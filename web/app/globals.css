@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/*
+ * Safe-area CSS variables
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Expose env() insets as reusable vars so any component can reference them
+ * without repeating the env() fallback syntax.  On devices without a notch or
+ * home indicator all four values resolve to 0 px.
+ */
+:root {
+  --sai-t: env(safe-area-inset-top,    0px);
+  --sai-b: env(safe-area-inset-bottom, 0px);
+  --sai-l: env(safe-area-inset-left,   0px);
+  --sai-r: env(safe-area-inset-right,  0px);
+}
+
+/*
+ * Viewport containment
+ * ─────────────────────────────────────────────────────────────────────────────
+ * The app shell owns 100 % of the viewport.  html and body must not scroll;
+ * all scrolling is managed by overflow-y-auto containers inside the shell.
+ *
+ * overscroll-behavior: none prevents the iOS "elastic bounce" effect from
+ * propagating through overlay panes to the root document.
+ */
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  /* Stable dark baseline — eliminates white flash during navigation */
+  background-color: #09090b; /* zinc-950 */
+  color: #fafafa;            /* zinc-50  */
+  font-family: var(--font-geist-sans, Arial, Helvetica, sans-serif);
+}
