@@ -1,0 +1,21 @@
+{
+  "name": "financial-ops-platform",
+  "version": "1.0.0",
+  "description": "Workflow-driven financial operations platform with AI-assisted configuration and modular business domains.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "eslint": "^10.2.0",
+    "prettier": "^3.8.2",
+    "typescript": "^6.0.2"
+  }
+}

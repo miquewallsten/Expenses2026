@@ -1,0 +1,65 @@
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, Integer, String, func
+from sqlalchemy.orm import Mapped, mapped_column
+
+from apps.api.db import Base
+
+
+class CompanyExpensePolicy(Base):
+    """Per-company expense policy configuration.
+
+    xml_required_mode allowed values:
+        "never"     — XML not required for any expense
+        "always"    — XML required for every expense
+        "mxn_only"  — XML required only for MXN-denominated expenses
+
+    allocation_dimensions allowed values:
+        "project"
+        "client"
+        "cost_center"
+        "project_client"
+        "project_cost_center"
+        "client_cost_center"
+        "project_client_cost_center"
+    """
+
+    __tablename__ = "company_expense_policies"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+
+    # One policy row per company
+    company_id: Mapped[int] = mapped_column(Integer, unique=True, index=True, nullable=False)
+
+    # XML requirements
+    xml_required_mode: Mapped[str] = mapped_column(String(20), default="mxn_only", nullable=False)
+
+    # Document pairing
+    pdf_pair_required_for_cfdi: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    # Expense types
+    international_expenses_allowed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    tickets_allowed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    # Supporting documents
+    require_justification: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    require_proof: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    # Allocation
+    allow_split_allocations: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    allocation_dimensions: Mapped[str] = mapped_column(
+        String(50), default="project_client_cost_center", nullable=False
+    )
+
+    # Approval workflow
+    manager_approval_required: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    accounting_review_required: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    # AI features
+    ai_policy_assist_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
+    )
