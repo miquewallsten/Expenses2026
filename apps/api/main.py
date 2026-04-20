@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import os
 
 from apps.api.config import settings
 from apps.api.db import Base, engine
@@ -20,7 +22,7 @@ from packages.core.config_engine.models import (
     SetupInference,
     SetupSession,
 )
-from packages.core.platform.models_user import User
+from packages.core.platform.models_user import User, MagicLinkToken  # noqa: F401
 from packages.core.platform.models_audit import AuditLog
 from packages.core.platform.models_module import PlatformModule
 from packages.core.platform.models_company_module import CompanyModule
@@ -76,6 +78,24 @@ from packages.modules.archive.api.archive_config_router import router as archive
 from packages.modules.archive.api.archive_query_router import router as archive_query_router
 from packages.modules.expenses.api.document_triage_router import router as document_triage_router
 from packages.modules.expenses.api.cfdi_pairing_router import router as cfdi_pairing_router
+from packages.modules.ai.models_embedding import DocumentEmbedding  # noqa: F401 — registers document_embeddings table
+from apps.api.routes.auth import router as auth_router
+from packages.core.platform.models_user_project import UserProjectAssignment  # noqa: F401
+from packages.core.platform.models_auth_settings import CompanyAuthSettings  # noqa: F401
+from packages.modules.admin.api.auth_settings_router import router as auth_settings_router
+from packages.modules.channels.models import (  # noqa: F401 — registers channel tables
+    ChannelSettings, ChannelConversation, ChannelMessage, ChannelVerification,
+)
+from packages.modules.channels.api.whatsapp_webhook import router as whatsapp_webhook_router
+from packages.modules.channels.api.email_inbound import router as email_inbound_router
+from packages.modules.channels.api.admin_router import router as channels_admin_router
+from packages.core.platform.models_purchase_request import PurchaseRequest as _PurchaseRequestModel  # noqa: F401
+from packages.core.platform.models_request_attachment import RequestAttachment as _RequestAttachmentModel  # noqa: F401
+from packages.modules.requests.router import router as purchase_requests_router
+from packages.core.platform.models_time_tracking import (  # noqa: F401 — registers time tables
+    TimeProject, TimeActivity, TimeAssignment, TimeEntry,
+)
+from packages.modules.time_tracking.router import router as time_tracking_router
 
 app = FastAPI(title=settings.app_name)
 
@@ -87,6 +107,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ── Static file serving for uploads (logos, etc.) ────────────────────────────
+_uploads_dir = os.path.join(os.path.dirname(__file__), "..", "..", "uploads")
+os.makedirs(os.path.join(_uploads_dir, "logos"), exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=_uploads_dir), name="uploads")
+
 # ── Schema migrations ─────────────────────────────────────────────────────────
 # Alembic is now the canonical migration tool. Run `alembic upgrade head` to
 # apply all pending migrations. create_all is kept as a safety net for tables
@@ -95,6 +120,14 @@ app.add_middleware(
 def _run_migrations() -> None:
     import logging
     _mig_log = logging.getLogger(__name__)
+    # Ensure pgvector extension exists (idempotent).
+    try:
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+            conn.commit()
+    except Exception:
+        pass  # Extension already exists — safe to ignore
     try:
         from alembic.config import Config
         from alembic import command
@@ -166,6 +199,13 @@ app.include_router(archive_config_router)
 app.include_router(archive_query_router)
 app.include_router(document_triage_router)
 app.include_router(cfdi_pairing_router)
+app.include_router(auth_router)
+app.include_router(auth_settings_router)
+app.include_router(whatsapp_webhook_router)
+app.include_router(email_inbound_router)
+app.include_router(channels_admin_router)
+app.include_router(purchase_requests_router)
+app.include_router(time_tracking_router)
 
 
 @app.get("/")

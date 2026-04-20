@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface DerivedConfig {
@@ -31,9 +33,10 @@ function label(text: string, accent?: string) {
 
 type Tag = ReturnType<typeof label>;
 
-function buildTags(portalConfig: Props["portalConfig"], portalType: PortalType): Tag[] {
+type Tpp = (key: string, params?: Record<string, string>) => string;
+
+function buildTags(portalConfig: Props["portalConfig"], portalType: PortalType, tpp: Tpp): Tag[] {
   const derived: DerivedConfig | undefined = portalConfig?.derived;
-  const ep  = portalConfig?.expense_policy  as Record<string, unknown> | undefined;
   const as  = portalConfig?.accounting_setup as Record<string, unknown> | undefined;
   const aps = portalConfig?.approval_setup   as Record<string, unknown> | undefined;
   const ws  = portalConfig?.workflow_setup   as Record<string, unknown> | undefined;
@@ -42,40 +45,34 @@ function buildTags(portalConfig: Props["portalConfig"], portalType: PortalType):
 
   // ── MODULE LIST (admin only) ────────────────────────────────────────────────
   if (portalType === "admin" && derived?.enabled_modules?.length) {
-    const LABELS: Record<string, string> = {
-      expenses:        "Expenses",
-      time_allocation: "Time",
-      subcontractor:   "Subcontractors",
-      reimbursements:  "Reimbursements",
-      approvals:       "Approvals",
-      accounting:      "Accounting",
-      archive:         "Archive",
-      ai_copilot:      "AI Copilot",
+    const MODULE_KEYS: Record<string, string> = {
+      expenses: "moduleExpenses", time_allocation: "moduleTime",
+      subcontractor: "moduleSubcontractors", reimbursements: "moduleReimbursements",
+      approvals: "moduleApprovals", accounting: "moduleAccounting",
+      archive: "moduleArchive", ai_copilot: "moduleAiCopilot",
     };
-    const names = derived.enabled_modules.map((k) => LABELS[k] ?? k).join(", ");
-    tags.push(label(`Modules: ${names}`));
+    const names = derived.enabled_modules.map((k) => tpp(MODULE_KEYS[k] ?? k)).join(", ");
+    tags.push(label(tpp("modules", { names })));
   }
 
   // ── APPROVAL FLOW ───────────────────────────────────────────────────────────
   if (portalType === "manager" || portalType === "admin") {
     if (derived?.manager_flow_enabled && derived?.accounting_flow_enabled) {
-      tags.push(label("Manager + Accounting flow", "blue"));
+      tags.push(label(tpp("managerAccounting"), "blue"));
     } else if (derived?.manager_flow_enabled) {
-      tags.push(label("Manager flow", "blue"));
+      tags.push(label(tpp("managerFlow"), "blue"));
     } else if (derived?.accounting_flow_enabled) {
-      tags.push(label("Accounting flow only", "blue"));
+      tags.push(label(tpp("accountingFlow"), "blue"));
     }
 
     const mode = aps?.approval_mode as string | undefined;
     if (mode && mode !== "none") {
-      const MODE_LABELS: Record<string, string> = {
-        manager_only:            "Manager only",
-        manager_then_accounting: "Manager → Accounting",
-        accounting_only:         "Accounting only",
-        threshold_based:         "Threshold-based routing",
-        auto_approve:            "Auto-approve",
+      const MODE_KEYS: Record<string, string> = {
+        manager_only: "modeManagerOnly", manager_then_accounting: "modeManagerThenAccounting",
+        accounting_only: "modeAccountingOnly", threshold_based: "modeThresholdBased",
+        auto_approve: "modeAutoApprove",
       };
-      tags.push(label(MODE_LABELS[mode] ?? mode));
+      tags.push(label(tpp(MODE_KEYS[mode] ?? mode)));
     }
   }
 
@@ -83,67 +80,53 @@ function buildTags(portalConfig: Props["portalConfig"], portalType: PortalType):
   if (portalType === "accounting" || portalType === "admin") {
     const reviewMode = as?.accounting_review_mode as string | undefined;
     if (reviewMode && reviewMode !== "none") {
-      const REVIEW_LABELS: Record<string, string> = {
-        all:       "Review: all expenses",
-        threshold: "Review: above threshold",
-      };
-      tags.push(label(REVIEW_LABELS[reviewMode] ?? `Review: ${reviewMode}`, "indigo"));
+      const REVIEW_KEYS: Record<string, string> = { all: "reviewAll", threshold: "reviewThreshold" };
+      tags.push(label(tpp(REVIEW_KEYS[reviewMode] ?? `reviewAll`), "indigo"));
     }
-    if (as?.account_code_required === true)   tags.push(label("Account code required", "indigo"));
-    if (as?.cost_center_required === true)    tags.push(label("Cost center required", "indigo"));
-    if (as?.poliza_required === true)         tags.push(label("Póliza required", "indigo"));
+    if (as?.account_code_required === true)   tags.push(label(tpp("accountCodeRequired"), "indigo"));
+    if (as?.cost_center_required === true)    tags.push(label(tpp("costCenterRequired"), "indigo"));
+    if (as?.poliza_required === true)         tags.push(label(tpp("polizaRequired"), "indigo"));
     if (as?.require_final_accounting_review_before_export === true)
-      tags.push(label("Final review before export", "indigo"));
+      tags.push(label(tpp("finalReviewRequired"), "indigo"));
   }
 
   // ── ALLOCATION (employee / admin) ───────────────────────────────────────────
   if (portalType === "employee" || portalType === "admin") {
     const dims = derived?.allocation_dimensions ?? [];
     if (dims.length) {
-      const DIM_LABELS: Record<string, string> = {
-        project:     "Project",
-        client:      "Client",
-        cost:        "Cost Center",
-        center:      "",   // fragment from underscore-split — omit
-        cc:          "Cost Center",
-      };
-      const readable = dims
-        .map((d) => DIM_LABELS[d] ?? d)
-        .filter(Boolean);
+      const DIM_KEYS: Record<string, string> = { project: "dimProject", client: "dimClient", cost: "dimCostCenter", cc: "dimCostCenter", center: "" };
+      const readable = dims.map((d) => tpp(DIM_KEYS[d] ?? d)).filter(Boolean);
       if (readable.length === 1) {
-        tags.push(label(`Allocation: ${readable[0]} only`));
+        tags.push(label(tpp("allocationSingle", { dim: readable[0] })));
       } else if (readable.length > 1) {
-        tags.push(label(`Allocation: ${readable.join(", ")}`));
+        tags.push(label(tpp("allocationMultiple", { dims: readable.join(", ") })));
       }
     }
-    if (derived?.allow_split_allocations) tags.push(label("Split allocations"));
+    if (derived?.allow_split_allocations) tags.push(label(tpp("splitAllocations")));
   }
 
   // ── SUBMISSION RULES (employee / admin) ────────────────────────────────────
   if (portalType === "employee" || portalType === "admin") {
     const xmlMode = derived?.xml_required_mode;
-    if (xmlMode === "always")        tags.push(label("XML required", "amber"));
-    else if (xmlMode === "mxn_only") tags.push(label("XML for MXN", "amber"));
+    if (xmlMode === "always")        tags.push(label(tpp("xmlRequired"), "amber"));
+    else if (xmlMode === "mxn_only") tags.push(label(tpp("xmlForMxn"), "amber"));
 
-    if (derived?.pdf_pair_required_for_cfdi) tags.push(label("CFDI PDF required", "amber"));
-    if (derived?.international_expenses_allowed)
-      tags.push(label("International expenses"));
-    if (derived?.tickets_allowed === false) tags.push(label("Tickets disabled", "red"));
+    if (derived?.pdf_pair_required_for_cfdi) tags.push(label(tpp("cfdiPdfRequired"), "amber"));
+    if (derived?.international_expenses_allowed) tags.push(label(tpp("internationalExpenses")));
+    if (derived?.tickets_allowed === false) tags.push(label(tpp("ticketsDisabled"), "red"));
   }
 
   // ── WORKFLOW (employee / admin) ─────────────────────────────────────────────
   if (portalType === "employee" || portalType === "admin") {
     const wfMode = derived?.workflow_mode ?? ws?.default_expense_workflow_mode as string | undefined;
     if (wfMode && wfMode !== "standard") {
-      const WF_LABELS: Record<string, string> = {
-        manager_then_accounting: "Manager → Accounting",
-        manager_only:            "Manager only",
-        accounting_only:         "Accounting only",
-        auto_approve:            "Auto-approve",
+      const WF_KEYS: Record<string, string> = {
+        manager_then_accounting: "workflowManagerThenAccounting", manager_only: "workflowManagerOnly",
+        accounting_only: "workflowAccountingOnly", auto_approve: "workflowAutoApprove",
       };
-      tags.push(label(`Workflow: ${WF_LABELS[wfMode] ?? wfMode}`));
+      if (WF_KEYS[wfMode]) tags.push(label(tpp(WF_KEYS[wfMode])));
     }
-    if (ws?.block_submit_on_failed_validation === true) tags.push(label("Blocks on validation", "red"));
+    if (ws?.block_submit_on_failed_validation === true) tags.push(label(tpp("blockOnValidation"), "red"));
   }
 
   return tags;
@@ -163,9 +146,10 @@ const DEFAULT_CLS = "border-white/[0.07] bg-white/[0.03] text-white/35";
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function PortalPolicySummary({ portalConfig, portalType }: Props) {
+  const tpp = useTranslations("archive.portalPolicy") as Tpp;
   if (!portalConfig) return null;
 
-  const tags = buildTags(portalConfig, portalType);
+  const tags = buildTags(portalConfig, portalType, tpp);
   if (!tags.length) return null;
 
   return (

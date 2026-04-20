@@ -59,7 +59,7 @@ local DB seed.  Run the steps in order — each builds on the previous result.
 
 ── Step 6 · Confirm DB metadata row ──────────────────────────────────────────
 
-    # In psql / SQLite shell:
+    # In psql:
     SELECT id, company_id, expense_id, file_name, file_type,
            source_type, storage_backend, storage_key, created_at
     FROM archive_files

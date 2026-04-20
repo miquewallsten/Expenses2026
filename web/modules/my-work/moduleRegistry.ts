@@ -21,7 +21,7 @@ import React from "react";
 // the session helpers in lib/session.ts.
 
 export interface ModuleVisibilityContext {
-  /** Role string from session storage ("employee" | "manager" | "accounting" | "admin" | null) */
+  /** Role string from session storage ("employee" | "manager" | "accounting" | "admin" | "executive" | "secretary" | null) */
   role: string | null;
   /** Flat list of permission_keys from /roles/user-permissions/:id */
   permissionKeys: string[];
@@ -37,6 +37,20 @@ export interface ModuleVisibilityContext {
     xml_required_mode: string;
     pdf_pair_required_for_cfdi: boolean;
     workflow_mode: string;
+  } | null;
+  /**
+   * Per-user capability flags set by admin in the Users panel.
+   * Null while user profile is loading.
+   */
+  capabilities: {
+    can_create_expenses: boolean;
+    can_create_corporate_expenses: boolean;
+    can_invoice_corporation: boolean;
+    is_amex_reconciler: boolean;
+    requires_time_tracking: boolean;
+    has_executive_reporting: boolean;
+    delegates_for_user_id: number | null;
+    delegates_for_user_name: string | null;
   } | null;
 }
 
@@ -116,19 +130,36 @@ function buildPlaceholder(label: string): React.FC {
 
 export const MY_WORK_MODULES: readonly MyWorkModule[] = [
   // ── My Expenses ─────────────────────────────────────────────────────────────
-  // Available to any employee or admin when the expenses module is enabled.
+  // Gated on the per-user can_create_expenses flag (default true) AND the
+  // expenses module being enabled.  Secretaries see this too — the workspace
+  // fetches their boss's expenses when delegates_for_user_id is set.
   {
     id: "my_expenses",
     label: "My Expenses",
     icon: "Receipt",
     isVisible: (ctx) =>
       hasModule(ctx, "expenses") &&
-      (hasRole(ctx, "employee", "admin") || hasPermission(ctx, "submit_expense")),
+      (ctx.capabilities?.can_create_expenses ?? true) &&
+      (hasRole(ctx, "employee", "manager", "admin", "executive", "secretary") ||
+        hasPermission(ctx, "submit_expense")),
     component: React.lazy(() => import("@/modules/my-expenses/MyExpensesModule")),
   },
 
+  // ── Corporate Expenses ───────────────────────────────────────────────────────
+  // Any role — gated purely on the per-user can_create_corporate_expenses flag.
+  // These are non-project expenses (presales, operations, equipment, etc.).
+  {
+    id: "corporate_expenses",
+    label: "Corporate Expenses",
+    icon: "Building2",
+    isVisible: (ctx) =>
+      hasModule(ctx, "expenses") &&
+      (ctx.capabilities?.can_create_corporate_expenses ?? false),
+    component: buildPlaceholder("Corporate Expenses"),
+  },
+
   // ── My Approvals ────────────────────────────────────────────────────────────
-  // Visible to managers, admins, and anyone with the approve_expense permission,
+  // Visible to managers, executives, admins, and anyone with approve_expense,
   // but only when the manager approval flow is configured.
   {
     id: "my_approvals",
@@ -136,7 +167,7 @@ export const MY_WORK_MODULES: readonly MyWorkModule[] = [
     icon: "CheckSquare",
     isVisible: (ctx) =>
       (ctx.derived?.manager_flow_enabled ?? false) &&
-      (hasRole(ctx, "manager", "admin") ||
+      (hasRole(ctx, "manager", "admin", "executive") ||
         hasPermission(ctx, "approve_expense")),
     component: React.lazy(() => import("@/modules/my-approvals/MyApprovalsModule")),
   },
@@ -156,16 +187,18 @@ export const MY_WORK_MODULES: readonly MyWorkModule[] = [
   },
 
   // ── Time Allocation ──────────────────────────────────────────────────────────
-  // Available to employees and admins when the time_allocation add-on is on.
+  // Shown when the per-user requires_time_tracking flag is set (admin assigned
+  // this requirement) OR when the company-level time_allocation add-on is on.
   {
     id: "time_allocation",
     label: "Time Allocation",
     icon: "Clock",
     isVisible: (ctx) =>
-      hasModule(ctx, "time_allocation") &&
-      (hasRole(ctx, "employee", "admin") ||
-        hasPermission(ctx, "submit_timesheet")),
-    component: buildPlaceholder("Time Allocation"),
+      (ctx.capabilities?.requires_time_tracking ?? false) ||
+      (hasModule(ctx, "time_allocation") &&
+        (hasRole(ctx, "employee", "admin") ||
+          hasPermission(ctx, "submit_timesheet"))),
+    component: React.lazy(() => import("@/modules/my-time/MyTimeModule")),
   },
 
   // ── Archive ──────────────────────────────────────────────────────────────────
@@ -193,6 +226,62 @@ export const MY_WORK_MODULES: readonly MyWorkModule[] = [
       hasModule(ctx, "exports") &&
       (hasRole(ctx, "admin") || hasPermission(ctx, "export_data")),
     component: buildPlaceholder("Exports"),
+  },
+
+  // ── My Reports ───────────────────────────────────────────────────────────────
+  // Executives with has_executive_reporting always see this.  Others follow
+  // the standard role/permission rules.
+  {
+    id: "my_reports",
+    label: "My Reports",
+    icon: "BarChart2",
+    isVisible: (ctx) =>
+      hasModule(ctx, "expenses") &&
+      ((ctx.capabilities?.has_executive_reporting ?? false) ||
+        hasRole(ctx, "employee", "manager", "accounting", "admin", "executive") ||
+        hasPermission(ctx, "submit_expense") ||
+        hasPermission(ctx, "approve_expense")),
+    component: React.lazy(() => import("@/modules/my-reports/MyReportsModule")),
+  },
+
+  // ── My Requests ──────────────────────────────────────────────────────────────
+  // Employee-facing PR intake.  Visible to all roles when the purchase_requests
+  // add-on is enabled for the company.
+  {
+    id: "my_requests",
+    label: "My Requests",
+    icon: "ShoppingCart",
+    isVisible: (ctx) =>
+      hasModule(ctx, "purchase_requests") &&
+      (hasRole(ctx, "employee", "manager", "accounting", "admin", "executive", "secretary") ||
+        hasPermission(ctx, "submit_expense")),
+    component: React.lazy(() => import("@/modules/my-requests/MyRequestsModule")),
+  },
+
+  // ── Requerimientos de Compra (Accounting) ───────────────────────────────────
+  // Accounting team receives all submitted PRs for review and fulfillment
+  // tracking.  Gated on purchase_requests add-on.
+  {
+    id: "pr_accounting",
+    label: "Requerimientos de Compra",
+    icon: "ClipboardList",
+    isVisible: (ctx) =>
+      hasModule(ctx, "purchase_requests") &&
+      (hasRole(ctx, "accounting", "admin") || hasPermission(ctx, "assign_account")),
+    component: React.lazy(() => import("@/modules/pr-accounting/PRAccountingModule")),
+  },
+
+  // ── Approve PO (Managers) ────────────────────────────────────────────────────
+  // Managers see all submitted PRs pending their approval decision.
+  // Gated on purchase_requests add-on.
+  {
+    id: "pr_approvals",
+    label: "Approve PO",
+    icon: "BadgeCheck",
+    isVisible: (ctx) =>
+      hasModule(ctx, "purchase_requests") &&
+      (hasRole(ctx, "manager", "admin", "executive") || hasPermission(ctx, "approve_expense")),
+    component: React.lazy(() => import("@/modules/pr-approvals/PRApprovalsModule")),
   },
 ] as const;
 

@@ -150,6 +150,7 @@ export interface WorkflowAllocationPresence {
 export interface DecisionExpensePolicy {
   xml_required_mode: string;           // "always" | "mxn_only" | "never"
   pdf_pair_required_for_cfdi: boolean;
+  allow_document_free_expenses: boolean;
   tickets_allowed: boolean;
   require_justification: boolean;
   require_proof: boolean;
@@ -169,6 +170,7 @@ export interface DecisionDerived {
   tickets_allowed: boolean;
   xml_required_mode: string;
   pdf_pair_required_for_cfdi: boolean;
+  allow_document_free_expenses: boolean;
 }
 
 /**

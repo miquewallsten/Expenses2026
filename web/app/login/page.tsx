@@ -1,99 +1,105 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { setCurrentUserId, setCurrentRole, setCurrentCompanyId } from "@/lib/session";
+import { Mail } from "lucide-react";
+import { useTranslations } from "next-intl";
 
-const ROLES = ["employee", "manager", "admin", "accounting"] as const;
-type Role = (typeof ROLES)[number];
+const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [userId, setUserId] = useState("");
-  const [companyId, setCompanyId] = useState("1");
-  const [role, setRole] = useState<Role>("employee");
-  const [error, setError] = useState("");
+  const t = useTranslations("auth");
+  const [email, setEmail]     = useState("");
+  const [sent, setSent]       = useState(false);
+  const [devLink, setDevLink] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userId.trim()) {
-      setError("User ID is required.");
-      return;
+    if (!email.trim()) { setError(t("emailRequired")); return; }
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch(`${API}/auth/magic-link/request`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      if (!res.ok) throw new Error("Request failed");
+      const data = await res.json();
+      setSent(true);
+      if (data.dev_link) setDevLink(data.dev_link);
+    } catch {
+      setError(t("somethingWentWrong"));
+    } finally {
+      setLoading(false);
     }
-    setCurrentUserId(userId.trim());
-    setCurrentRole(role);
-    setCurrentCompanyId(companyId.trim() || "1");
-    router.push(`/${role}`);
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-4">
+    <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-1">
-            Financial Ops Platform
-          </div>
-          <h1 className="text-xl font-semibold text-white">Portal Login</h1>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-1">
+            {t("platformName")}
+          </p>
+          <h1 className="text-xl font-semibold text-white">{t("signIn")}</h1>
           <p className="mt-1 text-xs text-white/35">
-            This is a lightweight portal login for local development.
+            {t("enterEmailHint")}
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1.5">
-              User ID
-            </label>
-            <input
-              type="text"
-              value={userId}
-              onChange={(e) => { setUserId(e.target.value); setError(""); }}
-              placeholder="e.g. 1"
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-white/25 focus:ring-0 transition-colors"
-            />
+        {sent ? (
+          <div className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-5">
+            <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600/20">
+              <Mail className="h-4 w-4 text-indigo-400" />
+            </div>
+            <p className="text-sm font-medium text-white/80">{t("checkEmail")}</p>
+            <p className="mt-1 text-xs text-white/40">
+              {t("emailSentTo")} <span className="text-white/60">{email}</span>.{" "}
+              {t("expiresIn15")}
+            </p>
+            {devLink && (
+              <div className="mt-4 rounded border border-amber-500/20 bg-amber-500/[0.06] p-3">
+                <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-amber-400/60">
+                  {t("devMode")}
+                </p>
+                <a
+                  href={devLink}
+                  className="break-all text-[11px] text-indigo-400 underline-offset-2 hover:underline"
+                >
+                  {devLink}
+                </a>
+              </div>
+            )}
           </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1.5">
+                {t("emailLabel")}
+              </label>
+              <input
+                type="email"
+                autoFocus
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); setError(""); }}
+                placeholder={t("emailPlaceholder")}
+                className="w-full rounded border border-white/[0.1] bg-white/[0.04] px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-indigo-500/50 transition-colors"
+              />
+            </div>
 
-          <div>
-            <label className="block text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1.5">
-              Company ID
-            </label>
-            <input
-              type="text"
-              value={companyId}
-              onChange={(e) => setCompanyId(e.target.value)}
-              placeholder="e.g. 1"
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-white/25 focus:ring-0 transition-colors"
-            />
-          </div>
+            {error && <p className="text-xs text-red-400">{error}</p>}
 
-          <div>
-            <label className="block text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1.5">
-              Role
-            </label>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value as Role)}
-              className="w-full rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white outline-none focus:border-white/25 transition-colors"
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded border border-white/[0.1] bg-white/[0.07] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/[0.11] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {ROLES.map((r) => (
-                <option key={r} value={r} className="capitalize">
-                  {r.charAt(0).toUpperCase() + r.slice(1)}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {error && (
-            <p className="text-xs text-red-400">{error}</p>
-          )}
-
-          <button
-            type="submit"
-            className="w-full rounded-lg bg-white/10 hover:bg-white/15 border border-white/10 px-4 py-2.5 text-sm font-medium text-white transition-colors"
-          >
-            Enter Portal
-          </button>
-        </form>
+              {loading ? t("sending") : t("sendLink")}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );

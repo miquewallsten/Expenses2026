@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Archive } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -46,6 +47,8 @@ interface Props {
 }
 
 export default function ExpenseArchivePanel({ expenseId }: Props) {
+  const t = useTranslations("archive");
+  const tc = useTranslations("common");
   const [items, setItems]     = useState<ArchiveFileItem[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -69,7 +72,7 @@ export default function ExpenseArchivePanel({ expenseId }: Props) {
       <div className="flex items-center gap-1.5 border-b border-white/[0.05] px-3 py-1.5">
         <Archive className="h-3 w-3 text-white/25" />
         <span className="text-[9px] font-bold uppercase tracking-widest text-white/28">
-          Archive
+          {t("title")}
         </span>
         {!loading && items.length > 0 && (
           <span className="ml-auto rounded border border-white/[0.08] bg-white/[0.04] px-1.5 py-px text-[9px] text-white/35">
@@ -81,11 +84,11 @@ export default function ExpenseArchivePanel({ expenseId }: Props) {
       {/* Body */}
       <div className="divide-y divide-white/[0.04]">
         {loading && (
-          <p className="px-3 py-2 text-[10px] text-white/25">Loading…</p>
+          <p className="px-3 py-2 text-[10px] text-white/25">{tc("loading")}</p>
         )}
 
         {!loading && items.length === 0 && (
-          <p className="px-3 py-2 text-[10px] text-white/20">No archived files.</p>
+          <p className="px-3 py-2 text-[10px] text-white/20">{t("empty")}</p>
         )}
 
         {!loading && items.map((f) => (

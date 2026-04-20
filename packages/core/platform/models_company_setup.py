@@ -14,6 +14,7 @@ class CompanySetup(Base):
 
     # Identity
     display_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    logo_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     country_code: Mapped[str | None] = mapped_column(String(10), nullable=True)
     base_currency: Mapped[str | None] = mapped_column(String(10), nullable=True)
     timezone: Mapped[str | None] = mapped_column(String(100), nullable=True)
@@ -41,6 +42,7 @@ class CompanySetup(Base):
     accounting_module_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     archive_module_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     ai_copilot_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    purchase_requests_module_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     # AI Setup
     ai_setup_completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

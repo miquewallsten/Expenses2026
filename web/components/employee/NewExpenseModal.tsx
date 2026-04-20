@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { X, Paperclip } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -34,6 +35,8 @@ export default function NewExpenseModal({ open, onClose, onCreated }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const descRef = useRef<HTMLInputElement>(null);
+  const t = useTranslations("employee.newExpenseModal");
+  const tc = useTranslations("common");
 
   // Focus first field on open; reset on close
   useEffect(() => {
@@ -64,11 +67,11 @@ export default function NewExpenseModal({ open, onClose, onCreated }: Props) {
     e.preventDefault();
     const parsed = parseFloat(form.amount);
     if (!form.description.trim()) {
-      setError("Description is required.");
+      setError(t("errorRequired"));
       return;
     }
     if (isNaN(parsed) || parsed <= 0) {
-      setError("Enter a valid positive amount.");
+      setError(t("errorAmount"));
       return;
     }
     setError(null);
@@ -93,7 +96,7 @@ export default function NewExpenseModal({ open, onClose, onCreated }: Props) {
       onCreated?.();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save expense.");
+      setError(err instanceof Error ? err.message : t("errorSave"));
     } finally {
       setSaving(false);
     }
@@ -128,10 +131,10 @@ export default function NewExpenseModal({ open, onClose, onCreated }: Props) {
                 id="new-expense-title"
                 className="text-sm font-semibold text-white"
               >
-                New Expense
+                {t("title")}
               </h2>
               <p className="mt-0.5 text-[10px] text-white/35">
-                Create a draft expense. Attach a document to extract CFDI data automatically.
+                {t("subtitle")}
               </p>
             </div>
             <button
@@ -148,19 +151,19 @@ export default function NewExpenseModal({ open, onClose, onCreated }: Props) {
             <div className="space-y-0 divide-y divide-white/[0.05] px-5 py-4">
 
               {/* Description */}
-              <FieldRow label="Description" required>
+              <FieldRow label={t("fieldDescription")} required>
                 <input
                   ref={descRef}
                   type="text"
                   value={form.description}
                   onChange={set("description")}
-                  placeholder="e.g. Business lunch with Acme Corp"
+                  placeholder={t("descriptionPlaceholder")}
                   className={inputCls}
                 />
               </FieldRow>
 
               {/* Amount */}
-              <FieldRow label="Amount" required>
+              <FieldRow label={t("fieldAmount")} required>
                 <div className="relative">
                   <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-xs text-white/30">
                     $
@@ -180,62 +183,63 @@ export default function NewExpenseModal({ open, onClose, onCreated }: Props) {
               {/* Project / Client / Cost Center — 3-up */}
               <div className="grid grid-cols-3 gap-3 py-3">
                 <div>
-                  <label className={labelCls}>Project</label>
+                  <label className={labelCls}>{t("fieldProject")}</label>
                   <input
                     type="text"
                     value={form.project}
                     onChange={set("project")}
-                    placeholder="Optional"
+                    placeholder={t("optional")}
                     className={inputCls}
                   />
                 </div>
                 <div>
-                  <label className={labelCls}>Client</label>
+                  <label className={labelCls}>{t("fieldClient")}</label>
                   <input
                     type="text"
                     value={form.client}
                     onChange={set("client")}
-                    placeholder="Optional"
+                    placeholder={t("optional")}
                     className={inputCls}
                   />
                 </div>
                 <div>
-                  <label className={labelCls}>Cost Center</label>
+                  <label className={labelCls}>{t("fieldCostCenter")}</label>
                   <input
                     type="text"
                     value={form.cost_center}
                     onChange={set("cost_center")}
-                    placeholder="Optional"
+                    placeholder={t("optional")}
                     className={inputCls}
                   />
                 </div>
               </div>
 
               {/* Notes */}
-              <FieldRow label="Notes">
+              <FieldRow label={t("fieldNotes")}>
                 <textarea
                   value={form.notes}
                   onChange={set("notes")}
                   rows={2}
-                  placeholder="Any additional context…"
+                  placeholder={t("notesPlaceholder")}
                   className={`${inputCls} resize-none`}
                 />
               </FieldRow>
 
               {/* Attachment */}
               <div className="py-3">
-                <p className={labelCls}>Attachment</p>
+                <p className={labelCls}>{t("fieldAttachment")}</p>
                 <div className="mt-1 flex items-center gap-2">
                   <button
                     type="button"
                     className="flex items-center gap-1.5 rounded-md border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-white/50 transition-colors hover:border-white/20 hover:bg-white/[0.07] hover:text-white/70"
                   >
                     <Paperclip className="h-3.5 w-3.5" />
-                    Upload file
+                    {t("uploadFile")}
                   </button>
-                <p className="mt-1 text-[10px] text-white/20">
-                  Upload a CFDI XML to auto-fill amount and tax fields.
-                </p>
+                  <p className="mt-1 text-[10px] text-white/20">
+                    {t("uploadHint")}
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -253,14 +257,14 @@ export default function NewExpenseModal({ open, onClose, onCreated }: Props) {
                 onClick={onClose}
                 className="rounded-md px-4 py-1.5 text-xs font-medium text-white/40 transition-colors hover:bg-white/[0.05] hover:text-white/60"
               >
-                Cancel
+                {tc("cancel")}
               </button>
               <button
                 type="submit"
                 disabled={saving}
                 className="rounded-md bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-indigo-500 active:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {saving ? "Saving…" : "Save Expense"}
+                {saving ? t("saving") : t("saveExpense")}
               </button>
             </div>
           </form>

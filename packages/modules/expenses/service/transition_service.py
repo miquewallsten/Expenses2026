@@ -36,7 +36,7 @@ All commands target expense id=1 and company id=1; adjust as needed.
 Scenario 1 – draft expense can be submitted
   # Precondition: expense 1 must be in "draft" status.
   # Reset if needed:
-  #   sqlite3 financial_ops.db "UPDATE expenses SET status='draft' WHERE id=1;"
+  #   psql financial_ops -c "UPDATE expenses SET status='draft' WHERE id=1;"
   curl -s -X POST http://127.0.0.1:8000/expenses/review-actions/1/submit \\
        -H "X-User-Id: 1" | python3 -m json.tool
   # Expected: 200 with status="submitted"

@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface ReviewQueueSummaryProps {
@@ -22,7 +24,8 @@ function statusCls(s: string) {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function ReviewQueueSummary({ summary, variant }: ReviewQueueSummaryProps) {
+export default function ReviewQueueSummary({ summary, variant: _variant }: ReviewQueueSummaryProps) {
+  const tc = useTranslations("common");
   if (!summary) return null;
 
   const count: number   = summary.total_count ?? 0;
@@ -38,7 +41,7 @@ export default function ReviewQueueSummary({ summary, variant }: ReviewQueueSumm
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         {/* Item count */}
         <span className="text-[9px] font-semibold tabular-nums text-white/35">
-          {count} item{count !== 1 ? "s" : ""}
+          {tc("itemCount", { count })}
         </span>
 
         {/* Total amount */}
@@ -51,7 +54,7 @@ export default function ReviewQueueSummary({ summary, variant }: ReviewQueueSumm
         {/* Flagged count */}
         {flagged > 0 && (
           <span className="rounded border border-red-500/20 bg-red-500/[0.06] px-1.5 py-0.5 text-[8px] font-semibold text-red-300/60">
-            {flagged} flagged
+            {tc("flaggedCount", { count: flagged })}
           </span>
         )}
 

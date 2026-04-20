@@ -3,13 +3,15 @@
 import { Suspense } from "react";
 import { useMyWorkContext } from "@/context/MyWorkContext";
 import { useUserContext } from "@/context/UserContext";
+import { useTranslations } from "next-intl";
 
 // ── Fallback while a lazy module chunk loads ──────────────────────────────────
 
 function ModuleLoadingFallback() {
+  const tc = useTranslations("common");
   return (
     <div className="flex h-full items-center justify-center">
-      <p className="text-xs text-white/22">Loading…</p>
+      <p className="text-xs text-white/22">{tc("loading")}</p>
     </div>
   );
 }
@@ -17,9 +19,10 @@ function ModuleLoadingFallback() {
 // ── Fallback when no module is active ────────────────────────────────────────
 
 function NoModuleSelected() {
+  const t = useTranslations("myWork");
   return (
     <div className="flex h-full items-center justify-center">
-      <p className="text-xs text-white/22">No module selected.</p>
+      <p className="text-xs text-white/22">{t("noModule")}</p>
     </div>
   );
 }
@@ -44,10 +47,11 @@ export default function MyWorkWorkspace() {
 
   const { activeModule, configLoading, selectedItem, setSelectedItem, clearSelectedItem, effectiveConfig } = myWork;
 
+  const tc = useTranslations("common");
   if (configLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <p className="text-xs text-white/22">Loading configuration…</p>
+        <p className="text-xs text-white/22">{tc("loading")}</p>
       </div>
     );
   }

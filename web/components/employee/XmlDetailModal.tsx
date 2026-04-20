@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { X, CheckCircle2, AlertTriangle, XCircle, FileText } from "lucide-react";
 import type { ExtractedData, ConceptoItem } from "@/lib/expenses/xmlExtract";
 
@@ -109,6 +110,8 @@ function fmtAmount(v: string | null): string {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function XmlDetailModal({ open, onClose, extractedData, satStatus }: Props) {
+  const t = useTranslations("employee.xmlDetail");
+  const tc = useTranslations("common");
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -147,12 +150,12 @@ export default function XmlDetailModal({ open, onClose, extractedData, satStatus
           <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.07] px-4 py-2.5">
             <div className="min-w-0">
               <h2 id="cfdi-title" className="text-[11px] font-bold uppercase tracking-widest text-white/70">
-                CFDI Detail
+                {t("title")}
               </h2>
               {uuid ? (
                 <p className="mt-0.5 truncate font-mono text-[9px] text-white/25">{uuid}</p>
               ) : (
-                <p className="mt-0.5 text-[9px] text-white/18">No UUID</p>
+                <p className="mt-0.5 text-[9px] text-white/18">{t("noUuid")}</p>
               )}
             </div>
             <button
@@ -170,7 +173,7 @@ export default function XmlDetailModal({ open, onClose, extractedData, satStatus
               /* ── Empty state ── */
               <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
                 <FileText className="h-6 w-6 text-white/15" />
-                <p className="text-[11px] text-white/25">No structured CFDI data available.</p>
+                <p className="text-[11px] text-white/25">{t("noData")}</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -209,7 +212,7 @@ export default function XmlDetailModal({ open, onClose, extractedData, satStatus
                 {rawConceptos.length > 0 && (
                 <div>
                   <p className="mb-1 text-[8px] font-bold uppercase tracking-widest text-white/22">
-                    Conceptos ({rawConceptos.length})
+                    {t("conceptos", { count: rawConceptos.length })}
                   </p>
                   <div className="overflow-hidden rounded-lg border border-white/[0.07] bg-black/20">
                     {rawConceptos.map((c, ci) => (
@@ -266,21 +269,21 @@ export default function XmlDetailModal({ open, onClose, extractedData, satStatus
                   <div className="flex items-center justify-between gap-3 overflow-hidden rounded-lg border border-white/[0.07] bg-black/20 px-2.5 py-1.5">
                     {satStatus === "valid" ? (
                       <>
-                        <p className="text-[9px] text-white/35">Live SAT SOAP verification passed.</p>
+                        <p className="text-[9px] text-white/35">{t("satPassed")}</p>
                         <span className="inline-flex shrink-0 items-center gap-1 rounded border border-emerald-500/20 bg-emerald-500/[0.07] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-emerald-400/70">
                           <CheckCircle2 className="h-2 w-2" /> Vigente
                         </span>
                       </>
                     ) : satStatus === "warning" ? (
                       <>
-                        <p className="text-[9px] text-white/35">SAT verification returned warnings.</p>
+                        <p className="text-[9px] text-white/35">{t("satWarning")}</p>
                         <span className="inline-flex shrink-0 items-center gap-1 rounded border border-amber-500/20 bg-amber-500/[0.07] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-amber-400/70">
-                          <AlertTriangle className="h-2 w-2" /> Warnings
+                          <AlertTriangle className="h-2 w-2" /> {t("badgeWarnings")}
                         </span>
                       </>
                     ) : satStatus === "error" ? (
                       <>
-                        <p className="text-[9px] text-white/35">SAT verification failed — CFDI may be invalid.</p>
+                        <p className="text-[9px] text-white/35">{t("satFailed")}</p>
                         <span className="inline-flex shrink-0 items-center gap-1 rounded border border-red-500/20 bg-red-500/[0.07] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-red-400/70">
                           <XCircle className="h-2 w-2" /> No Vigente
                         </span>
@@ -288,10 +291,10 @@ export default function XmlDetailModal({ open, onClose, extractedData, satStatus
                     ) : (
                       <>
                         <p className="text-[9px] text-white/22">
-                          SAT verification pending — save document to trigger check.
+                          {t("satPending")}
                         </p>
                         <span className="inline-flex shrink-0 items-center gap-1 rounded border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-white/25">
-                          Pending
+                          {t("badgePending")}
                         </span>
                       </>
                     )}
@@ -308,7 +311,7 @@ export default function XmlDetailModal({ open, onClose, extractedData, satStatus
               onClick={onClose}
               className="rounded px-3 py-1 text-[10px] font-medium text-white/30 transition-colors hover:bg-white/[0.05] hover:text-white/50"
             >
-              Close
+              {tc("close")}
             </button>
           </div>
         </div>

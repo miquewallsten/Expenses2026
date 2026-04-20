@@ -35,6 +35,7 @@ import {
   getCurrentUserId,
   getCurrentRole,
   getCurrentCompanyId,
+  getStoredSession,
 } from "@/lib/session";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -42,11 +43,52 @@ const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 /**
+ * Per-user capability flags — set by admin per user.
+ * These drive MyWork portal visibility independently of role.
+ */
+export interface UserCapabilities {
+  can_create_expenses: boolean;
+  can_create_corporate_expenses: boolean;
+  can_invoice_corporation: boolean;
+  is_amex_reconciler: boolean;
+  requires_time_tracking: boolean;
+  has_executive_reporting: boolean;
+  delegates_for_user_id: number | null;
+  delegates_for_user_name: string | null;
+}
+
+/**
+ * Per-user capability flags — set by admin per user.
+ * These drive MyWork portal visibility independently of role.
+ */
+export interface UserCapabilities {
+  can_create_expenses: boolean;
+  can_create_corporate_expenses: boolean;
+  can_invoice_corporation: boolean;
+  is_amex_reconciler: boolean;
+  requires_time_tracking: boolean;
+  has_executive_reporting: boolean;
+  delegates_for_user_id: number | null;
+  delegates_for_user_name: string | null;
+}
+
+const DEFAULT_CAPABILITIES: UserCapabilities = {
+  can_create_expenses: true,
+  can_create_corporate_expenses: false,
+  can_invoice_corporation: false,
+  is_amex_reconciler: false,
+  requires_time_tracking: false,
+  has_executive_reporting: false,
+  delegates_for_user_id: null,
+  delegates_for_user_name: null,
+};
+
+/**
  * The set of roles a user may hold.  The current session stores one role at a
  * time, but the context exposes an array so callers do not need to change when
  * multi-role support is introduced.
  */
-export type UserRole = "employee" | "manager" | "accounting" | "admin";
+export type UserRole = "employee" | "manager" | "accounting" | "admin" | "executive" | "secretary";
 
 export interface UserContextValue {
   /** Numeric user id (null while unauthenticated or loading) */
@@ -71,6 +113,10 @@ export interface UserContextValue {
    * has no explicit permissions beyond what their role grants.
    */
   permissionKeys: string[];
+  /** Per-user capability flags configured by admin */
+  capabilities: UserCapabilities;
+  /** Full name of the authenticated user — null while loading */
+  displayName: string | null;
   /** True while the initial identity / permissions load is in flight */
   loading: boolean;
   /**
@@ -100,6 +146,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [companyId, setCompanyId] = useState<number | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [permissionKeys, setPermissionKeys] = useState<string[]>([]);
+  const [capabilities, setCapabilities] = useState<UserCapabilities>(DEFAULT_CAPABILITIES);
+  const [displayName, setDisplayName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Monotonically increasing refresh token — increment to trigger a full reload.
@@ -119,16 +167,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setLoading(true);
 
     // ── Read identity from session ─────────────────────────────────────────
-    //
-    // getCurrentUserId / getCurrentRole / getCurrentCompanyId each guard
-    // against SSR (return null on the server).  In a real auth setup, replace
-    // these with token claims.
+    // Prefer the JWT session written by magic link verify; fall back to the
+    // legacy localStorage values for backwards compatibility.
 
-    const rawId = getCurrentUserId();
-    const rawRole = getCurrentRole();
-    const rawCompany = getCurrentCompanyId();
+    const stored = getStoredSession();
 
-    const numId = rawId ? parseInt(rawId, 10) : null;
+    const rawId      = stored ? String(stored.userId) : getCurrentUserId();
+    const rawRole    = stored ? stored.role            : getCurrentRole();
+    const rawCompany = stored ? String(stored.companyId) : getCurrentCompanyId();
+    const bearerToken = stored?.token ?? null;
+
+    const numId      = rawId      ? parseInt(rawId, 10)      : null;
     const numCompany = rawCompany ? parseInt(rawCompany, 10) : null;
 
     setUserId(isNaN(numId ?? NaN) ? null : numId);
@@ -137,31 +186,42 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setRole(rawRole);
 
     // ── Fetch permissions ──────────────────────────────────────────────────
-    //
-    // The /roles/user-permissions endpoint is already wired in the API.
-    // When userId is absent (unauthenticated), skip the fetch and resolve
-    // with an empty permission set.
-
     if (!rawId) {
       setPermissionKeys([]);
+      setCapabilities(DEFAULT_CAPABILITIES);
       setLoading(false);
       return;
     }
 
-    fetch(`${API}/roles/user-permissions/${rawId}`, {
-      signal: ac.signal,
-      headers: { "X-User-Id": rawId },
-    })
-      .then((r) => (r.ok ? r.json() : { permission_keys: [] }))
-      .catch((err) => {
-        if ((err as { name?: string }).name === "AbortError") return null;
-        return { permission_keys: [] };
-      })
-      .then((data) => {
-        if (data === null) return; // aborted
-        setPermissionKeys(data.permission_keys ?? []);
-        setLoading(false);
-      });
+    const headers: Record<string, string> = bearerToken
+      ? { Authorization: `Bearer ${bearerToken}` }
+      : { "X-User-Id": rawId };
+
+    Promise.all([
+      fetch(`${API}/roles/user-permissions/${rawId}`, { signal: ac.signal, headers })
+        .then((r) => (r.ok ? r.json() : { permission_keys: [] }))
+        .catch((err) => ((err as { name?: string }).name === "AbortError" ? null : { permission_keys: [] })),
+      fetch(`${API}/users/${rawId}`, { signal: ac.signal, headers })
+        .then((r) => (r.ok ? r.json() : null))
+        .catch((err) => ((err as { name?: string }).name === "AbortError" ? null : null)),
+    ]).then(([permData, userData]) => {
+      if (permData === null && userData === null) return; // both aborted
+      if (permData !== null) setPermissionKeys(permData?.permission_keys ?? []);
+      if (userData) {
+        setDisplayName(userData.full_name ?? null);
+        setCapabilities({
+          can_create_expenses:         userData.can_create_expenses         ?? true,
+          can_create_corporate_expenses: userData.can_create_corporate_expenses ?? false,
+          can_invoice_corporation:     userData.can_invoice_corporation     ?? false,
+          is_amex_reconciler:          userData.is_amex_reconciler          ?? false,
+          requires_time_tracking:      userData.requires_time_tracking      ?? false,
+          has_executive_reporting:     userData.has_executive_reporting     ?? false,
+          delegates_for_user_id:       userData.delegates_for_user_id       ?? null,
+          delegates_for_user_name:     userData.delegates_for_user_name     ?? null,
+        });
+      }
+      setLoading(false);
+    });
 
     return () => {
       ac.abort();
@@ -174,7 +234,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (!role) return [];
     // Admins implicitly hold all roles so role-checks work without listing them
     // all.  Once the API returns a real roles array, replace this derivation.
-    if (role === "admin") return ["employee", "manager", "accounting", "admin"];
+    if (role === "admin") return ["employee", "manager", "accounting", "admin", "executive", "secretary"];
     return [role as UserRole];
   }, [role]);
 
@@ -196,12 +256,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
       role,
       roles,
       permissionKeys,
+      capabilities,
+      displayName,
       loading,
       hasPermission,
       hasRole,
       refresh,
     }),
-    [userId, userIdStr, companyId, role, roles, permissionKeys, loading, hasPermission, hasRole, refresh],
+    [userId, userIdStr, companyId, role, roles, permissionKeys, capabilities, displayName, loading, hasPermission, hasRole, refresh],
   );
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

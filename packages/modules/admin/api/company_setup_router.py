@@ -1,6 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+import io
+import os
+import uuid
 
 from apps.api.deps import get_db
 from packages.modules.admin.schemas.company_setup import (
@@ -20,6 +24,13 @@ from packages.modules.admin.service.company_setup_service import (
     update_legal_entity,
     upsert_company_setup,
 )
+
+_UPLOADS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "uploads", "logos")
+_ALLOWED_MIME = {
+    "image/png", "image/jpeg", "image/jpg", "image/gif",
+    "image/webp", "image/bmp", "image/tiff", "image/x-icon",
+}
+_MAX_BYTES = 8 * 1024 * 1024  # 8 MB
 
 
 class DeleteResponse(BaseModel):
@@ -41,6 +52,66 @@ def upsert_company_setup_route(
     db: Session = Depends(get_db),
 ):
     return upsert_company_setup(db, company_id, data)
+
+
+@router.post("/{company_id}/logo")
+def upload_company_logo(
+    company_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    """Accept any image format, process with Pillow (resize + convert to WebP), persist URL."""
+    # ── Validation ─────────────────────────────────────────────────────────────
+    content_type = (file.content_type or "").lower()
+    if content_type not in _ALLOWED_MIME:
+        raise HTTPException(status_code=415, detail=f"Unsupported image type: {content_type}")
+
+    raw = file.file.read()
+    if len(raw) > _MAX_BYTES:
+        raise HTTPException(status_code=413, detail="File exceeds 8 MB limit")
+
+    # ── Process with Pillow ────────────────────────────────────────────────────
+    try:
+        from PIL import Image
+        img = Image.open(io.BytesIO(raw))
+        img = img.convert("RGBA")
+
+        # Resize: max 512 px on the longest side, preserve aspect ratio
+        max_side = 512
+        w, h = img.size
+        if max(w, h) > max_side:
+            ratio = max_side / max(w, h)
+            img = img.resize((int(w * ratio), int(h * ratio)), Image.LANCZOS)
+
+        # Convert to WebP
+        buf = io.BytesIO()
+        img.save(buf, format="WEBP", quality=92)
+        processed = buf.getvalue()
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"Could not process image: {exc}") from exc
+
+    # ── Persist ────────────────────────────────────────────────────────────────
+    os.makedirs(_UPLOADS_DIR, exist_ok=True)
+    filename = f"company_{company_id}_{uuid.uuid4().hex[:8]}.webp"
+    dest = os.path.join(_UPLOADS_DIR, filename)
+
+    # Remove previous logo for this company (keep disk tidy)
+    for old in os.listdir(_UPLOADS_DIR):
+        if old.startswith(f"company_{company_id}_") and old.endswith(".webp"):
+            try:
+                os.remove(os.path.join(_UPLOADS_DIR, old))
+            except OSError:
+                pass
+
+    with open(dest, "wb") as f:
+        f.write(processed)
+
+    logo_url = f"/uploads/logos/{filename}"
+
+    # ── Save URL on company setup ──────────────────────────────────────────────
+    from packages.modules.admin.schemas.company_setup import CompanySetupUpdate as _Upd
+    setup = upsert_company_setup(db, company_id, _Upd(logo_url=logo_url))
+    return {"logo_url": logo_url}
 
 
 @router.get("/{company_id}/legal-entities", response_model=list[LegalEntityRead])

@@ -58,6 +58,15 @@ class CompanyExpensePolicy(Base):
     # AI features
     ai_policy_assist_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
+    # Document-free expenses
+    # When True, employees may submit an expense with no uploaded documents at all.
+    # The admin enables this for petty-cash, per-diem, or any scenario where
+    # receipts are not expected.  The xml_required_mode and pdf_pair settings are
+    # still honoured — so enabling this while xml_required_mode="always" would
+    # still block on missing XML.  Intended use: set xml_required_mode="never",
+    # require_proof=False, require_justification=False.
+    allow_document_free_expenses: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(

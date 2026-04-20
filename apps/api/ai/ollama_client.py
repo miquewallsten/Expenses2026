@@ -83,3 +83,61 @@ def chat_with_ollama(system_prompt: str, user_prompt: str) -> dict:
             "content": "Ollama is not reachable.",
             "error": str(exc),
         }
+
+
+def chat_with_messages(messages: list[dict]) -> dict:
+    """
+    Send a multi-turn chat request to Ollama with a pre-built messages list.
+
+    Each message is {"role": "system"|"user"|"assistant", "content": str}.
+
+    Returns:
+        {
+            "ok": bool,
+            "model": str | None,
+            "content": str,
+            "error": str | None,
+        }
+    """
+    model = resolve_model()
+
+    if model is None:
+        return {
+            "ok": False,
+            "model": None,
+            "content": "No Ollama model is available.",
+            "error": "No model available",
+        }
+
+    payload = {
+        "model": model,
+        "messages": messages,
+        "stream": False,
+    }
+
+    try:
+        response = requests.post(
+            f"{OLLAMA_BASE_URL}/api/chat",
+            json=payload,
+            timeout=120,
+        )
+        response.raise_for_status()
+        data = response.json()
+        content = (
+            data.get("message", {}).get("content")
+            or data.get("content")
+            or ""
+        )
+        return {
+            "ok": True,
+            "model": model,
+            "content": content,
+            "error": None,
+        }
+    except Exception as exc:
+        return {
+            "ok": False,
+            "model": model,
+            "content": "Ollama is not reachable.",
+            "error": str(exc),
+        }

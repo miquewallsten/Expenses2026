@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, Integer, String, UniqueConstraint, func
+from sqlalchemy import DateTime, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from apps.api.db import Base
@@ -22,7 +22,7 @@ class ExpenseDocument(Base):
     company_id: Mapped[int] = mapped_column(index=True)
     expense_id: Mapped[int | None] = mapped_column(Integer, index=True, nullable=True)
     filename: Mapped[str] = mapped_column(String(255))
-    content_text: Mapped[str] = mapped_column(String(5000))
+    content_text: Mapped[str] = mapped_column(Text)
     validation_status: Mapped[str] = mapped_column(String(50), default="pending")
     extraction_status: Mapped[str] = mapped_column(String(50), default="pending")
     document_type: Mapped[str | None] = mapped_column(String(50), nullable=True)

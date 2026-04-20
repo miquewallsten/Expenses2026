@@ -11,63 +11,31 @@ export type NavigationContext = {
   role: string | null;
   enabledModuleKeys: string[];
   permissionKeys: string[];
-  currentPortal: "employee" | "manager" | "accounting" | "admin" | "settings";
+  currentPortal: "employee" | "admin" | "settings";
 };
 
 export function buildGlobalNav(context: NavigationContext): GlobalNavItem[] {
-  const { role, enabledModuleKeys, permissionKeys, currentPortal } = context;
+  const { role, permissionKeys, currentPortal } = context;
 
   const hasPermission = (key: string) => permissionKeys.includes(key);
-  const hasModule = (key: string) =>
-    enabledModuleKeys.length === 0 || enabledModuleKeys.includes(key);
 
   const items: GlobalNavItem[] = [];
 
-  // Employee
-  if (
-    (role === "employee" || role === "admin") &&
-    hasModule("expenses")
-  ) {
+  // ── My Work — single portal for all roles ──────────────────────────────────
+  // Visible module tabs are controlled by moduleRegistry.ts based on role.
+  // All roles (employee, manager, accounting, executive, secretary, admin)
+  // use the same URL; role-appropriate modules appear automatically.
+  if (role !== null) {
     items.push({
       key: "employee",
-      label: "Employee",
-      href: "/employee",
+      label: "My Work",
+      href: "/mywork",
       group: "Workspaces",
       active: currentPortal === "employee",
     });
   }
 
-  // Manager
-  if (
-    role === "manager" ||
-    role === "admin" ||
-    hasPermission("approve_expense")
-  ) {
-    items.push({
-      key: "manager",
-      label: "Manager",
-      href: "/manager",
-      group: "Workspaces",
-      active: currentPortal === "manager",
-    });
-  }
-
-  // Accounting
-  if (
-    role === "accounting" ||
-    role === "admin" ||
-    hasPermission("assign_account")
-  ) {
-    items.push({
-      key: "accounting",
-      label: "Accounting",
-      href: "/accounting",
-      group: "Workspaces",
-      active: currentPortal === "accounting",
-    });
-  }
-
-  // Admin
+  // ── Admin ──────────────────────────────────────────────────────────────────
   if (
     role === "admin" ||
     hasPermission("configure_rules") ||
@@ -82,14 +50,21 @@ export function buildGlobalNav(context: NavigationContext): GlobalNavItem[] {
     });
   }
 
-  // Settings — always included
-  items.push({
-    key: "settings",
-    label: "Settings",
-    href: "/settings",
-    group: "Personal",
-    active: currentPortal === "settings",
-  });
+  // ── Time Setup — project & activity catalog (admin tool) ───────────────────
+  if (
+    role === "admin" ||
+    hasPermission("configure_rules") ||
+    hasPermission("manage_projects")
+  ) {
+    items.push({
+      key: "time-admin",
+      label: "Time Setup",
+      href: "/time-admin",
+      group: "Administration",
+      active: currentPortal === ("time-admin" as never),
+    });
+  }
 
   return items;
 }
+

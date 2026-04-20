@@ -8,6 +8,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { AlertTriangle, ChevronLeft, ReceiptText } from "lucide-react";
 import ReviewActionBar from "@/components/review/ReviewActionBar";
 import StatusNextAction from "@/components/my-work/StatusNextAction";
@@ -75,6 +76,9 @@ function QueueList({
   loading: boolean;
   summary: QueueSummary | null;
 }) {
+  const t = useTranslations("manager");
+  const tc = useTranslations("common");
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
 
@@ -83,7 +87,7 @@ function QueueList({
         <div className="shrink-0 border-b border-white/[0.05] bg-black/10 px-3 py-1.5">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
             <span className="text-[9px] font-semibold tabular-nums text-white/35">
-              {summary.total_count} pending
+              {t("queuePending", { count: summary.total_count })}
             </span>
             <span className="font-mono text-[9px] text-white/28">
               ${summary.total_amount.toFixed(2)}
@@ -99,10 +103,10 @@ function QueueList({
 
       {/* List */}
       {loading ? (
-        <div className="px-4 py-6 text-center text-xs text-white/30">Loading…</div>
+        <div className="px-4 py-6 text-center text-xs text-white/30">{tc("loading")}</div>
       ) : !expenses.length ? (
         <div className="flex flex-1 items-center justify-center">
-          <p className="text-xs text-white/22">No expenses pending review.</p>
+          <p className="text-xs text-white/22">{t("queueEmpty")}</p>
         </div>
       ) : (
         <ul className="flex-1 overflow-y-auto">
@@ -165,6 +169,8 @@ function ApprovalDetail({
   onReject: () => void;
   onReturn: () => void;
 }) {
+  const t = useTranslations("manager");
+
   if (!expense) {
     return (
       <div className="flex h-full flex-col overflow-hidden">
@@ -175,11 +181,11 @@ function ApprovalDetail({
             className="flex h-11 shrink-0 items-center gap-2 border-b border-white/[0.07] px-4 text-[11px] text-white/40 transition-colors hover:text-white/65"
           >
             <ChevronLeft className="h-3.5 w-3.5" />
-            Back to queue
+            {t("backToQueue")}
           </button>
         )}
         <div className="flex flex-1 items-center justify-center">
-          <p className="text-xs text-white/22">Select an expense to review.</p>
+          <p className="text-xs text-white/22">{t("selectExpense")}</p>
         </div>
       </div>
     );
@@ -187,11 +193,11 @@ function ApprovalDetail({
 
   const { visibleSections } = decision;
   const rows: [string, string][] = [
-    ["Description", expense.description],
-    ["Amount",      `$${expense.amount.toFixed(2)}`],
-    ["Created",     new Date(expense.created_at).toLocaleString()],
-    ...(visibleSections.includes("category_detail")     ? [["Category",     expense.detected_category ?? "—"] as [string, string]] : []),
-    ...(visibleSections.includes("account_code_detail") ? [["Account Code", expense.account_code       ?? "—"] as [string, string]] : []),
+    [t("fields.description"), expense.description],
+    [t("fields.amount"),      `$${expense.amount.toFixed(2)}`],
+    [t("fields.created"),     new Date(expense.created_at).toLocaleString()],
+    ...(visibleSections.includes("category_detail")     ? [[t("fields.category"),    expense.detected_category ?? "—"] as [string, string]] : []),
+    ...(visibleSections.includes("account_code_detail") ? [[t("fields.accountCode"), expense.account_code       ?? "—"] as [string, string]] : []),
   ];
 
   return (
@@ -204,7 +210,7 @@ function ApprovalDetail({
           className="flex h-11 shrink-0 items-center gap-2 border-b border-white/[0.07] px-4 text-[11px] text-white/40 transition-colors hover:text-white/65"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
-          Back to queue
+          {t("backToQueue")}
         </button>
       )}
       <div className="flex-1 overflow-y-auto px-5 py-4">
@@ -213,7 +219,7 @@ function ApprovalDetail({
         {/* Header */}
         <div>
           <h2 className="text-sm font-semibold text-white">{expense.description}</h2>
-          <p className="mt-0.5 text-xs text-white/35">Expense #{expense.id}</p>
+          <p className="mt-0.5 text-xs text-white/35">{t("expenseTitle", { id: expense.id })}</p>
         </div>
 
         <StatusNextAction decision={decision} />
@@ -259,6 +265,7 @@ function ApprovalDetail({
 export default function MyApprovalsModule() {
   const { effectiveConfig } = useMyWorkContext();
   const { userIdStr, companyId } = useUserContext();
+  const t = useTranslations("manager");
 
   const [expenses,       setExpenses]       = useState<Expense[]>([]);
   const [summary,        setSummary]        = useState<QueueSummary | null>(null);
@@ -406,7 +413,7 @@ export default function MyApprovalsModule() {
         setActionError((body as { detail?: string })?.detail ?? `${label} failed (${r.status}).`);
       }
     } catch {
-      setActionError("Could not reach the server.");
+      setActionError(t("serverError"));
     } finally {
       setActing(false);
     }

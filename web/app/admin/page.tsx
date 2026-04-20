@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import AppShell from "@/components/shell/AppShell";
 import AdminCompanySetupStudio from "@/components/admin/AdminCompanySetupStudio";
 import AdminCompanySetupCopilot from "@/components/admin/AdminCompanySetupCopilot";
@@ -9,24 +10,30 @@ import AdminApprovalSetupStudio from "@/components/admin/AdminApprovalSetupStudi
 import AdminApprovalCopilot from "@/components/admin/AdminApprovalCopilot";
 import AdminWorkflowSetupStudio from "@/components/admin/AdminWorkflowSetupStudio";
 import AdminWorkflowCopilot from "@/components/admin/AdminWorkflowCopilot";
+import AdminAccountingSetupStudio from "@/components/admin/AdminAccountingSetupStudio";
 import AdminAccountingCopilot from "@/components/admin/AdminAccountingCopilot";
 import AdminSetupOrchestratorPanel from "@/components/admin/AdminSetupOrchestratorPanel";
 import AdminRolesPanel from "@/components/admin/AdminRolesPanel";
+import AdminPermissionsPanel from "@/components/admin/AdminPermissionsPanel";
 import { getPortalConfigConflicts } from "@/lib/portal-config-conflicts";
 import AdminWorkflowPanel from "@/components/admin/AdminWorkflowPanel";
 import AdminModulesPanel from "@/components/admin/AdminModulesPanel";
+import AdminUsersPanel from "@/components/admin/AdminUsersPanel";
+import AdminAuthSettingsPanel from "@/components/admin/AdminAuthSettingsPanel";
+import AdminChannelsPanel from "@/components/admin/AdminChannelsPanel";
 import {
-  Building2, FileText, GitBranch, ShieldCheck, Puzzle, Key,
-  AlertTriangle, Calculator, ClipboardCheck, Bot, Save, Loader2, FolderOutput, Archive,
+  Building2, FileText, GitBranch, ShieldCheck, Puzzle, Key, Lock,
+  AlertTriangle, Calculator, ClipboardCheck, Bot, Save, Loader2, FolderOutput, Archive, Users, Radio,
 } from "lucide-react";
-import { getCurrentRole, getCurrentUserId, getCurrentCompanyId } from "@/lib/session";
+import { getCurrentRole, getCurrentUserId, getCurrentCompanyId, getStoredSession } from "@/lib/session";
 import { buildGlobalNav, GlobalNavItem } from "@/lib/navigation";
-import PortalPolicySummary from "@/components/shell/PortalPolicySummary";
+import AdminOverviewPanel from "@/components/admin/AdminOverviewPanel";
+import { useTranslations } from "next-intl";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 const WORKLIST_ITEMS = [
-  "AI Setup Orchestrator",
+  "Overview",
   "Company Setup",
   "Expense Policy",
   "Accounting Setup",
@@ -34,11 +41,20 @@ const WORKLIST_ITEMS = [
   "Workflow Setup",
   "Export Config",
   "Archive Config",
+  "Channels",
+  "Users",
   "Roles",
   "Permissions",
   "Add-Ons",
+  "Authentication",
 ] as const;
 type WorklistItem = typeof WORKLIST_ITEMS[number];
+
+const WORKLIST_GROUPS: { label: string; items: WorklistItem[] }[] = [
+  { label: "Setup", items: ["Overview", "Company Setup", "Expense Policy", "Accounting Setup", "Approval Setup", "Workflow Setup"] },
+  { label: "Integration", items: ["Export Config", "Archive Config", "Channels"] },
+  { label: "Administration", items: ["Users", "Roles", "Permissions", "Add-Ons", "Authentication"] },
+];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -122,74 +138,6 @@ function EmptyState({ text }: { text: string }) {
   return <p className="text-xs text-white/20 italic">{text}</p>;
 }
 
-// ── Panel: Accounting Setup placeholder ─────────────────────────────────────────
-
-function AdminAccountingSetupPlaceholder({ accountingSetup }: { accountingSetup: any }) {
-  const s = accountingSetup ?? {};
-  const rows: [string, any][] = [
-    ["Accounting review mode",    s.accounting_review_mode    ?? "—"],
-    ["Manager approval mode",     s.manager_approval_mode     ?? "—"],
-    ["Poliza required",           s.poliza_required            != null ? (s.poliza_required ? "Yes" : "No") : "—"],
-    ["Account code required",     s.account_code_required      != null ? (s.account_code_required ? "Yes" : "No") : "—"],
-    ["Cost center required",      s.cost_center_required       != null ? (s.cost_center_required ? "Yes" : "No") : "—"],
-    ["Project required",          s.project_required           != null ? (s.project_required ? "Yes" : "No") : "—"],
-    ["Client required",           s.client_required            != null ? (s.client_required ? "Yes" : "No") : "—"],
-    ["Allow accounting override", s.allow_accounting_override  != null ? (s.allow_accounting_override ? "Yes" : "No") : "—"],
-    ["Archive retention (years)", s.archive_retention_years   ?? "—"],
-    ["AI accounting assist",      s.ai_accounting_assist_enabled != null ? (s.ai_accounting_assist_enabled ? "On" : "Off") : "—"],
-  ];
-  return (
-    <div className="max-w-2xl">
-      <SectionHeader title="Accounting Setup" />
-      {!accountingSetup ? (
-        <EmptyState text="Accounting setup not loaded." />
-      ) : (
-        <div className="overflow-hidden rounded-lg border border-white/[0.07]">
-          {rows.map(([label, val]) => (
-            <div
-              key={label}
-              className="flex items-center justify-between border-b border-white/[0.04] px-4 py-2.5 last:border-0"
-            >
-              <span className="text-[11px] text-white/45">{label}</span>
-              <span className="text-[11px] font-medium text-white/65">{String(val).replace(/_/g, " ")}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Panel: Permissions (inline) ───────────────────────────────────────────────
-
-function AdminPermissionsPanel({ permissions }: { permissions: PermissionRead[] }) {
-  return (
-    <div className="max-w-2xl">
-      <SectionHeader title="Permissions" count={permissions.length} />
-      {permissions.length === 0 ? (
-        <EmptyState text="No permissions defined yet." />
-      ) : (
-        <div className="overflow-hidden rounded-lg border border-white/[0.07]">
-          <div className="grid grid-cols-[1fr_1fr] gap-x-4 border-b border-white/[0.05] bg-black/20 px-4 py-2">
-            {["Key", "Name"].map((h) => (
-              <span key={h} className="text-[9px] font-bold uppercase tracking-widest text-white/22">{h}</span>
-            ))}
-          </div>
-          {permissions.map((p) => (
-            <div
-              key={p.id}
-              className="grid grid-cols-[1fr_1fr] items-center gap-x-4 border-b border-white/[0.04] px-4 py-2.5 last:border-0 hover:bg-white/[0.02]"
-            >
-              <span className="font-mono text-[11px] text-sky-300/80">{p.key}</span>
-              <span className="text-[11px] text-white/60">{p.name}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ── Panel: Export Config ──────────────────────────────────────────────────────
 
 const BUNDLE_PREVIEW_TOKENS: Record<string, string> = {
@@ -239,13 +187,15 @@ function AdminExportConfigPanel({
     }
   };
 
+  const t = useTranslations("admin");
+  const tc = useTranslations("common");
   return (
     <div className="max-w-lg">
-      <SectionHeader title="Export Config" />
+      <SectionHeader title={t("exportConfig.title")} />
       <div className="overflow-hidden rounded-lg border border-white/[0.07]">
         <div className="border-b border-white/[0.05] px-4 py-3">
           <div className="mb-1 flex items-baseline justify-between">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-white/30">Bundle name pattern</span>
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-white/30">{t("exportConfig.bundleNamePattern")}</span>
             <span className="font-mono text-[9px] text-white/18">{"{ company_id }  { date }  { year }  { month }"}</span>
           </div>
           <input
@@ -261,7 +211,7 @@ function AdminExportConfigPanel({
         </div>
         <div className="px-4 py-3">
           <div className="mb-1">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-white/30">Export format</span>
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-white/30">{t("exportConfig.exportFormat")}</span>
           </div>
           <div className="flex gap-2">
             {(["json", "csv"] as const).map((fmt) => (
@@ -289,9 +239,9 @@ function AdminExportConfigPanel({
           disabled={saving}
           className="inline-flex items-center gap-1.5 rounded border border-white/10 bg-white/[0.05] px-3 py-1.5 text-[10px] font-semibold text-white/60 transition-colors hover:bg-white/[0.09] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {saving ? <><Loader2 className="h-3 w-3 animate-spin" /> Saving…</> : <><Save className="h-3 w-3" /> Save</>}
+          {saving ? <><Loader2 className="h-3 w-3 animate-spin" /> {tc("saving")}</> : <><Save className="h-3 w-3" /> {tc("save")}</>}
         </button>
-        {saved  && <span className="text-[10px] text-emerald-400/60">Saved</span>}
+        {saved  && <span className="text-[10px] text-emerald-400/60">{tc("saved")}</span>}
         {error  && <span className="text-[10px] text-red-400/60">{error}</span>}
       </div>
     </div>
@@ -348,15 +298,17 @@ function AdminArchiveConfigPanel({
     }
   };
 
+  const ta = useTranslations("admin");
+  const tc = useTranslations("common");
   const fields: { label: string; value: string; set: (v: string) => void; tokens: string }[] = [
     {
-      label: "File pattern",
+      label: ta("archiveConfig.filePattern"),
       value: filePattern,
       set: setFilePattern,
       tokens: "{company}  {date}  {expense_id}  {filename}",
     },
     {
-      label: "Folder pattern",
+      label: ta("archiveConfig.folderPattern"),
       value: folderPattern,
       set: setFolderPattern,
       tokens: "{year}  {month}  {company}",
@@ -365,7 +317,7 @@ function AdminArchiveConfigPanel({
 
   return (
     <div className="max-w-lg">
-      <SectionHeader title="Archive Config" />
+      <SectionHeader title={ta("archiveConfig.title")} />
       <div className="overflow-hidden rounded-lg border border-white/[0.07]">
         {fields.map(({ label, value, set, tokens }) => (
           <div key={label} className="border-b border-white/[0.05] px-4 py-3 last:border-0">
@@ -393,19 +345,43 @@ function AdminArchiveConfigPanel({
           disabled={saving}
           className="inline-flex items-center gap-1.5 rounded border border-white/10 bg-white/[0.05] px-3 py-1.5 text-[10px] font-semibold text-white/60 transition-colors hover:bg-white/[0.09] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {saving ? <><Loader2 className="h-3 w-3 animate-spin" /> Saving…</> : <><Save className="h-3 w-3" /> Save</>}
+          {saving ? <><Loader2 className="h-3 w-3 animate-spin" /> {tc("saving")}</> : <><Save className="h-3 w-3" /> {tc("save")}</>}
         </button>
-        {saved  && <span className="text-[10px] text-emerald-400/60">Saved</span>}
+        {saved  && <span className="text-[10px] text-emerald-400/60">{tc("saved")}</span>}
         {error  && <span className="text-[10px] text-red-400/60">{error}</span>}
       </div>
     </div>
   );
 }
 
+// ── Menu key mapping (English key → i18n key) ────────────────────────────────
+const ITEM_MENU_KEY: Record<WorklistItem, string> = {
+  "Overview": "overview",
+  "Company Setup": "companySetup",
+  "Expense Policy": "expensePolicy",
+  "Accounting Setup": "accountingSetup",
+  "Approval Setup": "approvalSetup",
+  "Workflow Setup": "workflowSetup",
+  "Export Config": "exportConfig",
+  "Archive Config": "archiveConfig",
+  "Channels": "channels",
+  "Users": "users",
+  "Roles": "roles",
+  "Permissions": "permissions",
+  "Add-Ons": "addOns",
+  "Authentication": "authentication",
+};
+
+const GROUP_KEY: Record<string, string> = {
+  "Setup": "setup",
+  "Integration": "integration",
+  "Administration": "administration",
+};
+
 // ── WorkList ──────────────────────────────────────────────────────────────────
 
 const WORKLIST_ICONS: Record<WorklistItem, React.ReactNode> = {
-  "AI Setup Orchestrator": <Bot className="h-3.5 w-3.5" />,
+  "Overview": <Bot className="h-3.5 w-3.5" />,
   "Company Setup":    <Building2 className="h-3.5 w-3.5" />,
   "Expense Policy":   <FileText className="h-3.5 w-3.5" />,
   "Accounting Setup": <Calculator className="h-3.5 w-3.5" />,
@@ -413,9 +389,12 @@ const WORKLIST_ICONS: Record<WorklistItem, React.ReactNode> = {
   "Workflow Setup":   <GitBranch className="h-3.5 w-3.5" />,
   "Export Config":    <FolderOutput className="h-3.5 w-3.5" />,
   "Archive Config":   <Archive className="h-3.5 w-3.5" />,
+  "Channels":         <Radio className="h-3.5 w-3.5" />,
+  Users:              <Users className="h-3.5 w-3.5" />,
   Roles:              <ShieldCheck className="h-3.5 w-3.5" />,
   Permissions:        <Key className="h-3.5 w-3.5" />,
   "Add-Ons":          <Puzzle className="h-3.5 w-3.5" />,
+  Authentication:     <Lock className="h-3.5 w-3.5" />,
 };
 
 function WorkList({
@@ -423,172 +402,108 @@ function WorkList({
   onSelect,
   roles,
   permissions,
-  companyModules,
+  enabledModulesCount,
+  users,
+  hasCompanySetup,
   hasExpensePolicy,
   hasAccountingSetup,
   hasApprovalSetup,
   hasWorkflowSetup,
   hasExportConfig,
   hasArchiveConfig,
+  conflictsCount,
   draftSections,
 }: {
   active: WorklistItem;
   onSelect: (s: WorklistItem) => void;
   roles: RoleRead[];
   permissions: PermissionRead[];
-  companyModules: CompanyModuleRead[];
+  enabledModulesCount: number;
+  users: { id: number }[];
+  hasCompanySetup: boolean;
   hasExpensePolicy: boolean;
   hasAccountingSetup: boolean;
   hasApprovalSetup: boolean;
   hasWorkflowSetup: boolean;
   hasExportConfig: boolean;
   hasArchiveConfig: boolean;
+  conflictsCount: number;
   draftSections: Set<string>;
 }) {
+  const t = useTranslations("admin");
+  const tc = useTranslations("common");
+  const unconfiguredSetupCount = [
+    hasCompanySetup, hasExpensePolicy, hasAccountingSetup, hasApprovalSetup, hasWorkflowSetup,
+  ].filter((v) => !v).length;
+
   const counts: Record<WorklistItem, number | string> = {
-    "AI Setup Orchestrator": "AI",
-    "Company Setup":    "✓",
+    "Overview": conflictsCount > 0 ? conflictsCount : unconfiguredSetupCount > 0 ? unconfiguredSetupCount : "✓",
+    "Company Setup":    hasCompanySetup    ? "✓" : "—",
     "Expense Policy":   hasExpensePolicy   ? "✓" : "—",
     "Accounting Setup": hasAccountingSetup ? "✓" : "—",
     "Approval Setup":   hasApprovalSetup   ? "✓" : "—",
     "Workflow Setup":   hasWorkflowSetup   ? "✓" : "—",
     "Export Config":    hasExportConfig    ? "✓" : "—",
     "Archive Config":   hasArchiveConfig   ? "✓" : "—",
+    "Channels":         "→",
+    Users:              users.length,
     Roles:              roles.length,
     Permissions:        permissions.length,
-    "Add-Ons":          companyModules.filter((m) => m.enabled).length,
+    "Add-Ons":          enabledModulesCount,
+    Authentication:     "✓",
   };
 
   return (
-    <ul className="py-1">
-      {WORKLIST_ITEMS.map((item) => (
-        <li key={item}>
-          <button
-            onClick={() => onSelect(item)}
-            className={`flex w-full items-center gap-2.5 px-4 py-2.5 text-left transition-colors ${
-              active === item
-                ? "bg-white/[0.08] text-white"
-                : "text-white/45 hover:bg-white/[0.04] hover:text-white/70"
-            }`}
-          >
-            <span className={active === item ? "text-white/70" : "text-white/25"}>
-              {WORKLIST_ICONS[item]}
+    <div className="py-1">
+      {WORKLIST_GROUPS.map((group) => (
+        <div key={group.label}>
+          <div className="px-4 pb-0.5 pt-3 first:pt-2">
+            <span className="text-[8.5px] font-bold uppercase tracking-[0.12em] text-white/18">
+              {t(`groups.${GROUP_KEY[group.label] ?? group.label.toLowerCase()}`)}
             </span>
-            <span className="flex-1 text-xs font-medium">{item}</span>
-            {draftSections.has(item) && (
-              <span className="rounded border border-violet-500/20 bg-violet-500/[0.08] px-1 py-0.5 text-[8px] font-semibold uppercase tracking-wide text-violet-300/50">
-                Draft
-              </span>
-            )}
-            <span className="font-mono text-[10px] text-white/25">{counts[item]}</span>
-          </button>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-// ── AI Setup Orchestrator overview panel ─────────────────────────────────────
-
-function AdminSetupOrchestratorOverview({ portalConfig }: { portalConfig: any }) {
-  if (!portalConfig) {
-    return (
-      <div className="max-w-2xl">
-        <SectionHeader title="AI Setup Orchestrator" />
-        <p className="text-xs text-white/20 italic">Portal config loading…</p>
-      </div>
-    );
-  }
-
-  const cs  = portalConfig.company_setup    ?? {};
-  const ep  = portalConfig.expense_policy   ?? {};
-  const ac  = portalConfig.accounting_setup ?? {};
-  const ap  = portalConfig.approval_setup   ?? {};
-  const wf  = portalConfig.workflow_setup   ?? {};
-
-  const b = (v: any) => v === true ? "Yes" : v === false ? "No" : "—";
-  const s = (v: any) => v != null ? String(v).replace(/_/g, " ") : "—";
-
-  const sections: { label: string; rows: [string, string][] }[] = [
-    {
-      label: "Company",
-      rows: [
-        ["Name",            s(cs.display_name)],
-        ["Industry",        s(cs.industry)],
-        ["Country",         s(cs.country_code)],
-        ["Has managers",    b(cs.has_managers)],
-        ["Accounting team", b(cs.has_accounting_team)],
-        ["Multi-entity",    b(cs.operates_multi_entity)],
-        ["Multi-country",   b(cs.operates_multi_country)],
-      ],
-    },
-    {
-      label: "Expense policy",
-      rows: [
-        ["XML mode",          s(ep.xml_required_mode)],
-        ["International",     b(ep.international_expenses_allowed)],
-        ["Tickets allowed",   b(ep.tickets_allowed)],
-        ["Allocation dims",   s(ep.allocation_dimensions)],
-        ["Split allocations", b(ep.allow_split_allocations)],
-      ],
-    },
-    {
-      label: "Accounting",
-      rows: [
-        ["Review mode",       s(ac.accounting_review_mode)],
-        ["Póliza required",   b(ac.poliza_required)],
-        ["Account code req.", b(ac.account_code_required)],
-        ["Cost center req.",  b(ac.cost_center_required)],
-        ["Project required",  b(ac.project_required)],
-        ["Client required",   b(ac.client_required)],
-      ],
-    },
-    {
-      label: "Approval",
-      rows: [
-        ["Approval mode",    s(ap.approval_mode)],
-        ["Require manager",  b(ap.require_manager_for_all_employees)],
-        ["Escalate intl",    b(ap.escalate_international_to_accounting)],
-        ["Escalate policy",  b(ap.escalate_policy_failures_to_accounting)],
-      ],
-    },
-    {
-      label: "Workflow",
-      rows: [
-        ["Mode",             s(wf.default_expense_workflow_mode)],
-        ["Block on failure", b(wf.block_submit_on_failed_validation)],
-        ["Route policy to",  s(wf.route_policy_failures_to)],
-        ["Route intl to",    s(wf.route_international_expenses_to)],
-        ["Allow draft save", b(wf.allow_draft_save)],
-      ],
-    },
-  ];
-
-  return (
-    <div className="max-w-4xl">
-      <SectionHeader title="AI Setup Orchestrator" />
-      <p className="mb-4 text-[11px] text-white/30 leading-relaxed">
-        Current configuration snapshot across all five setup domains.
-        Use the AI panel on the right to analyse and apply recommendations.
-      </p>
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
-        {sections.map(({ label, rows }) => (
-          <div key={label} className="overflow-hidden rounded-lg border border-white/[0.07]">
-            <div className="border-b border-white/[0.05] bg-black/20 px-3 py-1.5">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-white/25">{label}</p>
-            </div>
-            {rows.map(([k, v]) => (
-              <div
-                key={k}
-                className="flex items-center justify-between border-b border-white/[0.04] px-3 py-2 last:border-0"
-              >
-                <span className="text-[10px] text-white/35">{k}</span>
-                <span className="text-[10px] font-medium text-white/55">{v}</span>
-              </div>
-            ))}
           </div>
-        ))}
-      </div>
+          {group.items.map((item) => {
+            const isActive = active === item;
+            const count = counts[item];
+            const hasDraft = draftSections.has(item);
+            const isConflict = item === "Overview" && conflictsCount > 0;
+            return (
+              <button
+                key={item}
+                onClick={() => onSelect(item)}
+                className={`flex w-full items-center gap-2 px-3.5 py-[7px] text-left transition-colors ${
+                  isActive
+                    ? "bg-white/[0.07] text-white/90"
+                    : "text-white/42 hover:bg-white/[0.035] hover:text-white/65"
+                }`}
+              >
+                {/* Active indicator strip */}
+                <span
+                  className={`h-3.5 w-0.5 shrink-0 rounded-full transition-colors ${
+                    isActive ? "bg-indigo-400/60" : "bg-transparent"
+                  }`}
+                />
+                <span className={isActive ? "text-white/60" : "text-white/22"}>
+                  {WORKLIST_ICONS[item]}
+                </span>
+                <span className="flex-1 truncate text-[11px] font-medium tracking-[-0.01em]">{t(`menu.${ITEM_MENU_KEY[item]}`)}</span>
+                {hasDraft && (
+                  <span className="rounded border border-violet-500/20 bg-violet-500/[0.08] px-1 py-0.5 text-[7.5px] font-semibold uppercase tracking-wide text-violet-300/50">
+                    {tc("draft")}
+                  </span>
+                )}
+                <span
+                  className={`font-mono text-[9.5px] tabular-nums ${
+                    isConflict ? "text-amber-400/65" : "text-white/22"
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 }
@@ -619,8 +534,8 @@ function AdminAIHints({
   workflowSetup?: any;
 }) {
   const hints: Record<WorklistItem, string[]> = {
-    "AI Setup Orchestrator": [
-      "Describe your company structure, expense process, and controls in the AI panel to analyse the full setup.",
+    "Overview": [
+      "Use the AI panel on the right to analyse your full configuration and get recommended fixes.",
     ],
     "Company Setup": [
       "Company identity is read from the platform database.",
@@ -682,6 +597,11 @@ function AdminAIHints({
         : `${permissionsCount} permission${permissionsCount !== 1 ? "s" : ""} defined.`,
       "Use snake_case keys that mirror the action name for easy readability in audit logs.",
     ],
+    Users: [
+      "Create users here so they can log in via magic link.",
+      "Each user must have an email address and a role — employee, manager, accounting, or admin.",
+      "Changing a role takes effect immediately. The user's existing session will reflect the new role on next login.",
+    ],
     "Export Config": [
       "Controls how export bundle names are generated per company.",
       "Use {company_id}, {date}, {year}, {month} as tokens in the bundle name pattern.",
@@ -692,21 +612,31 @@ function AdminAIHints({
       "Use {company}, {date}, {expense_id}, {year}, {month}, {filename} as tokens.",
       "Changes apply to all new uploads — existing archived files are not renamed.",
     ],
+    "Channels": [
+      "WhatsApp and email channels share the same AI agent — expenses, approvals, and queries work identically via both.",
+      "WhatsApp identity is anchored to the employee's email address via a one-time OTP challenge.",
+      "The webhook verify token and URL are generated automatically on first save — copy them into the Meta App Dashboard.",
+    ],
     "Add-Ons": [
       `${enabledModulesCount} module${enabledModulesCount !== 1 ? "s" : ""} currently active for this company.`,
       "Enable Expenses before Accounting — poliza export depends on expense records.",
       "Inactive modules are hidden from employees. No data is deleted when a module is disabled.",
     ],
+    Authentication: [
+      "Configure SSO, magic-link, and session expiry settings for your company.",
+      "Changes to authentication settings take effect immediately for all new sessions.",
+    ],
   };
 
+  const t = useTranslations("admin");
   const items = hints[section] ?? [];
 
   return (
     <div className="space-y-3">
       <div className="rounded-lg border border-white/[0.07] bg-white/[0.03] p-3">
-        <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/22">Admin Copilot</p>
+        <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/22">{t("copilot")}</p>
         <p className="text-[11px] text-white/40 leading-relaxed">
-          Reviewing <span className="font-semibold text-white/60">{section}</span>.
+          {t("reviewing", { section })}.
         </p>
       </div>
 
@@ -714,25 +644,25 @@ function AdminAIHints({
         <div className="grid grid-cols-2 divide-x divide-white/[0.05] border-b border-white/[0.05]">
           <div className="px-3 py-2.5 text-center">
             <p className="font-mono text-base font-bold text-white">{rolesCount}</p>
-            <p className="text-[9px] uppercase tracking-widest text-white/25">Roles</p>
+            <p className="text-[9px] uppercase tracking-widest text-white/25">{t("stats.roles")}</p>
           </div>
           <div className="px-3 py-2.5 text-center">
             <p className="font-mono text-base font-bold text-white">{permissionsCount}</p>
-            <p className="text-[9px] uppercase tracking-widest text-white/25">Permissions</p>
+            <p className="text-[9px] uppercase tracking-widest text-white/25">{t("stats.permissions")}</p>
           </div>
         </div>
         <div className="grid grid-cols-3 divide-x divide-white/[0.05]">
           <div className="px-3 py-2.5 text-center">
             <p className="font-mono text-base font-bold text-white">{stagesCount}</p>
-            <p className="text-[9px] uppercase tracking-widest text-white/25">Stages</p>
+            <p className="text-[9px] uppercase tracking-widest text-white/25">{t("stats.stages")}</p>
           </div>
           <div className="px-3 py-2.5 text-center">
             <p className="font-mono text-base font-bold text-white">{transitionsCount}</p>
-            <p className="text-[9px] uppercase tracking-widest text-white/25">Trans.</p>
+            <p className="text-[9px] uppercase tracking-widest text-white/25">{t("stats.transactions")}</p>
           </div>
           <div className="px-3 py-2.5 text-center">
             <p className="font-mono text-base font-bold text-white">{enabledModulesCount}</p>
-            <p className="text-[9px] uppercase tracking-widest text-white/25">Modules</p>
+            <p className="text-[9px] uppercase tracking-widest text-white/25">{t("stats.modules")}</p>
           </div>
         </div>
       </div>
@@ -747,44 +677,14 @@ function AdminAIHints({
   );
 }
 
-function ConfigConflictBanner({
-  portalConfig,
-  onOpenOrchestrator,
-}: {
-  portalConfig: any;
-  onOpenOrchestrator: () => void;
-}) {
-  const conflicts = getPortalConfigConflicts(portalConfig);
-  if (conflicts.length === 0) return null;
-
-  const first = conflicts[0];
-  const label = conflicts.length === 1
-    ? first.message
-    : `${conflicts.length} configuration conflicts — ${first.message.replace(/\.$/, "")}, and ${conflicts.length - 1} more.`;
-
-  return (
-    <div className="shrink-0 border-b border-amber-500/20 bg-amber-950/20 px-4 py-2">
-      <div className="flex items-start gap-2">
-        <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-amber-400/60" />
-        <p className="min-w-0 flex-1 text-[11px] leading-snug text-amber-300/65">{label}</p>
-        <button
-          onClick={onOpenOrchestrator}
-          className="shrink-0 text-[10px] font-medium text-amber-400/70 transition-colors hover:text-amber-300"
-        >
-          Review in AI Setup Orchestrator →
-        </button>
-      </div>
-    </div>
-  );
-}
 // ── Orchestrator patch summary ─────────────────────────────────────────────────────────
 
-const PATCH_SECTION_DEFS: { key: keyof OrchestratorPatches; label: string }[] = [
-  { key: "company_setup",    label: "Company Setup" },
-  { key: "expense_policy",   label: "Expense Policy" },
-  { key: "accounting_setup", label: "Accounting Setup" },
-  { key: "approval_setup",   label: "Approval Setup" },
-  { key: "workflow_setup",   label: "Workflow Setup" },
+const PATCH_SECTION_DEFS: { key: keyof OrchestratorPatches; menuKey: string }[] = [
+  { key: "company_setup",    menuKey: "companySetup" },
+  { key: "expense_policy",   menuKey: "expensePolicy" },
+  { key: "accounting_setup", menuKey: "accountingSetup" },
+  { key: "approval_setup",   menuKey: "approvalSetup" },
+  { key: "workflow_setup",   menuKey: "workflowSetup" },
 ];
 
 function patchVal(v: any): string {
@@ -800,6 +700,7 @@ function OrchestratorPatchSummary({
   result: OrchestratorResult;
   onApply: (patches: OrchestratorPatches) => void;
 }) {
+  const t = useTranslations("admin");
   const [applied, setApplied] = useState(false);
 
   const totalPatches = PATCH_SECTION_DEFS.reduce(
@@ -812,9 +713,9 @@ function OrchestratorPatchSummary({
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <h2 className="text-sm font-semibold text-white">AI Suggested Patches</h2>
+        <h2 className="text-sm font-semibold text-white">{t("aiSuggestedPatches")}</h2>
         <span className="rounded border border-white/[0.08] bg-white/[0.04] px-1.5 py-0.5 font-mono text-[10px] text-white/30">
-          {totalPatches} change{totalPatches !== 1 ? "s" : ""}
+          {t("changes", { n: totalPatches })}
         </span>
       </div>
 
@@ -823,13 +724,13 @@ function OrchestratorPatchSummary({
       )}
 
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
-        {PATCH_SECTION_DEFS.map(({ key, label }) => {
+        {PATCH_SECTION_DEFS.map(({ key, menuKey }) => {
           const entries = Object.entries(result.suggested_patches[key] ?? {});
           if (entries.length === 0) return null;
           return (
             <div key={key} className="overflow-hidden rounded-lg border border-white/[0.07]">
               <div className="flex items-center justify-between border-b border-white/[0.05] bg-black/20 px-3 py-1.5">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-white/25">{label}</p>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-white/25">{t(`menu.${menuKey}`)}</p>
                 <span className="rounded border border-white/[0.07] bg-white/[0.03] px-1 py-0 font-mono text-[9px] text-white/30">
                   {entries.length}
                 </span>
@@ -854,7 +755,7 @@ function OrchestratorPatchSummary({
         disabled={applied}
         className="inline-flex items-center gap-1.5 rounded border border-violet-500/25 bg-violet-600/15 px-3 py-1.5 text-[10px] font-semibold text-violet-300/70 transition-colors hover:bg-violet-600/25 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {applied ? "Drafts applied to setup sections" : "Apply Drafts to Setup Sections"}
+        {applied ? t("draftsApplied") : t("applyDrafts")}
       </button>
     </div>
   );
@@ -862,7 +763,17 @@ function OrchestratorPatchSummary({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AdminPage() {
-  const [activeSection, setActiveSection] = useState<WorklistItem>("AI Setup Orchestrator");
+  const router = useRouter();
+  useEffect(() => {
+    const session = getStoredSession();
+    const userId  = session?.userId ?? getCurrentUserId();
+    const role    = session?.role   ?? getCurrentRole();
+    if (!userId) { router.replace("/login"); return; }
+    if (role !== "admin") { router.replace("/mywork"); }
+  }, [router]);
+  const tAdmin = useTranslations("admin");
+  const tcAdmin = useTranslations("common");
+  const [activeSection, setActiveSection] = useState<WorklistItem>("Overview");
 
   // ── Lists not covered by portal config ──────────────────────────────────────
   const [roles, setRoles]               = useState<RoleRead[]>([]);
@@ -871,6 +782,7 @@ export default function AdminPage() {
   const [transitions, setTransitions]   = useState<WorkflowTransitionRead[]>([]);
   const [companyModules, setCompanyModules] = useState<CompanyModuleRead[]>([]);
   const [legalEntities, setLegalEntities]   = useState<any[]>([]);
+  const [users, setUsers]               = useState<any[]>([]);
 
   // ── Mutable edit states — seeded from portalConfig, updated on form save ────
   const [expensePolicy, setExpensePolicy]   = useState<any>(null);
@@ -952,7 +864,10 @@ export default function AdminPage() {
   // ── Supplemental data not in portal config ───────────────────────────────────
   // Roles list, permission definitions, workflow graph, company modules, legal entities.
   useEffect(() => {
-    const h = { "X-User-Id": "1" };
+    const stored = getStoredSession();
+    const h: Record<string, string> = stored
+      ? { Authorization: `Bearer ${stored.token}` }
+      : { "X-User-Id": "1" };
     Promise.all([
       fetch(`${API}/roles/`,                                                  { headers: h }).then((r) => r.ok ? r.json() : []),
       fetch(`${API}/roles/permissions`,                                       { headers: h }).then((r) => r.ok ? r.json() : []),
@@ -960,17 +875,25 @@ export default function AdminPage() {
       fetch(`${API}/workflows/transitions?company_id=1&module_key=expenses`,  { headers: h }).then((r) => r.ok ? r.json() : []),
       fetch(`${API}/modules/company/1`,                                       { headers: h }).then((r) => r.ok ? r.json() : []),
       fetch(`${API}/admin/company-setup/1/legal-entities`,                    { headers: h }).then((r) => r.ok ? r.json() : []),
-    ]).then(([r, p, s, t, m, entities]) => {
+      fetch(`${API}/users/?company_id=1`,                                     { headers: h }).then((r) => r.ok ? r.json() : []),
+    ]).then(([r, p, s, t, m, entities, u]) => {
       setRoles(r);
       setPermissions(p);
       setStages(s);
       setTransitions(t);
       setCompanyModules(m);
       if (Array.isArray(entities)) setLegalEntities(entities);
+      if (Array.isArray(u)) setUsers(u);
     }).catch(() => {});
   }, []);
 
-  const enabledModulesCount = companyModules.filter((m) => m.enabled).length;
+  const MODULE_FLAGS = [
+    "expenses_module_enabled", "approvals_module_enabled", "accounting_module_enabled",
+    "time_allocation_module_enabled", "reimbursements_module_enabled", "archive_module_enabled",
+    "subcontractor_module_enabled", "ai_copilot_enabled", "purchase_requests_module_enabled",
+  ];
+  const enabledModulesCount = MODULE_FLAGS.filter((f) => !!companySetup?.[f]).length;
+  const conflictsCount = getPortalConfigConflicts(portalConfig ?? {}).length;
 
   // ── Orchestrator: merge AI patches into per-domain draft states ──────────────
   const handleOrchestratorApplyPatch = (patches: {
@@ -1007,7 +930,11 @@ export default function AdminPage() {
   const handleSaveAllDrafts = async () => {
     setSavingAllDrafts(true);
     setSaveAllError(null);
-    const headers = { "Content-Type": "application/json", "X-User-Id": "1" };
+    const stored = getStoredSession();
+    const authHeader: Record<string, string> = stored
+      ? { Authorization: `Bearer ${stored.token}` }
+      : { "X-User-Id": "1" };
+    const headers = { "Content-Type": "application/json", ...authHeader };
     try {
       if (companySetupDraftPatch && Object.keys(companySetupDraftPatch).length > 0) {
         const body = { ...(companySetup ?? {}), ...companySetupDraftPatch };
@@ -1064,12 +991,12 @@ export default function AdminPage() {
 
   const detailNode = (() => {
     switch (activeSection) {
-      case "AI Setup Orchestrator": {
+      case "Overview": {
         const hasPatch = orchestratorResult && PATCH_SECTION_DEFS.some(
           (s) => Object.keys(orchestratorResult.suggested_patches[s.key] ?? {}).length > 0,
         );
         return (
-          <div className="max-w-4xl space-y-6">
+          <div className="space-y-5">
             {hasPatch && (
               <>
                 <OrchestratorPatchSummary
@@ -1080,7 +1007,15 @@ export default function AdminPage() {
                 <div className="border-t border-white/[0.05]" />
               </>
             )}
-            <AdminSetupOrchestratorOverview portalConfig={portalConfig} />
+            <AdminOverviewPanel
+              portalConfig={portalConfig}
+              companySetup={companySetup}
+              expensePolicy={expensePolicy}
+              accountingSetup={accountingSetup}
+              approvalSetup={approvalSetup}
+              workflowSetup={workflowSetup}
+              onNavigate={setActiveSection}
+            />
           </div>
         );
       }
@@ -1109,7 +1044,12 @@ export default function AdminPage() {
 
       case "Accounting Setup":
         return (
-          <AdminAccountingSetupPlaceholder accountingSetup={accountingSetup} />
+          <AdminAccountingSetupStudio
+            companyId={1}
+            setup={accountingSetup ?? {}}
+            onSaved={setAccountingSetup}
+            draftPatch={accountingSetupDraftPatch}
+          />
         );
 
       case "Approval Setup":
@@ -1156,19 +1096,34 @@ export default function AdminPage() {
           />
         );
 
+      case "Channels":
+        return <AdminChannelsPanel />;
+
+      case "Users":
+        return (
+          <AdminUsersPanel
+            companyId={1}
+            users={users}
+            onUsersChanged={setUsers}
+          />
+        );
+
       case "Roles":
-        return <AdminRolesPanel roles={roles} />;
+        return <AdminRolesPanel roles={roles} companyId={1} onRolesChanged={setRoles} />;
 
       case "Permissions":
-        return <AdminPermissionsPanel permissions={permissions} />;
+        return <AdminPermissionsPanel permissions={permissions} onPermissionsChanged={setPermissions} />;
 
       case "Add-Ons":
-        return <AdminModulesPanel companyModules={companyModules} />;
+        return <AdminModulesPanel companySetup={companySetup} onSetupChanged={setCompanySetup} />;
+
+      case "Authentication":
+        return <AdminAuthSettingsPanel companyId={1} />;
     }
   })();
 
   const aiPanelNode = (() => {
-    if (activeSection === "AI Setup Orchestrator") {
+    if (activeSection === "Overview") {
       return (
         <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-l border-white/[0.07] bg-zinc-950 p-3">
           <AdminSetupOrchestratorPanel
@@ -1250,14 +1205,14 @@ export default function AdminPage() {
         <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-l border-white/[0.07] bg-zinc-950 p-3">
           <div className="space-y-3">
             <div className="rounded-lg border border-white/[0.07] bg-white/[0.03] p-3">
-              <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/22">Archive Naming</p>
+              <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/22">{tAdmin("archiveNaming")}</p>
               <p className="text-[11px] text-white/40 leading-relaxed">
-                Patterns control how archived files are named and organized in storage.
+                {tAdmin("archiveNamingDesc")}
               </p>
             </div>
             <div className="overflow-hidden rounded-lg border border-white/[0.07]">
               <div className="border-b border-white/[0.05] bg-black/20 px-3 py-1.5">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-white/25">Available tokens</p>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-white/25">{tAdmin("availableTokens")}</p>
               </div>
               {([
                 ["{company}",    "Company slug derived from display name"],
@@ -1299,40 +1254,42 @@ export default function AdminPage() {
 
   return (
     <AppShell
-      title="Admin"
-      globalNavItems={globalNavItems}
-      workListTitle="Admin"
+      title={tAdmin("title")}
+      globalNavItems={[]}
+      workListTitle={tAdmin("title")}
       workList={
         <WorkList
           active={activeSection}
           onSelect={setActiveSection}
           roles={roles}
           permissions={permissions}
-          companyModules={companyModules}
+          enabledModulesCount={enabledModulesCount}
+          users={users}
+          hasCompanySetup={!!companySetup}
           hasExpensePolicy={!!expensePolicy}
           hasAccountingSetup={!!accountingSetup}
           hasApprovalSetup={!!approvalSetup}
           hasWorkflowSetup={!!workflowSetup}
           hasExportConfig={!!exportConfig}
           hasArchiveConfig={!!archiveConfig}
+          conflictsCount={conflictsCount}
           draftSections={draftSections}
         />
       }
       detail={
         <>
-          {portalConfig && (
-            <div className="shrink-0 border-b border-white/[0.05] px-3 py-1.5">
-              <PortalPolicySummary portalConfig={portalConfig} portalType="admin" />
+          {/* Section breadcrumb — shown on non-Overview pages */}
+          {activeSection !== "Overview" && (
+            <div className="mb-4 flex items-center gap-1.5 border-b border-white/[0.05] pb-3">
+              <span className="text-[9px] text-white/18">{tAdmin("title")}</span>
+              <span className="text-[9px] text-white/12">›</span>
+              <span className="text-[9px] font-semibold text-white/40">{tAdmin(`menu.${ITEM_MENU_KEY[activeSection]}`)}</span>
             </div>
           )}
-          <ConfigConflictBanner
-            portalConfig={portalConfig}
-            onOpenOrchestrator={() => setActiveSection("AI Setup Orchestrator")}
-          />
           {draftSections.size > 0 && (
             <div className="mb-4 flex items-center justify-between rounded border border-violet-500/15 bg-violet-900/[0.07] px-3 py-2">
               <span className="text-[10px] text-violet-300/45">
-                {draftSections.size} section{draftSections.size !== 1 ? "s" : ""} with pending AI draft{draftSections.size !== 1 ? "s" : ""}
+                {tAdmin("draftSectionsPending", { count: draftSections.size })}
               </span>
               <div className="flex items-center gap-2">
                 {saveAllError && (
@@ -1345,8 +1302,8 @@ export default function AdminPage() {
                   className="inline-flex items-center gap-1.5 rounded border border-violet-500/25 bg-violet-600/15 px-2.5 py-1 text-[10px] font-semibold text-violet-300/70 transition-colors hover:bg-violet-600/25 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {savingAllDrafts
-                    ? <><Loader2 className="h-3 w-3 animate-spin" /> Saving…</>
-                    : <><Save className="h-3 w-3" /> Save All Drafted Sections</>
+                    ? <><Loader2 className="h-3 w-3 animate-spin" /> {tcAdmin("saving")}</>
+                    : <><Save className="h-3 w-3" /> {tAdmin("saveAllDrafts")}</>
                   }
                 </button>
               </div>
@@ -1356,6 +1313,8 @@ export default function AdminPage() {
         </>
       }
       aiPanel={aiPanelNode}
+      mergedNav
+      logoUrl={companySetup?.logo_url ?? null}
     />
   );
 }

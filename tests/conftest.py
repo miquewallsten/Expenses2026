@@ -1,7 +1,7 @@
 """
 conftest.py — shared pytest fixtures for the financial-ops-platform test suite.
 
-Uses an in-memory SQLite database so tests are fully isolated from app.db.
+Uses an in-memory database so tests are fully isolated from the production PostgreSQL DB.
 """
 
 import os
@@ -10,8 +10,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-# Point tests at an in-memory DB — never touch app.db.
-TEST_DATABASE_URL = "sqlite://"
+# In-memory engine for test isolation — no production DB touched.
+TEST_DATABASE_URL = "sqlite://:memory:"
 os.environ.setdefault("ENVIRONMENT", "development")
 
 from apps.api.db import Base
@@ -52,7 +52,7 @@ from packages.modules.expenses.models.expense_attachment import ExpenseAttachmen
 def test_engine():
     engine = create_engine(
         TEST_DATABASE_URL,
-        connect_args={"check_same_thread": False},
+        connect_args={"check_same_thread": False},  # required for SQLite in-memory test engine
     )
     # Create all tables fresh for each test
     Base.metadata.create_all(bind=engine)

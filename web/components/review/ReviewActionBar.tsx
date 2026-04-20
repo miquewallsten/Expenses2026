@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { CheckCircle2, XCircle, Undo2 } from "lucide-react";
 
 interface Props {
@@ -32,6 +33,7 @@ export default function ReviewActionBar({
   onReject,
   onReturn,
 }: Props) {
+  const t = useTranslations("review");
   if (!actions) return null;
 
   const { can_approve: approve, can_reject: reject, can_return: ret } = actions;
@@ -56,7 +58,7 @@ export default function ReviewActionBar({
           className={`${BASE} border-emerald-500/40 bg-emerald-600/30 text-emerald-200 hover:bg-emerald-600/40`}
         >
           <CheckCircle2 className={ICON} />
-          Approve
+          {t("approve")}
         </button>
       )}
 
@@ -73,7 +75,7 @@ export default function ReviewActionBar({
           }`}
         >
           <XCircle className={ICON} />
-          Reject
+          {t("reject")}
         </button>
       )}
 
@@ -90,7 +92,7 @@ export default function ReviewActionBar({
           }`}
         >
           <Undo2 className={ICON} />
-          Return
+          {t("return")}
         </button>
       )}
 

@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { LocaleProvider } from "@/context/LocaleContext";
+import DevLoginCheat from "@/components/dev/DevLoginCheat";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -46,7 +48,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="es"
       // dark: force dark-mode colour tokens everywhere
       className={`${geistSans.variable} ${geistMono.variable} antialiased dark`}
     >
@@ -56,7 +58,8 @@ export default function RootLayout({
        * the shell, never the browser viewport.
        */}
       <body className="h-full overflow-hidden bg-zinc-950 text-white">
-        {children}
+        <LocaleProvider>{children}</LocaleProvider>
+        <DevLoginCheat />
       </body>
     </html>
   );

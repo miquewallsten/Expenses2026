@@ -327,6 +327,19 @@ export default function AdminCompanySetupPanel({ companyId, policy, onSaved, dra
         </Panel>
       </div>
 
+      {/* E — Document-Free Expenses */}
+      <div>
+        <SectionLabel>E — Document-Free Expenses</SectionLabel>
+        <Panel>
+          <ToggleRow
+            label="Allow expenses without documents"
+            description="Employees may create and submit an expense with no uploaded files. Useful for petty cash, per-diem, or pre-approved spend. Pair with XML mode = Never to prevent document blockers."
+            checked={!!form.allow_document_free_expenses}
+            onChange={(v) => set("allow_document_free_expenses", v)}
+          />
+        </Panel>
+      </div>
+
       {/* Save bar */}
       <div className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.06] bg-white/[0.015] px-4 py-2.5">
         <div className="flex items-center gap-2 flex-wrap">

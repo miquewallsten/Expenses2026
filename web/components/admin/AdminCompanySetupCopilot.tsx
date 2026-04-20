@@ -1,9 +1,37 @@
 "use client";
 
 import { useState } from "react";
-import { Bot, Zap, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Bot, Zap, Loader2, AlertTriangle, AlertCircle, CheckCircle2 } from "lucide-react";
+import {
+  getPortalConfigConflicts,
+  type PortalConfigConflict,
+} from "@/lib/portal-config-conflicts";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+const COMPANY_SETUP_CODES = new Set([
+  "MANAGER_FLOW_NO_MANAGERS",
+  "MANAGER_WORKFLOW_NO_MANAGERS",
+  "REQUIRE_MANAGER_ALL_NO_MANAGERS",
+  "EXPENSE_POLICY_MANAGER_APPROVAL_NO_MANAGERS",
+  "MULTI_COUNTRY_INTL_DISABLED",
+]);
+
+function buildLocalWarnings(setup: any, entities: any[]): string[] {
+  const w: string[] = [];
+  if (setup?.operates_multi_entity && entities.length === 0)
+    w.push("Multi-entity enabled but no legal entities configured.");
+  if (setup?.operates_multi_country) {
+    const codes = new Set<string>();
+    if (setup.country_code) codes.add(setup.country_code);
+    entities.forEach((e) => { if (e.country_code) codes.add(e.country_code); });
+    if (codes.size < 2)
+      w.push("Multi-country enabled but only one country represented.");
+  }
+  if (!setup?.has_managers && setup?.approvals_module_enabled)
+    w.push("Approvals module active but no managers configured.");
+  return w;
+}
 
 interface Props {
   companyId: number;
@@ -374,6 +402,15 @@ export default function AdminCompanySetupCopilot({
     ? buildPolicySummaryLines(result.expense_policy_patch)
     : [];
 
+  const configConflicts: PortalConfigConflict[] = portalConfig
+    ? getPortalConfigConflicts(portalConfig).filter((c) => COMPANY_SETUP_CODES.has(c.code))
+    : [];
+  const localWarnings = buildLocalWarnings(setup, legalEntities);
+  const allIssues = [
+    ...configConflicts.map((c) => ({ text: c.message, level: c.severity })),
+    ...localWarnings.map((w) => ({ text: w, level: "warning" as const })),
+  ];
+
   return (
     <div className="flex h-full flex-col gap-4 overflow-y-auto px-1 py-1">
 
@@ -385,6 +422,30 @@ export default function AdminCompanySetupCopilot({
           AI
         </span>
       </div>
+
+      {/* Config issues */}
+      {allIssues.length > 0 && (
+        <div className="space-y-1">
+          {allIssues.map((issue, i) => (
+            <div
+              key={i}
+              className={`flex items-start gap-1.5 rounded border px-2.5 py-1.5 ${
+                issue.level === "critical"
+                  ? "border-red-500/15 bg-red-500/[0.04]"
+                  : "border-amber-500/[0.12] bg-amber-500/[0.03]"
+              }`}
+            >
+              {issue.level === "critical"
+                ? <AlertCircle   className="mt-0.5 h-2.5 w-2.5 shrink-0 text-red-400/60" />
+                : <AlertTriangle className="mt-0.5 h-2.5 w-2.5 shrink-0 text-amber-400/55" />
+              }
+              <p className={`text-[9.5px] leading-snug ${
+                issue.level === "critical" ? "text-red-300/65" : "text-amber-300/65"
+              }`}>{issue.text}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* A — Prompt input */}
       <div className="space-y-1.5">

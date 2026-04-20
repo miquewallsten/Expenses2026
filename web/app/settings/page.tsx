@@ -1,19 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import AppShell from "@/components/shell/AppShell";
 import { getCurrentRole, getCurrentUserId, getCurrentCompanyId } from "@/lib/session";
 import { buildGlobalNav, GlobalNavItem } from "@/lib/navigation";
+import { useLocale, type Locale } from "@/context/LocaleContext";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-const SECTIONS = [
-  "Profile",
-  "Language & Region",
-  "Notifications",
-  "Appearance",
-  "AI Preferences",
-];
+type SectionKey = "profile" | "languageRegion" | "notifications" | "appearance" | "aiPreferences";
+const SECTION_KEYS: SectionKey[] = ["profile", "languageRegion", "notifications", "appearance", "aiPreferences"];
 
 const TIMEZONES = [
   "America/Mexico_City",
@@ -26,34 +23,27 @@ const TIMEZONES = [
   "UTC",
 ];
 
-const AI_HINTS: Record<string, string> = {
-  "Profile":            "Your display name and user ID are used in audit logs and approval notifications.",
-  "Language & Region":  "Language affects all UI labels and date formats. Timezone is used when rendering invoice dates and approval timestamps.",
-  "Notifications":      "Email and in-app notifications are triggered by submission status changes and approval events.",
-  "Appearance":         "Theme selection persists in localStorage. Dark mode is recommended for extended document review sessions.",
-  "AI Preferences":     "Enabling the AI panel by default loads Copilot context on every page. Disable to improve initial load performance.",
-};
-
 function WorkList({
   active,
   onSelect,
 }: {
-  active: string;
-  onSelect: (s: string) => void;
+  active: SectionKey;
+  onSelect: (s: SectionKey) => void;
 }) {
+  const t = useTranslations("settings");
   return (
     <ul className="py-1">
-      {SECTIONS.map((s) => (
-        <li key={s}>
+      {SECTION_KEYS.map((key) => (
+        <li key={key}>
           <button
-            onClick={() => onSelect(s)}
+            onClick={() => onSelect(key)}
             className={`w-full px-4 py-2.5 text-left text-xs transition-colors ${
-              active === s
+              active === key
                 ? "bg-white/10 text-white font-semibold"
                 : "text-white/50 hover:text-white/75 hover:bg-white/5"
             }`}
           >
-            {s}
+            {t(`sections.${key}` as Parameters<typeof t>[0])}
           </button>
         </li>
       ))}
@@ -61,8 +51,9 @@ function WorkList({
   );
 }
 
-function SettingsDetail({ section }: { section: string }) {
-  const [language, setLanguage]       = useState("en");
+function SettingsDetail({ sectionKey }: { sectionKey: SectionKey }) {
+  const t = useTranslations("settings");
+  const { locale, setLocale } = useLocale();
   const [timezone, setTimezone]       = useState("America/Mexico_City");
   const [theme, setTheme]             = useState("dark");
   const [notifications, setNotifications] = useState(true);
@@ -75,26 +66,26 @@ function SettingsDetail({ section }: { section: string }) {
   return (
     <div className="max-w-lg space-y-6">
       <div>
-        <h2 className="text-sm font-semibold text-white">{section}</h2>
+        <h2 className="text-sm font-semibold text-white">
+          {t(`sections.${sectionKey}` as Parameters<typeof t>[0])}
+        </h2>
         <p className="mt-0.5 text-xs text-white/35">
-          {AI_HINTS[section]}
+          {t(`hints.${sectionKey}` as Parameters<typeof t>[0])}
         </p>
       </div>
 
       <div className="space-y-4 rounded-xl border border-white/[0.07] bg-black/20 p-5">
-        {(section === "Language & Region" || section === "Profile") && (
+        {(sectionKey === "languageRegion" || sectionKey === "profile") && (
           <>
             <div>
-              <label className={labelCls}>Language</label>
-              <select value={language} onChange={(e) => setLanguage(e.target.value)} className={selectCls}>
-                <option value="en">English</option>
-                <option value="es">Español</option>
-                <option value="pt">Português</option>
-                <option value="fr">Français</option>
+              <label className={labelCls}>{t("language")}</label>
+              <select value={locale} onChange={(e) => setLocale(e.target.value as Locale)} className={selectCls}>
+                <option value="en">{t("langOptions.en")}</option>
+                <option value="es">{t("langOptions.es")}</option>
               </select>
             </div>
             <div>
-              <label className={labelCls}>Timezone</label>
+              <label className={labelCls}>{t("timezone")}</label>
               <select value={timezone} onChange={(e) => setTimezone(e.target.value)} className={selectCls}>
                 {TIMEZONES.map((tz) => (
                   <option key={tz} value={tz}>{tz}</option>
@@ -104,22 +95,22 @@ function SettingsDetail({ section }: { section: string }) {
           </>
         )}
 
-        {section === "Appearance" && (
+        {sectionKey === "appearance" && (
           <div>
-            <label className={labelCls}>Theme</label>
+            <label className={labelCls}>{t("theme")}</label>
             <select value={theme} onChange={(e) => setTheme(e.target.value)} className={selectCls}>
-              <option value="dark">Dark</option>
-              <option value="light">Light</option>
-              <option value="system">System</option>
+              <option value="dark">{t("themeOptions.dark")}</option>
+              <option value="light">{t("themeOptions.light")}</option>
+              <option value="system">{t("themeOptions.system")}</option>
             </select>
           </div>
         )}
 
-        {section === "Notifications" && (
+        {sectionKey === "notifications" && (
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm text-white/75 font-medium">Enable Notifications</div>
-              <div className="text-xs text-white/35 mt-0.5">Receive in-app alerts for approvals and submissions.</div>
+              <div className="text-sm text-white/75 font-medium">{t("enableNotifications")}</div>
+              <div className="text-xs text-white/35 mt-0.5">{t("notificationsDesc")}</div>
             </div>
             <button
               onClick={() => setNotifications((v) => !v)}
@@ -132,11 +123,11 @@ function SettingsDetail({ section }: { section: string }) {
           </div>
         )}
 
-        {section === "AI Preferences" && (
+        {sectionKey === "aiPreferences" && (
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm text-white/75 font-medium">AI Panel Open by Default</div>
-              <div className="text-xs text-white/35 mt-0.5">Automatically expand the Copilot panel on page load.</div>
+              <div className="text-sm text-white/75 font-medium">{t("aiPanelDefault")}</div>
+              <div className="text-xs text-white/35 mt-0.5">{t("aiPanelDesc")}</div>
             </div>
             <button
               onClick={() => setAiOpen((v) => !v)}
@@ -152,33 +143,38 @@ function SettingsDetail({ section }: { section: string }) {
 
       <div className="flex gap-3">
         <button className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-white hover:bg-white/10 transition-colors">
-          Save Changes
+          {t("saveChanges")}
         </button>
         <button className="rounded-lg px-4 py-2 text-xs font-medium text-white/35 hover:text-white/60 transition-colors">
-          Reset to Default
+          {t("resetDefault")}
         </button>
       </div>
     </div>
   );
 }
 
-function AiPanel({ section }: { section: string }) {
+function AiPanel({ sectionKey }: { sectionKey: SectionKey }) {
+  const t = useTranslations("settings");
+  const suggestionKey = (["languageRegion", "notifications", "aiPreferences"] as SectionKey[]).includes(sectionKey)
+    ? sectionKey
+    : "default";
+
   return (
     <div className="space-y-3">
       <div className="rounded-lg border border-white/[0.07] bg-white/[0.03] p-3">
-        <div className="text-[10px] font-bold uppercase tracking-widest text-white/25 mb-1.5">About this section</div>
-        <p className="text-xs text-white/50 leading-relaxed">{AI_HINTS[section]}</p>
+        <div className="text-[10px] font-bold uppercase tracking-widest text-white/25 mb-1.5">
+          {t("aboutSection")}
+        </div>
+        <p className="text-xs text-white/50 leading-relaxed">
+          {t(`hints.${sectionKey}` as Parameters<typeof t>[0])}
+        </p>
       </div>
       <div className="rounded-lg border border-white/[0.07] bg-white/[0.03] p-3">
-        <div className="text-[10px] font-bold uppercase tracking-widest text-white/25 mb-1.5">Suggestion</div>
+        <div className="text-[10px] font-bold uppercase tracking-widest text-white/25 mb-1.5">
+          {t("suggestion")}
+        </div>
         <p className="text-xs text-white/40 leading-relaxed">
-          {section === "Language & Region"
-            ? "Your invoices use MXN. Setting timezone to America/Mexico_City ensures dates align with SAT timestamps."
-            : section === "Notifications"
-            ? "Enable notifications to stay informed when a submitted expense report changes status."
-            : section === "AI Preferences"
-            ? "Keeping the AI panel open is recommended when reviewing complex CFDI documents."
-            : "No suggestions for this section."}
+          {t(`suggestions.${suggestionKey}` as Parameters<typeof t>[0])}
         </p>
       </div>
     </div>
@@ -186,7 +182,9 @@ function AiPanel({ section }: { section: string }) {
 }
 
 export default function SettingsPage() {
-  const [activeSection, setActiveSection] = useState("Language & Region");
+  const t = useTranslations("settings");
+  const tn = useTranslations("nav");
+  const [activeSection, setActiveSection] = useState<SectionKey>("languageRegion");
   const [globalNavItems, setGlobalNavItems] = useState<GlobalNavItem[]>([]);
 
   useEffect(() => {
@@ -219,16 +217,16 @@ export default function SettingsPage() {
 
   return (
     <AppShell
-      title="Settings"
+      title={tn("settings")}
       globalNavItems={globalNavItems}
-      workListTitle="Settings"
+      workListTitle={t("title")}
       workList={
         <WorkList active={activeSection} onSelect={setActiveSection} />
       }
-      detail={<SettingsDetail section={activeSection} />}
+      detail={<SettingsDetail sectionKey={activeSection} />}
       aiPanel={
         <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-l border-white/[0.07] bg-zinc-950 px-3 py-4">
-          <AiPanel section={activeSection} />
+          <AiPanel sectionKey={activeSection} />
         </aside>
       }
     />

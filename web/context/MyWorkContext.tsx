@@ -61,6 +61,7 @@ export interface ExpensePolicy {
   manager_approval_required: boolean;
   accounting_review_required: boolean;
   ai_policy_assist_enabled: boolean;
+  allow_document_free_expenses: boolean;
 }
 
 export interface PortalDerived {
@@ -71,6 +72,7 @@ export interface PortalDerived {
   international_expenses_allowed: boolean;
   xml_required_mode: string;
   pdf_pair_required_for_cfdi: boolean;
+  allow_document_free_expenses: boolean;
   manager_flow_enabled: boolean;
   accounting_flow_enabled: boolean;
   workflow_mode: string;
@@ -238,7 +240,8 @@ export function MyWorkProvider({ children }: { children: ReactNode }) {
     role: user.role,
     permissionKeys: user.permissionKeys,
     derived: portalConfig?.derived ?? null,
-  }), [user.role, user.permissionKeys, portalConfig]);
+    capabilities: user.capabilities,
+  }), [user.role, user.permissionKeys, user.capabilities, portalConfig]);
 
   // ── Compute visible modules ──────────────────────────────────────────────
 

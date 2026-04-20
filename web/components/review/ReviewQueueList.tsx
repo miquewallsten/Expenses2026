@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { AlertTriangle, ReceiptText } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -35,6 +36,7 @@ function formatDate(iso: string) {
 // ── Issue badges ──────────────────────────────────────────────────────────────
 
 function IssueBadges({ item, variant }: { item: any; variant: "manager" | "accounting" }) {
+  const t = useTranslations("accounting");
   const badges: React.ReactNode[] = [];
 
   if (variant === "accounting" && !item.account_code) {
@@ -44,7 +46,7 @@ function IssueBadges({ item, variant }: { item: any; variant: "manager" | "accou
         className="inline-flex items-center gap-0.5 rounded border border-amber-500/20 bg-amber-500/[0.05] px-1.5 py-0.5 text-[8px] text-amber-300/55"
       >
         <AlertTriangle className="h-2 w-2 shrink-0" />
-        No account code
+        {t("noAccountCode")}
       </span>
     );
   }
@@ -78,6 +80,7 @@ function QueueRow({
   onSelect: () => void;
   variant: "manager" | "accounting";
 }) {
+  const tc = useTranslations("common");
   const secondaryParts: string[] = [];
   if (item.id) secondaryParts.push(`#${item.id}`);
   if (item.created_at) secondaryParts.push(formatDate(item.created_at));

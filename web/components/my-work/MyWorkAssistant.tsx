@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Bot, CheckCircle2, Send, TriangleAlert } from "lucide-react";
 import { useMyWorkContext } from "@/context/MyWorkContext";
 import { useUserContext } from "@/context/UserContext";
@@ -122,9 +123,16 @@ function buildInsightPayload(
  *
  * Returns an empty list when no item is selected.
  */
+type AssistantStrings = {
+  p: Record<string, string>;
+  a: Record<string, string>;
+  addAllocation: (dim: string) => string;
+};
+
 function deriveQuickPrompts(
   ac: AssistantContext,
   moduleId: string | null,
+  s: AssistantStrings,
 ): string[] {
   if (!ac.expenseId) return [];
   const candidates: string[] = [];
@@ -132,43 +140,43 @@ function deriveQuickPrompts(
   // MY_EXPENSES: doc-state-driven prompts take priority when doc state is known
   if (moduleId === MODULE_IDS.MY_EXPENSES && ac.workflowStep === "employee_draft") {
     if (ac.xmlRequired && !ac.hasXml) {
-      candidates.push("How do I get the CFDI XML for this expense?");
+      candidates.push(s.p.howGetCFDI);
     } else if (ac.hasXml && ac.satStatus === "error") {
-      candidates.push("Why did SAT validation fail?");
-      candidates.push("Can I submit without SAT validation passing?");
+      candidates.push(s.p.whySATFailed);
+      candidates.push(s.p.submitWithoutSAT);
     } else if (ac.hasXml && ac.satStatus === "warning") {
-      candidates.push("What do the SAT validation warnings mean?");
+      candidates.push(s.p.satWarningsMean);
     } else if (ac.hasXml && ac.pdfPairRequired && !ac.hasPdf) {
-      candidates.push("How do I get the paired PDF for this invoice?");
+      candidates.push(s.p.howGetPDF);
     } else if (ac.hasXml && (!ac.pdfPairRequired || ac.hasPdf)) {
-      candidates.push("Is this expense ready to submit?");
+      candidates.push(s.p.readyToSubmit);
     }
   }
 
   // Blocking issues
   if (ac.blockerCount > 0 && candidates.length < 3)
-    candidates.push("How do I clear these blockers?");
+    candidates.push(s.p.clearBlockers);
   if (ac.missingAccountCode && moduleId === MODULE_IDS.ACCOUNTING_REVIEW)
-    candidates.push("Suggest an account code for this category");
+    candidates.push(s.p.suggestAccountCode);
   if (ac.missingAllocations.length > 0 && candidates.length < 3)
-    candidates.push(`How do I add the ${ac.missingAllocations[0].toLowerCase()} allocation?`);
+    candidates.push(s.addAllocation(ac.missingAllocations[0].toLowerCase()));
   if (ac.missingRequiredDocuments && candidates.length < 3)
-    candidates.push("What document is required for this expense?");
+    candidates.push(s.p.whatDocRequired);
 
   // Quality / confidence
   if (ac.aiCategoryConfidence === "low" && candidates.length < 3)
-    candidates.push("Is the AI category suggestion accurate?");
+    candidates.push(s.p.aiCategoryAccurate);
   if (ac.hasWarnings && candidates.length < 3)
-    candidates.push("Explain the current warnings");
+    candidates.push(s.p.explainWarnings);
   if (ac.currentStatus === "rejected" && candidates.length < 3)
-    candidates.push("What caused the rejection?");
+    candidates.push(s.p.causeOfRejection);
 
   // Workflow-stage guidance (only fills remaining slots)
   if (candidates.length < 3) {
     switch (ac.workflowStep) {
-      case "employee_draft":    candidates.push("Is this ready to submit?");              break;
-      case "manager_review":    candidates.push("What should I verify before approving?"); break;
-      case "accounting_review": candidates.push("Is the account code correct?");          break;
+      case "employee_draft":    candidates.push(s.p.readyToSubmitShort);       break;
+      case "manager_review":    candidates.push(s.p.verifyBeforeApproving);    break;
+      case "accounting_review": candidates.push(s.p.isAccountCodeCorrect);     break;
     }
   }
 
@@ -178,41 +186,43 @@ function deriveQuickPrompts(
 
 // Deterministic primary action — overrides AI text for the three canonical states
 
-function getDecisiveAction(ac: AssistantContext): string | null {
+function getDecisiveAction(ac: AssistantContext, s: AssistantStrings): string | null {
   if (!ac.expenseId) return null;
-  if (ac.xmlRequired && !ac.hasXml)              return "Upload XML to continue";
-  if (ac.hasXml && ac.pdfPairRequired && !ac.hasPdf) return "Upload PDF to complete this expense";
-  if (!ac.hasBlockers && ac.workflowStep === "employee_draft") return "Submit expense for review";
+  if (ac.xmlRequired && !ac.hasXml)              return s.a.uploadXML;
+  if (ac.hasXml && ac.pdfPairRequired && !ac.hasPdf) return s.a.uploadPDF;
+  if (!ac.hasBlockers && ac.workflowStep === "employee_draft") return s.a.submitExpense;
   return null; // fall through to AI recommendation
 }
 
 // State bullets — deterministic, based on doc/SAT state, not AI
 
 function StateBullets({ ac }: { ac: AssistantContext }) {
+  const tb = useTranslations("myWork.assistant.bullets");
+  const ta = useTranslations("myWork.assistant");
   type Bullet = { text: string; cls: string; icon: "ok" | "warn" | "info" };
   const bullets: Bullet[] = [];
 
   if (ac.hasXml) {
-    bullets.push({ text: "XML is valid and processed", cls: "text-emerald-400/65", icon: "ok" });
+    bullets.push({ text: tb("xmlValid"), cls: "text-emerald-400/65", icon: "ok" });
   }
   if (ac.satStatus === "valid") {
-    bullets.push({ text: "SAT validation passed", cls: "text-emerald-400/65", icon: "ok" });
+    bullets.push({ text: tb("satPassed"), cls: "text-emerald-400/65", icon: "ok" });
   } else if (ac.satStatus === "warning") {
-    bullets.push({ text: "SAT validation passed with warnings", cls: "text-amber-400/65", icon: "warn" });
+    bullets.push({ text: tb("satWarning"), cls: "text-amber-400/65", icon: "warn" });
   } else if (ac.satStatus === "error") {
-    bullets.push({ text: "SAT validation failed", cls: "text-red-400/60", icon: "warn" });
+    bullets.push({ text: tb("satFailed"), cls: "text-red-400/60", icon: "warn" });
   }
   if (ac.pdfPairRequired && ac.hasXml && !ac.hasPdf) {
-    bullets.push({ text: "PDF is required for CFDI pairing", cls: "text-white/40", icon: "info" });
+    bullets.push({ text: tb("pdfRequired"), cls: "text-white/40", icon: "info" });
   } else if (ac.pdfPairRequired && ac.hasPdf) {
-    bullets.push({ text: "PDF uploaded", cls: "text-emerald-400/65", icon: "ok" });
+    bullets.push({ text: tb("pdfUploaded"), cls: "text-emerald-400/65", icon: "ok" });
   }
 
   if (!bullets.length) return null;
 
   return (
     <div className="mt-2.5 border-t border-white/[0.05] pt-2">
-      <p className="mb-1.5 text-[9px] uppercase tracking-wider text-white/18">Why?</p>
+      <p className="mb-1.5 text-[9px] uppercase tracking-wider text-white/18">{ta("why")}</p>
       <ul className="space-y-1">
         {bullets.map((b, i) => (
           <li key={i} className={`flex items-center gap-1.5 text-[9px] ${b.cls} opacity-70`}>
@@ -255,6 +265,36 @@ function Chip({
 export default function MyWorkAssistant() {
   const myWork = useMyWorkContext();
   const user   = useUserContext();
+  const ta = useTranslations("myWork.assistant");
+  const tp = useTranslations("myWork.assistant.prompts");
+  const tac = useTranslations("myWork.assistant.actions");
+
+  const assistantStrings: AssistantStrings = useMemo(() => ({
+    p: {
+      howGetCFDI:          tp("howGetCFDI"),
+      whySATFailed:        tp("whySATFailed"),
+      submitWithoutSAT:    tp("submitWithoutSAT"),
+      satWarningsMean:     tp("satWarningsMean"),
+      howGetPDF:           tp("howGetPDF"),
+      readyToSubmit:       tp("readyToSubmit"),
+      clearBlockers:       tp("clearBlockers"),
+      suggestAccountCode:  tp("suggestAccountCode"),
+      whatDocRequired:     tp("whatDocRequired"),
+      aiCategoryAccurate:  tp("aiCategoryAccurate"),
+      explainWarnings:     tp("explainWarnings"),
+      causeOfRejection:    tp("causeOfRejection"),
+      readyToSubmitShort:  tp("readyToSubmitShort"),
+      verifyBeforeApproving: tp("verifyBeforeApproving"),
+      isAccountCodeCorrect:  tp("isAccountCodeCorrect"),
+    },
+    a: {
+      uploadXML:     tac("uploadXML"),
+      uploadPDF:     tac("uploadPDF"),
+      submitExpense: tac("submitExpense"),
+    },
+    addAllocation: (dim: string) => tp("addAllocation", { dim }),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), []);
 
   const { activeModule, selectedItem, effectiveConfig } = myWork;
 
@@ -430,12 +470,12 @@ export default function MyWorkAssistant() {
       const data = await res.json();
       setMessages((p) => [
         ...p,
-        { role: "assistant", content: data.content ?? "No response." },
+        { role: "assistant", content: data.content ?? ta("noResponse") },
       ]);
     } catch {
       setMessages((p) => [
         ...p,
-        { role: "assistant", content: "AI assistant did not respond. It may be temporarily offline." },
+        { role: "assistant", content: ta("aiUnavailable") },
       ]);
     } finally {
       setChatLoading(false);
@@ -444,8 +484,8 @@ export default function MyWorkAssistant() {
 
   // Quick prompts derived from decision — recalculated only when selection changes
   const quickPrompts = useMemo(
-    () => decision ? deriveQuickPrompts(decision.assistantContext, moduleId) : [],
-    [decision, moduleId],
+    () => decision ? deriveQuickPrompts(decision.assistantContext, moduleId, assistantStrings) : [],
+    [decision, moduleId, assistantStrings],
   );
 
   const hasContent = isStableItem(selectedItem.expenseId);
@@ -458,7 +498,7 @@ export default function MyWorkAssistant() {
       <div className="hidden h-9 shrink-0 items-center gap-2 border-b border-white/[0.07] px-2.5 lg:flex">
         <Bot className="h-3.5 w-3.5 shrink-0 text-indigo-400/60" />
         <span className="flex-1 truncate text-[11px] font-semibold text-white/50">
-          {activeModule ? activeModule.label : "Assistant"}
+          {ta("copilot")}
         </span>
         {aiStatus?.active_model && (
           <span className="shrink-0 rounded border border-indigo-500/20 bg-indigo-500/[0.08] px-1.5 py-px font-mono text-[8px] text-indigo-300/55">
@@ -473,7 +513,7 @@ export default function MyWorkAssistant() {
         {/* Offline notice */}
         {aiStatus && !aiStatus.available && (
           <p className="text-[10px] leading-relaxed text-white/22">
-            AI offline — validation and XML parsing still work.
+            {ta("aiOffline")}
           </p>
         )}
 
@@ -492,24 +532,24 @@ export default function MyWorkAssistant() {
                 <>
                   {/* Primary action — decisive, deterministic first; AI fallback second */}
                   {(() => {
-                    const decisive = decision ? getDecisiveAction(decision.assistantContext) : null;
+                    const decisive = decision ? getDecisiveAction(decision.assistantContext, assistantStrings) : null;
                     const primary  = decisive ?? recommendation;
                     return primary ? (
                       <>
-                        <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-wider text-white/30">Recommended next step</p>
+                        <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-wider text-white/30">{ta("recommendedStep")}</p>
                         <p className="text-[12px] font-semibold leading-snug text-white/80">{primary}</p>
                       </>
                     ) : null;
                   })()}
                   {/* Supporting AI explanation — secondary, dimmer */}
-                  {recommendation && decision && getDecisiveAction(decision.assistantContext) && (
+                  {recommendation && decision && getDecisiveAction(decision.assistantContext, assistantStrings) && (
                     <p className="mt-2 text-[10px] leading-relaxed text-white/30">{recommendation}</p>
                   )}
                   {explanation && (
                     <p className="mt-1 text-[10px] leading-relaxed text-white/25">{explanation}</p>
                   )}
                   {!recommendation && !decision?.assistantContext.expenseId && (
-                    <p className="text-[11px] text-white/25">No recommendation yet.</p>
+                    <p className="text-[11px] text-white/25">{ta("noRecommendation")}</p>
                   )}
                   {/* Why? — supporting state bullets, reduced weight */}
                   {decision && <StateBullets ac={decision.assistantContext} />}
@@ -531,8 +571,8 @@ export default function MyWorkAssistant() {
           !messages.length && (
             <p className="mt-8 text-center text-[11px] text-white/18">
               {activeModule
-                ? `Select an item in ${activeModule.label} to see insights.`
-                : "Select a module to get started."}
+                ? ta("selectItem", { module: activeModule.label })
+                : ta("selectModule")}
             </p>
           )
         )}
@@ -584,7 +624,7 @@ export default function MyWorkAssistant() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             disabled={chatLoading}
-            placeholder="Ask Assistant…"
+            placeholder={ta("askPlaceholder")}
             className="min-w-0 flex-1 rounded border border-white/[0.09] bg-white/[0.03] px-3 py-2.5 text-sm text-white placeholder-white/20 outline-none transition-colors focus:border-indigo-500/40 disabled:cursor-not-allowed disabled:opacity-40 md:px-2.5 md:py-1.5 md:text-[11px]"
           />
           <button

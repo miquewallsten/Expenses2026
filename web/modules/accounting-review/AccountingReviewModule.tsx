@@ -11,6 +11,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -143,6 +144,10 @@ function QueueList({
   loading: boolean;
   summary: QueueSummary | null;
 }) {
+  const ta = useTranslations("accounting");
+  const tc = useTranslations("common");
+  const tm = useTranslations("manager");
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
 
@@ -150,7 +155,7 @@ function QueueList({
         <div className="shrink-0 border-b border-white/[0.05] bg-black/10 px-3 py-1.5">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
             <span className="text-[9px] font-semibold tabular-nums text-white/35">
-              {summary.total_count} pending
+              {tm("queuePending", { count: summary.total_count })}
             </span>
             <span className="font-mono text-[9px] text-white/28">
               ${summary.total_amount.toFixed(2)}
@@ -168,10 +173,10 @@ function QueueList({
       )}
 
       {loading ? (
-        <div className="px-4 py-6 text-center text-xs text-white/30">Loading…</div>
+        <div className="px-4 py-6 text-center text-xs text-white/30">{tc("loading")}</div>
       ) : !expenses.length ? (
         <div className="flex flex-1 items-center justify-center">
-          <p className="text-xs text-white/22">No expenses pending accounting review.</p>
+          <p className="text-xs text-white/22">{ta("queueEmpty")}</p>
         </div>
       ) : (
         <ul className="flex-1 overflow-y-auto">
@@ -199,7 +204,7 @@ function QueueList({
                 <div className="mt-0.5 flex flex-wrap gap-1">
                   {!e.account_code && (
                     <span className="inline-flex items-center gap-0.5 rounded border border-amber-500/20 bg-amber-500/[0.05] px-1.5 py-px text-[8px] text-amber-300/55">
-                      <AlertTriangle className="h-2 w-2" /> No code
+                      <AlertTriangle className="h-2 w-2" /> {ta("noCode")}
                     </span>
                   )}
                   {e.account_code && (
@@ -227,20 +232,21 @@ function ReadinessBlock({ blockers, defaultOpen }: { blockers: BlockersResult; d
   const { accounting_blockers: ab, poliza_blockers: pb, warnings: ws } = blockers;
   const allClear = ab.length === 0 && pb.length === 0 && ws.length === 0;
   const [showInfo, setShowInfo] = useState(false);
+  const ta = useTranslations("accounting");
 
   const badge = ab.length > 0
-    ? <span className="inline-flex items-center gap-0.5 rounded border border-red-500/25 bg-red-500/10 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-red-300/70"><XCircle className="h-2 w-2" /> Blocked</span>
+    ? <span className="inline-flex items-center gap-0.5 rounded border border-red-500/25 bg-red-500/10 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-red-300/70"><XCircle className="h-2 w-2" /> {ta("readinessBlocked")}</span>
     : pb.length > 0
-    ? <span className="inline-flex items-center gap-0.5 rounded border border-amber-500/25 bg-amber-500/10 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-amber-300/70"><AlertTriangle className="h-2 w-2" /> Review</span>
-    : <span className="inline-flex items-center gap-0.5 rounded border border-emerald-500/25 bg-emerald-500/10 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-emerald-300/70"><CheckCircle2 className="h-2 w-2" /> Ready</span>;
+    ? <span className="inline-flex items-center gap-0.5 rounded border border-amber-500/25 bg-amber-500/10 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-amber-300/70"><AlertTriangle className="h-2 w-2" /> {ta("readinessReview")}</span>
+    : <span className="inline-flex items-center gap-0.5 rounded border border-emerald-500/25 bg-emerald-500/10 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-emerald-300/70"><CheckCircle2 className="h-2 w-2" /> {ta("readinessReady")}</span>;
 
   return (
-    <Collapsible title="Readiness" badge={badge} defaultOpen={defaultOpen ?? !allClear}>
+    <Collapsible title={ta("readiness")} badge={badge} defaultOpen={defaultOpen ?? !allClear}>
       <div className="space-y-1.5">
         {allClear && (
           <div className="flex items-center gap-1.5">
             <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-400/70" />
-            <span className="text-[10px] font-semibold text-emerald-300/70">No blockers</span>
+            <span className="text-[10px] font-semibold text-emerald-300/70">{ta("noBlockers")}</span>
           </div>
         )}
 
@@ -277,7 +283,7 @@ function ReadinessBlock({ blockers, defaultOpen }: { blockers: BlockersResult; d
               className="flex items-center gap-1 text-[9px] text-white/22 hover:text-white/40"
             >
               <ChevronDown className={`h-2.5 w-2.5 transition-transform duration-150 ${showInfo ? "rotate-180" : ""}`} />
-              {showInfo ? "Hide notices" : `${ws.length} notice${ws.length > 1 ? "s" : ""}`}
+              {showInfo ? ta("hideNotices") : ta("noticeCount", { count: ws.length })}
             </button>
             {showInfo && (
               <ul className="mt-0.5 space-y-0.5">
@@ -321,31 +327,34 @@ function RequiredFields({
   accountingSetup: Record<string, any> | null;
   allocationPresence: AllocationPresence | null;
 }) {
+  const ta = useTranslations("accounting");
+  const tc = useTranslations("common");
+
   const as = accountingSetup;
   const showProject = as?.project_required === true;
   const showClient  = as?.client_required  === true;
   const showCC      = as?.cost_center_required === true;
   const showPoliza  = as?.poliza_required === true;
 
-  const dims: { label: string; present: boolean }[] = [];
-  if (showProject) dims.push({ label: "Project",     present: allocationPresence?.has_project     ?? false });
-  if (showClient)  dims.push({ label: "Client",      present: allocationPresence?.has_client      ?? false });
-  if (showCC)      dims.push({ label: "Cost Center", present: allocationPresence?.has_cost_center ?? false });
+  const dims: { key: string; label: string; present: boolean }[] = [];
+  if (showProject) dims.push({ key: "project",    label: ta("dimensions.project"),    present: allocationPresence?.has_project     ?? false });
+  if (showClient)  dims.push({ key: "client",     label: ta("dimensions.client"),     present: allocationPresence?.has_client      ?? false });
+  if (showCC)      dims.push({ key: "costCenter", label: ta("dimensions.costCenter"), present: allocationPresence?.has_cost_center ?? false });
 
   return (
     <div className="overflow-hidden rounded-lg border border-white/[0.07] bg-zinc-900/70">
       <div className="border-b border-white/[0.05] px-3 py-1.5">
-        <span className="text-[9px] font-bold uppercase tracking-widest text-white/28">Required fields</span>
+        <span className="text-[9px] font-bold uppercase tracking-widest text-white/28">{ta("requiredFields")}</span>
       </div>
       <div className="space-y-2.5 px-3 py-2">
 
         {/* Account code */}
         <div>
           <div className="mb-1 flex items-center justify-between">
-            <span className="text-[9px] font-bold uppercase tracking-widest text-white/28">Account code</span>
+            <span className="text-[9px] font-bold uppercase tracking-widest text-white/28">{ta("accountCode")}</span>
             {expense.account_code
               ? <span className="font-mono text-[9px] text-emerald-300/60">{expense.account_code}</span>
-              : <span className="rounded border border-amber-500/20 bg-amber-500/[0.06] px-1.5 py-px text-[8px] font-semibold uppercase tracking-wider text-amber-300/55">Unassigned</span>
+              : <span className="rounded border border-amber-500/20 bg-amber-500/[0.06] px-1.5 py-px text-[8px] font-semibold uppercase tracking-wider text-amber-300/55">{ta("unassigned")}</span>
             }
           </div>
           {actions?.can_assign_account_code && (
@@ -364,7 +373,7 @@ function RequiredFields({
                 disabled={codesSaving || !accountCodeDraft.trim()}
                 className="shrink-0 rounded border border-sky-500/30 bg-sky-500/[0.08] px-3 text-xs font-semibold text-sky-300/70 transition-colors hover:bg-sky-500/[0.14] disabled:opacity-30 min-h-[40px] md:min-h-0 md:px-2.5 md:py-1 md:text-[10px]"
               >
-                Save
+                {tc("save")}
               </button>
               {(expense.account_code || accountCodeDraft) && (
                 <button
@@ -373,7 +382,7 @@ function RequiredFields({
                   disabled={codesSaving}
                   className="shrink-0 rounded border border-white/[0.07] bg-white/[0.03] px-2.5 text-xs text-white/35 transition-colors hover:bg-white/[0.06] disabled:opacity-30 min-h-[40px] md:min-h-0 md:px-2 md:py-1 md:text-[10px]"
                 >
-                  Clear
+                  {tc("clear")}
                 </button>
               )}
             </div>
@@ -386,14 +395,14 @@ function RequiredFields({
         {/* Allocation dimensions */}
         {dims.length > 0 && (
           <div>
-            <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-white/28">Allocations</p>
+            <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-white/28">{ta("allocations")}</p>
             <div
               className="grid gap-1.5"
               style={{ gridTemplateColumns: `repeat(${dims.length}, minmax(0, 1fr))` }}
             >
-              {dims.map(({ label, present }) => (
+              {dims.map(({ key, label, present }) => (
                 <div
-                  key={label}
+                  key={key}
                   className={`rounded border px-2 py-1.5 ${
                     present
                       ? "border-emerald-500/20 bg-emerald-500/[0.04]"
@@ -402,7 +411,7 @@ function RequiredFields({
                 >
                   <p className="text-[8px] font-bold uppercase tracking-widest text-white/22">{label}</p>
                   <p className={`mt-0.5 text-[9px] ${present ? "text-white/45" : "italic text-white/22"}`}>
-                    {present ? "Assigned" : "Missing"}
+                    {present ? tc("assigned") : ta("missing")}
                   </p>
                   {present
                     ? <CheckCircle2 className="mt-0.5 h-2.5 w-2.5 text-emerald-400/55" />
@@ -418,7 +427,7 @@ function RequiredFields({
         {showPoliza && (
           <div className="flex items-center gap-1.5 rounded border border-white/[0.05] bg-black/10 px-2.5 py-1.5">
             <Clock className="h-2.5 w-2.5 shrink-0 text-white/22" />
-            <span className="text-[9px] text-white/35">Póliza required before export.</span>
+            <span className="text-[9px] text-white/35">{ta("polizaRequiredNote")}</span>
           </div>
         )}
 
@@ -476,6 +485,9 @@ function AccountingDetail({
   onGeneratePoliza: () => void;
   decision: ExpenseDecision;
 }) {
+  const ta = useTranslations("accounting");
+  const tm = useTranslations("manager");
+
   if (!expense) {
     return (
       <div className="flex h-full flex-col overflow-hidden">
@@ -486,22 +498,22 @@ function AccountingDetail({
             className="flex h-11 shrink-0 items-center gap-2 border-b border-white/[0.07] px-4 text-[11px] text-white/40 transition-colors hover:text-white/65"
           >
             <ChevronLeft className="h-3.5 w-3.5" />
-            Back to queue
+            {tm("backToQueue")}
           </button>
         )}
         <div className="flex flex-1 items-center justify-center">
-          <p className="text-xs text-white/22">Select an expense to review.</p>
+          <p className="text-xs text-white/22">{tm("selectExpense")}</p>
         </div>
       </div>
     );
   }
 
   const summaryRows: [string, string][] = [
-    ["Description", expense.description],
-    ["Amount",      `$${expense.amount.toFixed(2)}`],
-    ["Category",    expense.detected_category ?? "—"],
-    ["Account",     expense.account_code ?? "—"],
-    ["Created",     new Date(expense.created_at).toLocaleString()],
+    [tm("fields.description"), expense.description],
+    [tm("fields.amount"),      `$${expense.amount.toFixed(2)}`],
+    [tm("fields.category"),    expense.detected_category ?? "—"],
+    [ta("account"),            expense.account_code ?? "—"],
+    [tm("fields.created"),     new Date(expense.created_at).toLocaleString()],
   ];
 
   return (
@@ -514,7 +526,7 @@ function AccountingDetail({
           className="flex h-11 shrink-0 items-center gap-2 border-b border-white/[0.07] px-4 text-[11px] text-white/40 transition-colors hover:text-white/65"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
-          Back to queue
+          {tm("backToQueue")}
         </button>
       )}
       <div className="flex-1 overflow-y-auto px-5 py-4">
@@ -523,7 +535,7 @@ function AccountingDetail({
         {/* Header */}
         <div>
           <h2 className="text-sm font-semibold text-white">{expense.description}</h2>
-          <p className="mt-0.5 text-xs text-white/35">Expense #{expense.id}</p>
+          <p className="mt-0.5 text-xs text-white/35">{tm("expenseTitle", { id: expense.id })}</p>
         </div>
 
         <StatusNextAction decision={decision} />
@@ -590,7 +602,7 @@ function AccountingDetail({
 
         {decision.visibleSections.includes("ai_category_explanation") && expense.accounting_explanation && (
           <Collapsible
-            title="Classification"
+            title={ta("classification")}
             defaultOpen={decision.expandedSections.includes("ai_category_explanation")}
           >
             <div className="space-y-1">
@@ -614,7 +626,7 @@ function AccountingDetail({
         )}
 
         {decision.visibleSections.includes("poliza") && (
-        <Collapsible title="Póliza generation">
+        <Collapsible title={ta("polizaGeneration")}>
           <div className="space-y-2">
             {actions?.can_generate_accounting_event ? (
               <button
@@ -623,13 +635,13 @@ function AccountingDetail({
                 disabled={polizaGenerating || acting}
                 className="rounded border border-emerald-500/30 bg-emerald-500/[0.07] px-2.5 py-1 text-[10px] font-semibold text-emerald-300/70 transition-colors hover:bg-emerald-500/[0.13] disabled:opacity-30"
               >
-                {polizaGenerating ? "Generating…" : "Generate Póliza"}
+                {polizaGenerating ? ta("generating") : ta("generatePoliza")}
               </button>
             ) : (
               <p className="text-[9px] text-white/28">
                 {blockers && blockers.poliza_blockers.length > 0
                   ? blockers.poliza_blockers[0]
-                  : "Not available for this expense."}
+                  : ta("polizaNotAvailable")}
               </p>
             )}
             {polizaResult && (
@@ -654,6 +666,7 @@ function AccountingDetail({
 export default function AccountingReviewModule() {
   const { effectiveConfig } = useMyWorkContext();
   const { userIdStr, companyId } = useUserContext();
+  const tm = useTranslations("manager");
 
   const uid = userIdStr ?? "1";
   const cid = companyId ?? 1;
@@ -814,7 +827,7 @@ export default function AccountingReviewModule() {
         setActionError((body as { detail?: string })?.detail ?? `${label} failed (${r.status}).`);
       }
     } catch {
-      setActionError("Could not reach the server.");
+      setActionError(tm("serverError"));
     } finally {
       setActing(false);
     }
@@ -837,7 +850,7 @@ export default function AccountingReviewModule() {
         setCodesError((body as { detail?: string })?.detail ?? `Save failed (${r.status}).`);
       }
     } catch {
-      setCodesError("Could not reach the server.");
+      setCodesError(tm("serverError"));
     } finally {
       setCodesSaving(false);
     }
@@ -859,7 +872,7 @@ export default function AccountingReviewModule() {
         setCodesError((body as { detail?: string })?.detail ?? `Clear failed (${r.status}).`);
       }
     } catch {
-      setCodesError("Could not reach the server.");
+      setCodesError(tm("serverError"));
     } finally {
       setCodesSaving(false);
     }
@@ -881,7 +894,7 @@ export default function AccountingReviewModule() {
         setPolizaError((body as { detail?: string })?.detail ?? `Generation failed (${r.status}).`);
       }
     } catch {
-      setPolizaError("Could not reach the server.");
+      setPolizaError(tm("serverError"));
     } finally {
       setPolizaGenerating(false);
     }

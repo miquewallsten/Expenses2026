@@ -16,6 +16,7 @@
  */
 
 import { useCallback, useMemo, useRef, useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
 import EmployeeExpenseList from "@/components/employee/EmployeeExpenseList";
 import EmployeeExpenseDetail from "@/components/employee/EmployeeExpenseDetail";
@@ -69,6 +70,8 @@ interface ExpenseDraftState {
 export default function MyExpensesModule() {
   const { effectiveConfig, setSelectedItem, clearSelectedItem } = useMyWorkContext();
   const { userIdStr, companyId } = useUserContext();
+  const te = useTranslations("employee");
+  const tc = useTranslations("common");
 
   // ── Local state ────────────────────────────────────────────────────────────
   const [expenses, setExpenses]     = useState<Expense[]>([]);
@@ -77,6 +80,14 @@ export default function MyExpensesModule() {
   const [uploading, setUploading]   = useState(false);
   const [dragOver, setDragOver]     = useState(false);
   const [draftState, setDraftState] = useState<ExpenseDraftState | null>(null);
+
+  // ── Simple-expense (document-free) form state ─────────────────────────────
+  const [showSimpleForm, setShowSimpleForm] = useState(false);
+  const [simpleDesc, setSimpleDesc]         = useState("");
+  const [simpleAmount, setSimpleAmount]     = useState("");
+  const [simpleDate, setSimpleDate]         = useState(() => new Date().toISOString().substring(0, 10));
+  const [simpleSubmitting, setSimpleSubmitting] = useState(false);
+  const [simpleError, setSimpleError]       = useState<string | null>(null);
 
   // Keep a ref to the current selection so loadExpenses can read it without
   // being re-created every time `selected` changes.
@@ -351,6 +362,41 @@ export default function MyExpensesModule() {
     ? decision.assistantContext.policyNotes.join(" · ")
     : null;
 
+  const docFreeAllowed = (effectiveConfig?.derived as { allow_document_free_expenses?: boolean } | null | undefined)?.allow_document_free_expenses ?? false;
+
+  // ── Simple expense creation (document-free) ────────────────────────────────
+  const handleCreateSimple = useCallback(async () => {
+    if (!simpleDesc.trim() || !simpleAmount) return;
+    const cid = companyId ?? 1;
+    setSimpleSubmitting(true);
+    setSimpleError(null);
+    try {
+      const res = await fetch(`${API}/expenses/`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json", "X-User-Id": userIdStr ?? "1" },
+        body:    JSON.stringify({
+          company_id:   cid,
+          amount:       parseFloat(simpleAmount),
+          description:  simpleDesc.trim(),
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { detail?: string }).detail ?? "Failed to create expense");
+      }
+      const created: Expense = await res.json();
+      setShowSimpleForm(false);
+      setSimpleDesc("");
+      setSimpleAmount("");
+      setSimpleDate(new Date().toISOString().substring(0, 10));
+      loadExpenses(false, created.id);
+    } catch (e) {
+      setSimpleError(e instanceof Error ? e.message : "Unknown error");
+    } finally {
+      setSimpleSubmitting(false);
+    }
+  }, [simpleDesc, simpleAmount, companyId, userIdStr, loadExpenses]);
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
@@ -365,36 +411,95 @@ export default function MyExpensesModule() {
         ].join(" ")}
       >
         {/* Upload zone — tap-friendly on mobile */}
-        <div
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDragOver(false);
-            if (!uploading && e.dataTransfer.files.length) uploadFiles(e.dataTransfer.files);
-          }}
-          onClick={() => { if (!uploading) fileInputRef.current?.click(); }}
-          className={[
-            "mx-3 mt-2 mb-1 shrink-0 rounded border-2 border-dashed px-4 text-center transition-colors",
-            isMobile ? "py-4" : "py-2.5",
-            uploading
-              ? "cursor-not-allowed border-indigo-500/30 bg-indigo-500/[0.04]"
-              : dragOver
-              ? "cursor-copy border-indigo-500/50 bg-indigo-500/[0.07]"
-              : "cursor-pointer border-white/[0.09] bg-white/[0.02] hover:border-white/[0.15]",
-          ].join(" ")}
-        >
-          <p className={isMobile ? "text-xs text-white/30" : "text-[10px] text-white/30"}>
-            {uploading
-              ? "Uploading…"
-              : isMobile
-              ? "Tap to upload XML, PDF, or tickets"
-              : "Drag & drop XML, PDF, or tickets"}
-          </p>
-        </div>
+        {showSimpleForm ? (
+          /* ── Simple-expense inline form ────────────────────────────────── */
+          <div className="mx-3 mt-2 mb-1 shrink-0 rounded border border-white/[0.09] bg-white/[0.02] px-3 py-2.5">
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-white/40">{te("quickExpenseTitle")}</p>
+            <div className="flex flex-col gap-2">
+              <input
+                autoFocus
+                type="text"
+                placeholder={te("descriptionPlaceholder")}
+                value={simpleDesc}
+                onChange={(e) => setSimpleDesc(e.target.value)}
+                className="w-full rounded border border-white/[0.08] bg-transparent px-2.5 py-1.5 text-xs text-white/80 placeholder-white/20 outline-none focus:border-white/[0.18]"
+              />
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  placeholder={te("amountPlaceholder")}
+                  value={simpleAmount}
+                  onChange={(e) => setSimpleAmount(e.target.value)}
+                  min="0"
+                  step="0.01"
+                  className="w-28 rounded border border-white/[0.08] bg-transparent px-2.5 py-1.5 text-xs text-white/80 placeholder-white/20 outline-none focus:border-white/[0.18]"
+                />
+                <input
+                  type="date"
+                  value={simpleDate}
+                  onChange={(e) => setSimpleDate(e.target.value)}
+                  className="flex-1 rounded border border-white/[0.08] bg-transparent px-2.5 py-1.5 text-xs text-white/80 outline-none focus:border-white/[0.18]"
+                />
+              </div>
+              {simpleError && <p className="text-[10px] text-red-400">{simpleError}</p>}
+              <div className="flex gap-2">
+                <button
+                  onClick={handleCreateSimple}
+                  disabled={simpleSubmitting || !simpleDesc.trim() || !simpleAmount}
+                  className="flex-1 rounded bg-indigo-600 py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {simpleSubmitting ? te("creating") : te("create")}
+                </button>
+                <button
+                  onClick={() => { setShowSimpleForm(false); setSimpleError(null); }}
+                  className="rounded border border-white/[0.1] px-3 py-1.5 text-[11px] text-white/50 transition-colors hover:text-white/70"
+                >
+                  {tc("cancel")}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              if (!uploading && e.dataTransfer.files.length) uploadFiles(e.dataTransfer.files);
+            }}
+            onClick={() => { if (!uploading) fileInputRef.current?.click(); }}
+            className={[
+              "mx-3 mt-2 mb-1 shrink-0 rounded border-2 border-dashed px-4 text-center transition-colors",
+              isMobile ? "py-4" : "py-2.5",
+              uploading
+                ? "cursor-not-allowed border-indigo-500/30 bg-indigo-500/[0.04]"
+                : dragOver
+                ? "cursor-copy border-indigo-500/50 bg-indigo-500/[0.07]"
+                : "cursor-pointer border-white/[0.09] bg-white/[0.02] hover:border-white/[0.15]",
+            ].join(" ")}
+          >
+            <p className={isMobile ? "text-xs text-white/30" : "text-[10px] text-white/30"}>
+              {uploading
+                ? tc("uploading")
+                : isMobile
+                ? te("tapToUpload")
+                : te("dragDropUpload")}
+            </p>
+          </div>
+        )}
 
         {policyHint && (
           <p className="mx-3 mb-1.5 text-[9px] leading-snug text-white/22">{policyHint}</p>
+        )}
+
+        {docFreeAllowed && !showSimpleForm && (
+          <button
+            onClick={() => setShowSimpleForm(true)}
+            className="mx-3 mb-1.5 shrink-0 text-left text-[10px] text-indigo-400/70 hover:text-indigo-300/90 transition-colors"
+          >
+            {te("createWithoutDoc")}
+          </button>
         )}
 
         <input
@@ -415,6 +520,7 @@ export default function MyExpensesModule() {
           loading={loading}
           uploading={uploading}
           onNewExpense={() => { if (!uploading) fileInputRef.current?.click(); }}
+          onNewSimpleExpense={docFreeAllowed ? () => setShowSimpleForm(true) : undefined}
         />
       </div>
 

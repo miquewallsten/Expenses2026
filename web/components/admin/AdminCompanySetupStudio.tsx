@@ -3,14 +3,18 @@
 import { useState, useEffect, useRef } from "react";
 import {
   Save, Loader2, CheckCircle2, AlertCircle, Sparkles,
-  Building2, Plus, Pencil, Trash2, X, AlertTriangle,
+  Building2, Plus, Pencil, Trash2, X, AlertTriangle, ImagePlus,
 } from "lucide-react";
-import {
-  getPortalConfigConflicts,
-  type PortalConfigConflict,
-} from "@/lib/portal-config-conflicts";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+const COMPANY_SETUP_CODES = new Set([
+  "MANAGER_FLOW_NO_MANAGERS",
+  "MANAGER_WORKFLOW_NO_MANAGERS",
+  "REQUIRE_MANAGER_ALL_NO_MANAGERS",
+  "EXPENSE_POLICY_MANAGER_APPROVAL_NO_MANAGERS",
+  "MULTI_COUNTRY_INTL_DISABLED",
+]);
 
 interface Props {
   companyId: number;
@@ -455,6 +459,35 @@ export default function AdminCompanySetupStudio({
   const [addingEntity, setAddingEntity]   = useState(false);
   const [deletingId, setDeletingId]       = useState<number | null>(null);
 
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoError, setLogoError]         = useState<string | null>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoUpload = async (file: File) => {
+    setLogoUploading(true);
+    setLogoError(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`${API}/admin/company-setup/${companyId}/logo`, {
+        method: "POST",
+        headers: { "X-User-Id": "1" },
+        body: fd,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.detail ?? `${res.status}`);
+      }
+      const data = await res.json();
+      setForm((prev) => ({ ...prev, logo_url: data.logo_url }));
+      onSaved?.({ ...form, logo_url: data.logo_url });
+    } catch (e: any) {
+      setLogoError(e?.message ?? "Upload failed");
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
   // Sync when parent refreshes setup
   useEffect(() => {
     setForm({ ...setup });
@@ -535,13 +568,7 @@ export default function AdminCompanySetupStudio({
     }
   };
 
-  const localWarnings = buildLocalWarnings(form, entities);
-
-  // Cross-domain conflicts: use form as the live company_setup slice
-  const configConflicts: PortalConfigConflict[] = portalConfig
-    ? getPortalConfigConflicts({ ...portalConfig, company_setup: form })
-        .filter((c) => COMPANY_SETUP_CODES.has(c.code))
-    : [];
+  // Cross-domain conflicts are shown in the right-panel copilot, not here.
 
   return (
     <div className="max-w-xl space-y-5">
@@ -566,38 +593,6 @@ export default function AdminCompanySetupStudio({
       <div className="flex items-center gap-x-1 rounded border border-white/[0.05] bg-white/[0.02] px-3 py-2">
         <p className="text-[10px] text-white/38">{buildSummary(form)}</p>
       </div>
-
-      {/* Cross-domain config conflicts */}
-      {configConflicts.length > 0 && (
-        <div className="space-y-1.5">
-          {configConflicts.map((c, i) => (
-            <div
-              key={i}
-              className={`flex items-start gap-2 rounded border px-3 py-1.5 ${
-                c.severity === "critical"
-                  ? "border-red-500/15 bg-red-500/[0.04]"
-                  : "border-amber-500/[0.12] bg-amber-500/[0.03]"
-              }`}
-            >
-              {c.severity === "critical"
-                ? <AlertCircle   className="mt-0.5 h-3 w-3 shrink-0 text-red-400/55" />
-                : <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-amber-400/50" />
-              }
-              <p className={`text-[10px] leading-snug ${
-                c.severity === "critical" ? "text-red-300/60" : "text-amber-300/60"
-              }`}>{c.message}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Entity-level local warnings */}
-      {localWarnings.map((w, i) => (
-        <div key={i} className="flex items-start gap-2 rounded border border-amber-500/[0.12] bg-amber-500/[0.04] px-3 py-1.5">
-          <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-amber-400/50" />
-          <p className="text-[10px] leading-snug text-amber-300/60">{w}</p>
-        </div>
-      ))}
 
       {/* Status bar */}
       <div className="flex items-center gap-3">
@@ -629,6 +624,46 @@ export default function AdminCompanySetupStudio({
       <div>
         <SectionLabel>A — Company Identity</SectionLabel>
         <Panel>
+          {/* Logo upload row */}
+          <div className="flex items-center justify-between gap-4 px-4 py-2.5">
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-medium text-white/68">Company logo</p>
+              <p className="text-[10px] text-white/28">Any format — auto-converted to WebP, max 512 px.</p>
+              {logoError && <p className="mt-0.5 text-[9px] text-red-400/70">{logoError}</p>}
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {form.logo_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={`${API}${form.logo_url}`}
+                  alt="Company logo"
+                  className="h-8 w-8 rounded border border-white/[0.08] object-contain bg-white/[0.03] p-0.5"
+                />
+              )}
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleLogoUpload(f);
+                  e.target.value = "";
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => logoInputRef.current?.click()}
+                disabled={logoUploading}
+                className="flex items-center gap-1.5 rounded border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[10px] text-white/45 transition-colors hover:bg-white/[0.06] hover:text-white/65 disabled:opacity-40"
+              >
+                {logoUploading
+                  ? <Loader2 className="h-3 w-3 animate-spin" />
+                  : <ImagePlus className="h-3 w-3" />}
+                {form.logo_url ? "Replace" : "Upload"}
+              </button>
+            </div>
+          </div>
           <TextInputRow
             label="Display name"
             description="Internal display name for this company."

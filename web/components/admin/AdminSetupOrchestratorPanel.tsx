@@ -65,6 +65,13 @@ interface AnalyzeResponse {
   next_actions?: string[];
   ok: boolean;
   error?: string | null;
+  // Configuration Engine fields
+  engine_mode?: "DIAGNOSE" | "CONFIGURE" | "ADAPT";
+  understanding?: string;
+  current_state_assessment?: string;
+  impact?: string[];
+  risks_gaps?: string[];
+  action_state?: "awaiting_approval" | "no_changes";
 }
 
 // ── Patch section labels ──────────────────────────────────────────────────────
@@ -355,6 +362,7 @@ export default function AdminSetupOrchestratorPanel({
   const [loading, setLoading]       = useState(false);
   const [result, setResult]         = useState<AnalyzeResponse | null>(null);
   const [apiError, setApiError]     = useState<string | null>(null);
+  const [approvalState, setApprovalState] = useState<"pending" | "approved" | "applied">("pending");
   const [managerQueueCount, setManagerQueueCount]       = useState<number | null>(null);
   const [accountingQueueCount, setAccountingQueueCount] = useState<number | null>(null);
   const [applied, setApplied]       = useState(false);
@@ -393,6 +401,7 @@ export default function AdminSetupOrchestratorPanel({
     setResult(null);
     setApplied(false);
     setAppliedSections(new Set());
+    setApprovalState("pending");
     setCategoriesApplied(false);
     setCategoriesError(null);
     setSaved(false);
@@ -429,11 +438,14 @@ export default function AdminSetupOrchestratorPanel({
 
   const handleSubmit = () => runAnalysis(prompt);
 
+  const handleApprove = () => setApprovalState("approved");
+
   const handleApply = () => {
     if (!result?.suggested_patches) return;
     onApplyPatch?.(result.suggested_patches);
     setApplied(true);
     setAppliedSections(new Set(PATCH_SECTIONS.map((s) => s.key)));
+    setApprovalState("applied");
   };
 
   const handleApplyCategories = async () => {
@@ -528,7 +540,7 @@ export default function AdminSetupOrchestratorPanel({
       {/* Header */}
       <div className="flex items-center gap-2">
         <Bot className="h-4 w-4 shrink-0 text-violet-400/55" />
-        <span className="text-[11px] font-semibold text-white/45">Setup Orchestrator</span>
+        <span className="text-[11px] font-semibold text-white/45">Configuration Engine</span>
         <span className="ml-auto flex items-center gap-1.5">
           {managerQueueCount !== null && (
             <span className="rounded border border-white/[0.07] bg-white/[0.02] px-1.5 py-0.5 text-[8px] text-white/28">
@@ -548,38 +560,54 @@ export default function AdminSetupOrchestratorPanel({
 
       {/* Pre-flight: current config conflicts — shown until an AI result is loaded */}
       {!result && preflightConflicts.length > 0 && (
-        <CollapsibleSection
-          label="Current config issues"
-          count={preflightConflicts.length}
-          defaultOpen={preflightConflicts.some((c) => c.severity === "critical")}
-        >
+        <div className="space-y-1">
+          <p className="text-[8.5px] font-bold uppercase tracking-[0.12em] text-white/20">
+            Current config issues <span className="text-white/30">({preflightConflicts.length})</span>
+          </p>
           {preflightConflicts.map((c, i) => (
             <div
               key={i}
-              className={`flex items-start gap-2 rounded border px-3 py-2 ${
+              className={`flex items-start gap-2 rounded border px-2.5 py-1.5 ${
                 c.severity === "critical"
-                  ? "border-red-500/25 bg-red-500/[0.07]"
-                  : "border-amber-500/[0.10] bg-amber-500/[0.025]"
+                  ? "border-red-500/20 bg-red-500/[0.06]"
+                  : "border-white/[0.06] bg-white/[0.01]"
               }`}
             >
               {c.severity === "critical"
-                ? <AlertCircle   className="mt-0.5 h-3 w-3 shrink-0 text-red-400/70" />
-                : <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-amber-400/40" />
+                ? <AlertCircle   className="mt-0.5 h-2.5 w-2.5 shrink-0 text-red-400/65" />
+                : <AlertTriangle className="mt-0.5 h-2.5 w-2.5 shrink-0 text-amber-400/35" />
               }
-              <p className={`text-[10px] leading-snug ${
+              <p className={`text-[9.5px] leading-snug ${
                 c.severity === "critical"
-                  ? "font-medium text-red-300/75"
-                  : "text-amber-300/50"
+                  ? "text-red-300/70"
+                  : "text-white/35"
               }`}>
                 {c.message}
               </p>
             </div>
           ))}
-        </CollapsibleSection>
+        </div>
       )}
 
-      {/* A — Company understanding prompt */}
+      {/* A — Quick intent + prompt */}
       <div className="space-y-1.5">
+        {/* Mode starter chips */}
+        <div className="flex gap-1">
+          {([
+            { label: "Diagnose", starter: "Diagnose the current configuration and identify any issues." },
+            { label: "Configure", starter: "Configure this company: " },
+            { label: "Adapt", starter: "Adapt the current configuration to " },
+          ] as const).map(({ label, starter }) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => setPrompt((p) => p ? p : starter)}
+              className="rounded border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[9px] font-medium text-white/35 transition-colors hover:border-white/[0.15] hover:bg-white/[0.06] hover:text-white/55"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <textarea
           rows={4}
           value={prompt}
@@ -587,7 +615,7 @@ export default function AdminSetupOrchestratorPanel({
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); }
           }}
-          placeholder="Describe your company, expense process, accounting controls, legal entities, and approval structure…"
+          placeholder="Describe your company and requirements, paste policy text, request a diagnosis, or instruct the engine to adapt the current configuration…"
           className="w-full resize-none rounded border border-white/[0.08] bg-white/[0.03] px-2.5 py-2 text-[10px] text-white/55 placeholder-white/18 outline-none focus:border-violet-500/35"
         />
 
@@ -615,44 +643,80 @@ export default function AdminSetupOrchestratorPanel({
       {result && (
         <div className="space-y-4">
 
-          {/* C — Analysis summary */}
+        {/* C — Engine mode + Understanding */}
           <div className="space-y-1.5">
-            <SectionLabel>Analysis summary</SectionLabel>
-            <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2.5 space-y-2">
-              <p className="text-[10px] leading-relaxed text-white/45">{result.summary}</p>
-
-              <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                {/* Company type */}
-                {result.company_profile.company_type && (
-                  <span className="rounded border border-white/[0.08] bg-white/[0.02] px-2 py-0.5 text-[9px] text-white/35">
-                    {result.company_profile.company_type}
-                  </span>
-                )}
-                {/* Complexity badge */}
-                <span
-                  className={`rounded border px-2 py-0.5 text-[9px] font-semibold capitalize ${
-                    COMPLEXITY_COLOR[result.company_profile.complexity] ?? COMPLEXITY_COLOR.simple
-                  }`}
-                >
-                  {result.company_profile.complexity}
+            <div className="flex items-center gap-2">
+              <span
+                className={`rounded border px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest ${
+                  result.engine_mode === "DIAGNOSE"
+                    ? "border-indigo-500/20 bg-indigo-500/[0.06] text-indigo-300/55"
+                    : result.engine_mode === "ADAPT"
+                    ? "border-emerald-500/20 bg-emerald-500/[0.06] text-emerald-300/55"
+                    : "border-violet-500/20 bg-violet-500/[0.06] text-violet-300/55"
+                }`}
+              >
+                {result.engine_mode ?? "CONFIGURE"}
+              </span>
+              {result.company_profile.company_type && (
+                <span className="text-[9px] text-white/25">
+                  {result.company_profile.company_type}
                 </span>
-              </div>
-
-              {result.company_profile.notes.length > 0 && (
-                <ul className="space-y-0.5 pt-0.5">
-                  {result.company_profile.notes.map((n, i) => (
-                    <li key={i} className="flex items-start gap-1.5 text-[10px] text-white/35">
-                      <span className="mt-0.5 text-white/18">·</span>
-                      {n}
-                    </li>
-                  ))}
-                </ul>
               )}
+              <span
+                className={`ml-auto rounded border px-1.5 py-0.5 text-[8px] font-semibold capitalize ${
+                  COMPLEXITY_COLOR[result.company_profile.complexity] ?? COMPLEXITY_COLOR.simple
+                }`}
+              >
+                {result.company_profile.complexity}
+              </span>
             </div>
+
+            {result.understanding ? (
+              <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
+                <p className="text-[10px] leading-relaxed text-white/50">{result.understanding}</p>
+              </div>
+            ) : result.summary ? (
+              <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
+                <p className="text-[10px] leading-relaxed text-white/45">{result.summary}</p>
+              </div>
+            ) : null}
+
+            {result.company_profile.notes.length > 0 && (
+              <ul className="space-y-0.5 px-0.5">
+                {result.company_profile.notes.map((n, i) => (
+                  <li key={i} className="flex items-start gap-1.5 text-[10px] text-white/30">
+                    <span className="mt-0.5 text-white/18">·</span>
+                    {n}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
-          {/* C2 — Operational impact */}
-          {impactItems.length > 0 && (
+          {/* C2 — Current state assessment */}
+          {result.current_state_assessment && (
+            <div className="space-y-1">
+              <SectionLabel>Current state</SectionLabel>
+              <p className="px-0.5 text-[10px] leading-relaxed text-white/38">
+                {result.current_state_assessment}
+              </p>
+            </div>
+          )}
+
+          {/* C3 — Operational impact (AI-generated when available, else derived) */}
+          {(result.impact?.length ?? 0) > 0 ? (
+            <div>
+              <SectionLabel>Impact</SectionLabel>
+              <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2 space-y-1">
+                {result.impact!.map((item, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <span className="mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full bg-white/22" />
+                    <p className="text-[10px] leading-snug text-white/42">{item}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : impactItems.length > 0 && (
             <div>
               <SectionLabel>Operational impact</SectionLabel>
               <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2 space-y-1">
@@ -772,6 +836,21 @@ export default function AdminSetupOrchestratorPanel({
             </div>
           )}
 
+          {/* Risks & gaps */}
+          {(result.risks_gaps?.length ?? 0) > 0 && (
+            <div>
+              <SectionLabel>Risks &amp; gaps</SectionLabel>
+              <div className="rounded border border-amber-500/[0.08] bg-amber-500/[0.02] px-3 py-2 space-y-1.5">
+                {result.risks_gaps!.map((item, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <AlertTriangle className="mt-0.5 h-2.5 w-2.5 shrink-0 text-amber-400/35" />
+                    <p className="text-[10px] leading-snug text-amber-300/50">{item}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* F1 — Generated categories */}
           {(result.generated_categories?.length ?? 0) > 0 && (
             <div className="space-y-1.5">
@@ -823,7 +902,7 @@ export default function AdminSetupOrchestratorPanel({
           )}
           {totalPatches > 0 && (
             <div className="space-y-1.5">
-              <SectionLabel>Suggested patches</SectionLabel>
+              <SectionLabel>Proposed configuration</SectionLabel>
               {PATCH_SECTIONS.map(({ key, label }) => {
                 const allowed = ALLOWED_PATCH_KEYS[key];
                 const entries = Object.entries(result.suggested_patches[key] ?? {})
@@ -863,19 +942,46 @@ export default function AdminSetupOrchestratorPanel({
             </div>
           )}
 
-          {/* G — Apply all / apply draft button */}
-          {totalPatches > 0 && (
-            <button
-              type="button"
-              onClick={handleApply}
-              disabled={applied}
-              className="inline-flex w-full items-center justify-center gap-1.5 rounded border border-violet-500/25 bg-violet-600/15 px-3 py-1.5 text-[10px] font-semibold text-violet-300/70 transition-colors hover:bg-violet-600/25 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {applied
-                ? <><CheckCircle2 className="h-3 w-3 text-emerald-400/60" /> All drafts applied</>
-                : <><Zap className="h-3 w-3" /> Apply all drafts</>
-              }
-            </button>
+          {/* G — Action: 3-state approval gate */}
+          {totalPatches > 0 && result.action_state !== "no_changes" && (
+            <div className="space-y-1.5 border-t border-white/[0.06] pt-3">
+              <SectionLabel>Action</SectionLabel>
+              {approvalState === "pending" && (
+                <div className="flex items-center justify-between rounded border border-amber-500/[0.15] bg-amber-500/[0.04] px-3 py-2">
+                  <span className="text-[10px] text-amber-300/55">Awaiting approval</span>
+                  <button
+                    type="button"
+                    onClick={handleApprove}
+                    className="text-[10px] font-semibold text-violet-300/65 transition-colors hover:text-violet-300/90"
+                  >
+                    Approve →
+                  </button>
+                </div>
+              )}
+              {approvalState === "approved" && (
+                <button
+                  type="button"
+                  onClick={handleApply}
+                  className="inline-flex w-full items-center justify-center gap-1.5 rounded border border-violet-500/25 bg-violet-600/15 px-3 py-1.5 text-[10px] font-semibold text-violet-300/70 transition-colors hover:bg-violet-600/25"
+                >
+                  <Zap className="h-3 w-3" /> Apply changes
+                </button>
+              )}
+              {approvalState === "applied" && (
+                <div className="flex items-center gap-2 px-1 py-1">
+                  <CheckCircle2 className="h-3 w-3 text-emerald-400/60" />
+                  <span className="text-[10px] text-emerald-300/60">Changes applied</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* G2 — DIAGNOSE / no-changes indicator */}
+          {(result.action_state === "no_changes" || totalPatches === 0) && result.engine_mode === "DIAGNOSE" && (
+            <div className="flex items-center gap-2 border-t border-white/[0.06] pt-3 px-0.5">
+              <CheckCircle2 className="h-3 w-3 text-white/25" />
+              <span className="text-[10px] text-white/30">Diagnosis complete — no changes proposed</span>
+            </div>
           )}
 
           {/* H — Save summary + notes to company setup */}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, type ReactNode } from "react";
 import { Bot, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import TopBar from "@/components/shell/TopBar";
 import NavRail, { type NavRailItem } from "@/components/shell/NavRail";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
@@ -39,6 +40,14 @@ export type AppShellProps = {
    * Nav mode              →  left 150–240 px (def 180),  center min 560 px
    */
   navSidebar?: boolean;
+  /**
+   * Admin portal 3-column mode: merges the NavRail and WorkList into one
+   * draggable left column (220–340 px, default 260 px).  Eliminates the
+   * separate worklist pane so only 3 columns remain: left nav, content, AI.
+   */
+  mergedNav?: boolean;
+  /** Company logo URL — passed to the NavRail header. */
+  logoUrl?: string | null;
 };
 
 // ── Layout constants ──────────────────────────────────────────────────────────
@@ -61,6 +70,11 @@ const AI_MAX = 440;
 const AI_DEFAULT = 280;
 const AI_COLLAPSED_W = 28;
 
+// Merged nav mode (admin portal — NavRail + WorkList in one left column)
+const ML_MIN = 220;
+const ML_MAX = 340;
+const ML_DEFAULT = 260;
+
 // Tablet fixed widths
 const TABLET_NAV_W = 160;  // navSidebar mode
 const TABLET_WL_W  = 220;  // queue mode
@@ -80,6 +94,8 @@ export default function AppShell({
   aiPanel,
   detailFlush = false,
   navSidebar = false,
+  mergedNav = false,
+  logoUrl,
 }: AppShellProps) {
 
   // ── Breakpoint / layout mode ──────────────────────────────────────────────
@@ -88,13 +104,14 @@ export default function AppShell({
   // module components call the hook independently with their own hasDetail
   // context to derive activeMobilePane.
 
+  const t = useTranslations("shell");
   const { isMobile, isTablet, isDesktop } = useLayoutMode();
 
   // ── Desktop column sizing ─────────────────────────────────────────────────
 
-  const leftMin     = navSidebar ? NL_MIN     : WL_MIN;
-  const leftMax     = navSidebar ? NL_MAX     : WL_MAX;
-  const leftDefault = navSidebar ? NL_DEFAULT : WL_DEFAULT;
+  const leftMin     = mergedNav ? ML_MIN     : navSidebar ? NL_MIN     : WL_MIN;
+  const leftMax     = mergedNav ? ML_MAX     : navSidebar ? NL_MAX     : WL_MAX;
+  const leftDefault = mergedNav ? ML_DEFAULT : navSidebar ? NL_DEFAULT : WL_DEFAULT;
   const detailMinW  = navSidebar ? WS_MIN     : DETAIL_MIN;
 
   // ── State ─────────────────────────────────────────────────────────────────
@@ -251,7 +268,7 @@ export default function AppShell({
                 <button
                   type="button"
                   onClick={() => setNavDrawerOpen(false)}
-                  aria-label="Close navigation"
+                  aria-label={t("closeNavigation")}
                   className="flex h-8 w-8 items-center justify-center rounded text-white/30 transition-colors hover:bg-white/[0.06] hover:text-white/65"
                 >
                   <X className="h-4 w-4" />
@@ -288,13 +305,13 @@ export default function AppShell({
                 <div className="flex items-center gap-2">
                   <Bot className="h-3 w-3 text-indigo-300/60" />
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">
-                    AI Assistant
+                    {t("aiAssistant")}
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setAiSheetOpen(false)}
-                  aria-label="Close AI assistant"
+                  aria-label={t("closeAI")}
                   className="flex h-7 w-7 items-center justify-center rounded text-white/30 transition-colors hover:bg-white/[0.06] hover:text-white/60"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -339,6 +356,7 @@ export default function AppShell({
             onToggle={() => {}}
             items={globalNavItems}
             hideToggle
+            logoUrl={logoUrl}
           />
 
           {/* Left pane — fixed width, no drag handle */}
@@ -369,8 +387,8 @@ export default function AppShell({
             >
               <button
                 type="button"
-                title="Open AI assistant"
-                aria-label="Open AI assistant"
+                title={t("openAIAssistant")}
+                aria-label={t("openAIAssistant")}
                 onClick={() => setAiSheetOpen((v) => !v)}
                 className="flex h-7 w-7 items-center justify-center rounded text-white/20 transition-colors hover:bg-white/[0.06] hover:text-indigo-300/70"
               >
@@ -429,27 +447,49 @@ export default function AppShell({
 
       <div className="flex flex-1 overflow-hidden">
 
-        {/* ── Global nav rail ───────────────────────────────────────── */}
-        <NavRail
-          collapsed={leftCollapsed}
-          onToggle={() => setLeftCollapsed((v) => !v)}
-          items={globalNavItems}
-        />
+        {/* ── Global nav rail OR merged left column ─────────────────── */}
+        {mergedNav ? (
+          /* Merged mode: NavRail + WorkList in one draggable column */
+          <div
+            style={{ width: workListWidth, minWidth: leftMin, maxWidth: leftMax, willChange: "width" }}
+            className="flex shrink-0 flex-col overflow-hidden border-r border-white/[0.07] bg-zinc-950"
+          >
+            <NavRail
+              collapsed={false}
+              onToggle={() => {}}
+              items={globalNavItems}
+              hideToggle
+              footerSlot={resolveWL(noop)}
+              fullWidth
+              logoUrl={logoUrl}
+            />
+          </div>
+        ) : (
+          <>
+            {/* ── Global nav rail ───────────────────────────────────── */}
+            <NavRail
+              collapsed={leftCollapsed}
+              onToggle={() => setLeftCollapsed((v) => !v)}
+              items={globalNavItems}
+              logoUrl={logoUrl}
+            />
 
-        {/* ── Left pane (worklist in queue mode; module nav in nav mode) ── */}
-        <div
-          style={{ width: workListWidth, minWidth: leftMin, maxWidth: leftMax, willChange: "width" }}
-          className="flex shrink-0 flex-col overflow-hidden border-r border-white/[0.07] bg-zinc-950"
-        >
-          <div className="flex h-9 shrink-0 items-center border-b border-white/[0.07] px-3">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
-              {workListTitle}
-            </span>
-          </div>
-          <div className={navSidebar ? "min-h-0 flex-1 overflow-hidden" : "min-h-0 flex-1 overflow-y-auto"}>
-            {resolveWL(noop)}
-          </div>
-        </div>
+            {/* ── Left pane (worklist in queue mode; module nav in nav mode) ── */}
+            <div
+              style={{ width: workListWidth, minWidth: leftMin, maxWidth: leftMax, willChange: "width" }}
+              className="flex shrink-0 flex-col overflow-hidden border-r border-white/[0.07] bg-zinc-950"
+            >
+              <div className="flex h-9 shrink-0 items-center border-b border-white/[0.07] px-3">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
+                  {workListTitle}
+                </span>
+              </div>
+              <div className={navSidebar ? "min-h-0 flex-1 overflow-hidden" : "min-h-0 flex-1 overflow-y-auto"}>
+                {resolveWL(noop)}
+              </div>
+            </div>
+          </>
+        )}
 
         {/* ── Resizer: worklist / detail ────────────────────────────── */}
         <div

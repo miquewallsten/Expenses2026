@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict
 class CompanySetupBase(BaseModel):
     company_id: int
     display_name: str | None = None
+    logo_url: str | None = None
     country_code: str | None = None
     base_currency: str | None = None
     timezone: str | None = None
@@ -38,6 +39,7 @@ class CompanySetupCreate(CompanySetupBase):
 
 class CompanySetupUpdate(BaseModel):
     display_name: str | None = None
+    logo_url: str | None = None
     country_code: str | None = None
     base_currency: str | None = None
     timezone: str | None = None

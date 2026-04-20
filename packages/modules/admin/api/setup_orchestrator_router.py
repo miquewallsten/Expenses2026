@@ -1,17 +1,22 @@
 import json
+from datetime import datetime, timezone
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from apps.api.deps import get_db
 from apps.api.ai.ollama_client import chat_with_ollama, resolve_model
+from packages.core.platform.models_orchestrator_session import OrchestratorSession
+from packages.core.platform.models_orchestrator_audit import OrchestratorAuditLog
 from packages.modules.admin.service.company_setup_service import get_or_create_company_setup
 from packages.modules.admin.service.accounting_setup_service import get_or_create_accounting_setup
 from packages.modules.admin.service.approval_setup_service import get_or_create_approval_setup
 from packages.modules.admin.service.workflow_setup_service import get_or_create_workflow_setup
 from packages.modules.admin.service.accounting_category_ai_service import generate_accounting_categories
+from packages.modules.admin.service.accounting_category_seed_service import seed_accounting_categories
 from packages.modules.expenses.service.policy_service import get_or_create_company_expense_policy
 from packages.modules.admin.schemas.company_setup import CompanySetupRead
 from packages.modules.admin.schemas.accounting_setup import AccountingSetupRead
@@ -21,6 +26,9 @@ from packages.modules.expenses.schemas.policy import CompanyExpensePolicyRead
 
 router = APIRouter(prefix="/admin/setup-orchestrator", tags=["admin"])
 
+_MAX_SESSION_TURNS = 20
+_SESSION_CONTEXT_TURNS = 10
+
 
 # ── Request / response models ─────────────────────────────────────────────────
 
@@ -28,6 +36,7 @@ router = APIRouter(prefix="/admin/setup-orchestrator", tags=["admin"])
 class AnalyzeRequest(BaseModel):
     prompt: str
     current_portal_config: dict[str, Any] = {}
+    session_id: str | None = None  # if set, loads prior turns as context and stores result
 
 
 class CompanyProfile(BaseModel):
@@ -56,7 +65,80 @@ class SuggestedPatches(BaseModel):
     workflow_setup: dict[str, Any] = {}
 
 
-# ── Allowed patch fields per root ─────────────────────────────────────────────
+class AnalyzeResponse(BaseModel):
+    summary: str
+    company_profile: CompanyProfile
+    detected_conflicts: list[DetectedConflict]
+    missing_decisions: list[MissingDecision]
+    recommended_next_questions: list[str]
+    suggested_patches: SuggestedPatches
+    generated_categories: list[dict] = []
+    accounting_mode: str | None = None
+    next_actions: list[str] = []
+    ok: bool
+    error: str | None = None
+    engine_mode: Literal["DIAGNOSE", "CONFIGURE", "ADAPT"] = "CONFIGURE"
+    understanding: str = ""
+    current_state_assessment: str = ""
+    impact: list[str] = []
+    risks_gaps: list[str] = []
+    action_state: Literal["awaiting_approval", "no_changes"] = "awaiting_approval"
+    session_id: str | None = None   # echoed back so the frontend can continue the same session
+    audit_id: int | None = None
+
+
+# ── Apply models ──────────────────────────────────────────────────────────────
+
+
+class ApplyRequest(BaseModel):
+    patches: SuggestedPatches
+    generated_categories: list[dict[str, Any]] = []
+    session_id: str | None = None
+    approved_by: str | None = None
+
+
+class DomainApplied(BaseModel):
+    domain: str
+    fields: list[str]
+
+
+class ApplyResponse(BaseModel):
+    ok: bool
+    applied_domains: list[DomainApplied]
+    categories_applied: int
+    audit_id: int
+    error: str | None = None
+
+
+# ── Session / audit read models ───────────────────────────────────────────────
+
+
+class SessionSummary(BaseModel):
+    session_id: str
+    turn_count: int
+    created_at: str
+    updated_at: str
+
+
+class SessionDetail(BaseModel):
+    session_id: str
+    turns: list[dict[str, Any]]
+    created_at: str
+    updated_at: str
+
+
+class AuditEntry(BaseModel):
+    id: int
+    session_id: str | None
+    action: str
+    engine_mode: str | None
+    categories_proposed: int
+    categories_applied: int
+    applied_by: str | None
+    created_at: str
+
+
+# ── Allowed patch fields per domain ──────────────────────────────────────────
 
 _ALLOWED_PATCH_FIELDS: dict[str, frozenset[str]] = {
     "company_setup": frozenset({
@@ -105,10 +187,7 @@ _PATCH_ROOTS = ("company_setup", "expense_policy", "accounting_setup", "approval
 
 
 def _normalize_patches(raw: dict[str, Any]) -> SuggestedPatches:
-    """
-    Discard any keys the AI invented that don't exist in the real backend schemas.
-    Each root is always a dict; unknown keys within each root are silently dropped.
-    """
+    """Discard any keys the AI invented that don't exist in the real backend schemas."""
     patches = SuggestedPatches()
     for root in _PATCH_ROOTS:
         allowed = _ALLOWED_PATCH_FIELDS[root]
@@ -121,41 +200,51 @@ def _normalize_patches(raw: dict[str, Any]) -> SuggestedPatches:
     return patches
 
 
-class AnalyzeResponse(BaseModel):
-    summary: str
-    company_profile: CompanyProfile
-    detected_conflicts: list[DetectedConflict]
-    missing_decisions: list[MissingDecision]
-    recommended_next_questions: list[str]
-    suggested_patches: SuggestedPatches
-    generated_categories: list[dict] = []
-    accounting_mode: str | None = None
-    next_actions: list[str] = []
-    ok: bool
-    error: str | None = None
-
-
-# ── AI helpers ────────────────────────────────────────────────────────────────
+# ── AI system prompt ──────────────────────────────────────────────────────────
 
 # fmt: off
 SYSTEM_PROMPT = (
-    "You are a senior financial operations platform architect. "
-    "You receive a description of a company's desired configuration along with its current "
-    "portal configuration snapshot, and you produce a structured analysis and recommendations "
-    "spanning all five setup domains: company structure, expense policy, accounting controls, "
-    "approval logic, and workflow routing. "
-    "Consider CFDI/SAT compliance, p\u00f3liza requirements, multi-entity and international operations, "
-    "allocation dimensions, and approval escalation paths when assessing the current state. "
-    "Respond ONLY with a single valid JSON object \u2014 no markdown fences, no prose outside the JSON. "
-    "IMPORTANT: suggested_patches may only contain real field names listed below. "
-    "Do NOT invent field names. Omit any patch root that has no changes. "
-    "Each patch root must be a JSON object (use {} if empty). "
-    "Schema: "
+    "You are the AI Configuration Engine for an enterprise financial operations platform. "
+    "You are NOT a chatbot. You are the system that understands, designs, configures, and "
+    "evolves how the platform works for each company. "
+    "You receive a company's intent alongside its full current configuration snapshot and "
+    "produce a structured analysis and concrete configuration plan spanning all five setup "
+    "domains: company structure, expense policy, accounting controls, approval logic, and "
+    "workflow routing. Consider CFDI/SAT compliance, p\u00f3liza requirements, multi-entity "
+    "and international operations, allocation dimensions, and approval escalation paths.\n\n"
+    "OPERATING MODES \u2014 detect automatically from context:\n"
+    "  DIAGNOSE: User asks what is wrong, requests a health check, or describes issues without "
+    "intent to change config. Surface conflicts and gaps. Leave suggested_patches empty. "
+    "Set action_state to 'no_changes'.\n"
+    "  CONFIGURE: User provides intent, policy descriptions, setup requirements, or company "
+    "information. Map intent to schema. Populate suggested_patches. "
+    "Set action_state to 'awaiting_approval'.\n"
+    "  ADAPT: User asks to tune or adjust an existing config with a specific delta. Compute "
+    "minimal safe changes vs current state. Explain what changes and why. "
+    "Set action_state to 'awaiting_approval'.\n\n"
+    "MULTI-TURN CONTEXT: If prior conversation turns are included, use them to maintain "
+    "continuity. Build on previous decisions. Do not repeat questions already answered. "
+    "Incorporate clarifications the user has already provided.\n\n"
+    "HARD RULES:\n"
+    "  1. Never use field names not listed below. Invented keys will be discarded.\n"
+    "  2. Never apply config silently. action_state must always reflect the correct state.\n"
+    "  3. In DIAGNOSE mode, suggested_patches must be empty and action_state must be 'no_changes'.\n"
+    "  4. Every proposed patch change must be explained in impact[]. "
+    "Every known risk must appear in risks_gaps[].\n"
+    "  5. Respond ONLY with a single valid JSON object \u2014 no markdown fences, no prose outside JSON.\n"
+    "  6. Never hallucinate configuration values. Never assume missing financial rules.\n"
+    "  7. Never create duplicate or conflicting rules.\n\n"
+    "Schema:\n"
     '{ '
+    '"engine_mode": "DIAGNOSE"|"CONFIGURE"|"ADAPT", '
+    '"understanding": string, '
     '"summary": string, '
     '"company_profile": { "company_type": string, "complexity": "simple"|"medium"|"complex", "notes": string[] }, '
+    '"current_state_assessment": string, '
     '"detected_conflicts": [{ "code": string, "message": string, "severity": "warning"|"critical" }], '
     '"missing_decisions": [{ "key": string, "question": string, "suggested_options": string[] }], '
+    '"impact": string[], '
+    '"risks_gaps": string[], '
     '"recommended_next_questions": string[], '
     '"suggested_patches": { '
     '"company_setup": { '
@@ -194,27 +283,140 @@ SYSTEM_PROMPT = (
     '  allow_draft_save allow_resubmit_after_return show_next_action_guidance '
     '  ai_workflow_assist_enabled ai_workflow_notes */ '
     '} '
-    '} '
+    '}, '
+    '"action_state": "awaiting_approval"|"no_changes" '
     "}"
 )
 # fmt: on
 
 
-def _build_user_prompt(company_id: int, prompt: str, config: dict[str, Any]) -> str:
+# ── Session helpers ───────────────────────────────────────────────────────────
+
+
+def _load_session_turns(db: Session, company_id: int, session_id: str) -> list[dict]:
+    row = (
+        db.query(OrchestratorSession)
+        .filter(
+            OrchestratorSession.company_id == company_id,
+            OrchestratorSession.session_id == session_id,
+        )
+        .first()
+    )
+    if not row or not row.turns:
+        return []
+    try:
+        turns = json.loads(row.turns)
+        return turns[-_SESSION_CONTEXT_TURNS:] if len(turns) > _SESSION_CONTEXT_TURNS else turns
+    except Exception:
+        return []
+
+
+def _save_session_turn(
+    db: Session,
+    company_id: int,
+    session_id: str,
+    user_content: str,
+    assistant_summary: str,
+) -> None:
+    now = datetime.now(timezone.utc).isoformat()
+    new_turns = [
+        {"role": "user", "content": user_content[:1000], "timestamp": now},
+        {"role": "assistant", "content": assistant_summary[:1000], "timestamp": now},
+    ]
+    row = (
+        db.query(OrchestratorSession)
+        .filter(
+            OrchestratorSession.company_id == company_id,
+            OrchestratorSession.session_id == session_id,
+        )
+        .first()
+    )
+    if row:
+        try:
+            existing = json.loads(row.turns or "[]")
+        except Exception:
+            existing = []
+        merged = existing + new_turns
+        row.turns = json.dumps(merged[-_MAX_SESSION_TURNS:])
+    else:
+        row = OrchestratorSession(
+            company_id=company_id,
+            session_id=session_id,
+            turns=json.dumps(new_turns),
+        )
+        db.add(row)
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+
+
+def _write_audit(
+    db: Session,
+    company_id: int,
+    action: str,
+    *,
+    session_id: str | None = None,
+    engine_mode: str | None = None,
+    patches_proposed: dict | None = None,
+    patches_applied: dict | None = None,
+    categories_proposed: int = 0,
+    categories_applied: int = 0,
+    applied_by: str | None = None,
+) -> int:
+    """Write an audit log entry. Returns the new row id, or -1 on failure."""
+    entry = OrchestratorAuditLog(
+        company_id=company_id,
+        session_id=session_id,
+        action=action,
+        engine_mode=engine_mode,
+        patches_proposed=json.dumps(patches_proposed) if patches_proposed is not None else None,
+        patches_applied=json.dumps(patches_applied) if patches_applied is not None else None,
+        categories_proposed=categories_proposed,
+        categories_applied=categories_applied,
+        applied_by=applied_by,
+    )
+    db.add(entry)
+    try:
+        db.commit()
+        db.refresh(entry)
+        return entry.id
+    except Exception:
+        db.rollback()
+        return -1
+
+
+# ── Prompt builders ───────────────────────────────────────────────────────────
+
+
+def _build_user_prompt(
+    company_id: int,
+    prompt: str,
+    config: dict[str, Any],
+    prior_turns: list[dict] | None = None,
+) -> str:
     config_text = json.dumps(config, default=str, indent=2) if config else "{}"
+    prior_context = ""
+    if prior_turns:
+        lines = []
+        for t in prior_turns:
+            role = str(t.get("role", "user")).upper()
+            content = str(t.get("content", ""))
+            lines.append(f"[{role}]: {content}")
+        prior_context = (
+            "Prior conversation context (maintain continuity — do not re-ask questions already answered):\n"
+            + "\n".join(lines)
+            + "\n\n"
+        )
     return (
         f"Company ID: {company_id}.\n\n"
         f"Current portal config:\n{config_text}\n\n"
+        f"{prior_context}"
         f"User instruction: {prompt.strip()}"
     )
 
 
 def _load_portal_config(db: Session, company_id: int) -> dict[str, Any]:
-    """
-    Assemble the full portal config for a company using the same logic as
-    GET /admin/portal-config/{company_id}, returned as a plain dict so it
-    can be used as the AI prompt context.
-    """
     cs  = get_or_create_company_setup(db, company_id)
     ep  = get_or_create_company_expense_policy(db, company_id)
     ac  = get_or_create_accounting_setup(db, company_id)
@@ -263,6 +465,9 @@ def _load_portal_config(db: Session, company_id: int) -> dict[str, Any]:
     }
 
 
+# ── Response parsers ──────────────────────────────────────────────────────────
+
+
 def _parse_str_list(raw: Any, max_items: int = 10) -> list[str]:
     if not isinstance(raw, list):
         return []
@@ -276,7 +481,6 @@ def _parse_dict(raw: Any) -> dict[str, Any]:
 def _build_category_fields(
     prompt: str, config: dict[str, Any]
 ) -> tuple[list[dict], str | None, list[str]]:
-    """Return (generated_categories, accounting_mode, next_actions) for injection into AnalyzeResponse."""
     cs = _parse_dict(config.get("company_setup"))
     categories = generate_accounting_categories(prompt, cs)
     country = str(cs.get("country_code", "") or "").strip().upper()
@@ -288,7 +492,6 @@ def _build_category_fields(
 
 
 def _parse_ai_response(parsed: dict[str, Any], prompt: str, config: dict[str, Any]) -> AnalyzeResponse:
-    """Convert a validated AI-parsed dict into a full AnalyzeResponse."""
     raw_profile = _parse_dict(parsed.get("company_profile"))
     complexity_raw = str(raw_profile.get("complexity", "simple")).strip().lower()
     complexity: Literal["simple", "medium", "complex"] = (
@@ -333,6 +536,19 @@ def _parse_ai_response(parsed: dict[str, Any], prompt: str, config: dict[str, An
     raw_patches = _parse_dict(parsed.get("suggested_patches"))
     suggested_patches = _normalize_patches(raw_patches)
 
+    engine_mode_raw = str(parsed.get("engine_mode", "CONFIGURE")).strip().upper()
+    engine_mode: Literal["DIAGNOSE", "CONFIGURE", "ADAPT"] = (
+        engine_mode_raw if engine_mode_raw in ("DIAGNOSE", "CONFIGURE", "ADAPT") else "CONFIGURE"
+    )
+    understanding = str(parsed.get("understanding", "")).strip()[:500]
+    current_state_assessment = str(parsed.get("current_state_assessment", "")).strip()[:800]
+    impact = _parse_str_list(parsed.get("impact"), max_items=10)
+    risks_gaps = _parse_str_list(parsed.get("risks_gaps"), max_items=10)
+    action_state_raw = str(parsed.get("action_state", "awaiting_approval")).strip().lower()
+    action_state: Literal["awaiting_approval", "no_changes"] = (
+        "no_changes" if action_state_raw == "no_changes" else "awaiting_approval"
+    )
+
     generated_categories, accounting_mode, next_actions = _build_category_fields(prompt, config)
 
     return AnalyzeResponse(
@@ -348,6 +564,12 @@ def _parse_ai_response(parsed: dict[str, Any], prompt: str, config: dict[str, An
         accounting_mode=accounting_mode,
         next_actions=next_actions,
         ok=True,
+        engine_mode=engine_mode,
+        understanding=understanding,
+        current_state_assessment=current_state_assessment,
+        impact=impact,
+        risks_gaps=risks_gaps,
+        action_state=action_state,
     )
 
 
@@ -357,10 +579,7 @@ _MANAGER_MODES = {"manager_only", "manager_then_accounting", "threshold_based"}
 
 
 def _deterministic_analysis(config: dict[str, Any], prompt: str = "") -> AnalyzeResponse:
-    """
-    Rule-based analysis applied when the AI model is unavailable.
-    Detects structural conflicts from the portal config without fabricating data.
-    """
+    """Rule-based analysis when the AI model is unavailable."""
     cs  = _parse_dict(config.get("company_setup"))
     ep  = _parse_dict(config.get("expense_policy"))
     ac  = _parse_dict(config.get("accounting_setup"))
@@ -391,7 +610,6 @@ def _deterministic_analysis(config: dict[str, Any], prompt: str = "") -> Analyze
     wf_allow_warnings: bool      = bool(wf.get("allow_submit_with_warnings", True))
     ac_allow_warnings: bool      = bool(ac.get("allow_submit_with_warnings", True))
 
-    # Allocation dimensions come from derived (list) or expense_policy (raw string)
     alloc_dims: list[str] = list(drv.get("allocation_dimensions") or [])
     if not alloc_dims:
         raw_alloc: str = str(ep.get("allocation_dimensions", ""))
@@ -401,7 +619,7 @@ def _deterministic_analysis(config: dict[str, Any], prompt: str = "") -> Analyze
     missing: list[MissingDecision] = []
     patches = SuggestedPatches()
 
-    # ── 1. Workflow mode includes manager path but company has no managers ───
+    # 1. Workflow mode includes manager path but company has no managers
     wf_manager_modes = {"manager_only", "manager_then_accounting", "threshold_based"}
     if wf_mode in wf_manager_modes and not has_managers:
         conflicts.append(DetectedConflict(
@@ -414,7 +632,7 @@ def _deterministic_analysis(config: dict[str, Any], prompt: str = "") -> Analyze
         ))
         patches.company_setup["has_managers"] = True
 
-    # ── 2. Approval mode requires managers but company has none ─────────────
+    # 2. Approval mode requires managers but company has none
     if approval_mode in _MANAGER_MODES and not has_managers:
         conflicts.append(DetectedConflict(
             code="MANAGER_FLOW_NO_MANAGERS",
@@ -427,11 +645,8 @@ def _deterministic_analysis(config: dict[str, Any], prompt: str = "") -> Analyze
         patches.approval_setup["approval_mode"] = "accounting_only"
         patches.company_setup["has_managers"] = True
 
-    # ── 3. Expense policy requires manager approval but approval setup disables it ──
-    manager_approval_disabled = (
-        approval_mode not in _MANAGER_MODES
-        or not has_managers
-    )
+    # 3. Expense policy requires manager approval but approval setup disables it
+    manager_approval_disabled = approval_mode not in _MANAGER_MODES or not has_managers
     if ep_manager_req and manager_approval_disabled:
         conflicts.append(DetectedConflict(
             code="POLICY_MANAGER_REQ_BUT_MANAGER_FLOW_OFF",
@@ -445,7 +660,7 @@ def _deterministic_analysis(config: dict[str, Any], prompt: str = "") -> Analyze
         ))
         patches.expense_policy["manager_approval_required"] = False
 
-    # ── 4. Expense policy requires accounting review but accounting module disabled ──
+    # 4. Expense policy requires accounting review but accounting module disabled
     accounting_enabled: bool = bool(cs.get("accounting_module_enabled", True))
     if ep_accounting_req and not accounting_enabled:
         conflicts.append(DetectedConflict(
@@ -458,7 +673,7 @@ def _deterministic_analysis(config: dict[str, Any], prompt: str = "") -> Analyze
         ))
         patches.expense_policy["accounting_review_required"] = False
 
-    # ── 5. Tickets disabled but ticket workflow implied ──────────────────────
+    # 5. Tickets disabled but ticket workflow implied
     ticket_routes = {
         wf.get("route_policy_failures_to"),
         wf.get("route_missing_documents_to"),
@@ -475,7 +690,7 @@ def _deterministic_analysis(config: dict[str, Any], prompt: str = "") -> Analyze
         ))
         patches.expense_policy["tickets_allowed"] = True
 
-    # ── 6. Accounting requires dimension not present in allocation_dimensions ─
+    # 6. Accounting requires dimension not present in allocation_dimensions
     required_dims: list[tuple[str, str]] = [
         ("cost_center", "cost_center_required"),
         ("project",     "project_required"),
@@ -505,7 +720,7 @@ def _deterministic_analysis(config: dict[str, Any], prompt: str = "") -> Analyze
                 alloc_dims_updated.append(dim_key)
         patches.expense_policy["allocation_dimensions"] = "_".join(alloc_dims_updated)
 
-    # ── 7. International escalation enabled, international expenses disabled ──
+    # 7. International escalation enabled, international expenses disabled
     intl_routing_active = escalate_intl or route_intl not in ("", "none", None)
     if intl_routing_active and not intl_allowed:
         conflicts.append(DetectedConflict(
@@ -520,7 +735,7 @@ def _deterministic_analysis(config: dict[str, Any], prompt: str = "") -> Analyze
         ))
         patches.expense_policy["international_expenses_allowed"] = True
 
-    # ── 8. Approvals enabled, no managers, approval mode none ────────────────
+    # 8. Approvals enabled, no managers, approval mode none
     if approvals_enabled and not has_managers and approval_mode == "none":
         conflicts.append(DetectedConflict(
             code="APPROVALS_ENABLED_NO_PATH",
@@ -541,9 +756,7 @@ def _deterministic_analysis(config: dict[str, Any], prompt: str = "") -> Analyze
             ],
         ))
 
-    # ── 9. block_submit_on_failed_validation conflicts with allow_submit_with_warnings ──
-    # If validation is set to block hard but warnings are still allowed, the behaviour
-    # is inconsistent: a failed policy check may be classified as a warning and slip through.
+    # 9. block_submit_on_failed_validation conflicts with allow_submit_with_warnings
     if wf_block_on_fail and wf_allow_warnings:
         conflicts.append(DetectedConflict(
             code="BLOCK_ON_FAIL_BUT_WARNINGS_ALLOWED",
@@ -556,7 +769,7 @@ def _deterministic_analysis(config: dict[str, Any], prompt: str = "") -> Analyze
         ))
         patches.workflow_setup["allow_submit_with_warnings"] = False
 
-    # ── 10. Workflow allows warnings but accounting does not ─────────────────
+    # 10. Workflow allows warnings but accounting does not
     if wf_allow_warnings and not ac_allow_warnings:
         conflicts.append(DetectedConflict(
             code="WF_ALLOWS_WARNINGS_ACCOUNTING_BLOCKS",
@@ -570,9 +783,7 @@ def _deterministic_analysis(config: dict[str, Any], prompt: str = "") -> Analyze
         ))
         patches.accounting_setup["allow_submit_with_warnings"] = True
 
-    # ── 11. Split allocations disabled in derived but enabled in a child layer ──
-    # drv_allow_split is the resolved value; if it is False but any child layer
-    # has it enabled there is an inconsistency (child setting overridden or stale).
+    # 11. Split allocations disabled in derived but enabled in a child layer
     split_enabled_in_child = ep_allow_split or cs_allow_split
     if not drv_allow_split and split_enabled_in_child:
         conflicts.append(DetectedConflict(
@@ -587,7 +798,7 @@ def _deterministic_analysis(config: dict[str, Any], prompt: str = "") -> Analyze
         patches.expense_policy["allow_split_allocations"] = False
         patches.company_setup["allow_split_allocations"] = False
 
-    # ── Missing decisions: account_code_required with no dimension ───────────
+    # Missing: account_code_required with no dimension
     if account_code_req and "account" not in " ".join(alloc_dims).lower():
         missing.append(MissingDecision(
             key="account_code_dimension",
@@ -602,7 +813,7 @@ def _deterministic_analysis(config: dict[str, Any], prompt: str = "") -> Analyze
             ],
         ))
 
-    # ── Complexity heuristic (deterministic) ─────────────────────────────────
+    # Complexity heuristic
     complexity_score = sum([
         bool(cs.get("operates_multi_entity")),
         bool(cs.get("operates_multi_country")),
@@ -656,6 +867,11 @@ def _deterministic_analysis(config: dict[str, Any], prompt: str = "") -> Analyze
 
     generated_categories, accounting_mode, next_actions = _build_category_fields(prompt, config)
 
+    patch_count = sum(len(getattr(patches, root)) for root in _PATCH_ROOTS)
+    det_action_state: Literal["awaiting_approval", "no_changes"] = (
+        "awaiting_approval" if patch_count > 0 else "no_changes"
+    )
+
     return AnalyzeResponse(
         summary=" ".join(summary_parts),
         company_profile=CompanyProfile(
@@ -671,10 +887,19 @@ def _deterministic_analysis(config: dict[str, Any], prompt: str = "") -> Analyze
         accounting_mode=accounting_mode,
         next_actions=next_actions,
         ok=True,
+        engine_mode="DIAGNOSE",
+        understanding=(
+            "Deterministic conflict analysis (AI model unavailable). "
+            f"Checked {len(conflicts) + len(missing)} rule(s) against current configuration."
+        ),
+        current_state_assessment=" ".join(summary_parts) if summary_parts else "No issues detected.",
+        impact=[],
+        risks_gaps=[c.message for c in conflicts if c.severity == "critical"],
+        action_state=det_action_state,
     )
 
 
-# ── Route ─────────────────────────────────────────────────────────────────────
+# ── Routes ────────────────────────────────────────────────────────────────────
 
 
 @router.post("/analyze/{company_id}", response_model=AnalyzeResponse)
@@ -688,8 +913,8 @@ def analyze_setup(
     config. Uses the AI model when available; falls back to deterministic rule-based
     conflict detection otherwise.
 
-    If current_portal_config is absent or empty the endpoint fetches the live
-    config from the database automatically.
+    Pass session_id to maintain a multi-turn conversation. The engine will load prior
+    turns as context and append the new turn to the session after analysis.
     """
     portal_config: dict[str, Any] = (
         body.current_portal_config
@@ -697,28 +922,266 @@ def analyze_setup(
         else _load_portal_config(db, company_id)
     )
 
+    # Load prior session turns for multi-turn context
+    prior_turns: list[dict] = []
+    if body.session_id:
+        prior_turns = _load_session_turns(db, company_id, body.session_id)
+
     ai_available = resolve_model() is not None
+    response: AnalyzeResponse
 
     if not ai_available:
-        return _deterministic_analysis(portal_config, body.prompt)
+        response = _deterministic_analysis(portal_config, body.prompt)
+    else:
+        user_prompt = _build_user_prompt(company_id, body.prompt, portal_config, prior_turns)
+        result = chat_with_ollama(SYSTEM_PROMPT, user_prompt)
 
-    user_prompt = _build_user_prompt(company_id, body.prompt, portal_config)
-    result = chat_with_ollama(SYSTEM_PROMPT, user_prompt)
+        if not result.get("ok"):
+            response = _deterministic_analysis(portal_config, body.prompt)
+        else:
+            raw: str = result.get("content", "")
+            json_str = raw.replace("```json", "").replace("```", "").strip()
+            try:
+                parsed = json.loads(json_str)
+            except Exception:
+                parsed = None
 
-    if not result.get("ok"):
-        # AI call failed at runtime — fall back rather than returning an error
-        return _deterministic_analysis(portal_config, body.prompt)
+            if not isinstance(parsed, dict):
+                response = _deterministic_analysis(portal_config, body.prompt)
+            else:
+                response = _parse_ai_response(parsed, body.prompt, portal_config)
 
-    raw: str = result.get("content", "")
-    json_str = raw.replace("```json", "").replace("```", "").strip()
+    # Persist session turn (non-blocking — failure does not break the response)
+    if body.session_id:
+        _save_session_turn(
+            db,
+            company_id,
+            body.session_id,
+            user_content=body.prompt,
+            assistant_summary=response.understanding or response.summary,
+        )
+
+    # Write audit log (non-blocking)
+    audit_id = _write_audit(
+        db,
+        company_id,
+        action="analyze",
+        session_id=body.session_id,
+        engine_mode=response.engine_mode,
+        patches_proposed=response.suggested_patches.model_dump(),
+        categories_proposed=len(response.generated_categories),
+    )
+
+    response.session_id = body.session_id
+    response.audit_id = audit_id
+    return response
+
+
+@router.post("/apply/{company_id}", response_model=ApplyResponse)
+def apply_setup(
+    company_id: int,
+    body: ApplyRequest,
+    db: Session = Depends(get_db),
+) -> ApplyResponse:
+    """
+    Apply a set of suggested patches to the live configuration.
+
+    Only call this after the user has reviewed and approved the patches returned
+    by /analyze. Changes are applied atomically across all config domains.
+    Categories (if provided) are upserted in a separate step.
+
+    This is the ONLY way changes reach the database — /analyze never writes config.
+    """
+    applied_domains: list[DomainApplied] = []
 
     try:
-        parsed = json.loads(json_str)
+        # Load all ORM records first (creates defaults if not yet configured)
+        cs = get_or_create_company_setup(db, company_id)
+        ep = get_or_create_company_expense_policy(db, company_id)
+        ac = get_or_create_accounting_setup(db, company_id)
+        ap = get_or_create_approval_setup(db, company_id)
+        wf = get_or_create_workflow_setup(db, company_id)
+
+        # Apply each non-empty patch domain directly to the ORM objects
+        if body.patches.company_setup:
+            for field, value in body.patches.company_setup.items():
+                setattr(cs, field, value)
+            applied_domains.append(DomainApplied(
+                domain="company_setup",
+                fields=list(body.patches.company_setup),
+            ))
+
+        if body.patches.expense_policy:
+            for field, value in body.patches.expense_policy.items():
+                setattr(ep, field, value)
+            applied_domains.append(DomainApplied(
+                domain="expense_policy",
+                fields=list(body.patches.expense_policy),
+            ))
+
+        if body.patches.accounting_setup:
+            for field, value in body.patches.accounting_setup.items():
+                setattr(ac, field, value)
+            applied_domains.append(DomainApplied(
+                domain="accounting_setup",
+                fields=list(body.patches.accounting_setup),
+            ))
+
+        if body.patches.approval_setup:
+            for field, value in body.patches.approval_setup.items():
+                setattr(ap, field, value)
+            applied_domains.append(DomainApplied(
+                domain="approval_setup",
+                fields=list(body.patches.approval_setup),
+            ))
+
+        if body.patches.workflow_setup:
+            for field, value in body.patches.workflow_setup.items():
+                setattr(wf, field, value)
+            applied_domains.append(DomainApplied(
+                domain="workflow_setup",
+                fields=list(body.patches.workflow_setup),
+            ))
+
+        # Single commit for all config changes — atomic across all domains
+        db.commit()
+
+    except Exception as exc:
+        db.rollback()
+        return ApplyResponse(
+            ok=False,
+            applied_domains=[],
+            categories_applied=0,
+            audit_id=-1,
+            error=str(exc),
+        )
+
+    # Categories upserted separately (seed service has its own commit)
+    cats_applied = 0
+    if body.generated_categories:
+        try:
+            rows = seed_accounting_categories(db, company_id, body.generated_categories)
+            cats_applied = len(rows)
+        except Exception as exc:
+            # Categories failed but config changes are already committed — report partial success
+            audit_id = _write_audit(
+                db,
+                company_id,
+                action="apply",
+                session_id=body.session_id,
+                patches_applied=body.patches.model_dump(),
+                categories_applied=0,
+                applied_by=body.approved_by,
+            )
+            return ApplyResponse(
+                ok=False,
+                applied_domains=applied_domains,
+                categories_applied=0,
+                audit_id=audit_id,
+                error=f"Config applied but categories failed: {exc}",
+            )
+
+    audit_id = _write_audit(
+        db,
+        company_id,
+        action="apply",
+        session_id=body.session_id,
+        patches_applied=body.patches.model_dump(),
+        categories_proposed=len(body.generated_categories),
+        categories_applied=cats_applied,
+        applied_by=body.approved_by,
+    )
+
+    return ApplyResponse(
+        ok=True,
+        applied_domains=applied_domains,
+        categories_applied=cats_applied,
+        audit_id=audit_id,
+    )
+
+
+@router.get("/sessions/{company_id}", response_model=list[SessionSummary])
+def list_sessions(
+    company_id: int,
+    db: Session = Depends(get_db),
+) -> list[SessionSummary]:
+    """List all orchestrator sessions for a company, most recent first."""
+    rows = (
+        db.query(OrchestratorSession)
+        .filter(OrchestratorSession.company_id == company_id)
+        .order_by(desc(OrchestratorSession.updated_at))
+        .limit(50)
+        .all()
+    )
+    result = []
+    for row in rows:
+        try:
+            turns = json.loads(row.turns or "[]")
+            turn_count = len(turns)
+        except Exception:
+            turn_count = 0
+        result.append(SessionSummary(
+            session_id=row.session_id,
+            turn_count=turn_count,
+            created_at=row.created_at.isoformat(),
+            updated_at=row.updated_at.isoformat(),
+        ))
+    return result
+
+
+@router.get("/sessions/{company_id}/{session_id}", response_model=SessionDetail)
+def get_session(
+    company_id: int,
+    session_id: str,
+    db: Session = Depends(get_db),
+) -> SessionDetail:
+    """Return all turns in a specific session."""
+    row = (
+        db.query(OrchestratorSession)
+        .filter(
+            OrchestratorSession.company_id == company_id,
+            OrchestratorSession.session_id == session_id,
+        )
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Session not found")
+    try:
+        turns = json.loads(row.turns or "[]")
     except Exception:
-        return _deterministic_analysis(portal_config, body.prompt)
+        turns = []
+    return SessionDetail(
+        session_id=row.session_id,
+        turns=turns,
+        created_at=row.created_at.isoformat(),
+        updated_at=row.updated_at.isoformat(),
+    )
 
-    if not isinstance(parsed, dict):
-        return _deterministic_analysis(portal_config, body.prompt)
 
-    return _parse_ai_response(parsed, body.prompt, portal_config)
-
+@router.get("/audit/{company_id}", response_model=list[AuditEntry])
+def list_audit_log(
+    company_id: int,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+) -> list[AuditEntry]:
+    """Return the most recent orchestrator audit log entries for a company."""
+    rows = (
+        db.query(OrchestratorAuditLog)
+        .filter(OrchestratorAuditLog.company_id == company_id)
+        .order_by(desc(OrchestratorAuditLog.created_at))
+        .limit(min(limit, 200))
+        .all()
+    )
+    return [
+        AuditEntry(
+            id=row.id,
+            session_id=row.session_id,
+            action=row.action,
+            engine_mode=row.engine_mode,
+            categories_proposed=row.categories_proposed,
+            categories_applied=row.categories_applied,
+            applied_by=row.applied_by,
+            created_at=row.created_at.isoformat(),
+        )
+        for row in rows
+    ]

@@ -31,6 +31,7 @@ class DerivedConfig(BaseModel):
     international_expenses_allowed: bool
     xml_required_mode: str
     pdf_pair_required_for_cfdi: bool
+    allow_document_free_expenses: bool
     manager_flow_enabled: bool
     accounting_flow_enabled: bool
     workflow_mode: str
@@ -84,6 +85,7 @@ def _compute_enabled_modules(cs: Any) -> list[str]:
         "accounting": cs.accounting_module_enabled,
         "archive": cs.archive_module_enabled,
         "ai_copilot": cs.ai_copilot_enabled,
+        "purchase_requests": cs.purchase_requests_module_enabled,
     }
     return [name for name, enabled in mapping.items() if enabled]
 
@@ -177,6 +179,7 @@ def get_portal_config(company_id: int, db: Session = Depends(get_db)):
         international_expenses_allowed=expense_policy.international_expenses_allowed,
         xml_required_mode=expense_policy.xml_required_mode,
         pdf_pair_required_for_cfdi=expense_policy.pdf_pair_required_for_cfdi,
+        allow_document_free_expenses=expense_policy.allow_document_free_expenses,
         manager_flow_enabled=manager_flow_enabled,
         accounting_flow_enabled=accounting_flow_enabled,
         workflow_mode=workflow_setup.default_expense_workflow_mode or "standard",
