@@ -160,12 +160,13 @@ export const MY_WORK_MODULES: readonly MyWorkModule[] = [
 
   // ── My Approvals ────────────────────────────────────────────────────────────
   // Visible to managers, executives, admins, and anyone with approve_expense,
-  // but only when the manager approval flow is configured.
+  // but only when the approvals module is enabled AND the manager flow is active.
   {
     id: "my_approvals",
     label: "My Approvals",
     icon: "CheckSquare",
     isVisible: (ctx) =>
+      hasModule(ctx, "approvals") &&
       (ctx.derived?.manager_flow_enabled ?? false) &&
       (hasRole(ctx, "manager", "admin", "executive") ||
         hasPermission(ctx, "approve_expense")),
@@ -174,12 +175,13 @@ export const MY_WORK_MODULES: readonly MyWorkModule[] = [
 
   // ── Accounting Review ────────────────────────────────────────────────────────
   // Visible to accountants, admins, and anyone with assign_account permission
-  // when the accounting review flow is configured.
+  // when the accounting module is enabled AND the accounting review flow is active.
   {
     id: "accounting_review",
     label: "Accounting Review",
     icon: "Calculator",
     isVisible: (ctx) =>
+      hasModule(ctx, "accounting") &&
       (ctx.derived?.accounting_flow_enabled ?? false) &&
       (hasRole(ctx, "accounting", "admin") ||
         hasPermission(ctx, "assign_account")),
@@ -216,14 +218,14 @@ export const MY_WORK_MODULES: readonly MyWorkModule[] = [
   },
 
   // ── Exports ──────────────────────────────────────────────────────────────────
-  // Visible only to admins and users with export_data when the exports module
-  // is explicitly enabled in company config.
+  // Visible only to admins and users with export_data when the archive module
+  // is enabled (export bundles depend on archived documents).
   {
     id: "exports",
     label: "Exports",
     icon: "Download",
     isVisible: (ctx) =>
-      hasModule(ctx, "exports") &&
+      hasModule(ctx, "archive") &&
       (hasRole(ctx, "admin") || hasPermission(ctx, "export_data")),
     component: buildPlaceholder("Exports"),
   },

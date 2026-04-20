@@ -13,6 +13,8 @@ export interface PortalConfigConflict {
   code: string;
   message: string;
   severity: "warning" | "critical";
+  /** Admin section to navigate to for remediation. */
+  section: string;
 }
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
@@ -118,8 +120,9 @@ export function getPortalConfigConflicts(
   const add = (
     code: string,
     message: string,
-    severity: "warning" | "critical"
-  ) => out.push({ code, message, severity });
+    severity: "warning" | "critical",
+    section: string
+  ) => out.push({ code, message, severity, section });
 
   // ── Section 1: Manager routing with no managers ───────────────────────────
 
@@ -127,7 +130,8 @@ export function getPortalConfigConflicts(
     add(
       "MANAGER_FLOW_NO_MANAGERS",
       `Approval mode is "${approvalMode}" but the company has no managers. Manager routing will never trigger.`,
-      "critical"
+      "critical",
+      "Approval Setup"
     );
   }
 
@@ -135,7 +139,8 @@ export function getPortalConfigConflicts(
     add(
       "MANAGER_WORKFLOW_NO_MANAGERS",
       `Workflow mode is "${wfMode}" but the company has no managers. Expenses will have no valid routing path.`,
-      "critical"
+      "critical",
+      "Workflow Setup"
     );
   }
 
@@ -143,7 +148,8 @@ export function getPortalConfigConflicts(
     add(
       "REQUIRE_MANAGER_ALL_NO_MANAGERS",
       "Approval setup requires a manager for all employees, but the company has no managers configured.",
-      "critical"
+      "critical",
+      "Approval Setup"
     );
   }
 
@@ -151,7 +157,8 @@ export function getPortalConfigConflicts(
     add(
       "EXPENSE_POLICY_MANAGER_APPROVAL_NO_MANAGERS",
       "The expense policy requires manager approval, but the company has no managers configured.",
-      "critical"
+      "critical",
+      "Expense Policy"
     );
   }
 
@@ -159,7 +166,8 @@ export function getPortalConfigConflicts(
     add(
       "ESCALATE_MISSING_DOCS_NO_MANAGERS",
       "Missing-document escalation routes to manager, but the company has no managers.",
-      "warning"
+      "warning",
+      "Approval Setup"
     );
   }
 
@@ -167,7 +175,8 @@ export function getPortalConfigConflicts(
     add(
       "ROUTE_POLICY_FAILURES_NO_MANAGERS",
       "Policy failures are routed to manager, but the company has no managers.",
-      "warning"
+      "warning",
+      "Workflow Setup"
     );
   }
 
@@ -175,7 +184,8 @@ export function getPortalConfigConflicts(
     add(
       "ROUTE_MISSING_DOCS_NO_MANAGERS",
       "Missing-document routing is set to manager, but the company has no managers.",
-      "warning"
+      "warning",
+      "Workflow Setup"
     );
   }
 
@@ -185,7 +195,8 @@ export function getPortalConfigConflicts(
     add(
       "INTL_ESCALATION_INTL_DISABLED",
       "International escalation is enabled, but international expenses are not allowed by the expense policy.",
-      "warning"
+      "warning",
+      "Approval Setup"
     );
   }
 
@@ -193,7 +204,8 @@ export function getPortalConfigConflicts(
     add(
       "INTL_ROUTING_INTL_DISABLED",
       `International expenses are routed to "${routeIntlTo}", but international expenses are disabled in the expense policy.`,
-      "warning"
+      "warning",
+      "Workflow Setup"
     );
   }
 
@@ -201,7 +213,8 @@ export function getPortalConfigConflicts(
     add(
       "MULTI_COUNTRY_INTL_DISABLED",
       "The company operates across multiple countries, but international expenses are disabled in the expense policy.",
-      "warning"
+      "warning",
+      "Expense Policy"
     );
   }
 
@@ -211,7 +224,8 @@ export function getPortalConfigConflicts(
     add(
       "PROJECT_REQUIRED_NOT_IN_DIMS",
       "Accounting requires project allocation, but \"project\" is not included in the expense allocation dimensions.",
-      "critical"
+      "critical",
+      "Accounting Setup"
     );
   }
 
@@ -219,7 +233,8 @@ export function getPortalConfigConflicts(
     add(
       "CLIENT_REQUIRED_NOT_IN_DIMS",
       "Accounting requires client allocation, but \"client\" is not included in the expense allocation dimensions.",
-      "critical"
+      "critical",
+      "Accounting Setup"
     );
   }
 
@@ -227,7 +242,8 @@ export function getPortalConfigConflicts(
     add(
       "COST_CENTER_REQUIRED_NOT_IN_DIMS",
       "Accounting requires cost center allocation, but \"cost_center\" is not included in the expense allocation dimensions.",
-      "critical"
+      "critical",
+      "Accounting Setup"
     );
   }
 
@@ -237,7 +253,8 @@ export function getPortalConfigConflicts(
     add(
       "APPROVALS_ENABLED_NO_MODE",
       "The approvals module is enabled but the approval mode is \"none\". Submitted expenses will not be reviewed.",
-      "warning"
+      "warning",
+      "Approval Setup"
     );
   }
 
@@ -245,7 +262,8 @@ export function getPortalConfigConflicts(
     add(
       "THRESHOLD_APPROVAL_NO_THRESHOLD",
       "Approval mode is \"threshold_based\" but no manager threshold amount is configured. All expenses will follow the fallback path.",
-      "warning"
+      "warning",
+      "Approval Setup"
     );
   }
 
@@ -255,7 +273,8 @@ export function getPortalConfigConflicts(
     add(
       "POLIZA_REQUIRED_NO_XML_MODE",
       "Accounting requires póliza, but the expense policy does not require XML (CFDI). Póliza generation will fail without a valid CFDI document.",
-      "critical"
+      "critical",
+      "Accounting Setup"
     );
   }
 
@@ -263,7 +282,8 @@ export function getPortalConfigConflicts(
     add(
       "PDF_PAIR_REQUIRED_NO_XML_MODE",
       "PDF/XML pairing is required, but XML mode is set to none. Document pairs can never be satisfied.",
-      "warning"
+      "warning",
+      "Expense Policy"
     );
   }
 
@@ -273,7 +293,8 @@ export function getPortalConfigConflicts(
     add(
       "ACCOUNTING_DISABLED_REVIEW_ACTIVE",
       "The accounting module is disabled, but accounting review mode is still active. Expenses will not reach an accounting reviewer.",
-      "warning"
+      "warning",
+      "Add-Ons"
     );
   }
 
@@ -281,7 +302,8 @@ export function getPortalConfigConflicts(
     add(
       "ACCOUNTING_DISABLED_STRICT_RULES",
       "The accounting module is disabled, but póliza or account code requirements remain active. These rules cannot be enforced without an accounting reviewer.",
-      "warning"
+      "warning",
+      "Add-Ons"
     );
   }
 
@@ -289,7 +311,8 @@ export function getPortalConfigConflicts(
     add(
       "ROUTE_TO_ACCOUNTING_MODULE_DISABLED",
       "Policy failures are routed to accounting, but the accounting module is disabled.",
-      "warning"
+      "warning",
+      "Add-Ons"
     );
   }
 
@@ -299,7 +322,8 @@ export function getPortalConfigConflicts(
     add(
       "REIMBURSEMENTS_MULTI_ENTITY_NO_ENTITY_REQUIRED",
       "Reimbursements are enabled and the company operates as multi-entity, but reimbursement entity is not required. Entity assignment will be inconsistent across legal entities.",
-      "warning"
+      "warning",
+      "Accounting Setup"
     );
   }
 
@@ -309,7 +333,8 @@ export function getPortalConfigConflicts(
     add(
       "TICKETS_DISABLED_POLICY_ROUTE",
       "Policy failures are routed to tickets, but the expense policy does not allow tickets.",
-      "warning"
+      "warning",
+      "Expense Policy"
     );
   }
 
@@ -317,7 +342,8 @@ export function getPortalConfigConflicts(
     add(
       "TICKETS_DISABLED_INTL_ROUTE",
       "International expenses are routed to tickets, but the expense policy does not allow tickets.",
-      "warning"
+      "warning",
+      "Expense Policy"
     );
   }
 

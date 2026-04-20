@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, String, func
+from sqlalchemy import DateTime, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from apps.api.db import Base
@@ -62,7 +62,7 @@ class ArchiveFile(Base):
     # document_type  : classified kind — cfdi_xml | cfdi_pdf | receipt_pdf |
     #                  supporting_document | unknown  (null until triage runs)
     # validation_summary : human-readable summary from validation/triage
-    content_text:      Mapped[str | None] = mapped_column(String(10000), nullable=True)
+    content_text:      Mapped[str | None] = mapped_column(Text, nullable=True)
     document_type:     Mapped[str | None] = mapped_column(String(50),    nullable=True)
     validation_summary: Mapped[str | None] = mapped_column(String(2000), nullable=True)
 

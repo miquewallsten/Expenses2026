@@ -21,9 +21,10 @@ import AdminModulesPanel from "@/components/admin/AdminModulesPanel";
 import AdminUsersPanel from "@/components/admin/AdminUsersPanel";
 import AdminAuthSettingsPanel from "@/components/admin/AdminAuthSettingsPanel";
 import AdminChannelsPanel from "@/components/admin/AdminChannelsPanel";
+import AdminReportCyclePanel from "@/components/admin/AdminReportCyclePanel";
 import {
   Building2, FileText, GitBranch, ShieldCheck, Puzzle, Key, Lock,
-  AlertTriangle, Calculator, ClipboardCheck, Bot, Save, Loader2, FolderOutput, Archive, Users, Radio,
+  AlertTriangle, Calculator, ClipboardCheck, Bot, Save, Loader2, FolderOutput, Archive, Users, Radio, CalendarClock,
 } from "lucide-react";
 import { getCurrentRole, getCurrentUserId, getCurrentCompanyId, getStoredSession } from "@/lib/session";
 import { buildGlobalNav, GlobalNavItem } from "@/lib/navigation";
@@ -39,6 +40,7 @@ const WORKLIST_ITEMS = [
   "Accounting Setup",
   "Approval Setup",
   "Workflow Setup",
+  "Report Cycle",
   "Export Config",
   "Archive Config",
   "Channels",
@@ -51,7 +53,7 @@ const WORKLIST_ITEMS = [
 type WorklistItem = typeof WORKLIST_ITEMS[number];
 
 const WORKLIST_GROUPS: { label: string; items: WorklistItem[] }[] = [
-  { label: "Setup", items: ["Overview", "Company Setup", "Expense Policy", "Accounting Setup", "Approval Setup", "Workflow Setup"] },
+  { label: "Setup", items: ["Overview", "Company Setup", "Expense Policy", "Accounting Setup", "Approval Setup", "Workflow Setup", "Report Cycle"] },
   { label: "Integration", items: ["Export Config", "Archive Config", "Channels"] },
   { label: "Administration", items: ["Users", "Roles", "Permissions", "Add-Ons", "Authentication"] },
 ];
@@ -362,6 +364,7 @@ const ITEM_MENU_KEY: Record<WorklistItem, string> = {
   "Accounting Setup": "accountingSetup",
   "Approval Setup": "approvalSetup",
   "Workflow Setup": "workflowSetup",
+  "Report Cycle": "reportCycle",
   "Export Config": "exportConfig",
   "Archive Config": "archiveConfig",
   "Channels": "channels",
@@ -387,7 +390,8 @@ const WORKLIST_ICONS: Record<WorklistItem, React.ReactNode> = {
   "Accounting Setup": <Calculator className="h-3.5 w-3.5" />,
   "Approval Setup":   <ClipboardCheck className="h-3.5 w-3.5" />,
   "Workflow Setup":   <GitBranch className="h-3.5 w-3.5" />,
-  "Export Config":    <FolderOutput className="h-3.5 w-3.5" />,
+  "Report Cycle":     <CalendarClock className="h-3.5 w-3.5" />,
+  "Export Config":    <FolderOutput className="h-3.5 w-3.5" />
   "Archive Config":   <Archive className="h-3.5 w-3.5" />,
   "Channels":         <Radio className="h-3.5 w-3.5" />,
   Users:              <Users className="h-3.5 w-3.5" />,
@@ -573,6 +577,11 @@ function AdminAIHints({
         : "Resubmission after rejection is disabled — employees must contact an admin.",
     ] : [
       "Approval setup not loaded. Save the form to initialise defaults.",
+    ],
+    "Report Cycle": [
+      "Configure when expense reports are automatically created for each user.",
+      "Validated expenses sit in a holding state until the cycle fires — then they are bundled per user and submitted for approval.",
+      "Use 'Run now' to trigger a cycle immediately. Use the title template tokens: {user}, {month}, {year}.",
     ],
     "Workflow Setup": workflowSetup ? [
       `Workflow mode: ${(workflowSetup.default_expense_workflow_mode ?? "standard").replace(/_/g, " ")}.`,
@@ -1117,6 +1126,9 @@ export default function AdminPage() {
       case "Add-Ons":
         return <AdminModulesPanel companySetup={companySetup} onSetupChanged={setCompanySetup} />;
 
+      case "Report Cycle":
+        return <AdminReportCyclePanel companyId={1} />;
+
       case "Authentication":
         return <AdminAuthSettingsPanel companyId={1} />;
     }
@@ -1131,6 +1143,7 @@ export default function AdminPage() {
             portalConfig={portalConfig}
             onApplyPatch={handleOrchestratorApplyPatch}
             onAnalysisResult={handleAnalysisResult}
+            onNavigate={(section) => setActiveSection(section as WorklistItem)}
           />
         </aside>
       );

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CheckCircle2, Settings, Puzzle } from "lucide-react";
+import { getCurrentCompanyId } from "@/lib/session";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -82,10 +83,11 @@ export default function AdminModulesPanel({ companySetup, onSetupChanged }: Prop
 
   async function handleToggle(mod: CatalogEntry) {
     const current = !!companySetup?.[mod.setupFlag];
+    const companyId = getCurrentCompanyId() ?? "1";
     setToggling(mod.key);
     setError(null);
     try {
-      const res = await fetch(`${API}/admin/company-setup/1`, {
+      const res = await fetch(`${API}/admin/company-setup/${companyId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ [mod.setupFlag]: !current }),

@@ -20,6 +20,7 @@ interface Props {
   onApplyPatch?: (patches: SuggestedPatches) => void;
   onAnalysisResult?: (result: AnalyzeResponse) => void;
   onRefreshPortalConfig?: () => void;
+  onNavigate?: (section: string) => void;
 }
 
 interface CompanyProfile {
@@ -357,6 +358,7 @@ export default function AdminSetupOrchestratorPanel({
   onApplyPatch,
   onAnalysisResult,
   onRefreshPortalConfig,
+  onNavigate,
 }: Props) {
   const [prompt, setPrompt]         = useState("");
   const [loading, setLoading]       = useState(false);
@@ -436,7 +438,7 @@ export default function AdminSetupOrchestratorPanel({
     }
   };
 
-  const handleSubmit = () => runAnalysis(prompt);
+  const handleSubmit = (overridePrompt?: string) => runAnalysis(overridePrompt ?? prompt);
 
   const handleApprove = () => setApprovalState("approved");
 
@@ -567,47 +569,60 @@ export default function AdminSetupOrchestratorPanel({
           {preflightConflicts.map((c, i) => (
             <div
               key={i}
-              className={`flex items-start gap-2 rounded border px-2.5 py-1.5 ${
+              className={`group rounded border ${
                 c.severity === "critical"
                   ? "border-red-500/20 bg-red-500/[0.06]"
                   : "border-white/[0.06] bg-white/[0.01]"
               }`}
             >
-              {c.severity === "critical"
-                ? <AlertCircle   className="mt-0.5 h-2.5 w-2.5 shrink-0 text-red-400/65" />
-                : <AlertTriangle className="mt-0.5 h-2.5 w-2.5 shrink-0 text-amber-400/35" />
-              }
-              <p className={`text-[9.5px] leading-snug ${
-                c.severity === "critical"
-                  ? "text-red-300/70"
-                  : "text-white/35"
-              }`}>
-                {c.message}
-              </p>
+              {/* Main row — click to navigate */}
+              <button
+                type="button"
+                onClick={() => onNavigate?.(c.section)}
+                className="flex w-full items-start gap-2 px-2.5 py-1.5 text-left"
+              >
+                {c.severity === "critical"
+                  ? <AlertCircle   className="mt-0.5 h-2.5 w-2.5 shrink-0 text-red-400/65" />
+                  : <AlertTriangle className="mt-0.5 h-2.5 w-2.5 shrink-0 text-amber-400/35" />
+                }
+                <p className={`flex-1 text-[9.5px] leading-snug ${
+                  c.severity === "critical" ? "text-red-300/70" : "text-white/35"
+                }`}>
+                  {c.message}
+                </p>
+              </button>
+              {/* Action bar */}
+              <div className="flex items-center justify-between border-t border-white/[0.04] px-2.5 py-1">
+                <span className="text-[8px] text-white/20">{c.section}</span>
+                <div className="flex gap-1">
+                  {onNavigate && (
+                    <button
+                      type="button"
+                      onClick={() => onNavigate(c.section)}
+                      className="rounded px-1.5 py-0.5 text-[8px] font-medium text-white/25 transition-colors hover:bg-white/[0.05] hover:text-white/50"
+                    >
+                      Go to section →
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPrompt(`Fix this configuration issue: ${c.message}`);
+                      handleSubmit(`Fix this configuration issue: ${c.message}`);
+                    }}
+                    className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[8px] font-medium text-violet-300/35 transition-colors hover:bg-violet-500/[0.08] hover:text-violet-300/60"
+                  >
+                    <Zap className="h-2 w-2" /> Ask AI
+                  </button>
+                </div>
+              </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* A — Quick intent + prompt */}
+      {/* A — Prompt */}
       <div className="space-y-1.5">
-        {/* Mode starter chips */}
-        <div className="flex gap-1">
-          {([
-            { label: "Diagnose", starter: "Diagnose the current configuration and identify any issues." },
-            { label: "Configure", starter: "Configure this company: " },
-            { label: "Adapt", starter: "Adapt the current configuration to " },
-          ] as const).map(({ label, starter }) => (
-            <button
-              key={label}
-              type="button"
-              onClick={() => setPrompt((p) => p ? p : starter)}
-              className="rounded border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[9px] font-medium text-white/35 transition-colors hover:border-white/[0.15] hover:bg-white/[0.06] hover:text-white/55"
-            >
-              {label}
-            </button>
-          ))}
-        </div>
         <textarea
           rows={4}
           value={prompt}

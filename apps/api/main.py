@@ -96,6 +96,8 @@ from packages.core.platform.models_time_tracking import (  # noqa: F401 — regi
     TimeProject, TimeActivity, TimeAssignment, TimeEntry,
 )
 from packages.modules.time_tracking.router import router as time_tracking_router
+from packages.core.platform.models_report_cycle import ReportCycleSettings  # noqa: F401 — registers table
+from packages.modules.admin.api.report_cycle_router import router as report_cycle_router
 
 app = FastAPI(title=settings.app_name)
 
@@ -206,6 +208,7 @@ app.include_router(email_inbound_router)
 app.include_router(channels_admin_router)
 app.include_router(purchase_requests_router)
 app.include_router(time_tracking_router)
+app.include_router(report_cycle_router)
 
 
 @app.get("/")
