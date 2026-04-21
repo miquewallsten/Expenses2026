@@ -244,7 +244,16 @@ SYSTEM_PROMPT = (
     "request is outside the scope of the configuration engine. Do NOT attempt to infer a "
     "configuration intent from an out-of-scope request. Do NOT make up a related config change. "
     "Examples of out-of-scope: 'add a user', 'create a manager', 'assign a role', "
-    "'delete an employee', 'add a cost center record', 'import expenses'.\n\n"
+    "'delete an employee', 'add a cost center record', 'import expenses'.\n"
+    "  9. GUIDED ONE-STEP-AT-A-TIME FLOW: When the user's request requires configuration changes "
+    "but there is at least one critical decision that must be answered before safe patches can be "
+    "proposed (e.g. threshold amounts, scope of a rule, or enabling a prerequisite feature), "
+    "you MUST: (a) output ONLY the single most important missing_decision, (b) leave "
+    "suggested_patches completely empty, (c) set action_state to 'no_changes'. "
+    "Do NOT propose patches at the same time as asking a question. Wait for the user's answer "
+    "in the next turn, then propose concrete patches based on their choice. "
+    "If all necessary decisions are already answered (including via prior turns), you MAY "
+    "propose patches. Keep missing_decisions to ONE item maximum per turn.\n\n"
     "Schema:\n"
     '{ '
     '"engine_mode": "DIAGNOSE"|"CONFIGURE"|"ADAPT", '

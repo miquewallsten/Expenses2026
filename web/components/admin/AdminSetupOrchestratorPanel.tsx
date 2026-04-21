@@ -836,12 +836,18 @@ export default function AdminSetupOrchestratorPanel({
                 {d.suggested_options.length > 0 && (
                   <div className="flex flex-wrap gap-1 pl-5">
                     {d.suggested_options.map((opt, j) => (
-                      <span
+                      <button
                         key={j}
-                        className="rounded border border-white/[0.06] bg-white/[0.02] px-2 py-0.5 text-[9px] text-white/28"
+                        type="button"
+                        onClick={() => {
+                          const reply = `${d.question} → ${opt}`;
+                          setPrompt(reply);
+                          handleSubmit(reply);
+                        }}
+                        className="rounded border border-indigo-500/20 bg-indigo-500/[0.06] px-2 py-0.5 text-[9px] text-indigo-300/55 transition-colors hover:border-indigo-500/40 hover:bg-indigo-500/[0.12] hover:text-indigo-300/80"
                       >
                         {opt}
-                      </span>
+                      </button>
                     ))}
                   </div>
                 )}
