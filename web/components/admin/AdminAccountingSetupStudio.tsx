@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { Save, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -11,20 +12,6 @@ interface Props {
   onSaved?: (setup: any) => void;
   draftPatch?: Partial<any>;
 }
-
-// ── Option sets ───────────────────────────────────────────────────────────────
-
-const REVIEW_MODE_OPTIONS = [
-  { value: "all",             label: "All — review every expense" },
-  { value: "exceptions_only", label: "Exceptions only" },
-  { value: "none",            label: "None — skip accounting review" },
-];
-
-const MANAGER_APPROVAL_OPTIONS = [
-  { value: "disabled",       label: "Disabled" },
-  { value: "all",            label: "All expenses" },
-  { value: "threshold_only", label: "Above threshold" },
-];
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
@@ -146,21 +133,36 @@ function ToggleRow({
   );
 }
 
-// ── Draft indicator ───────────────────────────────────────────────────────────
-
-function DraftBadge({ patch }: { patch: Partial<any> | undefined }) {
-  if (!patch || Object.keys(patch).length === 0) return null;
-  const count = Object.keys(patch).length;
-  return (
-    <span className="rounded border border-violet-500/20 bg-violet-500/[0.08] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-violet-300/60">
-      {count} AI draft{count !== 1 ? "s" : ""}
-    </span>
-  );
-}
-
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function AdminAccountingSetupStudio({ companyId, setup, onSaved, draftPatch }: Props) {
+  const t = useTranslations("admin.accountingSetup");
+  const tc = useTranslations("common");
+
+  // ── Option sets (inside component to use t()) ──────────────────────────────
+  const REVIEW_MODE_OPTIONS = [
+    { value: "all",             label: t("modeAll") },
+    { value: "exceptions_only", label: t("modeExceptionsOnly") },
+    { value: "none",            label: t("modeNone") },
+  ];
+
+  const MANAGER_APPROVAL_OPTIONS = [
+    { value: "disabled",       label: t("mgrDisabled") },
+    { value: "all",            label: t("mgrAll") },
+    { value: "threshold_only", label: t("mgrThresholdOnly") },
+  ];
+
+  // ── Draft badge ──────────────────────────────────────────────────────────
+  function DraftBadge({ patch }: { patch: Partial<any> | undefined }) {
+    if (!patch || Object.keys(patch).length === 0) return null;
+    const count = Object.keys(patch).length;
+    return (
+      <span className="rounded border border-violet-500/20 bg-violet-500/[0.08] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-violet-300/60">
+        {t("aiDraftCount", { count })}
+      </span>
+    );
+  }
+
   const seed = (field: string, def: any) => {
     if (draftPatch && field in draftPatch) return draftPatch[field];
     return setup[field] ?? def;
@@ -213,9 +215,9 @@ export default function AdminAccountingSetupStudio({ companyId, setup, onSaved, 
   // Local warnings
   const warnings: string[] = [];
   if (accountingReviewMode === "none" && polizaRequired)
-    warnings.push("Póliza is required but accounting review mode is 'none' — no one will validate the XML.");
+    warnings.push(t("warnPolizaNoReview"));
   if (managerApprovalMode === "threshold_only" && !managerApprovalThreshold)
-    warnings.push("Manager approval mode is 'threshold only' but no threshold amount is set.");
+    warnings.push(t("warnThresholdNoAmount"));
 
   const handleSave = async () => {
     setSaving(true); setError(null); setSaved(false);
@@ -249,7 +251,7 @@ export default function AdminAccountingSetupStudio({ companyId, setup, onSaved, 
       onSaved?.(data);
       setSaved(true);
     } catch (e: any) {
-      setError(e?.message ?? "Save failed");
+      setError(e?.message ?? tc("save"));
     } finally {
       setSaving(false);
     }
@@ -259,7 +261,7 @@ export default function AdminAccountingSetupStudio({ companyId, setup, onSaved, 
     <div className="max-w-2xl space-y-4">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <h2 className="text-sm font-semibold text-white">Accounting Setup</h2>
+        <h2 className="text-sm font-semibold text-white">{t("title")}</h2>
         <DraftBadge patch={draftPatch} />
       </div>
 
@@ -273,34 +275,34 @@ export default function AdminAccountingSetupStudio({ companyId, setup, onSaved, 
 
       {/* Operating Model */}
       <div>
-        <SectionLabel>Operating model</SectionLabel>
+        <SectionLabel>{t("operatingModel")}</SectionLabel>
         <Panel>
           <SelectRow
-            label="Accounting review mode"
-            description="Which expenses go through accounting review"
+            label={t("accountingReviewMode")}
+            description={t("accountingReviewModeDesc")}
             value={accountingReviewMode}
             options={REVIEW_MODE_OPTIONS}
             onChange={setAccountingReviewMode}
           />
           <SelectRow
-            label="Manager pre-approval"
-            description="When manager approval is required before accounting"
+            label={t("managerPreApproval")}
+            description={t("managerPreApprovalDesc")}
             value={managerApprovalMode}
             options={MANAGER_APPROVAL_OPTIONS}
             onChange={setManagerApprovalMode}
           />
           {managerApprovalMode === "threshold_only" && (
             <NumberRow
-              label="Manager approval threshold"
-              description="Expenses above this amount require manager pre-approval"
+              label={t("managerApprovalThreshold")}
+              description={t("managerApprovalThresholdDesc")}
               value={managerApprovalThreshold}
-              placeholder="e.g. 500"
+              placeholder={t("managerApprovalThresholdPlaceholder")}
               onChange={setManagerApprovalThreshold}
             />
           )}
           <NumberRow
-            label="Archive retention (years)"
-            description="How long to retain archived expense records"
+            label={t("archiveRetention")}
+            description={t("archiveRetentionDesc")}
             value={archiveRetentionYears}
             placeholder="5"
             onChange={setArchiveRetentionYears}
@@ -310,23 +312,23 @@ export default function AdminAccountingSetupStudio({ companyId, setup, onSaved, 
 
       {/* Compliance & Filing */}
       <div>
-        <SectionLabel>Compliance & filing</SectionLabel>
+        <SectionLabel>{t("complianceFiling")}</SectionLabel>
         <Panel>
           <ToggleRow
-            label="Póliza XML required"
-            description="Require a valid CFDI/XML document before export"
+            label={t("polizaXmlRequired")}
+            description={t("polizaXmlDesc")}
             checked={polizaRequired}
             onChange={setPolizaRequired}
           />
           <ToggleRow
-            label="Reimbursement entity required"
-            description="Expenses must be linked to a legal entity for reimbursement"
+            label={t("reimbursementEntityRequired")}
+            description={t("reimbursementEntityDesc")}
             checked={reimbursementEntityRequired}
             onChange={setReimbursementEntityRequired}
           />
           <ToggleRow
-            label="Require final accounting review before export"
-            description="All expenses must be marked reviewed before export bundle is generated"
+            label={t("finalReviewBeforeExport")}
+            description={t("finalReviewBeforeExportDesc")}
             checked={requireFinalReviewBeforeExport}
             onChange={setRequireFinalReviewBeforeExport}
           />
@@ -335,29 +337,29 @@ export default function AdminAccountingSetupStudio({ companyId, setup, onSaved, 
 
       {/* Expense Control */}
       <div>
-        <SectionLabel>Expense control fields</SectionLabel>
+        <SectionLabel>{t("expenseControlFields")}</SectionLabel>
         <Panel>
-          <ToggleRow label="Account code required" checked={accountCodeRequired} onChange={setAccountCodeRequired} />
-          <ToggleRow label="Sub-account required"  checked={subaccountRequired}  onChange={setSubaccountRequired} />
-          <ToggleRow label="Cost center required"  checked={costCenterRequired}  onChange={setCostCenterRequired} />
-          <ToggleRow label="Project required"       checked={projectRequired}     onChange={setProjectRequired} />
-          <ToggleRow label="Client required"        checked={clientRequired}      onChange={setClientRequired} />
+          <ToggleRow label={t("accountCodeRequired")} checked={accountCodeRequired} onChange={setAccountCodeRequired} />
+          <ToggleRow label={t("subaccountRequired")}  checked={subaccountRequired}  onChange={setSubaccountRequired} />
+          <ToggleRow label={t("costCenterRequired")}  checked={costCenterRequired}  onChange={setCostCenterRequired} />
+          <ToggleRow label={t("projectRequired")}     checked={projectRequired}     onChange={setProjectRequired} />
+          <ToggleRow label={t("clientRequired")}      checked={clientRequired}      onChange={setClientRequired} />
         </Panel>
       </div>
 
       {/* Validation & Override */}
       <div>
-        <SectionLabel>Validation & override</SectionLabel>
+        <SectionLabel>{t("validationOverride")}</SectionLabel>
         <Panel>
           <ToggleRow
-            label="Allow accounting override"
-            description="Accounting team can override validation errors on individual expenses"
+            label={t("allowAccountingOverride")}
+            description={t("allowAccountingOverrideDesc")}
             checked={allowAccountingOverride}
             onChange={setAllowAccountingOverride}
           />
           <ToggleRow
-            label="Allow submit with warnings"
-            description="Employees can submit expenses even when there are non-blocking validation warnings"
+            label={t("allowSubmitWithWarnings")}
+            description={t("allowSubmitWithWarningsDesc")}
             checked={allowSubmitWithWarnings}
             onChange={setAllowSubmitWithWarnings}
           />
@@ -366,28 +368,28 @@ export default function AdminAccountingSetupStudio({ companyId, setup, onSaved, 
 
       {/* AI Assistance */}
       <div>
-        <SectionLabel>AI assistance</SectionLabel>
+        <SectionLabel>{t("aiAssistance")}</SectionLabel>
         <Panel>
           <ToggleRow
-            label="AI accounting assist"
-            description="AI suggestions for account codes and cost centers during review"
+            label={t("aiAccountingAssist")}
+            description={t("aiAccountingAssistDesc")}
             checked={aiAssistEnabled}
             onChange={setAiAssistEnabled}
           />
           <ToggleRow
-            label="Auto account code suggestion"
-            description="AI pre-fills account codes on new expenses based on category patterns"
+            label={t("autoAccountCodeSuggestion")}
+            description={t("autoAccountCodeSuggestionDesc")}
             checked={autoAccountSuggestion}
             onChange={setAutoAccountSuggestion}
           />
           <div className="px-4 py-2.5">
-            <p className="mb-1 text-[11px] font-medium text-white/68">AI notes</p>
-            <p className="mb-1.5 text-[10px] text-white/28">Optional context for the AI about your chart of accounts or accounting policies</p>
+            <p className="mb-1 text-[11px] font-medium text-white/68">{t("aiNotes")}</p>
+            <p className="mb-1.5 text-[10px] text-white/28">{t("aiNotesDesc")}</p>
             <textarea
               value={aiNotes}
               onChange={(e) => setAiNotes(e.target.value)}
               rows={3}
-              placeholder="e.g. We use a 4-digit chart of accounts based on the Mexican SAT catálogo…"
+              placeholder={t("aiNotesPlaceholder")}
               className="w-full resize-none rounded border border-white/[0.07] bg-black/20 px-2.5 py-1.5 text-[11px] text-white/60 placeholder:text-white/20 outline-none focus:border-white/20"
             />
           </div>
@@ -403,13 +405,13 @@ export default function AdminAccountingSetupStudio({ companyId, setup, onSaved, 
           className="inline-flex items-center gap-1.5 rounded border border-white/10 bg-white/[0.05] px-3 py-1.5 text-[10px] font-semibold text-white/60 transition-colors hover:bg-white/[0.09] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {saving
-            ? <><Loader2 className="h-3 w-3 animate-spin" /> Saving…</>
-            : <><Save className="h-3 w-3" /> Save</>
+            ? <><Loader2 className="h-3 w-3 animate-spin" /> {tc("saving")}</>
+            : <><Save className="h-3 w-3" /> {tc("save")}</>
           }
         </button>
         {saved && (
           <span className="flex items-center gap-1 text-[10px] text-emerald-400/60">
-            <CheckCircle2 className="h-3 w-3" /> Saved
+            <CheckCircle2 className="h-3 w-3" /> {tc("saved")}
           </span>
         )}
         {error && <span className="text-[10px] text-red-400/60">{error}</span>}

@@ -8,7 +8,6 @@ import {
 } from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
-const COMPANY_ID = 1;
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -128,9 +127,11 @@ function SecretField({ label, value, isSet, onChange }: {
 function WhatsAppSettingsForm({
   settings,
   onSaved,
+  companyId,
 }: {
   settings: ChannelSettings;
   onSaved: (updated: ChannelSettings) => void;
+  companyId: number;
 }) {
   const [form, setForm] = useState({
     is_enabled:              settings.is_enabled,
@@ -155,7 +156,7 @@ function WhatsAppSettingsForm({
     try {
       const body: Record<string, unknown> = { ...form };
       if (!body.wa_access_token) delete body.wa_access_token; // don't overwrite with blank
-      const r = await fetch(`${API}/admin/channels/settings/${COMPANY_ID}/whatsapp`, {
+      const r = await fetch(`${API}/admin/channels/settings/${companyId}/whatsapp`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -174,7 +175,7 @@ function WhatsAppSettingsForm({
     setTesting(true);
     setTestResult(null);
     try {
-      const r = await fetch(`${API}/admin/channels/test/${COMPANY_ID}/whatsapp`, {
+      const r = await fetch(`${API}/admin/channels/test/${companyId}/whatsapp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ recipient: testRecipient }),
@@ -303,9 +304,11 @@ function WhatsAppSettingsForm({
 function EmailSettingsForm({
   settings,
   onSaved,
+  companyId,
 }: {
   settings: ChannelSettings;
   onSaved: (updated: ChannelSettings) => void;
+  companyId: number;
 }) {
   const [form, setForm] = useState({
     is_enabled:            settings.is_enabled,
@@ -336,7 +339,7 @@ function EmailSettingsForm({
       };
       if (!body.email_smtp_password) delete body.email_smtp_password;
       if (!body.email_webhook_secret) delete body.email_webhook_secret;
-      const r = await fetch(`${API}/admin/channels/settings/${COMPANY_ID}/email`, {
+      const r = await fetch(`${API}/admin/channels/settings/${companyId}/email`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -355,7 +358,7 @@ function EmailSettingsForm({
     setTesting(true);
     setTestResult(null);
     try {
-      const r = await fetch(`${API}/admin/channels/test/${COMPANY_ID}/email`, {
+      const r = await fetch(`${API}/admin/channels/test/${companyId}/email`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ recipient: testRecipient }),
@@ -498,7 +501,7 @@ function EmailSettingsForm({
 
 // ── Message log ────────────────────────────────────────────────────────────────
 
-function MessageLog({ channel }: { channel: ChannelTab | "all" }) {
+function MessageLog({ channel, companyId }: { channel: ChannelTab | "all"; companyId: number }) {
   const [messages, setMessages] = useState<ChannelMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<number | null>(null);
@@ -509,7 +512,7 @@ function MessageLog({ channel }: { channel: ChannelTab | "all" }) {
       const params = new URLSearchParams();
       if (channel !== "all") params.set("channel", channel);
       params.set("limit", "80");
-      const r = await fetch(`${API}/admin/channels/messages/${COMPANY_ID}?${params}`);
+      const r = await fetch(`${API}/admin/channels/messages/${companyId}?${params}`);
       if (r.ok) setMessages(await r.json());
     } finally {
       setLoading(false);
@@ -613,7 +616,7 @@ function StatsBar({ stats }: { stats: ChannelStats | null }) {
 
 // ── Main panel ─────────────────────────────────────────────────────────────────
 
-export default function AdminChannelsPanel() {
+export default function AdminChannelsPanel({ companyId }: { companyId: number }) {
   const [channelTab, setChannelTab] = useState<ChannelTab>("whatsapp");
   const [subTab, setSubTab] = useState<SubTab>("settings");
   const [settings, setSettings] = useState<ChannelSettings[] | null>(null);
@@ -622,8 +625,8 @@ export default function AdminChannelsPanel() {
 
   useEffect(() => {
     Promise.all([
-      fetch(`${API}/admin/channels/settings/${COMPANY_ID}`).then((r) => r.ok ? r.json() : null),
-      fetch(`${API}/admin/channels/stats/${COMPANY_ID}`).then((r) => r.ok ? r.json() : null),
+      fetch(`${API}/admin/channels/settings/${companyId}`).then((r) => r.ok ? r.json() : null),
+      fetch(`${API}/admin/channels/stats/${companyId}`).then((r) => r.ok ? r.json() : null),
     ]).then(([s, st]) => {
       setSettings(s);
       setStats(st);
@@ -693,13 +696,13 @@ export default function AdminChannelsPanel() {
         ) : subTab === "settings" ? (
           current ? (
             channelTab === "whatsapp"
-              ? <WhatsAppSettingsForm settings={current} onSaved={handleSaved} />
-              : <EmailSettingsForm settings={current} onSaved={handleSaved} />
+              ? <WhatsAppSettingsForm settings={current} onSaved={handleSaved} companyId={companyId} />
+              : <EmailSettingsForm settings={current} onSaved={handleSaved} companyId={companyId} />
           ) : (
             <p className="py-8 text-center text-[11px] text-white/25">Could not load settings.</p>
           )
         ) : (
-          <MessageLog channel={channelTab} />
+          <MessageLog channel={channelTab} companyId={companyId} />
         )}
       </div>
     </div>

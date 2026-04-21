@@ -333,8 +333,8 @@ export function MyWorkProvider({ children }: { children: ReactNode }) {
   );
 
   const showAiCopilot = useMemo(
-    () => ep?.ai_policy_assist_enabled ?? false,
-    [ep],
+    () => !!(portalConfig?.company_setup?.ai_copilot_enabled),
+    [portalConfig],
   );
 
   // ── Assemble value ───────────────────────────────────────────────────────

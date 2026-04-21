@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Plus, Key, Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -19,6 +20,8 @@ interface Props {
 }
 
 export default function AdminPermissionsPanel({ permissions, onPermissionsChanged }: Props) {
+  const tp = useTranslations("admin.permissions");
+  const tc = useTranslations("common");
   const [showForm, setShowForm] = useState(false);
   const [key,      setKey]      = useState("");
   const [name,     setName]     = useState("");
@@ -27,7 +30,7 @@ export default function AdminPermissionsPanel({ permissions, onPermissionsChange
   const [error,    setError]    = useState<string | null>(null);
 
   const handleCreate = async () => {
-    if (!key.trim() || !name.trim()) { setError("Key and name are required."); return; }
+    if (!key.trim() || !name.trim()) { setError(tp("errorRequired")); return; }
     setSaving(true); setError(null);
     try {
       const res = await fetch(`${API}/roles/permissions`, {
@@ -44,7 +47,7 @@ export default function AdminPermissionsPanel({ permissions, onPermissionsChange
       setKey(""); setName(""); setDesc("");
       setShowForm(false);
     } catch (e: any) {
-      setError(e?.message ?? "Create failed");
+      setError(e?.message ?? tp("errorCreate"));
     } finally {
       setSaving(false);
     }
@@ -56,7 +59,7 @@ export default function AdminPermissionsPanel({ permissions, onPermissionsChange
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Key className="h-4 w-4 text-white/25" />
-          <h2 className="text-sm font-semibold text-white">Permissions</h2>
+          <h2 className="text-sm font-semibold text-white">{tp("title")}</h2>
           <span className="rounded border border-white/[0.08] bg-white/[0.04] px-1.5 py-0.5 font-mono text-[10px] text-white/30">
             {permissions.length}
           </span>
@@ -68,7 +71,7 @@ export default function AdminPermissionsPanel({ permissions, onPermissionsChange
             className="inline-flex items-center gap-1.5 rounded border border-white/[0.09] bg-white/[0.03] px-2.5 py-1 text-[10px] font-semibold text-white/40 transition-colors hover:border-white/20 hover:text-white/70"
           >
             <Plus className="h-3 w-3" />
-            New Permission
+            {tp("newPermission")}
           </button>
         )}
       </div>
@@ -76,13 +79,13 @@ export default function AdminPermissionsPanel({ permissions, onPermissionsChange
       {permissions.length === 0 && !showForm ? (
         <div className="rounded-lg border border-white/[0.07] bg-white/[0.02] px-4 py-8 text-center">
           <Key className="mx-auto mb-2 h-6 w-6 text-white/10" />
-          <p className="text-xs text-white/20 italic">No permissions defined yet.</p>
+          <p className="text-xs text-white/20 italic">{tp("empty")}</p>
         </div>
       ) : (
         <div className="overflow-hidden rounded-lg border border-white/[0.07]">
           {permissions.length > 0 && (
             <div className="grid grid-cols-[1fr_1fr_2fr] gap-x-4 border-b border-white/[0.05] bg-black/20 px-4 py-2">
-              {["Key", "Name", "Description"].map((h) => (
+              {[tp("colKey"), tp("colName"), tp("colDescription")].map((h) => (
                 <span key={h} className="text-[9px] font-bold uppercase tracking-widest text-white/22">{h}</span>
               ))}
             </div>
@@ -103,25 +106,25 @@ export default function AdminPermissionsPanel({ permissions, onPermissionsChange
           {/* Inline create form */}
           {showForm && (
             <div className="border-t border-white/[0.06] bg-white/[0.02] px-4 py-3">
-              <p className="mb-2 text-[9px] font-bold uppercase tracking-widest text-white/22">New permission</p>
+              <p className="mb-2 text-[9px] font-bold uppercase tracking-widest text-white/22">{tp("formTitle")}</p>
               <div className="grid grid-cols-[1fr_1fr_2fr] gap-2 mb-2">
                 <input
                   type="text"
-                  placeholder="key (snake_case)"
+                  placeholder={tp("keyPlaceholder")}
                   value={key}
                   onChange={(e) => setKey(e.target.value)}
                   className="rounded border border-white/[0.08] bg-zinc-900 px-2 py-1.5 font-mono text-[10px] text-white/55 placeholder:text-white/20 outline-none focus:border-sky-500/40"
                 />
                 <input
                   type="text"
-                  placeholder="Name"
+                  placeholder={tp("namePlaceholder")}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="rounded border border-white/[0.08] bg-zinc-900 px-2 py-1.5 text-[11px] text-white/70 placeholder:text-white/20 outline-none focus:border-sky-500/40"
                 />
                 <input
                   type="text"
-                  placeholder="Description (optional)"
+                  placeholder={tp("descPlaceholder")}
                   value={desc}
                   onChange={(e) => setDesc(e.target.value)}
                   className="rounded border border-white/[0.08] bg-zinc-900 px-2 py-1.5 text-[11px] text-white/55 placeholder:text-white/20 outline-none focus:border-sky-500/40"
@@ -135,14 +138,14 @@ export default function AdminPermissionsPanel({ permissions, onPermissionsChange
                   disabled={saving}
                   className="inline-flex items-center gap-1.5 rounded border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] font-semibold text-white/60 transition-colors hover:bg-white/[0.09] disabled:opacity-50"
                 >
-                  {saving ? <><Loader2 className="h-3 w-3 animate-spin" /> Creating…</> : <>Create</>}
+                  {saving ? <><Loader2 className="h-3 w-3 animate-spin" /> {tp("creating")}</> : <>{tp("create")}</>}
                 </button>
                 <button
                   type="button"
                   onClick={() => { setShowForm(false); setError(null); setKey(""); setName(""); setDesc(""); }}
                   className="text-[10px] text-white/30 hover:text-white/55"
                 >
-                  Cancel
+                  {tc("cancel")}
                 </button>
               </div>
             </div>

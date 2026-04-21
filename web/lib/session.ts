@@ -69,3 +69,14 @@ export function clearSession(): void {
   localStorage.removeItem("currentUserRole");
   localStorage.removeItem("currentCompanyId");
 }
+
+/** Returns the correct Authorization headers for API calls.
+ *  Prefers Bearer JWT (from stored session); falls back to X-User-Id in dev. */
+export function getAuthHeaders(): Record<string, string> {
+  const stored = getStoredSession();
+  if (stored?.token) {
+    return { Authorization: `Bearer ${stored.token}` };
+  }
+  const userId = getCurrentUserId() ?? "1";
+  return { "X-User-Id": userId };
+}

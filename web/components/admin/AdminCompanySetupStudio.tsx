@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import {
+import { getAuthHeaders } from "@/lib/session";
   Save, Loader2, CheckCircle2, AlertCircle, Sparkles,
-  Building2, Plus, Pencil, Trash2, X, AlertTriangle, ImagePlus,
+  Building2, Plus, Pencil, Trash2, X, ImagePlus,
 } from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -97,54 +99,6 @@ const ALLOC_DIM_OPTIONS = [
   { value: "client_cost_center",         label: "Client + Cost Center" },
   { value: "project_client_cost_center", label: "Project + Client + Cost Center" },
 ];
-
-// ── Summary builder ───────────────────────────────────────────────────────────
-
-function buildSummary(form: Record<string, any>): string {
-  const parts: string[] = [];
-  if (form.industry) parts.push(form.industry);
-  if (form.employee_count_range) parts.push(`${form.employee_count_range} employees`);
-  if (form.country_code) parts.push(form.country_code);
-  if (form.base_currency) parts.push(form.base_currency);
-  if (form.operates_multi_entity) parts.push("multi-entity");
-  if (form.operates_multi_country) parts.push("multi-country");
-  const enabledCount = [
-    "expenses_module_enabled", "time_allocation_module_enabled",
-    "subcontractor_module_enabled", "reimbursements_module_enabled",
-    "approvals_module_enabled", "accounting_module_enabled",
-    "archive_module_enabled", "ai_copilot_enabled",
-  ].filter((k) => form[k]).length;
-  parts.push(`${enabledCount} module${enabledCount !== 1 ? "s" : ""} active`);
-  return parts.join(" · ") || "No setup configured yet.";
-}
-
-// ── Inline warnings ──────────────────────────────────────────────────────────
-
-function buildWarnings(form: Record<string, any>, entities: any[]): string[] {
-  const w: string[] = [];
-
-  if (form.operates_multi_entity && entities.length === 0)
-    w.push("Multi-entity operation is enabled but no legal entities have been configured.");
-
-  if (form.operates_multi_country) {
-    const countryCodes = new Set<string>();
-    if (form.country_code) countryCodes.add(form.country_code);
-    entities.forEach((e) => { if (e.country_code) countryCodes.add(e.country_code); });
-    if (countryCodes.size < 2)
-      w.push("Multi-country operation is enabled but only one country is represented across the company and legal entities.");
-  }
-
-  if (!form.has_managers && form.approvals_module_enabled)
-    w.push("Approvals module is active but no managers are configured — approval workflows may have no approvers.");
-
-  if (form.accounting_module_enabled && !form.expenses_module_enabled)
-    w.push("Accounting module is enabled but Expenses module is off — poliza export requires expense records.");
-
-  if (form.subcontractor_module_enabled && !form.has_subcontractors)
-    w.push("Subcontractor module is active but the organisation model does not include subcontractors.");
-
-  return w;
-}
 
 // ── Shared sub-components ─────────────────────────────────────────────────────
 
@@ -293,6 +247,9 @@ function LegalEntityForm({
   onSaved: (entity: any) => void;
   onCancel: () => void;
 }) {
+  const t = useTranslations("admin.companySetup");
+  const tc = useTranslations("common");
+
   const isEdit = !!initial?.id;
   const [form, setForm] = useState<Record<string, any>>(
     isEdit ? { ...initial } : { ...EMPTY_ENTITY, company_id: companyId }
@@ -305,7 +262,7 @@ function LegalEntityForm({
 
   const save = async () => {
     if (!form.entity_name?.trim()) {
-      setError("Entity name is required.");
+      setError(t("entityNameRequired"));
       return;
     }
     setSaving(true);
@@ -320,13 +277,13 @@ function LegalEntityForm({
         : form;
       const res = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json", "X-User-Id": "1" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(`${res.status}`);
       onSaved(await res.json());
     } catch (e: any) {
-      setError(e?.message ?? "Save failed");
+      setError(e?.message ?? tc("save"));
     } finally {
       setSaving(false);
     }
@@ -338,64 +295,64 @@ function LegalEntityForm({
   return (
     <div className="space-y-3 rounded-lg border border-white/[0.08] bg-white/[0.025] p-4">
       <p className="text-[9px] font-bold uppercase tracking-widest text-white/30">
-        {isEdit ? "Edit entity" : "Add legal entity"}
+        {isEdit ? t("editEntity") : t("addLegalEntity")}
       </p>
 
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <p className="mb-0.5 text-[9px] text-white/30">Entity name *</p>
+          <p className="mb-0.5 text-[9px] text-white/30">{t("entityNameLabel")}</p>
           <input className={fieldClass} value={form.entity_name ?? ""} onChange={(e) => set("entity_name", e.target.value)} placeholder="ACME S.A. de C.V." />
         </div>
         <div>
-          <p className="mb-0.5 text-[9px] text-white/30">Entity code</p>
+          <p className="mb-0.5 text-[9px] text-white/30">{t("entityCodeLabel")}</p>
           <input className={fieldClass} value={form.entity_code ?? ""} onChange={(e) => set("entity_code", e.target.value)} placeholder="MX-MAIN" />
         </div>
         <div>
-          <p className="mb-0.5 text-[9px] text-white/30">RFC</p>
+          <p className="mb-0.5 text-[9px] text-white/30">{t("rfcLabel")}</p>
           <input className={fieldClass} value={form.rfc ?? ""} onChange={(e) => set("rfc", e.target.value)} placeholder="ACM901204XY3" />
         </div>
         <div>
-          <p className="mb-0.5 text-[9px] text-white/30">Tax ID</p>
-          <input className={fieldClass} value={form.tax_id ?? ""} onChange={(e) => set("tax_id", e.target.value)} placeholder="Optional" />
+          <p className="mb-0.5 text-[9px] text-white/30">{t("taxIdLabel")}</p>
+          <input className={fieldClass} value={form.tax_id ?? ""} onChange={(e) => set("tax_id", e.target.value)} placeholder={t("taxIdPlaceholder")} />
         </div>
         <div>
-          <p className="mb-0.5 text-[9px] text-white/30">Country</p>
+          <p className="mb-0.5 text-[9px] text-white/30">{t("countryLabel")}</p>
           <select className={fieldClass} value={form.country_code ?? ""} onChange={(e) => set("country_code", e.target.value)}>
             <option value="">—</option>
             {COUNTRY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
         <div>
-          <p className="mb-0.5 text-[9px] text-white/30">Currency</p>
+          <p className="mb-0.5 text-[9px] text-white/30">{t("currencyLabel")}</p>
           <select className={fieldClass} value={form.base_currency ?? ""} onChange={(e) => set("base_currency", e.target.value)}>
             <option value="">—</option>
             {CURRENCY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
         <div>
-          <p className="mb-0.5 text-[9px] text-white/30">Fiscal regime</p>
+          <p className="mb-0.5 text-[9px] text-white/30">{t("fiscalRegimeLabel")}</p>
           <input className={fieldClass} value={form.fiscal_regime ?? ""} onChange={(e) => set("fiscal_regime", e.target.value)} placeholder="601" />
         </div>
         <div>
-          <p className="mb-0.5 text-[9px] text-white/30">Fiscal zip code</p>
+          <p className="mb-0.5 text-[9px] text-white/30">{t("fiscalZipLabel")}</p>
           <input className={fieldClass} value={form.fiscal_zip_code ?? ""} onChange={(e) => set("fiscal_zip_code", e.target.value)} placeholder="06600" />
         </div>
         <div className="col-span-2">
-          <p className="mb-0.5 text-[9px] text-white/30">Legal name</p>
-          <input className={fieldClass} value={form.legal_name ?? ""} onChange={(e) => set("legal_name", e.target.value)} placeholder="Full registered legal name" />
+          <p className="mb-0.5 text-[9px] text-white/30">{t("legalNameLabel")}</p>
+          <input className={fieldClass} value={form.legal_name ?? ""} onChange={(e) => set("legal_name", e.target.value)} placeholder={t("legalNamePlaceholder")} />
         </div>
         <div className="col-span-2">
-          <p className="mb-0.5 text-[9px] text-white/30">Fiscal address</p>
-          <input className={fieldClass} value={form.fiscal_address ?? ""} onChange={(e) => set("fiscal_address", e.target.value)} placeholder="Registered fiscal address" />
+          <p className="mb-0.5 text-[9px] text-white/30">{t("fiscalAddressLabel")}</p>
+          <input className={fieldClass} value={form.fiscal_address ?? ""} onChange={(e) => set("fiscal_address", e.target.value)} placeholder={t("fiscalAddressPlaceholder")} />
         </div>
       </div>
 
       {/* Flags */}
       <div className="flex items-center gap-4 pt-1">
         {[
-          { key: "is_reimbursement_entity",    label: "Reimbursement entity" },
-          { key: "is_invoice_receiver_entity", label: "Invoice receiver" },
-          { key: "is_active",                  label: "Active" },
+          { key: "is_reimbursement_entity",    label: t("entityFlagReimb") },
+          { key: "is_invoice_receiver_entity", label: t("entityFlagInvoice") },
+          { key: "is_active",                  label: t("entityFlagActive") },
         ].map(({ key, label }) => (
           <label key={key} className="flex cursor-pointer items-center gap-1.5">
             <input
@@ -421,14 +378,14 @@ function LegalEntityForm({
           className="flex items-center gap-1.5 rounded border border-indigo-500/30 bg-indigo-600/20 px-3 py-1 text-[10px] font-semibold text-indigo-300 transition-colors hover:bg-indigo-600/30 disabled:opacity-40"
         >
           {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-          {isEdit ? "Update" : "Create"}
+          {isEdit ? t("update") : t("create")}
         </button>
         <button
           type="button"
           onClick={onCancel}
           className="flex items-center gap-1.5 rounded border border-white/[0.07] px-3 py-1 text-[10px] text-white/35 transition-colors hover:text-white/50"
         >
-          <X className="h-3 w-3" /> Cancel
+          <X className="h-3 w-3" /> {tc("cancel")}
         </button>
       </div>
     </div>
@@ -446,6 +403,55 @@ export default function AdminCompanySetupStudio({
   draftPatch,
   portalConfig,
 }: Props) {
+  const t = useTranslations("admin.companySetup");
+  const tc = useTranslations("common");
+
+  // ── Derived summary (inside component so we can use t()) ──────────────────
+  function buildSummary(form: Record<string, any>): string {
+    const parts: string[] = [];
+    if (form.industry) parts.push(form.industry);
+    if (form.employee_count_range) parts.push(form.employee_count_range);
+    if (form.country_code) parts.push(form.country_code);
+    if (form.base_currency) parts.push(form.base_currency);
+    if (form.operates_multi_entity) parts.push("multi-entity");
+    if (form.operates_multi_country) parts.push("multi-country");
+    const enabledCount = [
+      "expenses_module_enabled", "time_allocation_module_enabled",
+      "subcontractor_module_enabled", "reimbursements_module_enabled",
+      "approvals_module_enabled", "accounting_module_enabled",
+      "archive_module_enabled", "ai_copilot_enabled",
+    ].filter((k) => form[k]).length;
+    parts.push(`${enabledCount} modules active`);
+    return parts.join(" · ") || "No setup configured yet.";
+  }
+
+  // ── Inline warnings ──────────────────────────────────────────────────────
+  function buildWarnings(form: Record<string, any>, entities: any[]): string[] {
+    const w: string[] = [];
+
+    if (form.operates_multi_entity && entities.length === 0)
+      w.push(t("warningMultiEntityNoEntities"));
+
+    if (form.operates_multi_country) {
+      const countryCodes = new Set<string>();
+      if (form.country_code) countryCodes.add(form.country_code);
+      entities.forEach((e) => { if (e.country_code) countryCodes.add(e.country_code); });
+      if (countryCodes.size < 2)
+        w.push(t("warningMultiCountrySingle"));
+    }
+
+    if (!form.has_managers && form.approvals_module_enabled)
+      w.push(t("warningApprovalNoManagers"));
+
+    if (form.accounting_module_enabled && !form.expenses_module_enabled)
+      w.push(t("warningAccountingNoExpenses"));
+
+    if (form.subcontractor_module_enabled && !form.has_subcontractors)
+      w.push(t("warningSubcontractorNoFlag"));
+
+    return w;
+  }
+
   const [form, setForm]           = useState<Record<string, any>>({ ...setup });
   const [dirty, setDirty]         = useState(false);
   const [saving, setSaving]       = useState(false);
@@ -471,7 +477,7 @@ export default function AdminCompanySetupStudio({
       fd.append("file", file);
       const res = await fetch(`${API}/admin/company-setup/${companyId}/logo`, {
         method: "POST",
-        headers: { "X-User-Id": "1" },
+        headers: getAuthHeaders(),
         body: fd,
       });
       if (!res.ok) {
@@ -482,7 +488,7 @@ export default function AdminCompanySetupStudio({
       setForm((prev) => ({ ...prev, logo_url: data.logo_url }));
       onSaved?.({ ...form, logo_url: data.logo_url });
     } catch (e: any) {
-      setLogoError(e?.message ?? "Upload failed");
+      setLogoError(e?.message ?? tc("uploading"));
     } finally {
       setLogoUploading(false);
     }
@@ -525,7 +531,7 @@ export default function AdminCompanySetupStudio({
     try {
       const res = await fetch(`${API}/admin/company-setup/${companyId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", "X-User-Id": "1" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify(form),
       });
       if (!res.ok) throw new Error(`${res.status}`);
@@ -535,7 +541,7 @@ export default function AdminCompanySetupStudio({
       setAiDrafted(false);
       onSaved?.(updated);
     } catch (e: any) {
-      setError(e?.message ?? "Save failed");
+      setError(e?.message ?? tc("save"));
     } finally {
       setSaving(false);
     }
@@ -556,7 +562,7 @@ export default function AdminCompanySetupStudio({
     try {
       await fetch(`${API}/admin/company-setup/legal-entities/${id}`, {
         method: "DELETE",
-        headers: { "X-User-Id": "1" },
+        headers: getAuthHeaders(),
       });
       const next = entities.filter((e) => e.id !== id);
       setEntities(next);
@@ -568,7 +574,7 @@ export default function AdminCompanySetupStudio({
     }
   };
 
-  // Cross-domain conflicts are shown in the right-panel copilot, not here.
+  const warnings = buildWarnings(form, entities);
 
   return (
     <div className="max-w-xl space-y-5">
@@ -577,15 +583,15 @@ export default function AdminCompanySetupStudio({
       <div className="border-b border-white/[0.06] pb-3">
         <div className="flex items-center gap-2">
           <Building2 className="h-4 w-4 text-white/25" />
-          <h2 className="text-sm font-semibold text-white/80">Company Setup</h2>
+          <h2 className="text-sm font-semibold text-white/80">{t("title")}</h2>
           {aiDrafted && (
             <span className="flex items-center gap-1 rounded border border-indigo-500/20 bg-indigo-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-indigo-300/80">
-              <Sparkles className="h-2.5 w-2.5" /> AI Draft
+              <Sparkles className="h-2.5 w-2.5" /> {t("aiDraft")}
             </span>
           )}
         </div>
         <p className="mt-0.5 text-[11px] text-white/35">
-          Organisation identity, operating model, and module activation.
+          {t("studioSubtitle")}
         </p>
       </div>
 
@@ -597,11 +603,11 @@ export default function AdminCompanySetupStudio({
       {/* Status bar */}
       <div className="flex items-center gap-3">
         {dirty && !saved && (
-          <span className="text-[10px] text-amber-400/70">Unsaved changes</span>
+          <span className="text-[10px] text-amber-400/70">{t("unsavedChanges")}</span>
         )}
         {saved && (
           <span className="flex items-center gap-1 text-[10px] text-emerald-400/70">
-            <CheckCircle2 className="h-3 w-3" /> Saved
+            <CheckCircle2 className="h-3 w-3" /> {tc("saved")}
           </span>
         )}
         {error && (
@@ -616,19 +622,19 @@ export default function AdminCompanySetupStudio({
           className="ml-auto flex items-center gap-1.5 rounded border border-indigo-500/30 bg-indigo-600/20 px-3 py-1 text-[10px] font-semibold text-indigo-300 transition-colors hover:bg-indigo-600/30 disabled:opacity-30"
         >
           {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-          Save
+          {tc("save")}
         </button>
       </div>
 
       {/* A — Company Identity */}
       <div>
-        <SectionLabel>A — Company Identity</SectionLabel>
+        <SectionLabel>{t("sectionA")}</SectionLabel>
         <Panel>
           {/* Logo upload row */}
           <div className="flex items-center justify-between gap-4 px-4 py-2.5">
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-medium text-white/68">Company logo</p>
-              <p className="text-[10px] text-white/28">Any format — auto-converted to WebP, max 512 px.</p>
+              <p className="text-[11px] font-medium text-white/68">{t("logo")}</p>
+              <p className="text-[10px] text-white/28">{t("logoDesc")}</p>
               {logoError && <p className="mt-0.5 text-[9px] text-red-400/70">{logoError}</p>}
             </div>
             <div className="flex shrink-0 items-center gap-2">
@@ -636,7 +642,7 @@ export default function AdminCompanySetupStudio({
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={`${API}${form.logo_url}`}
-                  alt="Company logo"
+                  alt={t("logo")}
                   className="h-8 w-8 rounded border border-white/[0.08] object-contain bg-white/[0.03] p-0.5"
                 />
               )}
@@ -660,48 +666,48 @@ export default function AdminCompanySetupStudio({
                 {logoUploading
                   ? <Loader2 className="h-3 w-3 animate-spin" />
                   : <ImagePlus className="h-3 w-3" />}
-                {form.logo_url ? "Replace" : "Upload"}
+                {form.logo_url ? t("logoReplace") : t("logoUpload")}
               </button>
             </div>
           </div>
           <TextInputRow
-            label="Display name"
-            description="Internal display name for this company."
+            label={t("displayName")}
+            description={t("displayNameDesc")}
             value={form.display_name ?? ""}
-            placeholder="ACME Corporation"
+            placeholder={t("displayNamePlaceholder")}
             onChange={(v) => set("display_name", v)}
           />
           <SelectRow
-            label="Country"
-            description="Primary operating country."
+            label={t("country")}
+            description={t("countryDesc")}
             value={form.country_code ?? ""}
             options={COUNTRY_OPTIONS}
             onChange={(v) => set("country_code", v)}
           />
           <SelectRow
-            label="Base currency"
-            description="Default currency for expenses and reporting."
+            label={t("baseCurrency")}
+            description={t("baseCurrencyDesc")}
             value={form.base_currency ?? ""}
             options={CURRENCY_OPTIONS}
             onChange={(v) => set("base_currency", v)}
           />
           <SelectRow
-            label="Timezone"
-            description="Primary timezone for date calculations."
+            label={t("timezone")}
+            description={t("timezoneDesc")}
             value={form.timezone ?? ""}
             options={TIMEZONE_OPTIONS}
             onChange={(v) => set("timezone", v)}
           />
           <SelectRow
-            label="Language"
-            description="UI and document language."
+            label={t("language")}
+            description={t("languageDesc")}
             value={form.language_code ?? ""}
             options={LANGUAGE_OPTIONS}
             onChange={(v) => set("language_code", v)}
           />
           <SelectRow
-            label="Industry"
-            description="Business sector."
+            label={t("industry")}
+            description={t("industryDesc")}
             value={form.industry ?? ""}
             options={INDUSTRY_OPTIONS}
             onChange={(v) => set("industry", v)}
@@ -711,42 +717,42 @@ export default function AdminCompanySetupStudio({
 
       {/* B — Organization Model */}
       <div>
-        <SectionLabel>B — Organization Model</SectionLabel>
+        <SectionLabel>{t("sectionB")}</SectionLabel>
         <Panel>
           <SelectRow
-            label="Employee count range"
-            description="Approximate headcount band."
+            label={t("employeeCountRange")}
+            description={t("employeeCountRangeDesc")}
             value={form.employee_count_range ?? ""}
             options={EMPLOYEE_RANGE_OPTIONS}
             onChange={(v) => set("employee_count_range", v)}
           />
           <ToggleRow
-            label="Has managers"
-            description="Employees have a direct reporting manager."
+            label={t("hasManagers")}
+            description={t("hasManagersDesc")}
             checked={!!form.has_managers}
             onChange={(v) => set("has_managers", v)}
           />
           <ToggleRow
-            label="Has accounting team"
-            description="A dedicated accounting or finance team exists."
+            label={t("hasAccountingTeam")}
+            description={t("hasAccountingTeamDesc")}
             checked={!!form.has_accounting_team}
             onChange={(v) => set("has_accounting_team", v)}
           />
           <ToggleRow
-            label="Has subcontractors"
-            description="Subcontractors submit expenses through the platform."
+            label={t("hasSubcontractors")}
+            description={t("hasSubcontractorsDesc")}
             checked={!!form.has_subcontractors}
             onChange={(v) => set("has_subcontractors", v)}
           />
           <ToggleRow
-            label="Multi-entity operation"
-            description="Company operates through multiple legal entities."
+            label={t("multiEntity")}
+            description={t("multiEntityDesc")}
             checked={!!form.operates_multi_entity}
             onChange={(v) => set("operates_multi_entity", v)}
           />
           <ToggleRow
-            label="Multi-country operation"
-            description="Operations span more than one country."
+            label={t("multiCountry")}
+            description={t("multiCountryDesc")}
             checked={!!form.operates_multi_country}
             onChange={(v) => set("operates_multi_country", v)}
           />
@@ -755,18 +761,18 @@ export default function AdminCompanySetupStudio({
 
       {/* C — Allocation & Operations */}
       <div>
-        <SectionLabel>C — Allocation & Operations</SectionLabel>
+        <SectionLabel>{t("sectionC")}</SectionLabel>
         <Panel>
           <SelectRow
-            label="Allocation dimensions"
-            description="Which org unit fields appear on expense allocation."
+            label={t("allocationDimensions")}
+            description={t("allocationDimensionsDesc")}
             value={form.allocation_dimensions ?? "project_client_cost_center"}
             options={ALLOC_DIM_OPTIONS}
             onChange={(v) => set("allocation_dimensions", v)}
           />
           <ToggleRow
-            label="Split allocations"
-            description="Allow an expense to be split across multiple cost objects."
+            label={t("splitAllocations")}
+            description={t("splitAllocationsDesc")}
             checked={!!form.allow_split_allocations}
             onChange={(v) => set("allow_split_allocations", v)}
           />
@@ -775,17 +781,17 @@ export default function AdminCompanySetupStudio({
 
       {/* D — Module Activation */}
       <div>
-        <SectionLabel>D — Module Activation</SectionLabel>
+        <SectionLabel>{t("sectionD")}</SectionLabel>
         <Panel>
           {[
-            { key: "expenses_module_enabled",          label: "Expenses",          desc: "Core expense submission and approval." },
-            { key: "time_allocation_module_enabled",   label: "Time Allocation",   desc: "Employee time tracking and allocation." },
-            { key: "subcontractor_module_enabled",     label: "Subcontractors",    desc: "Subcontractor expense and invoice management." },
-            { key: "reimbursements_module_enabled",    label: "Reimbursements",    desc: "Employee reimbursement processing." },
-            { key: "approvals_module_enabled",         label: "Approvals",         desc: "Multi-level approval workflows." },
-            { key: "accounting_module_enabled",        label: "Accounting",        desc: "Poliza export and accounting integration." },
-            { key: "archive_module_enabled",           label: "Archive",           desc: "Document archiving and retention." },
-            { key: "ai_copilot_enabled",               label: "AI Copilot",        desc: "AI-assisted policy setup and classification." },
+            { key: "expenses_module_enabled",          label: t("moduleExpenses"),          desc: t("moduleExpensesDesc") },
+            { key: "time_allocation_module_enabled",   label: t("moduleTimeAllocation"),    desc: t("moduleTimeAllocationDesc") },
+            { key: "subcontractor_module_enabled",     label: t("moduleSubcontractors"),    desc: t("moduleSubcontractorsDesc") },
+            { key: "reimbursements_module_enabled",    label: t("moduleReimbursements"),    desc: t("moduleReimbursementsDesc") },
+            { key: "approvals_module_enabled",         label: t("moduleApprovals"),         desc: t("moduleApprovalsDesc") },
+            { key: "accounting_module_enabled",        label: t("moduleAccounting"),        desc: t("moduleAccountingDesc") },
+            { key: "archive_module_enabled",           label: t("moduleArchive"),           desc: t("moduleArchiveDesc") },
+            { key: "ai_copilot_enabled",               label: t("moduleAiCopilot"),         desc: t("moduleAiCopilotDesc") },
           ].map(({ key, label, desc }) => (
             <ToggleRow
               key={key}
@@ -800,12 +806,12 @@ export default function AdminCompanySetupStudio({
 
       {/* E — Legal Entities */}
       <div>
-        <SectionLabel>E — Legal Entities</SectionLabel>
+        <SectionLabel>{t("legalEntities")}</SectionLabel>
 
         {entities.length > 0 && (
           <div className="mb-2 overflow-hidden rounded-lg border border-white/[0.07]">
             <div className="grid grid-cols-[1fr_auto_auto_auto_60px] gap-x-3 border-b border-white/[0.05] bg-black/20 px-4 py-2">
-              {["Name", "RFC", "Reimb.", "Invoice", ""].map((h, i) => (
+              {[t("entityColName"), t("entityColRfc"), t("entityColReimb"), t("entityColInvoice"), ""].map((h, i) => (
                 <span key={i} className="text-[9px] font-bold uppercase tracking-widest text-white/22">{h}</span>
               ))}
             </div>
@@ -873,7 +879,7 @@ export default function AdminCompanySetupStudio({
             onClick={() => setAddingEntity(true)}
             className="mt-1 flex items-center gap-1.5 rounded border border-white/[0.07] px-3 py-1.5 text-[10px] text-white/35 transition-colors hover:border-white/[0.12] hover:text-white/55"
           >
-            <Plus className="h-3 w-3" /> Add legal entity
+            <Plus className="h-3 w-3" /> {t("addLegalEntity")}
           </button>
         )}
       </div>

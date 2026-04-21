@@ -18,6 +18,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from apps.api.auth import require_admin
 from apps.api.deps import get_db
 from packages.modules.channels.models import ChannelMessage, ChannelSettings
 from packages.modules.channels.schemas import (
@@ -27,7 +28,7 @@ from packages.modules.channels.schemas import (
     TestMessageRequest,
 )
 
-router = APIRouter(prefix="/admin/channels", tags=["admin-channels"])
+router = APIRouter(prefix="/admin/channels", tags=["admin-channels"], dependencies=[Depends(require_admin)])
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────

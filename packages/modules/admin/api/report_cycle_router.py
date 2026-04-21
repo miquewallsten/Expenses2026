@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from apps.api.auth import require_admin
 from apps.api.deps import get_db
 from packages.modules.admin.schemas.report_cycle import (
     BundleResult,
@@ -13,7 +14,7 @@ from packages.modules.admin.service.report_cycle_service import (
     update_report_cycle_settings,
 )
 
-router = APIRouter(prefix="/admin/report-cycle", tags=["admin"])
+router = APIRouter(prefix="/admin/report-cycle", tags=["admin"], dependencies=[Depends(require_admin)])
 
 
 @router.get("/{company_id}", response_model=ReportCycleSettingsRead)

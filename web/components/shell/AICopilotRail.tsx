@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Bot, ChevronDown, ChevronLeft, ChevronRight, Send,
 } from "lucide-react";
+import { useUserContext } from "@/context/UserContext";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -112,6 +113,8 @@ export default function AICopilotRail({
   const bottomRef   = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef    = useRef<AbortController | null>(null);
+  const user        = useUserContext();
+  const userIdStr   = user.userIdStr ?? "1";
 
   const [internalCollapsed, setInternalCollapsed] = useState(false);
   const isCollapsed  = collapsed ?? internalCollapsed;
@@ -173,7 +176,7 @@ export default function AICopilotRail({
       const ctrl    = new AbortController();
       abortRef.current = ctrl;
 
-      const h       = { "Content-Type": "application/json", "X-User-Id": "1" };
+      const h       = { "Content-Type": "application/json", "X-User-Id": userIdStr };
       const expText = JSON.stringify(selectedExpense);
       const valText = JSON.stringify(validationResults ?? []);
       const docText = JSON.stringify(selectedDocument ?? {});
@@ -227,6 +230,18 @@ export default function AICopilotRail({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedExpense, selectedDocument]);
 
+  // ── Clear chat history when switching to a different expense ──────────────
+  const prevExpenseIdRef = useRef<unknown>(undefined);
+  useEffect(() => {
+    const expId = hasExpenseData(selectedExpense)
+      ? (selectedExpense as Record<string, unknown>).id
+      : undefined;
+    if (expId !== prevExpenseIdRef.current) {
+      prevExpenseIdRef.current = expId;
+      setMessages([]);
+    }
+  }, [selectedExpense]);
+
   // ── Chat ───────────────────────────────────────────────────────────────────
   const sendMessage = async (prompt: string) => {
     if (!prompt.trim() || chatLoading) return;
@@ -242,7 +257,7 @@ export default function AICopilotRail({
       });
       const res = await fetch(`${API}/ai/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-User-Id": "1" },
+        headers: { "Content-Type": "application/json", "X-User-Id": userIdStr },
         body: JSON.stringify({ prompt: prompt.trim(), context }),
       });
       const data = await res.json();

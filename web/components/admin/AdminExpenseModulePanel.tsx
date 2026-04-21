@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { Save, Loader2, CheckCircle2, AlertCircle, Sparkles, AlertTriangle } from "lucide-react";
+import { getAuthHeaders } from "@/lib/session";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -10,60 +12,6 @@ interface Props {
   policy: any;
   onSaved?: (updatedPolicy: any) => void;
   draftPatch?: Partial<any>;
-}
-
-// ── Option sets ───────────────────────────────────────────────────────────────
-
-const XML_MODE_OPTIONS = [
-  { value: "never",    label: "Never" },
-  { value: "mxn_only", label: "MXN expenses only" },
-  { value: "always",   label: "All expenses" },
-];
-
-// ── Summary helpers ──────────────────────────────────────────────────────────
-
-const XML_MODE_LABELS: Record<string, string> = {
-  never:    "XML not required",
-  mxn_only: "MXN XML required",
-  always:   "XML always required",
-};
-
-function buildSummaryTokens(form: Record<string, any>): string[] {
-  const tokens: string[] = [];
-
-  const xmlMode = form.xml_required_mode ?? "mxn_only";
-  tokens.push(XML_MODE_LABELS[xmlMode] ?? xmlMode);
-
-  if (form.pdf_pair_required_for_cfdi) tokens.push("CFDI PDF required");
-
-  tokens.push(form.tickets_allowed ? "Tickets allowed" : "Tickets blocked");
-
-  tokens.push(form.international_expenses_allowed ? "International: Yes" : "International: No");
-
-  if (form.manager_approval_required)  tokens.push("Manager approval");
-  if (form.accounting_review_required) tokens.push("Accounting review");
-  if (form.require_proof)              tokens.push("Proof required");
-  if (form.require_justification)      tokens.push("Justification required");
-
-  return tokens;
-}
-
-function buildWarnings(form: Record<string, any>): string[] {
-  const warnings: string[] = [];
-
-  if (form.xml_required_mode === "never" && form.pdf_pair_required_for_cfdi) {
-    warnings.push("PDF pairing is enabled while XML is not required.");
-  }
-
-  if (form.international_expenses_allowed && !form.require_proof) {
-    warnings.push("International expenses are allowed without proof requirement.");
-  }
-
-  if (form.tickets_allowed && !form.require_justification) {
-    warnings.push("Tickets are allowed without justification requirement.");
-  }
-
-  return warnings;
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -157,6 +105,47 @@ function ToggleRow({
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function AdminCompanySetupPanel({ companyId, policy, onSaved, draftPatch }: Props) {
+  const t = useTranslations("admin.expenseModule");
+  const tc = useTranslations("common");
+
+  // ── Option sets (inside component to use t()) ──────────────────────────────
+  const XML_MODE_OPTIONS = [
+    { value: "never",    label: t("xmlNever") },
+    { value: "mxn_only", label: t("xmlMxnOnly") },
+    { value: "always",   label: t("xmlAlways") },
+  ];
+
+  // ── Summary helpers ──────────────────────────────────────────────────────
+  function buildSummaryTokens(form: Record<string, any>): string[] {
+    const tokens: string[] = [];
+    const xmlMode = form.xml_required_mode ?? "mxn_only";
+    const xmlLabel: Record<string, string> = {
+      never: t("xmlNever"),
+      mxn_only: t("xmlMxnOnly"),
+      always: t("xmlAlways"),
+    };
+    tokens.push(xmlLabel[xmlMode] ?? xmlMode);
+    if (form.pdf_pair_required_for_cfdi) tokens.push("CFDI PDF");
+    tokens.push(form.tickets_allowed ? t("ticketsAllowed") : "No tickets");
+    tokens.push(form.international_expenses_allowed ? t("internationalAllowed") : "No intl.");
+    if (form.manager_approval_required)  tokens.push(t("managerApprovalRequired"));
+    if (form.accounting_review_required) tokens.push(t("accountingReviewRequired"));
+    if (form.require_proof)              tokens.push(t("proofRequired"));
+    if (form.require_justification)      tokens.push(t("justificationRequired"));
+    return tokens;
+  }
+
+  function buildWarnings(form: Record<string, any>): string[] {
+    const warnings: string[] = [];
+    if (form.xml_required_mode === "never" && form.pdf_pair_required_for_cfdi)
+      warnings.push(t("warningPdfNoXml"));
+    if (form.international_expenses_allowed && !form.require_proof)
+      warnings.push(t("warningIntlNoProof"));
+    if (form.tickets_allowed && !form.require_justification)
+      warnings.push(t("warningTicketsNoJustification"));
+    return warnings;
+  }
+
   const [form, setForm]           = useState<Record<string, any>>({ ...policy });
   const [dirty, setDirty]         = useState(false);
   const [saving, setSaving]       = useState(false);
@@ -197,7 +186,7 @@ export default function AdminCompanySetupPanel({ companyId, policy, onSaved, dra
     try {
       const res = await fetch(`${API}/expenses/policy/${companyId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", "X-User-Id": "1" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify(form),
       });
       if (!res.ok) throw new Error(`${res.status}`);
@@ -207,7 +196,7 @@ export default function AdminCompanySetupPanel({ companyId, policy, onSaved, dra
       setAiDrafted(false);
       onSaved?.(updated);
     } catch (e: any) {
-      setError(e?.message ?? "Save failed");
+      setError(e?.message ?? tc("save"));
     } finally {
       setSaving(false);
     }
@@ -218,9 +207,9 @@ export default function AdminCompanySetupPanel({ companyId, policy, onSaved, dra
 
       {/* Header */}
       <div className="border-b border-white/[0.06] pb-3">
-        <h2 className="text-sm font-semibold text-white/80">Company Setup</h2>
+        <h2 className="text-sm font-semibold text-white/80">{t("title")}</h2>
         <p className="mt-0.5 text-[11px] text-white/35">
-          Define how employees submit and how finance controls expenses.
+          {t("subtitle")}
         </p>
       </div>
 
@@ -246,30 +235,30 @@ export default function AdminCompanySetupPanel({ companyId, policy, onSaved, dra
 
       {/* A — Expense Rules */}
       <div>
-        <SectionLabel>A — Company Expense Rules</SectionLabel>
+        <SectionLabel>{t("sectionA")}</SectionLabel>
         <Panel>
           <SelectRow
-            label="XML / CFDI required"
-            description="When is a CFDI XML file mandatory?"
+            label={t("xmlCfdiRequired")}
+            description={t("xmlCfdiDesc")}
             value={form.xml_required_mode ?? "mxn_only"}
             options={XML_MODE_OPTIONS}
             onChange={(v) => set("xml_required_mode", v)}
           />
           <ToggleRow
-            label="Paired PDF required for CFDI"
-            description="Require a matching PDF alongside each XML document."
+            label={t("pdfPairRequired")}
+            description={t("pdfPairDesc")}
             checked={!!form.pdf_pair_required_for_cfdi}
             onChange={(v) => set("pdf_pair_required_for_cfdi", v)}
           />
           <ToggleRow
-            label="International expenses allowed"
-            description="Allow expenses in currencies other than MXN."
+            label={t("internationalAllowed")}
+            description={t("internationalDesc")}
             checked={!!form.international_expenses_allowed}
             onChange={(v) => set("international_expenses_allowed", v)}
           />
           <ToggleRow
-            label="Tickets allowed"
-            description="Allow receipt or ticket documents as expense proof."
+            label={t("ticketsAllowed")}
+            description={t("ticketsDesc")}
             checked={!!form.tickets_allowed}
             onChange={(v) => set("tickets_allowed", v)}
           />
@@ -278,17 +267,17 @@ export default function AdminCompanySetupPanel({ companyId, policy, onSaved, dra
 
       {/* B — Supporting Information */}
       <div>
-        <SectionLabel>B — Required Supporting Information</SectionLabel>
+        <SectionLabel>{t("sectionB")}</SectionLabel>
         <Panel>
           <ToggleRow
-            label="Justification required"
-            description="Employees must attach a written justification."
+            label={t("justificationRequired")}
+            description={t("justificationDesc")}
             checked={!!form.require_justification}
             onChange={(v) => set("require_justification", v)}
           />
           <ToggleRow
-            label="Proof required"
-            description="Employees must attach a supporting proof document."
+            label={t("proofRequired")}
+            description={t("proofDesc")}
             checked={!!form.require_proof}
             onChange={(v) => set("require_proof", v)}
           />
@@ -297,17 +286,17 @@ export default function AdminCompanySetupPanel({ companyId, policy, onSaved, dra
 
       {/* C — Approval Flow */}
       <div>
-        <SectionLabel>C — Approval Flow</SectionLabel>
+        <SectionLabel>{t("sectionC")}</SectionLabel>
         <Panel>
           <ToggleRow
-            label="Manager approval required"
-            description="Submitted expenses must be approved by a manager."
+            label={t("managerApprovalRequired")}
+            description={t("managerApprovalDesc")}
             checked={!!form.manager_approval_required}
             onChange={(v) => set("manager_approval_required", v)}
           />
           <ToggleRow
-            label="Accounting review required"
-            description="Expenses must pass an accounting review before finalization."
+            label={t("accountingReviewRequired")}
+            description={t("accountingReviewDesc")}
             checked={!!form.accounting_review_required}
             onChange={(v) => set("accounting_review_required", v)}
           />
@@ -316,11 +305,11 @@ export default function AdminCompanySetupPanel({ companyId, policy, onSaved, dra
 
       {/* D — AI Assistance */}
       <div>
-        <SectionLabel>D — AI Assistance</SectionLabel>
+        <SectionLabel>{t("sectionD")}</SectionLabel>
         <Panel>
           <ToggleRow
-            label="AI policy assist enabled"
-            description="Use AI to suggest allocation and flag policy violations automatically."
+            label={t("aiPolicyAssist")}
+            description={t("aiPolicyAssistDesc")}
             checked={!!form.ai_policy_assist_enabled}
             onChange={(v) => set("ai_policy_assist_enabled", v)}
           />
@@ -329,11 +318,11 @@ export default function AdminCompanySetupPanel({ companyId, policy, onSaved, dra
 
       {/* E — Document-Free Expenses */}
       <div>
-        <SectionLabel>E — Document-Free Expenses</SectionLabel>
+        <SectionLabel>{t("sectionE")}</SectionLabel>
         <Panel>
           <ToggleRow
-            label="Allow expenses without documents"
-            description="Employees may create and submit an expense with no uploaded files. Useful for petty cash, per-diem, or pre-approved spend. Pair with XML mode = Never to prevent document blockers."
+            label={t("docFreeExpenses")}
+            description={t("docFreeExpensesDesc")}
             checked={!!form.allow_document_free_expenses}
             onChange={(v) => set("allow_document_free_expenses", v)}
           />
@@ -345,15 +334,15 @@ export default function AdminCompanySetupPanel({ companyId, policy, onSaved, dra
         <div className="flex items-center gap-2 flex-wrap">
           {aiDrafted && !saved && (
             <span className="inline-flex items-center gap-1 rounded border border-violet-500/25 bg-violet-500/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-violet-300/80">
-              <Sparkles className="h-2.5 w-2.5" /> AI Draft Applied
+              <Sparkles className="h-2.5 w-2.5" /> {t("aiDraftApplied")}
             </span>
           )}
           {dirty && !saving && !saved && (
-            <span className="text-[10px] text-amber-400/60">Unsaved changes</span>
+            <span className="text-[10px] text-amber-400/60">{t("unsavedChanges")}</span>
           )}
           {saved && (
             <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400/70">
-              <CheckCircle2 className="h-3 w-3" /> Saved
+              <CheckCircle2 className="h-3 w-3" /> {tc("saved")}
             </span>
           )}
           {error && (
@@ -369,7 +358,7 @@ export default function AdminCompanySetupPanel({ companyId, policy, onSaved, dra
           className="inline-flex items-center gap-1.5 rounded border border-indigo-500/30 bg-indigo-600/20 px-3 py-1 text-[10px] font-semibold text-indigo-300 transition-colors hover:bg-indigo-600/30 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-          {saving ? "Saving…" : "Save"}
+          {saving ? tc("saving") : tc("save")}
         </button>
       </div>
 

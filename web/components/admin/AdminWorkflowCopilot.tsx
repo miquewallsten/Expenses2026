@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Bot, Zap, Loader2, CheckCircle2 } from "lucide-react";
+import { getAuthHeaders } from "@/lib/session";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -213,7 +214,7 @@ export default function AdminWorkflowCopilot({
 
       const res = await fetch(`${API}/ai/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-User-Id": "1" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({
           prompt:  buildSystemPrompt(text, ctx),
           context: `company_id:${companyId}`,

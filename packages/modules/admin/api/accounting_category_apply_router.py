@@ -4,12 +4,13 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from apps.api.auth import require_admin
 from apps.api.deps import get_db
 from packages.modules.admin.service.accounting_category_seed_service import (
     seed_accounting_categories,
 )
 
-router = APIRouter(prefix="/admin/accounting-categories", tags=["admin"])
+router = APIRouter(prefix="/admin/accounting-categories", tags=["admin"], dependencies=[Depends(require_admin)])
 
 
 class ApplyRequest(BaseModel):

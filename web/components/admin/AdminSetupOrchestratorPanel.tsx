@@ -6,6 +6,7 @@ import {
   AlertTriangle, AlertCircle, HelpCircle, ChevronDown, ChevronRight,
 } from "lucide-react";
 import {
+import { getAuthHeaders } from "@/lib/session";
   getPortalConfigConflicts,
   type PortalConfigConflict,
 } from "@/lib/portal-config-conflicts";
@@ -382,13 +383,13 @@ export default function AdminSetupOrchestratorPanel({
     if (!portalConfig || !companyId) return;
     const derived = portalConfig?.derived;
     if (derived?.manager_flow_enabled) {
-      fetch(`${API}/manager/queue/${companyId}`, { headers: { "X-User-Id": "1" } })
+      fetch(`${API}/manager/queue/${companyId}`, { headers: getAuthHeaders() })
         .then((r) => r.ok ? r.json() : null)
         .then((d) => { if (d?.summary?.total_count != null) setManagerQueueCount(d.summary.total_count); })
         .catch(() => {});
     }
     if (derived?.accounting_flow_enabled) {
-      fetch(`${API}/accounting/queue/${companyId}`, { headers: { "X-User-Id": "1" } })
+      fetch(`${API}/accounting/queue/${companyId}`, { headers: getAuthHeaders() })
         .then((r) => r.ok ? r.json() : null)
         .then((d) => { if (d?.summary?.total_count != null) setAccountingQueueCount(d.summary.total_count); })
         .catch(() => {});
@@ -418,7 +419,7 @@ export default function AdminSetupOrchestratorPanel({
         `${API}/admin/setup-orchestrator/analyze/${companyId}`,
         {
           method:  "POST",
-          headers: { "Content-Type": "application/json", "X-User-Id": "1" },
+          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
           body:    JSON.stringify(body),
         },
       );
@@ -460,7 +461,7 @@ export default function AdminSetupOrchestratorPanel({
         `${API}/admin/accounting-categories/apply/${companyId}`,
         {
           method:  "POST",
-          headers: { "Content-Type": "application/json", "X-User-Id": "1" },
+          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
           body:    JSON.stringify({ items: cats }),
         },
       );
@@ -499,7 +500,7 @@ export default function AdminSetupOrchestratorPanel({
     try {
       const res = await fetch(`${API}/admin/company-setup/${companyId}`, {
         method:  "PUT",
-        headers: { "Content-Type": "application/json", "X-User-Id": "1" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body:    JSON.stringify({
           ai_setup_last_summary: result.summary,
           ai_setup_notes:        notes.trim() || null,

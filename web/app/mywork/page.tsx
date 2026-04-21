@@ -211,7 +211,7 @@ function UnifiedSidebar({
 
 function MyWorkShell() {
   useAuthGuard();
-  const { effectiveConfig, activeModule } = useMyWorkContext();
+  const { effectiveConfig, activeModule, showAiCopilot } = useMyWorkContext();
   const user = useUserContext();
   const { isMobile, isTablet, isDesktop } = useLayoutMode();
   const tnShell = useTranslations("nav");
@@ -368,8 +368,8 @@ function MyWorkShell() {
         {workspace}
       </div>
 
-      {/* Copilot rail — right (hidden when requests module is active) */}
-      {activeModule?.id !== "my_requests" && (
+      {/* Copilot rail — right (hidden when requests module is active or AI copilot disabled) */}
+      {showAiCopilot && activeModule?.id !== "my_requests" && (
         <aside className="flex w-[240px] shrink-0 flex-col overflow-hidden border-l border-white/[0.06] bg-zinc-950">
           <MyWorkAssistant />
         </aside>

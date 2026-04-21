@@ -2,10 +2,11 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from apps.api.auth import require_admin
 from apps.api.deps import get_db
 from packages.core.platform.models_accounting_learning import AccountingLearning
 
-router = APIRouter(prefix="/admin/accounting-learning", tags=["admin"])
+router = APIRouter(prefix="/admin/accounting-learning", tags=["admin"], dependencies=[Depends(require_admin)])
 
 
 class AccountingLearningRead(BaseModel):

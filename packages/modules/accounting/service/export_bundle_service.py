@@ -84,12 +84,11 @@ def build_export_bundle(db: Session, company_id: int) -> dict:
             Expense.status == "submitted",
         ).all()
 
-        print("[export_bundle] company_id =", company_id)
-        print("[export_bundle] total_company_expenses =", len(all_company_expenses))
-        print("[export_bundle] submitted_company_expenses =", len(submitted_company_expenses))
+        _log.debug("[export_bundle] company_id=%s total=%s submitted=%s",
+                   company_id, len(all_company_expenses), len(submitted_company_expenses))
 
         expenses = submitted_company_expenses
-        print("[export_bundle] final_candidate_expenses =", len(expenses))
+        _log.debug("[export_bundle] final_candidate_expenses=%s", len(expenses))
 
     except Exception as exc:  # noqa: BLE001
         _log.error("[export_bundle] company=%s failed to load expenses: %s", company_id, exc)

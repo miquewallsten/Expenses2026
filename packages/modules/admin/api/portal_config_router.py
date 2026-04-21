@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from apps.api.auth import require_admin
 from apps.api.deps import get_db
 from packages.modules.admin.service.company_setup_service import get_or_create_company_setup
 from packages.modules.admin.service.accounting_setup_service import get_or_create_accounting_setup
@@ -20,7 +21,7 @@ from packages.modules.admin.schemas.approval_setup import ApprovalSetupRead
 from packages.modules.admin.schemas.workflow_setup import WorkflowSetupRead
 from packages.modules.expenses.schemas.policy import CompanyExpensePolicyRead
 
-router = APIRouter(prefix="/admin/portal-config", tags=["admin"])
+router = APIRouter(prefix="/admin/portal-config", tags=["admin"], dependencies=[Depends(require_admin)])
 
 
 class DerivedConfig(BaseModel):

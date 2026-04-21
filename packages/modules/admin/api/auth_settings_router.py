@@ -11,10 +11,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from apps.api.auth import require_admin
 from apps.api.deps import get_db
 from packages.core.platform.models_auth_settings import CompanyAuthSettings
 
-router = APIRouter(prefix="/admin/auth-settings", tags=["admin", "auth-settings"])
+router = APIRouter(prefix="/admin/auth-settings", tags=["admin", "auth-settings"], dependencies=[Depends(require_admin)])
 
 
 # ── Schemas ───────────────────────────────────────────────────────────────────

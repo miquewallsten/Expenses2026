@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { Save, Loader2, CheckCircle2, Sparkles, AlertTriangle, AlertCircle } from "lucide-react";
 import {
+import { getAuthHeaders } from "@/lib/session";
   getPortalConfigConflicts,
   type PortalConfigConflict,
 } from "@/lib/portal-config-conflicts";
@@ -20,24 +22,6 @@ interface Props {
   draftPatch?: Partial<any>;
 }
 
-// ── Option sets ───────────────────────────────────────────────────────────────
-
-const WORKFLOW_MODE_OPTIONS = [
-  { value: "standard",               label: "Standard" },
-  { value: "manager_only",           label: "Manager only" },
-  { value: "accounting_only",        label: "Accounting only" },
-  { value: "manager_then_accounting",label: "Manager then accounting" },
-  { value: "direct_accounting",      label: "Direct to accounting" },
-  { value: "policy_driven",          label: "Policy-driven" },
-];
-
-const ROUTE_TO_OPTIONS = [
-  { value: "manager",    label: "Manager" },
-  { value: "accounting", label: "Accounting" },
-  { value: "employee",   label: "Employee" },
-  { value: "none",       label: "None" },
-];
-
 // ── Conflict codes relevant to the Workflow section ─────────────────────────
 
 const WORKFLOW_CODES = new Set([
@@ -50,78 +34,6 @@ const WORKFLOW_CODES = new Set([
   "ACCOUNTING_DISABLED_REVIEW_ACTIVE",
   "ROUTE_TO_ACCOUNTING_MODULE_DISABLED",
 ]);
-
-// Local-only warnings the shared lib can't detect from portal config alone
-function buildLocalWarnings(
-  form: Record<string, any>,
-  expensePolicy?: any,
-  accountingSetup?: any,
-  approvalSetup?: any,
-): string[] {
-  const w: string[] = [];
-
-  const mode = form.default_expense_workflow_mode ?? "standard";
-
-  // Accounting-routing mode but accounting review is disabled
-  const needsAccounting = ["accounting_only", "manager_then_accounting", "direct_accounting"].includes(mode);
-  if (needsAccounting && accountingSetup?.accounting_review_mode === "none")
-    w.push("Workflow mode routes to accounting, but accounting review mode is set to \u2018none\u2019 in Accounting Setup.");
-
-  // Auto-submit without validation block
-  if (form.auto_submit_on_complete_upload && !form.block_submit_on_failed_validation)
-    w.push("Auto-submit on upload is enabled but failed validation will not block submission \u2014 invalid documents may be submitted automatically.");
-
-  // Allow submit with warnings while strict document rules are in place
-  const strictDocPolicy =
-    expensePolicy?.xml_required_mode === "always" ||
-    expensePolicy?.pdf_pair_required_for_cfdi === true ||
-    !expensePolicy?.tickets_allowed;
-  if (form.allow_submit_with_warnings && strictDocPolicy)
-    w.push("Submit with warnings is allowed, but the expense policy enforces strict document requirements \u2014 employees may bypass incomplete document checks.");
-
-  // Validation not blocked while strict approval/accounting controls are active
-  const strictControls =
-    approvalSetup?.require_accounting_for_all_expenses === true ||
-    accountingSetup?.accounting_review_mode === "always" ||
-    accountingSetup?.poliza_required === true;
-  if (!form.block_submit_on_failed_validation && strictControls)
-    w.push("Validation failure does not block submission, but strict accounting or approval controls are active \u2014 invalid expenses may reach accounting review.");
-
-  // Routing missing docs to none while strict policy active
-  if (form.route_missing_documents_to === "none" && strictDocPolicy)
-    w.push("Missing document routing is set to \u2018none\u2019, but the expense policy enforces strict XML or PDF requirements \u2014 missing documents will not be flagged to any reviewer.");
-
-  // Policy failures to none
-  if (form.route_policy_failures_to === "none")
-    w.push("Policy failure routing is set to \u2018none\u2019 \u2014 policy-violating reports will not be escalated to any reviewer.");
-
-  // Policy-driven mode with no reviewers
-  if (mode === "policy_driven" && approvalSetup?.approval_mode === "none" && accountingSetup?.accounting_review_mode === "none")
-    w.push("Policy-driven workflow mode is selected, but neither approval mode nor accounting review mode is configured \u2014 the workflow has no active reviewers.");
-
-  return w;
-}
-
-// ── Summary builder ───────────────────────────────────────────────────────────
-
-function buildSummary(form: Record<string, any>): string {
-  const parts: string[] = [];
-  const modeLabel = WORKFLOW_MODE_OPTIONS.find((o) => o.value === form.default_expense_workflow_mode)?.label;
-  if (modeLabel) parts.push(modeLabel);
-  if (form.auto_submit_on_complete_upload) parts.push("auto-submit on upload");
-  if (form.block_submit_on_failed_validation) parts.push("blocks on failure");
-  if (form.allow_submit_with_warnings) parts.push("allows warnings");
-  const routes: string[] = [];
-  if (form.route_policy_failures_to && form.route_policy_failures_to !== "none")
-    routes.push(`policy→${form.route_policy_failures_to}`);
-  if (form.route_missing_documents_to && form.route_missing_documents_to !== "none")
-    routes.push(`missing docs→${form.route_missing_documents_to}`);
-  if (form.route_international_expenses_to && form.route_international_expenses_to !== "none")
-    routes.push(`intl→${form.route_international_expenses_to}`);
-  if (routes.length) parts.push(routes.join(", "));
-  if (form.ai_workflow_assist_enabled) parts.push("AI assist on");
-  return parts.join(" · ") || "No workflow configuration set.";
-}
 
 // ── Shared sub-components ─────────────────────────────────────────────────────
 
@@ -252,6 +164,70 @@ export default function AdminWorkflowSetupStudio({
   onSaved,
   draftPatch,
 }: Props) {
+  const t = useTranslations("admin.workflowSetup");
+  const tc = useTranslations("common");
+
+  // ── Option sets (inside component to use t()) ──────────────────────────────
+  const WORKFLOW_MODE_OPTIONS = [
+    { value: "standard",                label: t("modeStandard") },
+    { value: "manager_only",            label: t("modeManagerOnly") },
+    { value: "accounting_only",         label: t("modeAccountingOnly") },
+    { value: "manager_then_accounting", label: t("modeManagerThenAccounting") },
+    { value: "direct_accounting",       label: t("modeDirectAccounting") },
+    { value: "policy_driven",           label: t("modePolicyDriven") },
+  ];
+
+  const ROUTE_TO_OPTIONS = [
+    { value: "manager",    label: t("routeToManager") },
+    { value: "accounting", label: t("routeToAccounting") },
+    { value: "employee",   label: t("routeToEmployee") },
+    { value: "none",       label: t("routeToNone") },
+  ];
+
+  // ── Local-only warnings ──────────────────────────────────────────────────
+  function buildLocalWarnings(
+    form: Record<string, any>,
+    expensePolicy?: any,
+    accountingSetup?: any,
+    approvalSetup?: any,
+  ): string[] {
+    const w: string[] = [];
+    const mode = form.default_expense_workflow_mode ?? "standard";
+    const needsAccounting = ["accounting_only", "manager_then_accounting", "direct_accounting"].includes(mode);
+    if (needsAccounting && accountingSetup?.accounting_review_mode === "none")
+      w.push(t("warnAccountingModeNone"));
+    if (form.auto_submit_on_complete_upload && !form.block_submit_on_failed_validation)
+      w.push(t("warnAutoSubmitNoBlock"));
+    const strictDocPolicy =
+      expensePolicy?.xml_required_mode === "always" ||
+      expensePolicy?.pdf_pair_required_for_cfdi === true ||
+      !expensePolicy?.tickets_allowed;
+    if (form.allow_submit_with_warnings && strictDocPolicy)
+      w.push(t("warnSubmitWithWarningsStrict"));
+    const strictControls =
+      approvalSetup?.require_accounting_for_all_expenses === true ||
+      accountingSetup?.accounting_review_mode === "always" ||
+      accountingSetup?.poliza_required === true;
+    if (!form.block_submit_on_failed_validation && strictControls)
+      w.push(t("warnNoBlockStrictControls"));
+    if (form.route_missing_documents_to === "none" && strictDocPolicy)
+      w.push(t("warnMissingDocsNoneStrict"));
+    if (form.route_policy_failures_to === "none")
+      w.push(t("warnPolicyFailuresNone"));
+    if (mode === "policy_driven" && approvalSetup?.approval_mode === "none" && accountingSetup?.accounting_review_mode === "none")
+      w.push(t("warnPolicyDrivenNoReviewers"));
+    return w;
+  }
+
+  // ── Summary builder ──────────────────────────────────────────────────────
+  function buildSummary(form: Record<string, any>): string {
+    const parts: string[] = [];
+    const modeLabel = WORKFLOW_MODE_OPTIONS.find((o) => o.value === form.default_expense_workflow_mode)?.label;
+    if (modeLabel) parts.push(modeLabel);
+    if (form.ai_workflow_assist_enabled) parts.push("AI");
+    return parts.join(" · ") || t("noWorkflowConfigured");
+  }
+
   const [form, setForm]           = useState<Record<string, any>>({ ...setup });
   const [dirty, setDirty]         = useState(false);
   const [saving, setSaving]       = useState(false);
@@ -290,7 +266,7 @@ export default function AdminWorkflowSetupStudio({
     try {
       const res = await fetch(`${API}/admin/workflow-setup/${companyId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", "X-User-Id": "1" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify(form),
       });
       if (!res.ok) throw new Error(`${res.status}`);
@@ -300,7 +276,7 @@ export default function AdminWorkflowSetupStudio({
       setAiDrafted(false);
       onSaved?.(updated);
     } catch (e: any) {
-      setError(e?.message ?? "Save failed");
+      setError(e?.message ?? tc("save"));
     } finally {
       setSaving(false);
     }
@@ -326,7 +302,7 @@ export default function AdminWorkflowSetupStudio({
           <p className="text-[10px] leading-relaxed text-white/35">{buildSummary(form)}</p>
           {aiDrafted && (
             <span className="flex shrink-0 items-center gap-1 rounded border border-indigo-500/20 bg-indigo-500/[0.06] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-indigo-300/50">
-              <Sparkles className="h-2.5 w-2.5" /> AI Draft
+              <Sparkles className="h-2.5 w-2.5" /> {tc("draft")}
             </span>
           )}
         </div>
@@ -370,24 +346,24 @@ export default function AdminWorkflowSetupStudio({
 
       {/* A — Workflow Mode */}
       <div>
-        <SectionLabel>A — Workflow Mode</SectionLabel>
+        <SectionLabel>{t("sectionA")}</SectionLabel>
         <Panel>
           <SelectRow
-            label="Default expense workflow mode"
-            description="How expense reports flow through the system by default"
+            label={t("defaultWorkflowMode")}
+            description={t("defaultWorkflowModeDesc")}
             value={form.default_expense_workflow_mode ?? "standard"}
             options={WORKFLOW_MODE_OPTIONS}
             onChange={(v) => set("default_expense_workflow_mode", v)}
           />
           <ToggleRow
-            label="Auto-submit on complete upload"
-            description="Automatically submit an expense when all required documents are uploaded"
+            label={t("autoSubmitOnUpload")}
+            description={t("autoSubmitOnUploadDesc")}
             checked={!!form.auto_submit_on_complete_upload}
             onChange={(v) => set("auto_submit_on_complete_upload", v)}
           />
           <ToggleRow
-            label="Auto-assign review stage"
-            description="Automatically move expenses to the appropriate review stage on submission"
+            label={t("autoAssignReviewStage")}
+            description={t("autoAssignReviewStageDesc")}
             checked={!!form.auto_assign_review_stage}
             onChange={(v) => set("auto_assign_review_stage", v)}
           />
@@ -396,29 +372,29 @@ export default function AdminWorkflowSetupStudio({
 
       {/* B — Submission Controls */}
       <div>
-        <SectionLabel>B — Submission Controls</SectionLabel>
+        <SectionLabel>{t("sectionB")}</SectionLabel>
         <Panel>
           <ToggleRow
-            label="Block submit on failed validation"
-            description="Prevent submission if the expense document fails validation"
+            label={t("blockOnFailedValidation")}
+            description={t("blockOnFailedValidationDesc")}
             checked={!!form.block_submit_on_failed_validation}
             onChange={(v) => set("block_submit_on_failed_validation", v)}
           />
           <ToggleRow
-            label="Allow submit with warnings"
-            description="Employees may submit even when validation warnings are present"
+            label={t("allowSubmitWithWarnings")}
+            description={t("allowSubmitWithWarningsDesc")}
             checked={!!form.allow_submit_with_warnings}
             onChange={(v) => set("allow_submit_with_warnings", v)}
           />
           <ToggleRow
-            label="Allow draft save"
-            description="Employees can save incomplete expenses as drafts before submitting"
+            label={t("allowDraftSave")}
+            description={t("allowDraftSaveDesc")}
             checked={!!form.allow_draft_save}
             onChange={(v) => set("allow_draft_save", v)}
           />
           <ToggleRow
-            label="Allow resubmit after return"
-            description="Employees can correct and resubmit expenses returned by a reviewer"
+            label={t("allowResubmitAfterReturn")}
+            description={t("allowResubmitAfterReturnDesc")}
             checked={!!form.allow_resubmit_after_return}
             onChange={(v) => set("allow_resubmit_after_return", v)}
           />
@@ -427,25 +403,25 @@ export default function AdminWorkflowSetupStudio({
 
       {/* C — Routing Rules */}
       <div>
-        <SectionLabel>C — Routing Rules</SectionLabel>
+        <SectionLabel>{t("sectionC")}</SectionLabel>
         <Panel>
           <SelectRow
-            label="Route policy failures to"
-            description="Who receives expenses that violate policy rules"
+            label={t("routePolicyFailures")}
+            description={t("routePolicyFailuresDesc")}
             value={form.route_policy_failures_to ?? "accounting"}
             options={ROUTE_TO_OPTIONS}
             onChange={(v) => set("route_policy_failures_to", v)}
           />
           <SelectRow
-            label="Route missing documents to"
-            description="Who receives expenses with incomplete document sets"
+            label={t("routeMissingDocs")}
+            description={t("routeMissingDocsDesc")}
             value={form.route_missing_documents_to ?? "employee"}
             options={ROUTE_TO_OPTIONS}
             onChange={(v) => set("route_missing_documents_to", v)}
           />
           <SelectRow
-            label="Route international expenses to"
-            description="Who reviews cross-border or foreign-currency expenses"
+            label={t("routeInternational")}
+            description={t("routeInternationalDesc")}
             value={form.route_international_expenses_to ?? "accounting"}
             options={ROUTE_TO_OPTIONS}
             onChange={(v) => set("route_international_expenses_to", v)}
@@ -455,11 +431,11 @@ export default function AdminWorkflowSetupStudio({
 
       {/* D — Employee Guidance */}
       <div>
-        <SectionLabel>D — Employee Guidance</SectionLabel>
+        <SectionLabel>{t("sectionD")}</SectionLabel>
         <Panel>
           <ToggleRow
-            label="Show next-action guidance"
-            description="Display contextual hints to employees about what to do next with an expense"
+            label={t("showNextAction")}
+            description={t("showNextActionDesc")}
             checked={!!form.show_next_action_guidance}
             onChange={(v) => set("show_next_action_guidance", v)}
           />
@@ -468,19 +444,19 @@ export default function AdminWorkflowSetupStudio({
 
       {/* E — AI Assistance */}
       <div>
-        <SectionLabel>E — AI Assistance</SectionLabel>
+        <SectionLabel>{t("sectionE")}</SectionLabel>
         <Panel>
           <ToggleRow
-            label="AI workflow assist enabled"
-            description="AI provides routing suggestions and next-action recommendations"
+            label={t("aiWorkflowAssist")}
+            description={t("aiWorkflowAssistDesc")}
             checked={!!form.ai_workflow_assist_enabled}
             onChange={(v) => set("ai_workflow_assist_enabled", v)}
           />
           <TextareaRow
-            label="AI workflow notes"
-            description="Custom instructions for AI workflow behaviour"
+            label={t("aiWorkflowNotes")}
+            description={t("aiWorkflowNotesDesc")}
             value={form.ai_workflow_notes ?? ""}
-            placeholder="Optional notes for AI workflow logic…"
+            placeholder={t("aiWorkflowNotesPlaceholder")}
             onChange={(v) => set("ai_workflow_notes", v || null)}
           />
         </Panel>
@@ -498,11 +474,11 @@ export default function AdminWorkflowSetupStudio({
           className="flex items-center gap-1.5 rounded border border-indigo-500/30 bg-indigo-600/20 px-4 py-1.5 text-[10px] font-semibold text-indigo-300 transition-colors hover:bg-indigo-600/30 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-          Save workflow setup
+          {t("saveWorkflowSetup")}
         </button>
         {saved && !dirty && (
           <span className="flex items-center gap-1 text-[10px] text-emerald-400/60">
-            <CheckCircle2 className="h-3 w-3" /> Saved
+            <CheckCircle2 className="h-3 w-3" /> {tc("saved")}
           </span>
         )}
       </div>

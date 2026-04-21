@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   CheckCircle2,
   AlertTriangle,
@@ -64,41 +65,47 @@ function cardStatus(
   return "ok";
 }
 
-function StatusBadge({ status }: { status: CardStatus }) {
+function StatusBadge({ status, labels }: { status: CardStatus; labels: { ok: string; warn: string; unconfigured: string } }) {
   if (status === "ok")
     return (
       <span className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-widest text-emerald-400/60">
-        <CheckCircle2 className="h-2.5 w-2.5" /> Configured
+        <CheckCircle2 className="h-2.5 w-2.5" /> {labels.ok}
       </span>
     );
   if (status === "warn")
     return (
       <span className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-widest text-amber-400/60">
-        <AlertTriangle className="h-2.5 w-2.5" /> Needs attention
+        <AlertTriangle className="h-2.5 w-2.5" /> {labels.warn}
       </span>
     );
   return (
     <span className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-widest text-white/20">
-      <Circle className="h-2.5 w-2.5" /> Not configured
+      <Circle className="h-2.5 w-2.5" /> {labels.unconfigured}
     </span>
   );
 }
 
 function SetupCard({
   section,
+  sectionLabel,
   icon,
   status,
   rows,
   summary,
   onEdit,
+  editLabel,
+  statusLabels,
   fullWidth = false,
 }: {
   section: SetupSection;
+  sectionLabel: string;
   icon: React.ReactNode;
   status: CardStatus;
   rows: [string, string][];
   summary: string;
   onEdit: (s: SetupSection) => void;
+  editLabel: string;
+  statusLabels: { ok: string; warn: string; unconfigured: string };
   fullWidth?: boolean;
 }) {
   return (
@@ -112,9 +119,9 @@ function SetupCard({
       <div className="flex items-center justify-between border-b border-white/[0.05] bg-black/20 px-4 py-2.5">
         <div className="flex items-center gap-2">
           <span className="text-white/30">{icon}</span>
-          <span className="text-[11px] font-semibold text-white/70">{section}</span>
+          <span className="text-[11px] font-semibold text-white/70">{sectionLabel}</span>
         </div>
-        <StatusBadge status={status} />
+        <StatusBadge status={status} labels={statusLabels} />
       </div>
 
       <div className="flex-1">
@@ -138,7 +145,7 @@ function SetupCard({
       <div className="flex items-center justify-between border-t border-white/[0.04] px-4 py-2">
         <p className="min-w-0 flex-1 truncate text-[10px] text-white/22">{summary}</p>
         <span className="ml-3 shrink-0 text-[10px] font-medium text-white/30">
-          Edit →
+          {editLabel}
         </span>
       </div>
     </button>
@@ -171,6 +178,7 @@ export default function AdminOverviewPanel({
   workflowSetup,
   onNavigate,
 }: Props) {
+  const to = useTranslations("admin.overview");
   const conflicts = getPortalConfigConflicts(portalConfig ?? {});
   const issueCount = conflicts.length;
   const conflictCodes = new Set(conflicts.map((c) => c.code));
@@ -210,28 +218,31 @@ export default function AdminOverviewPanel({
     );
   })();
 
+  const statusLabels = { ok: to("statusConfigured"), warn: to("statusNeedsAttention"), unconfigured: to("statusNotConfigured") };
+
   const companySummary = cs.display_name
     ? [cs.display_name, cs.country_code, cs.industry].filter(Boolean).join(" · ")
-    : "No company profile saved.";
+    : to("noCompanyProfile");
 
   const expenseSummary = ep.xml_required_mode
     ? `XML ${s(ep.xml_required_mode)}. International: ${b(ep.international_expenses_allowed)}. Tickets: ${b(ep.tickets_allowed)}.`
-    : "No expense policy saved.";
+    : to("noExpensePolicy");
 
   const accountSummary = ac.accounting_review_mode
     ? `Review: ${s(ac.accounting_review_mode)}. Póliza: ${b(ac.poliza_required)}. Cost center: ${b(ac.cost_center_required)}.`
-    : "No accounting setup saved.";
+    : to("noAccountingSetup");
 
   const approvalSummary = ap.approval_mode
     ? `Mode: ${s(ap.approval_mode)}. Require manager: ${b(ap.require_manager_for_all_employees)}.`
-    : "No approval setup saved.";
+    : to("noApprovalSetup");
 
   const workflowSummary = wf.default_expense_workflow_mode
     ? `Mode: ${s(wf.default_expense_workflow_mode)}. Block on failure: ${b(wf.block_submit_on_failed_validation)}.`
-    : "No workflow setup saved.";
+    : to("noWorkflowSetup");
 
   const cards: {
     section: SetupSection;
+    sectionLabel: string;
     icon: React.ReactNode;
     status: CardStatus;
     rows: [string, string][];
@@ -239,66 +250,71 @@ export default function AdminOverviewPanel({
   }[] = [
     {
       section: "Company Setup",
+      sectionLabel: to("sectionCompanySetup"),
       icon: <Building2 className="h-3.5 w-3.5" />,
       status: companyStatus,
       rows: [
-        ["Name",            s(cs.display_name)],
-        ["Industry",        s(cs.industry)],
-        ["Country",         s(cs.country_code)],
-        ["Has managers",    b(cs.has_managers)],
-        ["Accounting team", b(cs.has_accounting_team)],
+        [to("fieldName"),            s(cs.display_name)],
+        [to("fieldIndustry"),        s(cs.industry)],
+        [to("fieldCountry"),         s(cs.country_code)],
+        [to("fieldHasManagers"),     b(cs.has_managers)],
+        [to("fieldAccountingTeam"),  b(cs.has_accounting_team)],
       ],
       summary: companySummary,
     },
     {
       section: "Expense Policy",
+      sectionLabel: to("sectionExpensePolicy"),
       icon: <FileText className="h-3.5 w-3.5" />,
       status: expenseStatus,
       rows: [
-        ["XML required",      s(ep.xml_required_mode)],
-        ["International",     b(ep.international_expenses_allowed)],
-        ["Tickets",           b(ep.tickets_allowed)],
-        ["Manager approval",  b(ep.manager_approval_required)],
-        ["Allocation",        s(ep.allocation_dimensions)],
+        [to("fieldXmlRequired"),     s(ep.xml_required_mode)],
+        [to("fieldInternational"),   b(ep.international_expenses_allowed)],
+        [to("fieldTickets"),         b(ep.tickets_allowed)],
+        [to("fieldManagerApproval"), b(ep.manager_approval_required)],
+        [to("fieldAllocation"),      s(ep.allocation_dimensions)],
       ],
       summary: expenseSummary,
     },
     {
       section: "Accounting Setup",
+      sectionLabel: to("sectionAccountingSetup"),
       icon: <Calculator className="h-3.5 w-3.5" />,
       status: accountStatus,
       rows: [
-        ["Review mode",      s(ac.accounting_review_mode)],
-        ["Póliza required",  b(ac.poliza_required)],
-        ["Account code",     b(ac.account_code_required)],
-        ["Cost center",      b(ac.cost_center_required)],
-        ["Project required", b(ac.project_required)],
+        [to("fieldReviewMode"),      s(ac.accounting_review_mode)],
+        [to("fieldPolizaRequired"),  b(ac.poliza_required)],
+        [to("fieldAccountCode"),     b(ac.account_code_required)],
+        [to("fieldCostCenter"),      b(ac.cost_center_required)],
+        [to("fieldProjectRequired"), b(ac.project_required)],
       ],
       summary: accountSummary,
     },
     {
       section: "Approval Setup",
+      sectionLabel: to("sectionApprovalSetup"),
       icon: <ClipboardCheck className="h-3.5 w-3.5" />,
       status: approvalStatus,
       rows: [
-        ["Approval mode",         s(ap.approval_mode)],
-        ["Require manager",       b(ap.require_manager_for_all_employees)],
-        ["Escalate international",b(ap.escalate_international_to_accounting)],
-        ["Escalate policy fails", b(ap.escalate_policy_failures_to_accounting)],
-        ["Allow resubmission",    b(ap.allow_resubmission_after_rejection)],
+        [to("fieldApprovalMode"),         s(ap.approval_mode)],
+        [to("fieldRequireManager"),       b(ap.require_manager_for_all_employees)],
+        [to("fieldEscalateIntl"),         b(ap.escalate_international_to_accounting)],
+        [to("fieldEscalatePolicyFails"),  b(ap.escalate_policy_failures_to_accounting)],
+        [to("fieldAllowResubmission"),    b(ap.allow_resubmission_after_rejection)],
       ],
       summary: approvalSummary,
     },
     {
       section: "Workflow Setup",
+      sectionLabel: to("sectionWorkflowSetup"),
       icon: <GitBranch className="h-3.5 w-3.5" />,
       status: workflowStatus,
       rows: [
-        ["Mode",              s(wf.default_expense_workflow_mode)],
-        ["Block on failure",  b(wf.block_submit_on_failed_validation)],
-        ["Route policy to",   s(wf.route_policy_failures_to)],
-        ["Route intl to",     s(wf.route_international_expenses_to)],
-        ["Allow draft save",  b(wf.allow_draft_save)],
+        [to("fieldMode"),             s(wf.default_expense_workflow_mode)],
+        [to("fieldBlockOnFailure"),   b(wf.block_submit_on_failed_validation)],
+        [to("fieldRoutePolicyTo"),    s(wf.route_policy_failures_to)],
+        [to("fieldRouteIntlTo"),      s(wf.route_international_expenses_to)],
+        [to("fieldAllowDraftSave"),   b(wf.allow_draft_save)],
       ],
       summary: workflowSummary,
     },
@@ -321,20 +337,20 @@ export default function AdminOverviewPanel({
             <>
               <AlertTriangle className="h-3.5 w-3.5 text-amber-400/55" />
               <span className="text-[11px] font-medium text-amber-200/55">
-                {issueCount} issue{issueCount !== 1 ? "s" : ""} need attention
+                {to("issueCount", { count: issueCount })}
               </span>
             </>
           ) : unconfiguredCount > 0 ? (
             <>
               <Circle className="h-3.5 w-3.5 text-white/20" />
               <span className="text-[11px] font-medium text-white/40">
-                {unconfiguredCount} section{unconfiguredCount !== 1 ? "s" : ""} not yet configured
+                {to("unconfiguredCount", { count: unconfiguredCount })}
               </span>
             </>
           ) : (
             <>
               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400/55" />
-              <span className="text-[11px] font-medium text-white/50">All systems configured</span>
+              <span className="text-[11px] font-medium text-white/50">{to("allConfigured")}</span>
             </>
           )}
         </div>
@@ -344,7 +360,7 @@ export default function AdminOverviewPanel({
             onClick={() => onNavigate(fixTarget)}
             className="text-[10px] font-semibold text-amber-400/55 transition-colors hover:text-amber-300/80"
           >
-            Fix setup →
+            {to("fixSetup")}
           </button>
         )}
         {issueCount === 0 && unconfiguredCount > 0 && (
@@ -353,22 +369,25 @@ export default function AdminOverviewPanel({
             onClick={() => onNavigate("Company Setup")}
             className="text-[10px] font-semibold text-white/25 transition-colors hover:text-white/50"
           >
-            Start setup →
+            {to("startSetup")}
           </button>
         )}
       </div>
 
       {/* Setup cards — 2-column grid; last card spans full width when count is odd */}
       <div className="grid grid-cols-2 gap-3">
-        {cards.map(({ section, icon, status, rows, summary }, idx) => (
+        {cards.map(({ section, sectionLabel, icon, status, rows, summary }, idx) => (
           <SetupCard
             key={section}
             section={section}
+            sectionLabel={sectionLabel}
             icon={icon}
             status={status}
             rows={rows}
             summary={summary}
             onEdit={onNavigate}
+            editLabel={to("edit")}
+            statusLabels={statusLabels}
             fullWidth={cards.length % 2 !== 0 && idx === cards.length - 1}
           />
         ))}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Bot, Zap, Loader2, AlertTriangle, AlertCircle, CheckCircle2 } from "lucide-react";
 import {
+import { getAuthHeaders } from "@/lib/session";
   getPortalConfigConflicts,
   type PortalConfigConflict,
 } from "@/lib/portal-config-conflicts";
@@ -301,7 +302,7 @@ export default function AdminCompanySetupCopilot({
     try {
       const res = await fetch(`${API}/ai/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-User-Id": "1" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({
           prompt: buildSystemPrompt(text, setup, legalEntities, portalConfig),
           context: `company_id:${companyId}`,

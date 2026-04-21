@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from apps.api.auth import require_admin
 from apps.api.deps import get_db
 from packages.modules.admin.schemas.workflow_setup import WorkflowSetupRead, WorkflowSetupUpdate
 from packages.modules.admin.service.workflow_setup_service import (
@@ -8,7 +9,7 @@ from packages.modules.admin.service.workflow_setup_service import (
     upsert_workflow_setup,
 )
 
-router = APIRouter(prefix="/admin/workflow-setup", tags=["admin"])
+router = APIRouter(prefix="/admin/workflow-setup", tags=["admin"], dependencies=[Depends(require_admin)])
 
 
 @router.get("/{company_id}", response_model=WorkflowSetupRead)

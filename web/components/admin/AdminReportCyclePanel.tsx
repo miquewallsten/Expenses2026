@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Zap, Loader2, CheckCircle2, AlertTriangle, RefreshCw } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Zap, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -28,8 +29,6 @@ interface BundleResult {
   report_ids: number[];
   triggered_by: string;
 }
-
-const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 function fmtDt(iso: string | null): string {
   if (!iso) return "—";
@@ -99,6 +98,19 @@ function Select({
 }
 
 export default function AdminReportCyclePanel({ companyId }: { companyId: number }) {
+  const t = useTranslations("admin.reportCycle");
+  const tc = useTranslations("common");
+
+  const DAY_NAMES = [
+    t("dayNames.monday"),
+    t("dayNames.tuesday"),
+    t("dayNames.wednesday"),
+    t("dayNames.thursday"),
+    t("dayNames.friday"),
+    t("dayNames.saturday"),
+    t("dayNames.sunday"),
+  ];
+
   const [settings, setSettings] = useState<CycleSettings | null>(null);
   const [saving, setSaving] = useState(false);
   const [triggering, setTriggering] = useState(false);
@@ -111,7 +123,7 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
     fetch(`${API}/admin/report-cycle/${companyId}`)
       .then((r) => r.json())
       .then(setSettings)
-      .catch(() => setError("Failed to load settings."));
+      .catch(() => setError(t("failedLoadSettings")));
   }, [companyId]);
 
   function patch<K extends keyof CycleSettings>(key: K, value: CycleSettings[K]) {
@@ -143,7 +155,7 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
       setSettings(updated);
       setDirty(false);
     } catch (e: any) {
-      setError(e.message ?? "Save failed.");
+      setError(e.message ?? tc("save"));
     } finally {
       setSaving(false);
     }
@@ -164,7 +176,7 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
       const fresh = await fetch(`${API}/admin/report-cycle/${companyId}`).then((r) => r.json());
       setSettings(fresh);
     } catch (e: any) {
-      setError(e.message ?? "Trigger failed.");
+      setError(e.message ?? t("failedLoadSettings"));
     } finally {
       setTriggering(false);
     }
@@ -186,9 +198,9 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
       {/* Master toggle */}
       <div className="flex items-center justify-between rounded border border-white/[0.06] bg-white/[0.02] px-3 py-2">
         <div>
-          <p className="text-[10px] font-semibold text-white/55">Automatic report generation</p>
+          <p className="text-[10px] font-semibold text-white/55">{t("autoReportGeneration")}</p>
           <p className="text-[9px] text-white/28">
-            {settings.enabled ? "Cycles are active" : "Disabled — reports must be triggered manually"}
+            {settings.enabled ? t("cyclesActive") : t("cyclesDisabled")}
           </p>
         </div>
         <Toggle value={settings.enabled} onChange={(v) => patch("enabled", v)} />
@@ -196,22 +208,22 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
 
       {/* Schedule */}
       <div className="rounded border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 space-y-0">
-        <Label>Schedule</Label>
-        <Row label="Frequency">
+        <Label>{t("schedule")}</Label>
+        <Row label={t("frequency")}>
           <Select
             value={settings.frequency}
             onChange={(v) => patch("frequency", v as CycleSettings["frequency"])}
             options={[
-              { value: "weekly", label: "Weekly" },
-              { value: "biweekly", label: "Every 2 weeks" },
-              { value: "monthly", label: "Monthly" },
-              { value: "manual", label: "Manual only" },
+              { value: "weekly", label: t("freqWeekly") },
+              { value: "biweekly", label: t("freqBiweekly") },
+              { value: "monthly", label: t("freqMonthly") },
+              { value: "manual", label: t("freqManual") },
             ]}
           />
         </Row>
 
         {showDayOfWeek && (
-          <Row label="Day of week">
+          <Row label={t("dayOfWeek")}>
             <Select
               value={settings.day_of_week ?? 4}
               onChange={(v) => patch("day_of_week", parseInt(v))}
@@ -221,7 +233,7 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
         )}
 
         {showDayOfMonth && (
-          <Row label="Day of month">
+          <Row label={t("dayOfMonth")}>
             <Select
               value={settings.day_of_month ?? 1}
               onChange={(v) => patch("day_of_month", parseInt(v))}
@@ -234,7 +246,7 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
         )}
 
         {settings.frequency !== "manual" && (
-          <Row label="Time (24h)">
+          <Row label={t("time24h")}>
             <input
               type="time"
               value={settings.time_of_day}
@@ -247,18 +259,18 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
 
       {/* Behaviour */}
       <div className="rounded border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 space-y-0">
-        <Label>Behaviour</Label>
-        <Row label="Auto-submit to approval">
+        <Label>{t("behaviour")}</Label>
+        <Row label={t("autoSubmitApproval")}>
           <Toggle value={settings.auto_submit} onChange={(v) => patch("auto_submit", v)} />
         </Row>
-        <Row label="Statuses to bundle">
+        <Row label={t("statusesToBundle")}>
           <input
             value={settings.bundle_statuses}
             onChange={(e) => patch("bundle_statuses", e.target.value)}
             className="w-44 rounded border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[10px] text-white/55 outline-none focus:border-violet-500/40"
           />
         </Row>
-        <Row label="Report title template">
+        <Row label={t("reportTitleTemplate")}>
           <input
             value={settings.report_name_template}
             onChange={(e) => patch("report_name_template", e.target.value)}
@@ -269,11 +281,11 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
 
       {/* Status */}
       <div className="rounded border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 space-y-0">
-        <Label>Status</Label>
-        <Row label="Last run">
+        <Label>{t("status")}</Label>
+        <Row label={t("lastRun")}>
           <span className="text-[10px] text-white/35">{fmtDt(settings.last_run_at)}</span>
         </Row>
-        <Row label="Next scheduled run">
+        <Row label={t("nextScheduledRun")}>
           <span className="text-[10px] text-white/35">{fmtDt(settings.next_run_at)}</span>
         </Row>
       </div>
@@ -284,17 +296,19 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
           <div className="flex items-center gap-1.5 mb-1">
             <CheckCircle2 className="h-3 w-3 text-emerald-400/60" />
             <span className="text-[9px] font-semibold uppercase tracking-widest text-emerald-300/55">
-              Cycle complete
+              {t("cycleComplete")}
             </span>
           </div>
           <p className="text-[10px] text-emerald-200/50">
-            {lastResult.reports_created} report{lastResult.reports_created !== 1 ? "s" : ""} created
-            · {lastResult.expenses_bundled} expense{lastResult.expenses_bundled !== 1 ? "s" : ""} bundled
-            · {lastResult.users_processed} user{lastResult.users_processed !== 1 ? "s" : ""} processed
+            {t("reportsCreated", { count: lastResult.reports_created })}
+            {" · "}
+            {t("expensesBundled", { count: lastResult.expenses_bundled })}
+            {" · "}
+            {t("usersProcessed", { count: lastResult.users_processed })}
           </p>
           {lastResult.skipped_users > 0 && (
             <p className="text-[9px] text-white/25">
-              {lastResult.skipped_users} user{lastResult.skipped_users !== 1 ? "s" : ""} skipped (no qualifying expenses)
+              {t("usersSkipped", { count: lastResult.skipped_users })}
             </p>
           )}
         </div>
@@ -316,7 +330,7 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
           className="flex-1 inline-flex items-center justify-center gap-1.5 rounded border border-white/[0.1] bg-white/[0.04] px-3 py-1.5 text-[10px] font-semibold text-white/45 transition-colors hover:bg-white/[0.07] hover:text-white/60 disabled:cursor-not-allowed disabled:opacity-30"
         >
           {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-          {saving ? "Saving…" : "Save settings"}
+          {saving ? tc("saving") : t("saveSettings")}
         </button>
         <button
           type="button"
@@ -325,11 +339,11 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
           className="flex-1 inline-flex items-center justify-center gap-1.5 rounded border border-violet-500/25 bg-violet-600/15 px-3 py-1.5 text-[10px] font-semibold text-violet-300/70 transition-colors hover:bg-violet-600/25 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {triggering ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
-          {triggering ? "Running…" : "Run now"}
+          {triggering ? t("running") : t("runNow")}
         </button>
       </div>
       <p className="text-[8px] text-white/15">
-        Tokens for title template: {"{user}"} {"{month}"} {"{year}"} {"{date}"}
+        {t("templateTokensNote", { user: "{user}", month: "{month}", year: "{year}", date: "{date}" })}
       </p>
     </div>
   );

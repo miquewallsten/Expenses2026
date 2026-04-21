@@ -16,7 +16,6 @@ import AdminSetupOrchestratorPanel from "@/components/admin/AdminSetupOrchestrat
 import AdminRolesPanel from "@/components/admin/AdminRolesPanel";
 import AdminPermissionsPanel from "@/components/admin/AdminPermissionsPanel";
 import { getPortalConfigConflicts } from "@/lib/portal-config-conflicts";
-import AdminWorkflowPanel from "@/components/admin/AdminWorkflowPanel";
 import AdminModulesPanel from "@/components/admin/AdminModulesPanel";
 import AdminUsersPanel from "@/components/admin/AdminUsersPanel";
 import AdminAuthSettingsPanel from "@/components/admin/AdminAuthSettingsPanel";
@@ -391,7 +390,7 @@ const WORKLIST_ICONS: Record<WorklistItem, React.ReactNode> = {
   "Approval Setup":   <ClipboardCheck className="h-3.5 w-3.5" />,
   "Workflow Setup":   <GitBranch className="h-3.5 w-3.5" />,
   "Report Cycle":     <CalendarClock className="h-3.5 w-3.5" />,
-  "Export Config":    <FolderOutput className="h-3.5 w-3.5" />
+  "Export Config":    <FolderOutput className="h-3.5 w-3.5" />,
   "Archive Config":   <Archive className="h-3.5 w-3.5" />,
   "Channels":         <Radio className="h-3.5 w-3.5" />,
   Users:              <Users className="h-3.5 w-3.5" />,
@@ -783,6 +782,7 @@ export default function AdminPage() {
   const tAdmin = useTranslations("admin");
   const tcAdmin = useTranslations("common");
   const [activeSection, setActiveSection] = useState<WorklistItem>("Overview");
+  const adminCompanyId = Number(getCurrentCompanyId() ?? 1);
 
   // ── Lists not covered by portal config ──────────────────────────────────────
   const [roles, setRoles]               = useState<RoleRead[]>([]);
@@ -862,7 +862,7 @@ export default function AdminPage() {
 
   // ── Dedicated export-config fetch ────────────────────────────────────────────
   useEffect(() => {
-    fetch(`${API}/admin/export-config/1`)
+    fetch(`${API}/admin/export-config/${adminCompanyId}`)
       .then((r) => r.ok ? r.json() : null)
       .catch(() => null)
       .then((d: any) => {
@@ -876,15 +876,15 @@ export default function AdminPage() {
     const stored = getStoredSession();
     const h: Record<string, string> = stored
       ? { Authorization: `Bearer ${stored.token}` }
-      : { "X-User-Id": "1" };
+      : { "X-User-Id": String(getCurrentUserId() ?? 1) };
     Promise.all([
-      fetch(`${API}/roles/`,                                                  { headers: h }).then((r) => r.ok ? r.json() : []),
-      fetch(`${API}/roles/permissions`,                                       { headers: h }).then((r) => r.ok ? r.json() : []),
-      fetch(`${API}/workflows/stages?company_id=1&module_key=expenses`,       { headers: h }).then((r) => r.ok ? r.json() : []),
-      fetch(`${API}/workflows/transitions?company_id=1&module_key=expenses`,  { headers: h }).then((r) => r.ok ? r.json() : []),
-      fetch(`${API}/modules/company/1`,                                       { headers: h }).then((r) => r.ok ? r.json() : []),
-      fetch(`${API}/admin/company-setup/1/legal-entities`,                    { headers: h }).then((r) => r.ok ? r.json() : []),
-      fetch(`${API}/users/?company_id=1`,                                     { headers: h }).then((r) => r.ok ? r.json() : []),
+      fetch(`${API}/roles/`,                                                          { headers: h }).then((r) => r.ok ? r.json() : []),
+      fetch(`${API}/roles/permissions`,                                               { headers: h }).then((r) => r.ok ? r.json() : []),
+      fetch(`${API}/workflows/stages?company_id=${adminCompanyId}&module_key=expenses`,       { headers: h }).then((r) => r.ok ? r.json() : []),
+      fetch(`${API}/workflows/transitions?company_id=${adminCompanyId}&module_key=expenses`,  { headers: h }).then((r) => r.ok ? r.json() : []),
+      fetch(`${API}/modules/company/${adminCompanyId}`,                                       { headers: h }).then((r) => r.ok ? r.json() : []),
+      fetch(`${API}/admin/company-setup/${adminCompanyId}/legal-entities`,                    { headers: h }).then((r) => r.ok ? r.json() : []),
+      fetch(`${API}/users/?company_id=${adminCompanyId}`,                                     { headers: h }).then((r) => r.ok ? r.json() : []),
     ]).then(([r, p, s, t, m, entities, u]) => {
       setRoles(r);
       setPermissions(p);
@@ -897,7 +897,6 @@ export default function AdminPage() {
   }, []);
 
   const MODULE_FLAGS = [
-    "expenses_module_enabled", "approvals_module_enabled", "accounting_module_enabled",
     "time_allocation_module_enabled", "reimbursements_module_enabled", "archive_module_enabled",
     "subcontractor_module_enabled", "ai_copilot_enabled", "purchase_requests_module_enabled",
   ];
@@ -942,40 +941,40 @@ export default function AdminPage() {
     const stored = getStoredSession();
     const authHeader: Record<string, string> = stored
       ? { Authorization: `Bearer ${stored.token}` }
-      : { "X-User-Id": "1" };
+      : { "X-User-Id": String(getCurrentUserId() ?? 1) };
     const headers = { "Content-Type": "application/json", ...authHeader };
     try {
       if (companySetupDraftPatch && Object.keys(companySetupDraftPatch).length > 0) {
         const body = { ...(companySetup ?? {}), ...companySetupDraftPatch };
-        const res = await fetch(`${API}/admin/company-setup/1`, { method: "PUT", headers, body: JSON.stringify(body) });
+        const res = await fetch(`${API}/admin/company-setup/${adminCompanyId}`, { method: "PUT", headers, body: JSON.stringify(body) });
         if (!res.ok) throw new Error(`Company Setup: ${res.status}`);
         setCompanySetup(await res.json());
         setCompanySetupDraftPatch(undefined);
       }
       if (expensePolicyDraftPatch && Object.keys(expensePolicyDraftPatch).length > 0) {
         const body = { ...(expensePolicy ?? {}), ...expensePolicyDraftPatch };
-        const res = await fetch(`${API}/expenses/policy/1`, { method: "PUT", headers, body: JSON.stringify(body) });
+        const res = await fetch(`${API}/expenses/policy/${adminCompanyId}`, { method: "PUT", headers, body: JSON.stringify(body) });
         if (!res.ok) throw new Error(`Expense Policy: ${res.status}`);
         setExpensePolicy(await res.json());
         setExpensePolicyDraftPatch(undefined);
       }
       if (accountingSetupDraftPatch && Object.keys(accountingSetupDraftPatch).length > 0) {
         const body = { ...(accountingSetup ?? {}), ...accountingSetupDraftPatch };
-        const res = await fetch(`${API}/admin/accounting-setup/1`, { method: "PUT", headers, body: JSON.stringify(body) });
+        const res = await fetch(`${API}/admin/accounting-setup/${adminCompanyId}`, { method: "PUT", headers, body: JSON.stringify(body) });
         if (!res.ok) throw new Error(`Accounting Setup: ${res.status}`);
         setAccountingSetup(await res.json());
         setAccountingSetupDraftPatch(undefined);
       }
       if (approvalSetupDraftPatch && Object.keys(approvalSetupDraftPatch).length > 0) {
         const body = { ...(approvalSetup ?? {}), ...approvalSetupDraftPatch };
-        const res = await fetch(`${API}/admin/approval-setup/1`, { method: "PUT", headers, body: JSON.stringify(body) });
+        const res = await fetch(`${API}/admin/approval-setup/${adminCompanyId}`, { method: "PUT", headers, body: JSON.stringify(body) });
         if (!res.ok) throw new Error(`Approval Setup: ${res.status}`);
         setApprovalSetup(await res.json());
         setApprovalSetupDraftPatch(undefined);
       }
       if (workflowSetupDraftPatch && Object.keys(workflowSetupDraftPatch).length > 0) {
         const body = { ...(workflowSetup ?? {}), ...workflowSetupDraftPatch };
-        const res = await fetch(`${API}/admin/workflow-setup/1`, { method: "PUT", headers, body: JSON.stringify(body) });
+        const res = await fetch(`${API}/admin/workflow-setup/${adminCompanyId}`, { method: "PUT", headers, body: JSON.stringify(body) });
         if (!res.ok) throw new Error(`Workflow Setup: ${res.status}`);
         setWorkflowSetup(await res.json());
         setWorkflowSetupDraftPatch(undefined);
@@ -1032,7 +1031,7 @@ export default function AdminPage() {
       case "Company Setup":
         return (
           <AdminCompanySetupStudio
-            companyId={1}
+            companyId={adminCompanyId}
             setup={companySetup ?? {}}
             legalEntities={legalEntities}
             onSaved={setCompanySetup}
@@ -1045,7 +1044,7 @@ export default function AdminPage() {
       case "Expense Policy":
         return (
           <AdminExpenseModulePanel
-            companyId={1}
+            companyId={adminCompanyId}
             policy={expensePolicy ?? {}}
             onSaved={setExpensePolicy}
           />
@@ -1054,7 +1053,7 @@ export default function AdminPage() {
       case "Accounting Setup":
         return (
           <AdminAccountingSetupStudio
-            companyId={1}
+            companyId={adminCompanyId}
             setup={accountingSetup ?? {}}
             onSaved={setAccountingSetup}
             draftPatch={accountingSetupDraftPatch}
@@ -1064,7 +1063,7 @@ export default function AdminPage() {
       case "Approval Setup":
         return (
           <AdminApprovalSetupStudio
-            companyId={1}
+            companyId={adminCompanyId}
             setup={approvalSetup ?? {}}
             companySetup={companySetup}
             accountingSetup={accountingSetup}
@@ -1076,7 +1075,7 @@ export default function AdminPage() {
       case "Workflow Setup":
         return (
           <AdminWorkflowSetupStudio
-            companyId={1}
+            companyId={adminCompanyId}
             setup={workflowSetup ?? {}}
             companySetup={companySetup}
             expensePolicy={expensePolicy}
@@ -1090,7 +1089,7 @@ export default function AdminPage() {
       case "Export Config":
         return (
           <AdminExportConfigPanel
-            companyId={1}
+            companyId={adminCompanyId}
             config={exportConfig}
             onSaved={setExportConfig}
           />
@@ -1099,26 +1098,26 @@ export default function AdminPage() {
       case "Archive Config":
         return (
           <AdminArchiveConfigPanel
-            companyId={1}
+            companyId={adminCompanyId}
             config={archiveConfig}
             onSaved={setArchiveConfig}
           />
         );
 
       case "Channels":
-        return <AdminChannelsPanel />;
+        return <AdminChannelsPanel companyId={adminCompanyId} />;
 
       case "Users":
         return (
           <AdminUsersPanel
-            companyId={1}
+            companyId={adminCompanyId}
             users={users}
             onUsersChanged={setUsers}
           />
         );
 
       case "Roles":
-        return <AdminRolesPanel roles={roles} companyId={1} onRolesChanged={setRoles} />;
+        return <AdminRolesPanel roles={roles} companyId={adminCompanyId} onRolesChanged={setRoles} />;
 
       case "Permissions":
         return <AdminPermissionsPanel permissions={permissions} onPermissionsChanged={setPermissions} />;
@@ -1127,10 +1126,10 @@ export default function AdminPage() {
         return <AdminModulesPanel companySetup={companySetup} onSetupChanged={setCompanySetup} />;
 
       case "Report Cycle":
-        return <AdminReportCyclePanel companyId={1} />;
+        return <AdminReportCyclePanel companyId={adminCompanyId} />;
 
       case "Authentication":
-        return <AdminAuthSettingsPanel companyId={1} />;
+        return <AdminAuthSettingsPanel companyId={adminCompanyId} />;
     }
   })();
 
@@ -1139,7 +1138,7 @@ export default function AdminPage() {
       return (
         <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-l border-white/[0.07] bg-zinc-950 p-3">
           <AdminSetupOrchestratorPanel
-            companyId={1}
+            companyId={adminCompanyId}
             portalConfig={portalConfig}
             onApplyPatch={handleOrchestratorApplyPatch}
             onAnalysisResult={handleAnalysisResult}
@@ -1153,7 +1152,7 @@ export default function AdminPage() {
       return (
         <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-l border-white/[0.07] bg-zinc-950 p-3">
           <AdminCompanySetupCopilot
-            companyId={1}
+            companyId={adminCompanyId}
             setup={companySetup ?? {}}
             legalEntities={legalEntities}
             portalConfig={portalConfig}
@@ -1167,7 +1166,7 @@ export default function AdminPage() {
       return (
         <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-l border-white/[0.07] bg-zinc-950 p-3">
           <AdminApprovalCopilot
-            companyId={1}
+            companyId={adminCompanyId}
             companySetup={companySetup ?? {}}
             expensePolicy={expensePolicy ?? {}}
             accountingSetup={accountingSetup ?? {}}
@@ -1183,7 +1182,7 @@ export default function AdminPage() {
       return (
         <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-l border-white/[0.07] bg-zinc-950 p-3">
           <AdminWorkflowCopilot
-            companyId={1}
+            companyId={adminCompanyId}
             companySetup={companySetup ?? {}}
             expensePolicy={expensePolicy ?? {}}
             accountingSetup={accountingSetup ?? {}}
@@ -1200,7 +1199,7 @@ export default function AdminPage() {
       return (
         <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-l border-white/[0.07] bg-zinc-950 p-3">
           <AdminAccountingCopilot
-            companyId={1}
+            companyId={adminCompanyId}
             companySetup={companySetup ?? {}}
             expensePolicy={expensePolicy ?? {}}
             accountingSetup={accountingSetup ?? {}}

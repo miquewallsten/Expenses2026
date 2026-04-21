@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
+from apps.api.auth import require_admin
 from apps.api.deps import get_db
 from apps.api.ai.ollama_client import chat_with_ollama, resolve_model
 from packages.core.platform.models_orchestrator_session import OrchestratorSession
@@ -24,7 +25,7 @@ from packages.modules.admin.schemas.approval_setup import ApprovalSetupRead
 from packages.modules.admin.schemas.workflow_setup import WorkflowSetupRead
 from packages.modules.expenses.schemas.policy import CompanyExpensePolicyRead
 
-router = APIRouter(prefix="/admin/setup-orchestrator", tags=["admin"])
+router = APIRouter(prefix="/admin/setup-orchestrator", tags=["admin"], dependencies=[Depends(require_admin)])
 
 _MAX_SESSION_TURNS = 20
 _SESSION_CONTEXT_TURNS = 10

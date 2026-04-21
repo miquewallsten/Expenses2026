@@ -99,13 +99,23 @@ def find_matching_draft_expense(db: Session, company_id: int, filename: str) -> 
         .filter(Expense.company_id == company_id, Expense.status == "draft")
         .all()
     )
+    if not drafts:
+        return None
+
+    expense_ids = [exp.id for exp in drafts]
+    docs_by_expense: dict[int, list[ExpenseDocument]] = {exp.id: [] for exp in drafts}
+    for doc in (
+        db.query(ExpenseDocument)
+        .filter(ExpenseDocument.expense_id.in_(expense_ids))
+        .all()
+    ):
+        docs_by_expense[doc.expense_id].append(doc)
 
     xml_match: Expense | None = None
     any_match: Expense | None = None
 
     for exp in drafts:
-        docs = db.query(ExpenseDocument).filter(ExpenseDocument.expense_id == exp.id).all()
-        for doc in docs:
+        for doc in docs_by_expense[exp.id]:
             doc_key = _pairing_key(doc.filename)
             if doc_key and doc_key == target:
                 if doc.document_type == "cfdi_xml":

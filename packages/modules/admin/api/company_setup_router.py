@@ -6,6 +6,7 @@ import io
 import os
 import uuid
 
+from apps.api.auth import require_admin
 from apps.api.deps import get_db
 from packages.modules.admin.schemas.company_setup import (
     CompanySetupRead,
@@ -37,7 +38,7 @@ class DeleteResponse(BaseModel):
     success: bool
 
 
-router = APIRouter(prefix="/admin/company-setup", tags=["admin"])
+router = APIRouter(prefix="/admin/company-setup", tags=["admin"], dependencies=[Depends(require_admin)])
 
 
 @router.get("/{company_id}", response_model=CompanySetupRead)

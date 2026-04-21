@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { Save, Loader2, CheckCircle2, Sparkles, AlertTriangle, AlertCircle } from "lucide-react";
 import {
+import { getAuthHeaders } from "@/lib/session";
   getPortalConfigConflicts,
   type PortalConfigConflict,
 } from "@/lib/portal-config-conflicts";
@@ -31,59 +33,6 @@ const APPROVAL_CODES = new Set([
   "INTL_ESCALATION_INTL_DISABLED",
   "INTL_ROUTING_INTL_DISABLED",
 ]);
-
-// Local-only warnings the shared lib can't detect from portal config alone
-function buildLocalWarnings(
-  form: Record<string, any>,
-  accountingSetup?: any,
-): string[] {
-  const w: string[] = [];
-
-  const mode = form.approval_mode ?? "none";
-  const needsAccounting = ["accounting_only", "manager_then_accounting", "threshold_based"].includes(mode);
-
-  if (needsAccounting && accountingSetup?.accounting_review_mode === "none")
-    w.push("Approval mode routes to accounting, but accounting review mode is set to \u2018none\u2019 in Accounting Setup.");
-
-  if (form.require_manager_for_all_employees && form.allow_self_submission_without_manager)
-    w.push("Manager is required for all employees, but self-submission without a manager is also allowed \u2014 these settings conflict.");
-
-  if (form.escalate_policy_failures_to_accounting && accountingSetup?.accounting_review_mode === "none")
-    w.push("Policy failures are set to escalate to accounting, but accounting review mode is \u2018none\u2019 \u2014 escalations will have no reviewer.");
-
-  return w;
-}
-
-// ── Option sets ───────────────────────────────────────────────────────────────
-
-const APPROVAL_MODE_OPTIONS = [
-  { value: "none",                       label: "None — no approval required" },
-  { value: "manager_only",               label: "Manager only" },
-  { value: "accounting_only",            label: "Accounting only" },
-  { value: "manager_then_accounting",    label: "Manager then accounting" },
-  { value: "threshold_based",            label: "Threshold-based" },
-];
-
-// ── Summary builder ───────────────────────────────────────────────────────────
-
-function buildSummary(form: Record<string, any>): string {
-  const parts: string[] = [];
-  const modeLabel = APPROVAL_MODE_OPTIONS.find((o) => o.value === form.approval_mode)?.label;
-  if (modeLabel) parts.push(modeLabel);
-  if (form.approval_mode === "threshold_based") {
-    if (form.manager_threshold_amount != null)
-      parts.push(`manager threshold ${form.manager_threshold_amount}`);
-    if (form.accounting_threshold_amount != null)
-      parts.push(`accounting threshold ${form.accounting_threshold_amount}`);
-  }
-  const escalations: string[] = [];
-  if (form.escalate_policy_failures_to_accounting) escalations.push("policy failures");
-  if (form.escalate_international_to_accounting)   escalations.push("international");
-  if (form.escalate_missing_documents_to_manager)  escalations.push("missing docs");
-  if (escalations.length) parts.push(`escalates: ${escalations.join(", ")}`);
-  if (form.ai_approval_assist_enabled) parts.push("AI assist on");
-  return parts.join(" · ") || "No approval routing configured.";
-}
 
 // ── Shared sub-components ─────────────────────────────────────────────────────
 
@@ -246,6 +195,47 @@ export default function AdminApprovalSetupStudio({
   onSaved,
   draftPatch,
 }: Props) {
+  const t = useTranslations("admin.approvalSetup");
+  const tc = useTranslations("common");
+
+  // ── Option sets (inside component to use t()) ──────────────────────────────
+  const APPROVAL_MODE_OPTIONS = [
+    { value: "none",                    label: t("modeNone") },
+    { value: "manager_only",            label: t("modeManagerOnly") },
+    { value: "accounting_only",         label: t("modeAccountingOnly") },
+    { value: "manager_then_accounting", label: t("modeManagerThenAccounting") },
+    { value: "threshold_based",         label: t("modeThresholdBased") },
+  ];
+
+  // ── Local-only warnings ──────────────────────────────────────────────────
+  function buildLocalWarnings(form: Record<string, any>, accountingSetup?: any): string[] {
+    const w: string[] = [];
+    const mode = form.approval_mode ?? "none";
+    const needsAccounting = ["accounting_only", "manager_then_accounting", "threshold_based"].includes(mode);
+    if (needsAccounting && accountingSetup?.accounting_review_mode === "none")
+      w.push(t("warnAccountingModeNone"));
+    if (form.require_manager_for_all_employees && form.allow_self_submission_without_manager)
+      w.push(t("warnSelfSubmissionConflict"));
+    if (form.escalate_policy_failures_to_accounting && accountingSetup?.accounting_review_mode === "none")
+      w.push(t("warnEscalateNoReviewer"));
+    return w;
+  }
+
+  // ── Summary builder ──────────────────────────────────────────────────────
+  function buildSummary(form: Record<string, any>): string {
+    const parts: string[] = [];
+    const modeLabel = APPROVAL_MODE_OPTIONS.find((o) => o.value === form.approval_mode)?.label;
+    if (modeLabel) parts.push(modeLabel);
+    if (form.approval_mode === "threshold_based") {
+      if (form.manager_threshold_amount != null)
+        parts.push(`${form.manager_threshold_amount}`);
+      if (form.accounting_threshold_amount != null)
+        parts.push(`${form.accounting_threshold_amount}`);
+    }
+    if (form.ai_approval_assist_enabled) parts.push("AI");
+    return parts.join(" · ") || t("noApprovalConfigured");
+  }
+
   const [form, setForm]           = useState<Record<string, any>>({ ...setup });
   const [dirty, setDirty]         = useState(false);
   const [saving, setSaving]       = useState(false);
@@ -284,7 +274,7 @@ export default function AdminApprovalSetupStudio({
     try {
       const res = await fetch(`${API}/admin/approval-setup/${companyId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", "X-User-Id": "1" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify(form),
       });
       if (!res.ok) throw new Error(`${res.status}`);
@@ -294,7 +284,7 @@ export default function AdminApprovalSetupStudio({
       setAiDrafted(false);
       onSaved?.(updated);
     } catch (e: any) {
-      setError(e?.message ?? "Save failed");
+      setError(e?.message ?? tc("save"));
     } finally {
       setSaving(false);
     }
@@ -321,7 +311,7 @@ export default function AdminApprovalSetupStudio({
           <p className="text-[10px] leading-relaxed text-white/35">{buildSummary(form)}</p>
           {aiDrafted && (
             <span className="flex shrink-0 items-center gap-1 rounded border border-indigo-500/20 bg-indigo-500/[0.06] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-indigo-300/50">
-              <Sparkles className="h-2.5 w-2.5" /> AI Draft
+              <Sparkles className="h-2.5 w-2.5" /> {tc("draft")}
             </span>
           )}
         </div>
@@ -365,11 +355,11 @@ export default function AdminApprovalSetupStudio({
 
       {/* A — Approval Routing */}
       <div>
-        <SectionLabel>A — Approval Routing</SectionLabel>
+        <SectionLabel>{t("sectionA")}</SectionLabel>
         <Panel>
           <SelectRow
-            label="Approval mode"
-            description="How expense reports are routed for approval"
+            label={t("approvalMode")}
+            description={t("approvalModeDesc")}
             value={form.approval_mode ?? "none"}
             options={APPROVAL_MODE_OPTIONS}
             onChange={(v) => set("approval_mode", v)}
@@ -377,17 +367,17 @@ export default function AdminApprovalSetupStudio({
           {isThreshold && (
             <>
               <NumberRow
-                label="Manager threshold amount"
-                description="Expenses at or above this amount require manager approval"
+                label={t("managerThreshold")}
+                description={t("managerThresholdDesc")}
                 value={form.manager_threshold_amount ?? null}
-                placeholder="e.g. 5000"
+                placeholder={t("managerThresholdPlaceholder")}
                 onChange={(v) => set("manager_threshold_amount", v)}
               />
               <NumberRow
-                label="Accounting threshold amount"
-                description="Expenses at or above this amount require accounting review"
+                label={t("accountingThreshold")}
+                description={t("accountingThresholdDesc")}
                 value={form.accounting_threshold_amount ?? null}
-                placeholder="e.g. 10000"
+                placeholder={t("accountingThresholdPlaceholder")}
                 onChange={(v) => set("accounting_threshold_amount", v)}
               />
             </>
@@ -397,29 +387,29 @@ export default function AdminApprovalSetupStudio({
 
       {/* B — Default Review Rules */}
       <div>
-        <SectionLabel>B — Default Review Rules</SectionLabel>
+        <SectionLabel>{t("sectionB")}</SectionLabel>
         <Panel>
           <ToggleRow
-            label="Require manager for all employees"
-            description="All employees must have a manager assigned for approval"
+            label={t("requireManagerAll")}
+            description={t("requireManagerAllDesc")}
             checked={!!form.require_manager_for_all_employees}
             onChange={(v) => set("require_manager_for_all_employees", v)}
           />
           <ToggleRow
-            label="Require accounting for all expenses"
-            description="Every expense report goes through accounting review"
+            label={t("requireAccountingAll")}
+            description={t("requireAccountingAllDesc")}
             checked={!!form.require_accounting_for_all_expenses}
             onChange={(v) => set("require_accounting_for_all_expenses", v)}
           />
           <ToggleRow
-            label="Allow self-submission without manager"
-            description="Employees without a manager can still submit expense reports"
+            label={t("allowSelfSubmission")}
+            description={t("allowSelfSubmissionDesc")}
             checked={!!form.allow_self_submission_without_manager}
             onChange={(v) => set("allow_self_submission_without_manager", v)}
           />
           <ToggleRow
-            label="Allow resubmission after rejection"
-            description="Employees can correct and resubmit rejected reports"
+            label={t("allowResubmission")}
+            description={t("allowResubmissionDesc")}
             checked={!!form.allow_resubmission_after_rejection}
             onChange={(v) => set("allow_resubmission_after_rejection", v)}
           />
@@ -428,23 +418,23 @@ export default function AdminApprovalSetupStudio({
 
       {/* C — Escalation Rules */}
       <div>
-        <SectionLabel>C — Escalation Rules</SectionLabel>
+        <SectionLabel>{t("sectionC")}</SectionLabel>
         <Panel>
           <ToggleRow
-            label="Escalate policy failures to accounting"
-            description="Reports with policy violations are routed to accounting"
+            label={t("escalatePolicyFailures")}
+            description={t("escalatePolicyFailuresDesc")}
             checked={!!form.escalate_policy_failures_to_accounting}
             onChange={(v) => set("escalate_policy_failures_to_accounting", v)}
           />
           <ToggleRow
-            label="Escalate international expenses to accounting"
-            description="Foreign-currency or cross-border expenses require accounting review"
+            label={t("escalateInternational")}
+            description={t("escalateInternationalDesc")}
             checked={!!form.escalate_international_to_accounting}
             onChange={(v) => set("escalate_international_to_accounting", v)}
           />
           <ToggleRow
-            label="Escalate missing documents to manager"
-            description="Reports with missing attachments are flagged to the manager"
+            label={t("escalateMissingDocs")}
+            description={t("escalateMissingDocsDesc")}
             checked={!!form.escalate_missing_documents_to_manager}
             onChange={(v) => set("escalate_missing_documents_to_manager", v)}
           />
@@ -453,19 +443,19 @@ export default function AdminApprovalSetupStudio({
 
       {/* D — AI Assistance */}
       <div>
-        <SectionLabel>D — AI Assistance</SectionLabel>
+        <SectionLabel>{t("sectionD")}</SectionLabel>
         <Panel>
           <ToggleRow
-            label="AI approval assist enabled"
-            description="AI suggests approval decisions based on policy and history"
+            label={t("aiApprovalAssist")}
+            description={t("aiApprovalAssistDesc")}
             checked={!!form.ai_approval_assist_enabled}
             onChange={(v) => set("ai_approval_assist_enabled", v)}
           />
           <TextareaRow
-            label="AI approval notes"
-            description="Custom instructions for AI approval behaviour"
+            label={t("aiApprovalNotes")}
+            description={t("aiApprovalNotesDesc")}
             value={form.ai_approval_notes ?? ""}
-            placeholder="Optional notes for AI approval logic…"
+            placeholder={t("aiApprovalNotesPlaceholder")}
             onChange={(v) => set("ai_approval_notes", v || null)}
           />
         </Panel>
@@ -483,11 +473,11 @@ export default function AdminApprovalSetupStudio({
           className="flex items-center gap-1.5 rounded border border-indigo-500/30 bg-indigo-600/20 px-4 py-1.5 text-[10px] font-semibold text-indigo-300 transition-colors hover:bg-indigo-600/30 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-          Save approval setup
+          {t("saveApprovalSetup")}
         </button>
         {saved && !dirty && (
           <span className="flex items-center gap-1 text-[10px] text-emerald-400/60">
-            <CheckCircle2 className="h-3 w-3" /> Saved
+            <CheckCircle2 className="h-3 w-3" /> {tc("saved")}
           </span>
         )}
       </div>

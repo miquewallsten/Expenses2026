@@ -1,10 +1,12 @@
 import json
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
+from apps.api.auth import get_current_user
 from apps.api.ai.ollama_client import OLLAMA_BASE_URL, chat_with_ollama, list_models, resolve_model
+from packages.core.platform.models_user import User
 
-router = APIRouter(prefix="/ai", tags=["ai"])
+router = APIRouter(prefix="/ai", tags=["ai"], dependencies=[Depends(get_current_user)])
 
 # ── Request models ────────────────────────────────────────────────────────────
 
