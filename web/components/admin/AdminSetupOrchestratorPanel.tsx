@@ -441,7 +441,8 @@ export default function AdminSetupOrchestratorPanel({
     }
   };
 
-  const handleSubmit = (overridePrompt?: string) => runAnalysis(overridePrompt ?? prompt);
+  const handleSubmit = (overridePrompt?: string) =>
+    runAnalysis(typeof overridePrompt === "string" ? overridePrompt : prompt);
 
   const handleApprove = () => setApprovalState("approved");
 
