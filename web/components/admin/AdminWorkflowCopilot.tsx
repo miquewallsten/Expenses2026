@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useLocale } from "next-intl";
 import { Bot, Zap, Loader2, CheckCircle2 } from "lucide-react";
 import { getAuthHeaders } from "@/lib/session";
 
@@ -200,6 +201,7 @@ export default function AdminWorkflowCopilot({
   const [offline, setOffline]       = useState(false);
   const [parseError, setParseError] = useState(false);
   const [applied, setApplied]       = useState(false);
+  const locale = useLocale();
 
   const runQuery = async (text: string) => {
     if (!text.trim()) return;
@@ -218,6 +220,7 @@ export default function AdminWorkflowCopilot({
         body: JSON.stringify({
           prompt:  buildSystemPrompt(text, ctx),
           context: `company_id:${companyId}`,
+          locale,
         }),
       });
 

@@ -11,15 +11,23 @@ router = APIRouter(prefix="/ai", tags=["ai"], dependencies=[Depends(get_current_
 # ── Request models ────────────────────────────────────────────────────────────
 
 
+def _lang_instruction(locale: str | None) -> str:
+    if locale and locale.startswith("es"):
+        return "Respond exclusively in Spanish. Use formal business language (usted form)."
+    return "Respond in English."
+
+
 class ChatRequest(BaseModel):
     prompt: str
     context: str | None = None
+    locale: str | None = None
 
 
 class ExpenseReviewRequest(BaseModel):
     expense_text: str
     validation_summary: str | None = None
     extracted_summary: str | None = None
+    locale: str | None = None
 
 
 class AllocationSuggestionRequest(BaseModel):
@@ -36,6 +44,7 @@ class NextActionRequest(BaseModel):
     has_account_code: bool = False
     has_allocation: bool = False
     has_attachments: bool = False
+    locale: str | None = None
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -60,7 +69,7 @@ def ai_chat(request: ChatRequest) -> dict:
         "You are a financial operations copilot embedded in an enterprise expense management platform. "
         "You help employees understand their expenses, navigate validation results, determine correct "
         "project and cost center allocation, and identify the next steps needed to get an expense approved. "
-        "Be concise, practical, and professional."
+        f"Be concise, practical, and professional. {_lang_instruction(request.locale)}"
     )
 
     user_prompt = request.prompt
@@ -79,7 +88,7 @@ def review_expense(request: ExpenseReviewRequest) -> dict:
         "No markdown, no bullet points, no numbering, no bold text. "
         "Maximum four sentences. "
         "State what is missing or wrong, then state what the employee must do next. "
-        "Be direct. Do not restate information that is already correct."
+        f"Be direct. Do not restate information that is already correct. {_lang_instruction(request.locale)}"
     )
 
     parts = [f"Expense details:\n{request.expense_text}"]
@@ -156,7 +165,7 @@ def next_action(request: NextActionRequest) -> dict:
         "You are an assistant inside an enterprise expense management platform. "
         "Tell the employee the single most important thing they must do next to get this expense approved. "
         "Write in plain business language. No markdown, no bullet points, no numbering, no bold text. "
-        "Maximum two sentences. Focus on the most blocking step only."
+        f"Maximum two sentences. Focus on the most blocking step only. {_lang_instruction(request.locale)}"
     )
 
     flags: list[str] = []

@@ -38,6 +38,7 @@ class AnalyzeRequest(BaseModel):
     prompt: str
     current_portal_config: dict[str, Any] = {}
     session_id: str | None = None  # if set, loads prior turns as context and stores result
+    locale: str | None = None
 
 
 class CompanyProfile(BaseModel):
@@ -935,7 +936,9 @@ def analyze_setup(
         response = _deterministic_analysis(portal_config, body.prompt)
     else:
         user_prompt = _build_user_prompt(company_id, body.prompt, portal_config, prior_turns)
-        result = chat_with_ollama(SYSTEM_PROMPT, user_prompt)
+        lang = "Respond exclusively in Spanish. Use formal business language (usted form)." if (body.locale or "").startswith("es") else "Respond in English."
+        system_prompt = SYSTEM_PROMPT + f"\n\n{lang}"
+        result = chat_with_ollama(system_prompt, user_prompt)
 
         if not result.get("ok"):
             response = _deterministic_analysis(portal_config, body.prompt)

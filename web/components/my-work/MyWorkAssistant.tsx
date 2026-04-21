@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Bot, CheckCircle2, Send, TriangleAlert } from "lucide-react";
 import { useMyWorkContext } from "@/context/MyWorkContext";
 import { useUserContext } from "@/context/UserContext";
@@ -265,6 +265,7 @@ function Chip({
 export default function MyWorkAssistant() {
   const myWork = useMyWorkContext();
   const user   = useUserContext();
+  const locale = useLocale();
   const ta = useTranslations("myWork.assistant");
   const tp = useTranslations("myWork.assistant.prompts");
   const tac = useTranslations("myWork.assistant.actions");
@@ -401,12 +402,12 @@ export default function MyWorkAssistant() {
       Promise.all([
         fetch(`${API}/ai/review-expense`, {
           method: "POST", headers, signal: ctrl.signal,
-          body: JSON.stringify(payload),
+          body: JSON.stringify({ ...payload, locale }),
         }).then((r) => r.ok ? r.json() : null).catch(() => null),
 
         fetch(`${API}/ai/next-action`, {
           method: "POST", headers, signal: ctrl.signal,
-          body: JSON.stringify(payload),
+          body: JSON.stringify({ ...payload, locale }),
         }).then((r) => r.ok ? r.json() : null).catch(() => null),
       ])
         .then(([rev, nxt]) => {
@@ -450,6 +451,7 @@ export default function MyWorkAssistant() {
         headers: { "Content-Type": "application/json", "X-User-Id": user.userIdStr ?? "1" },
         body: JSON.stringify({
           prompt: prompt.trim(),
+          locale,
           // Include the same rich context so the chat model has full state.
           context: JSON.stringify({
             module:         moduleId,

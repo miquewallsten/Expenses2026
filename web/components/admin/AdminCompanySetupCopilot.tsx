@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useLocale } from "next-intl";
 import { Bot, Zap, Loader2, AlertTriangle, AlertCircle, CheckCircle2 } from "lucide-react";
 import { getAuthHeaders } from "@/lib/session";
 import {
@@ -290,6 +291,7 @@ export default function AdminCompanySetupCopilot({
   const [offline, setOffline]     = useState(false);
   const [parseError, setParseError] = useState(false);
   const [applied, setApplied]     = useState(false);
+  const locale = useLocale();
 
   const runQuery = async (text: string) => {
     if (!text.trim()) return;
@@ -306,6 +308,7 @@ export default function AdminCompanySetupCopilot({
         body: JSON.stringify({
           prompt: buildSystemPrompt(text, setup, legalEntities, portalConfig),
           context: `company_id:${companyId}`,
+          locale,
         }),
       });
 

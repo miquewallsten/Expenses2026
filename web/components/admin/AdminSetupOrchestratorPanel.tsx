@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLocale } from "next-intl";
 import {
   Bot, Zap, Loader2, CheckCircle2,
   AlertTriangle, AlertCircle, HelpCircle, ChevronDown, ChevronRight,
@@ -377,6 +378,7 @@ export default function AdminSetupOrchestratorPanel({
   const [saving, setSaving]         = useState(false);
   const [saved, setSaved]           = useState(false);
   const [saveError, setSaveError]   = useState<string | null>(null);
+  const locale = useLocale();
 
   // Fetch queue counts non-blocking whenever portalConfig is available
   useEffect(() => {
@@ -411,7 +413,7 @@ export default function AdminSetupOrchestratorPanel({
     setSaveError(null);
 
     try {
-      const body: Record<string, unknown> = { prompt: trimmed };
+      const body: Record<string, unknown> = { prompt: trimmed, locale };
       if (portalConfig && Object.keys(portalConfig).length > 0) {
         body.current_portal_config = portalConfig;
       }

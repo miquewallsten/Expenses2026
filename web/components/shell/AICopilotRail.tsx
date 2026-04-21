@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useLocale } from "next-intl";
 import {
   Bot, ChevronDown, ChevronLeft, ChevronRight, Send,
 } from "lucide-react";
@@ -115,6 +116,7 @@ export default function AICopilotRail({
   const abortRef    = useRef<AbortController | null>(null);
   const user        = useUserContext();
   const userIdStr   = user.userIdStr ?? "1";
+  const locale      = useLocale();
 
   const [internalCollapsed, setInternalCollapsed] = useState(false);
   const isCollapsed  = collapsed ?? internalCollapsed;
@@ -191,6 +193,7 @@ export default function AICopilotRail({
             expense_text:       expText,
             validation_summary: valText,
             extracted_summary:  docText,
+            locale,
           }),
         }).then((r) => r.ok ? r.json() : null),
         fetch(`${API}/ai/next-action`, {
@@ -204,6 +207,7 @@ export default function AICopilotRail({
             has_account_code:   !!expObj.account_code,
             has_allocation:     false,
             has_attachments:    false,
+            locale,
           }),
         }).then((r) => r.ok ? r.json() : null),
       ])
@@ -258,7 +262,7 @@ export default function AICopilotRail({
       const res = await fetch(`${API}/ai/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-User-Id": userIdStr },
-        body: JSON.stringify({ prompt: prompt.trim(), context }),
+        body: JSON.stringify({ prompt: prompt.trim(), context, locale }),
       });
       const data = await res.json();
       setMessages((prev) => [
