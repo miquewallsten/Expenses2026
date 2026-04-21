@@ -554,7 +554,7 @@
     "changes": "{n} change(s)",
     "applyDrafts": "Apply Drafts to Setup Sections",
     "draftsApplied": "Drafts applied to setup sections",
-    "copilot": "Admin Copilot",
+    "copilotLabel": "Admin Copilot",
     "reviewing": "Reviewing {section}",
     "stats": {
       "roles": "Roles",

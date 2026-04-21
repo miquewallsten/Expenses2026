@@ -554,7 +554,7 @@
     "changes": "{n} cambio(s)",
     "applyDrafts": "Aplicar borradores a secciones de configuración",
     "draftsApplied": "Borradores aplicados a secciones de configuración",
-    "copilot": "Copilot de administrador",
+    "copilotLabel": "Copilot de administrador",
     "reviewing": "Revisando {section}",
     "stats": {
       "roles": "Roles",

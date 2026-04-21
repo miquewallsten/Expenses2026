@@ -642,7 +642,7 @@ function AdminAIHints({
   return (
     <div className="space-y-3">
       <div className="rounded-lg border border-white/[0.07] bg-white/[0.03] p-3">
-        <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/22">{t("copilot")}</p>
+        <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/22">{t("copilotLabel")}</p>
         <p className="text-[11px] text-white/40 leading-relaxed">
           {t("reviewing", { section })}.
         </p>
