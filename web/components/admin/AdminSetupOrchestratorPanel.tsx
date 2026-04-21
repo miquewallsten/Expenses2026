@@ -623,6 +623,7 @@ export default function AdminSetupOrchestratorPanel({
 
         {/* Engine mode tag + understanding */}
         <div className="space-y-1.5">
+          {hasAnalysis && (
           <div className="flex items-center gap-2">
             <span className={`rounded border px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest ${
               result.engine_mode === "DIAGNOSE" ? "border-indigo-500/20 bg-indigo-500/[0.06] text-indigo-300/55"
@@ -636,12 +637,13 @@ export default function AdminSetupOrchestratorPanel({
               COMPLEXITY_COLOR[result.company_profile?.complexity] ?? COMPLEXITY_COLOR.simple
             }`}>{result.company_profile?.complexity}</span>
           </div>
+          )}
           {(result.understanding || result.summary) && (
             <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
               <p className="text-[10px] leading-relaxed text-white/50">{result.understanding ?? result.summary}</p>
             </div>
           )}
-          {(result.company_profile?.notes?.length ?? 0) > 0 && (
+          {(result.company_profile?.notes?.length ?? 0) > 0 && hasAnalysis && (
             <ul className="space-y-0.5 px-0.5">
               {result.company_profile.notes.map((n, i) => (
                 <li key={i} className="flex items-start gap-1.5 text-[10px] text-white/30">
