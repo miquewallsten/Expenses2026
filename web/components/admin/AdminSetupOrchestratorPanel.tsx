@@ -611,6 +611,8 @@ export default function AdminSetupOrchestratorPanel({
       Object.keys(result.suggested_patches[key] ?? {}).some((k) => !ALLOWED_PATCH_KEYS[key].has(k)),
     );
     const impactItems = deriveOperationalImpact(portalConfig, result.detected_conflicts ?? []);
+    // Only show analysis sections when there's something substantive to show
+    const hasAnalysis = hasActions || totalPatches > 0 || (result.detected_conflicts?.length ?? 0) > 0 || (result.missing_decisions?.length ?? 0) > 0 || (result.generated_categories?.length ?? 0) > 0;
 
     return (
       <div className="space-y-3">
@@ -796,7 +798,7 @@ export default function AdminSetupOrchestratorPanel({
           );
         })}
 
-        {!hasActions && (<>
+        {!hasActions && hasAnalysis && (<>
 
         {/* Next steps */}
         {(result.next_steps?.length ?? 0) > 0 && (
@@ -1039,8 +1041,8 @@ export default function AdminSetupOrchestratorPanel({
 
         </>)} {/* end !hasActions */}
 
-        {/* Save summary */}
-        {result.summary && (
+        {/* Save summary — only when there's substantive analysis */}
+        {hasAnalysis && result.summary && (
           <div className="space-y-1.5 border-t border-white/[0.06] pt-3">
             <SectionLabel>Save to company setup</SectionLabel>
             <textarea rows={2} value={msg.notes}
