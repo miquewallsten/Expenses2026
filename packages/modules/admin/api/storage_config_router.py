@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from apps.api.deps import get_db
-from apps.api.routes.auth import require_admin
+from apps.api.auth import require_admin
 from packages.core.platform.models_storage_config import StorageConfig
 from packages.modules.admin.schemas.storage_config import StorageConfigRead, StorageConfigUpdate, VALID_BACKENDS
 
