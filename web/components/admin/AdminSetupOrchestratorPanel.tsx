@@ -612,7 +612,11 @@ export default function AdminSetupOrchestratorPanel({
     );
     const impactItems = deriveOperationalImpact(portalConfig, result.detected_conflicts ?? []);
     // Only show analysis sections when there's something substantive to show
-    const hasAnalysis = hasActions || totalPatches > 0 || (result.detected_conflicts?.length ?? 0) > 0 || (result.missing_decisions?.length ?? 0) > 0 || (result.generated_categories?.length ?? 0) > 0;
+    // Show analysis only when the AI is actually doing something — not for pure Q&A
+    const hasAnalysis = result.action_state !== "no_changes" && (
+      hasActions || totalPatches > 0 || (result.detected_conflicts?.length ?? 0) > 0
+      || (result.missing_decisions?.length ?? 0) > 0 || (result.generated_categories?.length ?? 0) > 0
+    );
 
     return (
       <div className="space-y-3">
