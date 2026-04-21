@@ -246,34 +246,75 @@ export default function AICopilotRail({
     }
   }, [selectedExpense]);
 
-  // ── Chat ───────────────────────────────────────────────────────────────────
+  // ── Streaming chat ─────────────────────────────────────────────────────────
   const sendMessage = async (prompt: string) => {
     if (!prompt.trim() || chatLoading) return;
     const userMsg: Message = { role: "user", content: prompt.trim() };
+
+    // Build history from current messages for multi-turn context
+    const history = messages.map((m) => ({ role: m.role, content: m.content }));
+
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setChatLoading(true);
+
+    // Add empty assistant placeholder that we'll stream into
+    setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+
     try {
       const context = JSON.stringify({
         expense: selectedExpense,
         document: selectedDocument,
         validationResults,
       });
-      const res = await fetch(`${API}/ai/chat`, {
+      const res = await fetch(`${API}/ai/chat/stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-User-Id": userIdStr },
-        body: JSON.stringify({ prompt: prompt.trim(), context, locale }),
+        body: JSON.stringify({ prompt: prompt.trim(), context, locale, history }),
       });
-      const data = await res.json();
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: data.content ?? "No response received." },
-      ]);
+
+      if (!res.ok || !res.body) throw new Error("Stream unavailable");
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const payload = line.slice(6).trim();
+          if (payload === "[DONE]") break;
+          try {
+            const parsed = JSON.parse(payload);
+            if (parsed.text) {
+              setMessages((prev) => {
+                const next = [...prev];
+                const last = next[next.length - 1];
+                if (last?.role === "assistant") {
+                  next[next.length - 1] = { ...last, content: last.content + parsed.text };
+                }
+                return next;
+              });
+            }
+          } catch {
+            // malformed SSE frame — skip
+          }
+        }
+      }
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "AI assistant did not respond. It may be temporarily offline." },
-      ]);
+      setMessages((prev) => {
+        const next = [...prev];
+        const last = next[next.length - 1];
+        if (last?.role === "assistant" && last.content === "") {
+          next[next.length - 1] = { ...last, content: "AI assistant did not respond. It may be temporarily offline." };
+        }
+        return next;
+      });
     } finally {
       setChatLoading(false);
     }
@@ -434,7 +475,8 @@ export default function AICopilotRail({
                 </div>
               </div>
             ))}
-            {chatLoading && (
+            {/* Streaming cursor — shown only while the last assistant turn is empty (first tokens not yet arrived) */}
+            {chatLoading && messages[messages.length - 1]?.role === "assistant" && messages[messages.length - 1]?.content === "" && (
               <div className="flex justify-start">
                 <div className="rounded border border-white/[0.06] bg-white/[0.03] px-2.5 py-1.5">
                   <span className="inline-flex gap-1">

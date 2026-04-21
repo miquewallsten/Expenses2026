@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   ChevronLeft, ChevronRight, ChevronDown,
   HelpCircle, Settings, LayoutGrid,
@@ -55,6 +56,7 @@ function groupItems(items: NavRailItem[]): { group: string; items: NavRailItem[]
 
 export default function NavRail({ collapsed, onToggle, items, hideToggle = false, footerSlot, fullWidth = false, logoUrl }: NavRailProps) {
   const t = useTranslations("nav");
+  const pathname = usePathname();
   const groups = groupItems(items);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(groups.map(({ group }) => [group, true]))
@@ -189,11 +191,15 @@ export default function NavRail({ collapsed, onToggle, items, hideToggle = false
         <Link
           href="/settings"
           title={collapsed ? t("settings") : undefined}
-          className={`flex items-center gap-2.5 rounded text-[11px] font-medium text-white/28 transition-colors hover:bg-white/[0.04] hover:text-white/55 ${
+          className={`flex items-center gap-2.5 rounded text-[11px] font-medium transition-colors ${
             collapsed ? "justify-center px-2 py-1.5" : "px-3 py-1.5"
+          } ${
+            pathname === "/settings"
+              ? "bg-indigo-600/[0.18] text-white"
+              : "text-white/28 hover:bg-white/[0.04] hover:text-white/55"
           }`}
         >
-          <Settings className="h-3.5 w-3.5 shrink-0 text-white/25" />
+          <Settings className={`h-3.5 w-3.5 shrink-0 ${pathname === "/settings" ? "text-indigo-300" : "text-white/25"}`} />
           {!collapsed && <span className="truncate">{t("settings")}</span>}
         </Link>
         <Link

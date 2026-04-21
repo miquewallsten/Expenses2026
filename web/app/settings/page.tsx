@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import AppShell from "@/components/shell/AppShell";
-import { getCurrentRole, getCurrentUserId, getCurrentCompanyId } from "@/lib/session";
+import { getCurrentRole, getCurrentUserId, getCurrentCompanyId, getAuthHeaders } from "@/lib/session";
 import { buildGlobalNav, GlobalNavItem } from "@/lib/navigation";
 import { useLocale, type Locale } from "@/context/LocaleContext";
 
@@ -54,10 +54,39 @@ function WorkList({
 function SettingsDetail({ sectionKey }: { sectionKey: SectionKey }) {
   const t = useTranslations("settings");
   const { locale, setLocale } = useLocale();
-  const [timezone, setTimezone]       = useState("America/Mexico_City");
-  const [theme, setTheme]             = useState("dark");
+  const [timezone, setTimezone]           = useState("America/Mexico_City");
+  const [theme, setTheme]                 = useState("dark");
   const [notifications, setNotifications] = useState(true);
-  const [aiOpen, setAiOpen]           = useState(false);
+  const [aiOpen, setAiOpen]               = useState(false);
+  const [saved, setSaved]                 = useState(false);
+
+  // Load persisted preferences on mount
+  useEffect(() => {
+    setTimezone(localStorage.getItem("pref_timezone") ?? "America/Mexico_City");
+    setTheme(localStorage.getItem("pref_theme") ?? "dark");
+    setNotifications(localStorage.getItem("pref_notifications") !== "false");
+    setAiOpen(localStorage.getItem("pref_ai_panel") === "true");
+  }, []);
+
+  const handleSave = () => {
+    localStorage.setItem("pref_timezone", timezone);
+    localStorage.setItem("pref_theme", theme);
+    localStorage.setItem("pref_notifications", String(notifications));
+    localStorage.setItem("pref_ai_panel", String(aiOpen));
+    // Apply theme to document root
+    const root = document.documentElement;
+    root.classList.remove("light", "dark");
+    if (theme !== "system") root.classList.add(theme);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleReset = () => {
+    setTimezone("America/Mexico_City");
+    setTheme("dark");
+    setNotifications(true);
+    setAiOpen(false);
+  };
 
   const labelCls = "block text-[10px] font-bold uppercase tracking-widest text-white/35 mb-1.5";
   const inputCls = "w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-white/20 transition-colors";
@@ -142,10 +171,16 @@ function SettingsDetail({ sectionKey }: { sectionKey: SectionKey }) {
       </div>
 
       <div className="flex gap-3">
-        <button className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-white hover:bg-white/10 transition-colors">
-          {t("saveChanges")}
+        <button
+          onClick={handleSave}
+          className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-4 py-2 text-xs font-medium text-indigo-200 hover:bg-indigo-500/20 transition-colors"
+        >
+          {saved ? `✓ ${t("saved")}` : t("saveChanges")}
         </button>
-        <button className="rounded-lg px-4 py-2 text-xs font-medium text-white/35 hover:text-white/60 transition-colors">
+        <button
+          onClick={handleReset}
+          className="rounded-lg px-4 py-2 text-xs font-medium text-white/35 hover:text-white/60 transition-colors"
+        >
           {t("resetDefault")}
         </button>
       </div>
@@ -194,10 +229,10 @@ export default function SettingsPage() {
 
     Promise.all([
       userId
-        ? fetch(`${API}/modules/visible/${companyId}?user_id=${userId}`).then((r) => r.ok ? r.json() : { enabled_module_keys: [] })
+        ? fetch(`${API}/modules/visible/${companyId}?user_id=${userId}`, { headers: getAuthHeaders() }).then((r) => r.ok ? r.json() : { enabled_module_keys: [] })
         : Promise.resolve({ enabled_module_keys: [] }),
       userId
-        ? fetch(`${API}/roles/user-permissions/${userId}`).then((r) => r.ok ? r.json() : { permission_keys: [] })
+        ? fetch(`${API}/roles/user-permissions/${userId}`, { headers: getAuthHeaders() }).then((r) => r.ok ? r.json() : { permission_keys: [] })
         : Promise.resolve({ permission_keys: [] }),
     ]).then(([modRes, permRes]) => {
       setGlobalNavItems(

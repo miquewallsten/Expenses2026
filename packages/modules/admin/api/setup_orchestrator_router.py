@@ -1139,7 +1139,7 @@ def analyze_setup(
         user_prompt = _build_user_prompt(company_id, body.prompt, portal_config, prior_turns, live_snapshot)
         lang = "Respond exclusively in Spanish. Use formal business language (usted form)." if (body.locale or "").startswith("es") else "Respond in English."
         system_prompt = SYSTEM_PROMPT + f"\n\n{lang}"
-        result = chat_with_ollama(system_prompt, user_prompt)
+        result = chat_with_ollama(system_prompt, user_prompt, temperature=0.2)
 
         if not result.get("ok"):
             response = _deterministic_analysis(portal_config, body.prompt)

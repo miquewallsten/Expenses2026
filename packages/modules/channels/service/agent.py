@@ -40,7 +40,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from apps.api.ai.ollama_client import chat_with_ollama
+from apps.api.ai.ollama_client import chat_with_ollama, chat_with_tools
 from packages.modules.channels.models import (
     ChannelConversation,
     ChannelMessage,
@@ -131,34 +131,70 @@ def _send_email_reply(settings: ChannelSettings, to: str, body: str, thread_id: 
 
 # ── Intent classification ─────────────────────────────────────────────────────
 
-_INTENT_SYSTEM = """
-You are an intent classifier for a business expense management platform.
-Classify the user's message into exactly ONE of these intents:
-  expense_submission  — the user is submitting an expense (mentions invoice, receipt, factura, gasto, comprobante, or has attachments)
-  approval_action     — the user is approving or rejecting something (approve, reject, apruebo, rechazo, autorizo)
-  status_inquiry      — asking about the status of an expense or report
-  report_query        — asking for a financial summary or report (total, spent, gastamos, cuánto, resumen, reporte)
-  verification_code   — the message appears to be a 6-digit numeric code
-  greeting            — hello, hi, hola, good morning, or similar greeting with no clear business intent
-  unknown             — cannot determine intent
+_INTENT_SYSTEM = """You are a precise intent classifier for a bilingual (English/Spanish) business expense management platform. Your sole job is to output exactly one intent key.
 
-Reply with ONLY the intent key, nothing else.
-""".strip()
+INTENTS:
+  expense_submission  — user is submitting/uploading an expense (keywords: invoice, receipt, factura, gasto, comprobante, adjunto, attachment, CFDI, xml)
+  approval_action     — user is approving or rejecting an item (keywords: approve, reject, apruebo, rechazo, autorizo, deny, acepto)
+  status_inquiry      — asking about status of a specific expense or report (keywords: status, estado, dónde está, what happened to, my expense #)
+  report_query        — asking for aggregated financial data (keywords: total, spent, gastamos, cuánto, resumen, reporte, how much, last month, this week, summary)
+  verification_code   — message is a standalone numeric code (appears to be a one-time passcode)
+  greeting            — casual hello/hi/hola with no business intent
+  unknown             — none of the above
+
+RULES:
+- Output ONLY the intent key, nothing else.
+- When ambiguous, choose the most specific matching intent.
+- If the message contains both a greeting and a business request, output the business intent.
+
+Examples:
+  "Hola, aquí está mi factura" → expense_submission
+  "¿Cuánto gasté este mes?" → report_query
+  "Estado de mi gasto #123" → status_inquiry
+  "Apruebo el gasto" → approval_action
+  "485921" → verification_code
+  "Buenos días" → greeting""".strip()
 
 
 def _classify_intent(body: str, has_attachments: bool) -> str:
-    """Use the local LLM to classify message intent."""
+    """Classify message intent. Fast regex shortcuts, then LLM."""
     if has_attachments:
         return "expense_submission"
-    # Fast regex shortcuts before hitting the LLM
-    if re.match(r"^\s*\d{6}\s*$", body.strip()):
+
+    b = body.strip()
+
+    # Fast regex shortcuts — avoid LLM call for unambiguous patterns
+    if re.match(r"^\s*\d{6}\s*$", b):
         return "verification_code"
-    result = chat_with_ollama(_INTENT_SYSTEM, body[:500])
+
+    _GREETING_RX = re.compile(
+        r"^(hola|hello|hi|hey|buenos [a-z]+|good (morning|afternoon|evening))[\s!.?]*$",
+        re.IGNORECASE,
+    )
+    if _GREETING_RX.match(b):
+        return "greeting"
+
+    _REPORT_RX = re.compile(
+        r"\b(total|gastamos|cuánto|how much|resumen|reporte|spent|summary|last month|this week|este mes)\b",
+        re.IGNORECASE,
+    )
+    if _REPORT_RX.search(b):
+        return "report_query"
+
+    _APPROVAL_RX = re.compile(
+        r"\b(apru[ea]bo|rechazo|autorizo|approve|reject|acepto|deny)\b",
+        re.IGNORECASE,
+    )
+    if _APPROVAL_RX.search(b):
+        return "approval_action"
+
+    # LLM classification for everything else
+    result = chat_with_ollama(_INTENT_SYSTEM, b[:600], temperature=0.0)
     if result.get("ok"):
-        raw = result.get("content", "").strip().lower()
+        raw = result.get("content", "").strip().lower().split()[0] if result.get("content") else ""
         for key in ("expense_submission", "approval_action", "status_inquiry",
                     "report_query", "verification_code", "greeting", "unknown"):
-            if key in raw:
+            if key == raw or key in raw:
                 return key
     return "unknown"
 
@@ -437,35 +473,61 @@ def _handle_report_query(
     msg: NormalizedMessage,
     user_id: int,
 ) -> str:
-    """Use the LLM to generate a plain-language summary from the user's query."""
+    """Generate a plain-language financial summary from rich aggregated context."""
     from packages.modules.expenses.models import Expense
     from sqlalchemy import func as sa_func
-
-    # Build context: total submitted last 30 days for this company
-    # (user_id is not a direct column — use company-wide totals for report queries)
     from datetime import timedelta
-    cutoff = _now() - timedelta(days=30)
-    total = (
-        db.query(sa_func.coalesce(sa_func.sum(Expense.amount), 0))
-        .filter(Expense.company_id == msg.company_id, Expense.created_at >= cutoff)
-        .scalar()
-    )
-    count = (
-        db.query(sa_func.count(Expense.id))
-        .filter(Expense.company_id == msg.company_id, Expense.created_at >= cutoff)
-        .scalar()
+
+    cutoff_30  = _now() - timedelta(days=30)
+    cutoff_7   = _now() - timedelta(days=7)
+    cutoff_mtd = _now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    def _agg(since: datetime) -> tuple[int, float]:
+        count = (
+            db.query(sa_func.count(Expense.id))
+            .filter(Expense.company_id == msg.company_id, Expense.created_at >= since)
+            .scalar()
+        ) or 0
+        total = float(
+            db.query(sa_func.coalesce(sa_func.sum(Expense.amount), 0))
+            .filter(Expense.company_id == msg.company_id, Expense.created_at >= since)
+            .scalar()
+        )
+        return count, total
+
+    def _agg_by_status(since: datetime) -> dict[str, int]:
+        rows = (
+            db.query(Expense.status, sa_func.count(Expense.id))
+            .filter(Expense.company_id == msg.company_id, Expense.created_at >= since)
+            .group_by(Expense.status)
+            .all()
+        )
+        return {r[0]: r[1] for r in rows}
+
+    c30, t30   = _agg(cutoff_30)
+    c7,  t7    = _agg(cutoff_7)
+    cmtd, tmtd = _agg(cutoff_mtd)
+    by_status  = _agg_by_status(cutoff_30)
+
+    status_summary = ", ".join(f"{k}: {v}" for k, v in by_status.items()) or "none"
+
+    context = (
+        f"Last 30 days: {c30} expenses, total {t30:.2f}.\n"
+        f"Last 7 days: {c7} expenses, total {t7:.2f}.\n"
+        f"Month-to-date: {cmtd} expenses, total {tmtd:.2f}.\n"
+        f"Status breakdown (30d): {status_summary}."
     )
 
-    context = f"User has {count} expenses totalling {total:.2f} in the last 30 days."
     system = (
-        "You are a financial operations assistant. Answer the user's question using the provided context. "
-        "Be concise. No markdown."
+        "You are a concise financial operations assistant for an enterprise expense platform. "
+        "Answer the user's question using only the data provided. "
+        "State numbers clearly. No markdown. Maximum 3 sentences."
     )
-    user_prompt = f"Context: {context}\n\nUser question: {msg.body[:400]}"
-    result = chat_with_ollama(system, user_prompt)
+    user_prompt = f"Financial data:\n{context}\n\nUser question: {msg.body[:400]}"
+    result = chat_with_ollama(system, user_prompt, temperature=0.2)
     if result.get("ok"):
         return result["content"].strip()
-    return f"In the last 30 days: {count} expenses submitted, total {total:.2f}."
+    return f"Last 30 days: {c30} expenses, total {t30:.2f}. Month-to-date: {cmtd} expenses, {tmtd:.2f}."
 
 
 def _handle_approval_action(
