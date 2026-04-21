@@ -25,7 +25,7 @@ import {
   Building2, FileText, GitBranch, ShieldCheck, Puzzle, Key, Lock,
   AlertTriangle, Calculator, ClipboardCheck, Bot, Save, Loader2, FolderOutput, Archive, Users, Radio, CalendarClock,
 } from "lucide-react";
-import { getCurrentRole, getCurrentUserId, getCurrentCompanyId, getStoredSession } from "@/lib/session";
+import { getCurrentRole, getCurrentUserId, getCurrentCompanyId, getStoredSession, getAuthHeaders } from "@/lib/session";
 import { buildGlobalNav, GlobalNavItem } from "@/lib/navigation";
 import AdminOverviewPanel from "@/components/admin/AdminOverviewPanel";
 import { useTranslations } from "next-intl";
@@ -821,7 +821,7 @@ export default function AdminPage() {
   useEffect(() => {
     const userId = getCurrentUserId();
     if (!userId) return;
-    fetch(`${API}/roles/user-permissions/${userId}`)
+    fetch(`${API}/roles/user-permissions/${userId}`, { headers: getAuthHeaders() })
       .then((r) => r.ok ? r.json() : { permission_keys: [] })
       .catch(() => ({ permission_keys: [] }))
       .then((d) => setPermissionKeys(d.permission_keys ?? []));
@@ -830,7 +830,7 @@ export default function AdminPage() {
   // ── Portal config — primary source for setup data + banner ──────────────────
   useEffect(() => {
     const companyId = getCurrentCompanyId() ?? "1";
-    fetch(`${API}/admin/portal-config/${companyId}`)
+    fetch(`${API}/admin/portal-config/${companyId}`, { headers: getAuthHeaders() })
       .then((r) => r.ok ? r.json() : null)
       .catch(() => null)
       .then((cfg: any) => {
@@ -862,7 +862,7 @@ export default function AdminPage() {
 
   // ── Dedicated export-config fetch ────────────────────────────────────────────
   useEffect(() => {
-    fetch(`${API}/admin/export-config/${adminCompanyId}`)
+    fetch(`${API}/admin/export-config/${adminCompanyId}`, { headers: getAuthHeaders() })
       .then((r) => r.ok ? r.json() : null)
       .catch(() => null)
       .then((d: any) => {
