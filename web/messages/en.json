@@ -518,6 +518,7 @@
       "reportCycle": "Report Cycle",
       "exportConfig": "Export Config",
       "archiveConfig": "Archive Config",
+      "storageConfig": "Storage Config",
       "channels": "Channels",
       "users": "Users",
       "roles": "Roles",
@@ -551,6 +552,19 @@
       "folder": "Folder",
       "file": "File",
       "full": "Full"
+    },
+    "storageConfig": {
+      "title": "Storage Config",
+      "backend": "Storage backend",
+      "localPath": "Storage directory",
+      "localPathHint": "Absolute or relative path on the server where files will be stored.",
+      "endpointUrl": "Endpoint URL",
+      "bucket": "Bucket / container",
+      "prefix": "Key prefix (optional)",
+      "region": "Region",
+      "azureAccount": "Storage account name",
+      "azureContainer": "Container name",
+      "secretsNotice": "Access credentials must be set as environment variables on the server — they are never stored in the database."
     },
     "aiSuggestedPatches": "AI Suggested Patches",
     "changes": "{n} change(s)",

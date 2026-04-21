@@ -98,6 +98,8 @@ from packages.core.platform.models_time_tracking import (  # noqa: F401 — regi
 from packages.modules.time_tracking.router import router as time_tracking_router
 from packages.core.platform.models_report_cycle import ReportCycleSettings  # noqa: F401 — registers table
 from packages.modules.admin.api.report_cycle_router import router as report_cycle_router
+from packages.core.platform.models_storage_config import StorageConfig  # noqa: F401 — registers storage_configs table
+from packages.modules.admin.api.storage_config_router import router as storage_config_router
 
 app = FastAPI(title=settings.app_name)
 
@@ -209,6 +211,7 @@ app.include_router(channels_admin_router)
 app.include_router(purchase_requests_router)
 app.include_router(time_tracking_router)
 app.include_router(report_cycle_router)
+app.include_router(storage_config_router)
 
 
 @app.get("/")

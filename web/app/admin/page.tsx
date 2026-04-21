@@ -23,7 +23,7 @@ import AdminChannelsPanel from "@/components/admin/AdminChannelsPanel";
 import AdminReportCyclePanel from "@/components/admin/AdminReportCyclePanel";
 import {
   Building2, FileText, GitBranch, ShieldCheck, Puzzle, Key, Lock,
-  AlertTriangle, Calculator, ClipboardCheck, Bot, Save, Loader2, FolderOutput, Archive, Users, Radio, CalendarClock,
+  AlertTriangle, Calculator, ClipboardCheck, Bot, Save, Loader2, FolderOutput, Archive, Users, Radio, CalendarClock, HardDrive,
 } from "lucide-react";
 import { getCurrentRole, getCurrentUserId, getCurrentCompanyId, getStoredSession, getAuthHeaders } from "@/lib/session";
 import { buildGlobalNav, GlobalNavItem } from "@/lib/navigation";
@@ -42,6 +42,7 @@ const WORKLIST_ITEMS = [
   "Report Cycle",
   "Export Config",
   "Archive Config",
+  "Storage Config",
   "Channels",
   "Users",
   "Roles",
@@ -53,7 +54,7 @@ type WorklistItem = typeof WORKLIST_ITEMS[number];
 
 const WORKLIST_GROUPS: { label: string; items: WorklistItem[] }[] = [
   { label: "Setup", items: ["Overview", "Company Setup", "Expense Policy", "Accounting Setup", "Approval Setup", "Workflow Setup", "Report Cycle"] },
-  { label: "Integration", items: ["Export Config", "Archive Config", "Channels"] },
+  { label: "Integration", items: ["Export Config", "Archive Config", "Storage Config", "Channels"] },
   { label: "Administration", items: ["Users", "Roles", "Permissions", "Add-Ons", "Authentication"] },
 ];
 
@@ -355,6 +356,194 @@ function AdminArchiveConfigPanel({
   );
 }
 
+// ── Panel: Storage Config ────────────────────────────────────────────────────
+
+type StorageBackend = "local" | "nas" | "s3" | "azure";
+
+type StorageConfigState = {
+  backend: string;
+  local_path: string | null;
+  endpoint_url: string | null;
+  bucket: string | null;
+  prefix: string | null;
+  region: string | null;
+  azure_account: string | null;
+  azure_container: string | null;
+};
+
+function AdminStorageConfigPanel({
+  companyId,
+  config,
+  onSaved,
+}: {
+  companyId: number;
+  config: StorageConfigState | null;
+  onSaved: (c: StorageConfigState) => void;
+}) {
+  const ta = useTranslations("admin");
+  const tc = useTranslations("common");
+
+  const [backend,        setBackend]        = useState<StorageBackend>((config?.backend as StorageBackend) ?? "local");
+  const [localPath,      setLocalPath]      = useState(config?.local_path      ?? "./storage");
+  const [endpointUrl,    setEndpointUrl]    = useState(config?.endpoint_url    ?? "");
+  const [bucket,         setBucket]         = useState(config?.bucket          ?? "");
+  const [prefix,         setPrefix]         = useState(config?.prefix          ?? "");
+  const [region,         setRegion]         = useState(config?.region          ?? "us-east-1");
+  const [azureAccount,   setAzureAccount]   = useState(config?.azure_account   ?? "");
+  const [azureContainer, setAzureContainer] = useState(config?.azure_container ?? "");
+  const [saving, setSaving] = useState(false);
+  const [saved,  setSaved]  = useState(false);
+  const [error,  setError]  = useState<string | null>(null);
+
+  const handleSave = async () => {
+    setSaving(true); setError(null); setSaved(false);
+    try {
+      const body: Record<string, string | null> = { backend };
+      if (backend === "local" || backend === "nas") {
+        body.local_path = localPath || "./storage";
+      }
+      if (backend === "s3") {
+        body.endpoint_url = endpointUrl || null;
+        body.bucket       = bucket;
+        body.prefix       = prefix || null;
+        body.region       = region || "us-east-1";
+      }
+      if (backend === "azure") {
+        body.azure_account   = azureAccount;
+        body.azure_container = azureContainer;
+        body.endpoint_url    = endpointUrl || null;
+      }
+      const res = await fetch(`${API}/admin/storage-config/${companyId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(`${res.status}`);
+      const data = await res.json();
+      onSaved(data);
+      setSaved(true);
+    } catch (e: any) {
+      setError(e?.message ?? "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const labelCls = "block text-[10px] font-bold uppercase tracking-widest text-white/30 mb-1";
+  const inputCls = "w-full rounded border border-white/[0.07] bg-black/20 px-2.5 py-1.5 text-[11px] text-white/70 outline-none focus:border-white/20";
+
+  return (
+    <div className="max-w-lg space-y-5">
+      <SectionHeader title={ta("storageConfig.title")} />
+
+      {/* Backend selector */}
+      <div className="overflow-hidden rounded-lg border border-white/[0.07]">
+        <div className="border-b border-white/[0.05] px-4 py-3">
+          <span className={labelCls}>{ta("storageConfig.backend")}</span>
+          <div className="mt-1 grid grid-cols-4 gap-1.5">
+            {(["local", "nas", "s3", "azure"] as StorageBackend[]).map((b) => (
+              <button
+                key={b}
+                type="button"
+                onClick={() => { setBackend(b); setSaved(false); }}
+                className={`rounded border px-2 py-1.5 text-[10px] font-semibold uppercase tracking-widest transition-colors ${
+                  backend === b
+                    ? "border-indigo-500/40 bg-indigo-500/15 text-indigo-200"
+                    : "border-white/[0.07] bg-white/[0.03] text-white/35 hover:border-white/15 hover:text-white/55"
+                }`}
+              >
+                {b}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Local / NAS fields */}
+        {(backend === "local" || backend === "nas") && (
+          <div className="px-4 py-3">
+            <label className={labelCls}>{ta("storageConfig.localPath")}</label>
+            <input type="text" value={localPath} onChange={(e) => { setLocalPath(e.target.value); setSaved(false); }} className={inputCls} placeholder="./storage" />
+            <p className="mt-1.5 text-[10px] text-white/25">{ta("storageConfig.localPathHint")}</p>
+          </div>
+        )}
+
+        {/* S3 fields */}
+        {backend === "s3" && (
+          <>
+            <div className="border-b border-white/[0.05] px-4 py-3">
+              <label className={labelCls}>{ta("storageConfig.bucket")}</label>
+              <input type="text" value={bucket} onChange={(e) => { setBucket(e.target.value); setSaved(false); }} className={inputCls} placeholder="my-bucket" />
+            </div>
+            <div className="border-b border-white/[0.05] px-4 py-3">
+              <label className={labelCls}>{ta("storageConfig.endpointUrl")}</label>
+              <input type="text" value={endpointUrl} onChange={(e) => { setEndpointUrl(e.target.value); setSaved(false); }} className={inputCls} placeholder="https://s3.amazonaws.com (leave blank for AWS)" />
+            </div>
+            <div className="border-b border-white/[0.05] px-4 py-3">
+              <label className={labelCls}>{ta("storageConfig.region")}</label>
+              <input type="text" value={region} onChange={(e) => { setRegion(e.target.value); setSaved(false); }} className={inputCls} placeholder="us-east-1" />
+            </div>
+            <div className="px-4 py-3">
+              <label className={labelCls}>{ta("storageConfig.prefix")}</label>
+              <input type="text" value={prefix} onChange={(e) => { setPrefix(e.target.value); setSaved(false); }} className={inputCls} placeholder="archives/ (optional)" />
+            </div>
+          </>
+        )}
+
+        {/* Azure fields */}
+        {backend === "azure" && (
+          <>
+            <div className="border-b border-white/[0.05] px-4 py-3">
+              <label className={labelCls}>{ta("storageConfig.azureAccount")}</label>
+              <input type="text" value={azureAccount} onChange={(e) => { setAzureAccount(e.target.value); setSaved(false); }} className={inputCls} placeholder="mystorageaccount" />
+            </div>
+            <div className="border-b border-white/[0.05] px-4 py-3">
+              <label className={labelCls}>{ta("storageConfig.azureContainer")}</label>
+              <input type="text" value={azureContainer} onChange={(e) => { setAzureContainer(e.target.value); setSaved(false); }} className={inputCls} placeholder="documents" />
+            </div>
+            <div className="px-4 py-3">
+              <label className={labelCls}>{ta("storageConfig.endpointUrl")}</label>
+              <input type="text" value={endpointUrl} onChange={(e) => { setEndpointUrl(e.target.value); setSaved(false); }} className={inputCls} placeholder="https://<account>.blob.core.windows.net (leave blank for default)" />
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Secrets notice */}
+      {(backend === "s3" || backend === "azure") && (
+        <div className="rounded border border-amber-500/20 bg-amber-500/[0.06] px-3.5 py-2.5">
+          <p className="text-[10px] leading-relaxed text-amber-300/60">
+            {ta("storageConfig.secretsNotice")}
+          </p>
+          <div className="mt-2 space-y-0.5 font-mono text-[9px] text-amber-300/40">
+            {backend === "s3" && (
+              <>
+                <div>ARCHIVE_OBJECT_ACCESS_KEY=…</div>
+                <div>ARCHIVE_OBJECT_SECRET_KEY=…</div>
+              </>
+            )}
+            {backend === "azure" && (
+              <div>AZURE_STORAGE_CONNECTION_STRING=… (or AZURE_STORAGE_KEY=…)</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className="inline-flex items-center gap-1.5 rounded border border-white/10 bg-white/[0.05] px-3 py-1.5 text-[10px] font-semibold text-white/60 transition-colors hover:bg-white/[0.09] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {saving ? <><Loader2 className="h-3 w-3 animate-spin" /> {tc("saving")}</> : <><Save className="h-3 w-3" /> {tc("save")}</>}
+        </button>
+        {saved && <span className="text-[10px] text-emerald-400/60">{tc("saved")}</span>}
+        {error && <span className="text-[10px] text-red-400/60">{error}</span>}
+      </div>
+    </div>
+  );
+}
+
 // ── Menu key mapping (English key → i18n key) ────────────────────────────────
 const ITEM_MENU_KEY: Record<WorklistItem, string> = {
   "Overview": "overview",
@@ -366,6 +555,7 @@ const ITEM_MENU_KEY: Record<WorklistItem, string> = {
   "Report Cycle": "reportCycle",
   "Export Config": "exportConfig",
   "Archive Config": "archiveConfig",
+  "Storage Config": "storageConfig",
   "Channels": "channels",
   "Users": "users",
   "Roles": "roles",
@@ -392,6 +582,7 @@ const WORKLIST_ICONS: Record<WorklistItem, React.ReactNode> = {
   "Report Cycle":     <CalendarClock className="h-3.5 w-3.5" />,
   "Export Config":    <FolderOutput className="h-3.5 w-3.5" />,
   "Archive Config":   <Archive className="h-3.5 w-3.5" />,
+  "Storage Config":   <HardDrive className="h-3.5 w-3.5" />,
   "Channels":         <Radio className="h-3.5 w-3.5" />,
   Users:              <Users className="h-3.5 w-3.5" />,
   Roles:              <ShieldCheck className="h-3.5 w-3.5" />,
@@ -414,6 +605,7 @@ function WorkList({
   hasWorkflowSetup,
   hasExportConfig,
   hasArchiveConfig,
+  hasStorageConfig,
   conflictsCount,
   draftSections,
 }: {
@@ -430,6 +622,7 @@ function WorkList({
   hasWorkflowSetup: boolean;
   hasExportConfig: boolean;
   hasArchiveConfig: boolean;
+  hasStorageConfig: boolean;
   conflictsCount: number;
   draftSections: Set<string>;
 }) {
@@ -448,6 +641,7 @@ function WorkList({
     "Workflow Setup":   hasWorkflowSetup   ? "✓" : "—",
     "Export Config":    hasExportConfig    ? "✓" : "—",
     "Archive Config":   hasArchiveConfig   ? "✓" : "—",
+    "Storage Config":   hasStorageConfig   ? "✓" : "—",
     "Channels":         "→",
     Users:              users.length,
     Roles:              roles.length,
@@ -801,6 +995,7 @@ export default function AdminPage() {
   const [workflowSetup, setWorkflowSetup]   = useState<any>(null);
   const [exportConfig, setExportConfig]     = useState<{ bundle_name_pattern: string; export_format: string } | null>(null);
   const [archiveConfig, setArchiveConfig]   = useState<{ file_pattern: string; folder_pattern: string } | null>(null);
+  const [storageConfig, setStorageConfig]   = useState<{ backend: string; local_path: string | null; endpoint_url: string | null; bucket: string | null; prefix: string | null; region: string | null; azure_account: string | null; azure_container: string | null } | null>(null);
 
   // ── Draft patches for copilot apply-draft buttons ───────────────────────────
   const [companySetupDraftPatch, setCompanySetupDraftPatch]         = useState<Partial<any> | undefined>(undefined);
@@ -845,6 +1040,10 @@ export default function AdminPage() {
         if (cfg.export_config)    setExportConfig(cfg.export_config);
         if (cfg.archive_config)   setArchiveConfig(cfg.archive_config);
       });
+    fetch(`${API}/admin/storage-config/${adminCompanyId}`, { headers: getAuthHeaders() })
+      .then((r) => r.ok ? r.json() : null)
+      .catch(() => null)
+      .then((d: any) => { if (d) setStorageConfig(d); });
   }, []);
 
   // ── Reactive nav from portalConfig + permissionKeys ─────────────────────────
@@ -1104,6 +1303,15 @@ export default function AdminPage() {
           />
         );
 
+      case "Storage Config":
+        return (
+          <AdminStorageConfigPanel
+            companyId={adminCompanyId}
+            config={storageConfig}
+            onSaved={setStorageConfig}
+          />
+        );
+
       case "Channels":
         return <AdminChannelsPanel companyId={adminCompanyId} />;
 
@@ -1284,6 +1492,7 @@ export default function AdminPage() {
           hasWorkflowSetup={!!workflowSetup}
           hasExportConfig={!!exportConfig}
           hasArchiveConfig={!!archiveConfig}
+          hasStorageConfig={!!storageConfig}
           conflictsCount={conflictsCount}
           draftSections={draftSections}
         />

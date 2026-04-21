@@ -32,6 +32,7 @@ from sqlalchemy.orm import Session
 
 from packages.core.platform.models_archive_file import ArchiveFile
 from packages.core.platform.models_export_config import ExportConfig
+from packages.core.platform.models_storage_config import StorageConfig
 from packages.modules.archive.service.storage_backend import get_storage_backend
 
 
@@ -191,7 +192,33 @@ def store_file(
         expense_id=expense_id,
     )
 
-    backend = get_storage_backend()
+    # Resolve storage config: company-specific first, then platform default (company_id=0)
+    db_cfg: dict | None = None
+    try:
+        scfg = (
+            db.query(StorageConfig)
+            .filter(StorageConfig.company_id == company_id)
+            .first()
+        ) or (
+            db.query(StorageConfig)
+            .filter(StorageConfig.company_id == 0)
+            .first()
+        )
+        if scfg:
+            db_cfg = {
+                "backend":         scfg.backend,
+                "local_path":      scfg.local_path,
+                "endpoint_url":    scfg.endpoint_url,
+                "bucket":          scfg.bucket,
+                "prefix":          scfg.prefix,
+                "region":          scfg.region,
+                "azure_account":   scfg.azure_account,
+                "azure_container": scfg.azure_container,
+            }
+    except Exception:  # noqa: BLE001 — config lookup is best-effort
+        pass
+
+    backend = get_storage_backend(db_cfg=db_cfg)
 
     result = backend.save_bytes(
         company_id=company_id,

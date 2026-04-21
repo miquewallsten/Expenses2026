@@ -268,29 +268,45 @@ class ObjectStorageBackend:
 # ── Factory ────────────────────────────────────────────────────────────────────
 
 
-def get_storage_backend() -> LocalStorageBackend | ObjectStorageBackend:
-    """Return a storage backend instance configured from environment variables.
+def get_storage_backend(db_cfg: dict | None = None) -> "LocalStorageBackend | ObjectStorageBackend":
+    """Return a storage backend instance.
 
-    Reads ``ARCHIVE_STORAGE_BACKEND`` (canonical) or ``STORAGE_BACKEND``
-    (legacy fallback).  Defaults to ``"local"`` when neither is set.
+    Preference order:
+    1. *db_cfg* — dict with keys matching StorageConfig fields (passed by
+       archive_service after fetching the active StorageConfig row).
+    2. Environment variables (``ARCHIVE_STORAGE_BACKEND`` etc.).
+    3. Hardcoded default: ``local`` with ``./storage``.
     """
-    backend = _env("ARCHIVE_STORAGE_BACKEND", "STORAGE_BACKEND", default="local").lower()
+    if db_cfg:
+        backend = (db_cfg.get("backend") or "").lower() or _env("ARCHIVE_STORAGE_BACKEND", "STORAGE_BACKEND", default="local").lower()
+    else:
+        backend = _env("ARCHIVE_STORAGE_BACKEND", "STORAGE_BACKEND", default="local").lower()
 
-    if backend == "object":
-        container = _env("ARCHIVE_OBJECT_CONTAINER", "S3_BUCKET")
+    # NAS is treated identically to local — it's a mounted path
+    if backend in ("local", "nas"):
+        base_dir = (
+            db_cfg.get("local_path") if db_cfg else None
+        ) or _env("ARCHIVE_LOCAL_STORAGE_DIR", "LOCAL_STORAGE_DIR", default="./storage")
+        return LocalStorageBackend(base_dir=base_dir)
+
+    if backend in ("s3", "object", "azure"):
+        container = (
+            (db_cfg.get("bucket") or db_cfg.get("azure_container")) if db_cfg else None
+        ) or _env("ARCHIVE_OBJECT_CONTAINER", "S3_BUCKET")
         if not container:
             raise RuntimeError(
-                "ARCHIVE_OBJECT_CONTAINER is required when ARCHIVE_STORAGE_BACKEND=object"
+                "A bucket/container name is required for S3 or Azure storage. "
+                "Set it in Admin → Storage Config or via ARCHIVE_OBJECT_CONTAINER."
             )
         return ObjectStorageBackend(
             container=container,
-            prefix=_env("ARCHIVE_OBJECT_PREFIX"),
-            endpoint_url=_env("ARCHIVE_OBJECT_ENDPOINT", "S3_ENDPOINT_URL") or None,
-            region=_env("ARCHIVE_OBJECT_REGION", "S3_REGION", default="us-east-1"),
+            prefix=(db_cfg.get("prefix") if db_cfg else None) or _env("ARCHIVE_OBJECT_PREFIX"),
+            endpoint_url=(db_cfg.get("endpoint_url") if db_cfg else None) or _env("ARCHIVE_OBJECT_ENDPOINT", "S3_ENDPOINT_URL") or None,
+            region=(db_cfg.get("region") if db_cfg else None) or _env("ARCHIVE_OBJECT_REGION", "S3_REGION", default="us-east-1"),
             access_key=_env("ARCHIVE_OBJECT_ACCESS_KEY") or None,
             secret_key=_env("ARCHIVE_OBJECT_SECRET_KEY") or None,
         )
 
-    # local — default for development
+    # Unknown backend — fall back to local
     base_dir = _env("ARCHIVE_LOCAL_STORAGE_DIR", "LOCAL_STORAGE_DIR", default="./storage")
     return LocalStorageBackend(base_dir=base_dir)

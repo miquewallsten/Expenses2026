@@ -518,6 +518,7 @@
       "reportCycle": "Ciclo de informes",
       "exportConfig": "Config. de exportación",
       "archiveConfig": "Config. de archivo",
+      "storageConfig": "Config. de almacenamiento",
       "channels": "Canales",
       "users": "Usuarios",
       "roles": "Roles",
@@ -551,6 +552,19 @@
       "folder": "Carpeta",
       "file": "Archivo",
       "full": "Completo"
+    },
+    "storageConfig": {
+      "title": "Configuración de almacenamiento",
+      "backend": "Proveedor de almacenamiento",
+      "localPath": "Directorio de almacenamiento",
+      "localPathHint": "Ruta absoluta o relativa en el servidor donde se almacenarán los archivos.",
+      "endpointUrl": "URL del endpoint",
+      "bucket": "Bucket / contenedor",
+      "prefix": "Prefijo de clave (opcional)",
+      "region": "Región",
+      "azureAccount": "Nombre de la cuenta de almacenamiento",
+      "azureContainer": "Nombre del contenedor",
+      "secretsNotice": "Las credenciales de acceso deben configurarse como variables de entorno en el servidor; nunca se almacenan en la base de datos."
     },
     "aiSuggestedPatches": "Cambios sugeridos por IA",
     "changes": "{n} cambio(s)",
