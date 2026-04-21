@@ -19,11 +19,13 @@ def list_models() -> list[str]:
 
 
 def resolve_model() -> str | None:
-    """Return the configured model name, or the first available one, or None."""
-    if OLLAMA_MODEL:
-        return OLLAMA_MODEL
-    available = list_models()
-    return available[0] if available else None
+    """Return the explicitly configured model name, or None if not set.
+
+    IMPORTANT: This intentionally does NOT fall back to the first available model.
+    If OLLAMA_MODEL is not configured, the orchestrator uses deterministic fallback
+    rather than silently picking a random model.
+    """
+    return OLLAMA_MODEL if OLLAMA_MODEL else None
 
 
 def chat_with_ollama(system_prompt: str, user_prompt: str) -> dict:

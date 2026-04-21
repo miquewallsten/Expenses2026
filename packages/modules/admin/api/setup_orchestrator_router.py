@@ -250,41 +250,43 @@ def _normalize_patches(raw: dict[str, Any]) -> SuggestedPatches:
 
 # fmt: off
 SYSTEM_PROMPT = (
-    "You are an AI assistant embedded in an enterprise financial operations platform. "
-    "You help the platform administrator configure the company's expense management setup, "
-    "fix problems, and carry out operational tasks like creating users or adding accounting categories. "
-    "You have full context of the current configuration AND the live operational state of the company "
-    "(actual users in the system, accounting categories configured, legal entities, expense report queue, "
-    "cost centres, and projects).\n\n"
+    "## ROLE & CONTEXT\n"
+    "You are the Admin AI for an enterprise financial operations platform. "
+    "You help the administrator configure expense management, fix configuration problems, "
+    "and execute operational tasks (create users, add accounting categories, update roles, etc.).\n\n"
+    "You have full access to:\n"
+    "- The current configuration (company setup, expense policy, accounting, approval, workflow settings)\n"
+    "- Live operational data (actual users, categories, legal entities, expense reports, cost centres, projects)\n\n"
 
-    "You can do two types of things:\n"
-    "1. Propose configuration changes (suggested_patches) — changes to company setup, expense policy, "
-    "accounting, approval, and workflow settings that the admin must approve before they apply.\n"
-    "2. Execute actions (executable_actions) — create users, invite people, add accounting categories, "
-    "update roles. Populate these with everything you know; the UI will let the admin fill in any blanks.\n\n"
+    "## WHAT YOU CAN DO\n"
+    "1. Answer questions — use live data to give direct, factual answers. "
+    "If asked 'how many users?' respond with the exact count and names from the live data. "
+    "Never paraphrase the question back. The answer goes in `understanding`.\n\n"
+    "2. Propose config changes (suggested_patches) — changes to company setup, expense policy, "
+    "accounting, approval, and workflow. Admin must approve before they apply.\n\n"
+    "3. Execute actions (executable_actions) — create users, add accounting categories, update roles. "
+    "Fill every field you know; the UI lets the admin complete any blanks before confirming.\n\n"
+    "Be proactive: flag gaps you see in the live data "
+    "(no categories but required, no manager but approval mode needs one, reports stalled in a status). "
+    "Be direct. If something is broken, say so and offer to fix it. "
+    "If you need one genuinely critical piece of information, ask for it. Otherwise act.\n\n"
 
-    "Be proactive: when you see gaps or problems in the live data (e.g. no accounting categories "
-    "but they are required, no manager user but approval mode needs one, expense reports piling up "
-    "in a status that suggests a workflow block), mention it and offer to fix it. "
-    "You know who the users are, what categories exist, which entities are configured, and how many "
-    "reports are in each status — use that knowledge to give real, specific answers.\n\n"
-
-    "Use your judgment. Be direct. If something is broken, say so and fix it. "
-    "If the admin asks to add a user, create the action — don't redirect them. "
-    "If the admin asks 'how many users do I have?' answer from the live data. "
-    "If you need one genuinely critical piece of information before you can proceed, ask for it. "
-    "Keep responses concise and useful.\n\n"
-
-    "CRITICAL — the `understanding` field is the ANSWER or RESPONSE that the admin will read. "
-    "For factual questions ('how many users?', 'what categories exist?') write the direct answer "
-    "('Tienen 2 usuarios: Admin User y Employee User.'). "
-    "NEVER write a paraphrase of the question there ('El administrador solicita conocer...'). "
-    "For configuration tasks, briefly state what you are about to do.\n\n"
-
-    "Respond with a single JSON object — no markdown, no prose outside the JSON:\n"
+    "## RESPONSE FORMAT\n"
+    "Respond with ONLY a single JSON object — no markdown fences, no prose outside the JSON.\n\n"
+    "Field rules:\n"
+    "- `understanding`: The direct answer or action statement the admin reads. "
+    "For questions: the answer ('Tienen 2 usuarios: Admin y Employee.'). "
+    "For tasks: what you are doing ('Voy a crear el usuario con rol manager.'). "
+    "NEVER write a paraphrase of the question ('El administrador solicita...'). "
+    "NEVER leave this blank.\n"
+    "- `summary`: One-sentence executive summary for audit history.\n"
+    "- `action_state`: 'no_changes' for pure Q&A (nothing to approve). "
+    "'awaiting_approval' when patches or executable_actions are present.\n"
+    "- `engine_mode`: 'DIAGNOSE' when finding problems, 'CONFIGURE' when changing settings, "
+    "'ADAPT' when reacting to live operational state.\n\n"
     '{ '
     '"engine_mode": "DIAGNOSE"|"CONFIGURE"|"ADAPT", '
-    '"understanding": "direct answer or brief statement of intent — NOT a paraphrase of the question", '
+    '"understanding": string, '
     '"summary": string, '
     '"company_profile": { "company_type": string, "complexity": "simple"|"medium"|"complex", "notes": string[] }, '
     '"current_state_assessment": string, '
@@ -1071,6 +1073,32 @@ def _deterministic_analysis(config: dict[str, Any], prompt: str = "") -> Analyze
     )
 
 
+# ── Pre-apply validation ─────────────────────────────────────────────────────
+
+
+def _validate_patches_against_config(
+    db: Session,
+    company_id: int,
+    patches: SuggestedPatches,
+) -> list[DetectedConflict]:
+    """Merge patches onto current config and run deterministic rules.
+
+    Returns any CRITICAL conflicts that would result from applying these patches.
+    Used as a guard in apply_setup() before writing to the database.
+    """
+    current = _load_portal_config(db, company_id)
+    merged: dict[str, Any] = {
+        "company_setup":    {**current["company_setup"],    **patches.company_setup},
+        "expense_policy":   {**current["expense_policy"],   **patches.expense_policy},
+        "accounting_setup": {**current["accounting_setup"], **patches.accounting_setup},
+        "approval_setup":   {**current["approval_setup"],   **patches.approval_setup},
+        "workflow_setup":   {**current["workflow_setup"],   **patches.workflow_setup},
+        "derived":          current["derived"],
+    }
+    analysis = _deterministic_analysis(merged)
+    return [c for c in analysis.detected_conflicts if c.severity == "critical"]
+
+
 # ── Routes ────────────────────────────────────────────────────────────────────
 
 
@@ -1170,6 +1198,23 @@ def apply_setup(
     This is the ONLY way changes reach the database — /analyze never writes config.
     """
     applied_domains: list[DomainApplied] = []
+
+    # Pre-apply behavioral validation — reject if patches produce critical conflicts
+    has_patches = any(
+        getattr(body.patches, root)
+        for root in _PATCH_ROOTS
+    )
+    if has_patches:
+        critical = _validate_patches_against_config(db, company_id, body.patches)
+        if critical:
+            msgs = " | ".join(c.message for c in critical)
+            return ApplyResponse(
+                ok=False,
+                applied_domains=[],
+                categories_applied=0,
+                audit_id=-1,
+                error=f"{len(critical)} critical conflict(s) in proposed patches: {msgs}",
+            )
 
     try:
         # Load all ORM records first (creates defaults if not yet configured)
