@@ -244,8 +244,9 @@ export default function AdminAccountingCopilot({
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({
-          prompt:  buildSystemPrompt(text, ctx),
-          context: `company_id:${companyId}`,
+          system_prompt: buildSystemPrompt(text, ctx),
+          prompt:        text,
+          context:       `company_id:${companyId}`,
           locale,
         }),
       });

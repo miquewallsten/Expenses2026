@@ -306,8 +306,9 @@ export default function AdminCompanySetupCopilot({
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({
-          prompt: buildSystemPrompt(text, setup, legalEntities, portalConfig),
-          context: `company_id:${companyId}`,
+          system_prompt: buildSystemPrompt(text, setup, legalEntities, portalConfig),
+          prompt:        text,
+          context:       `company_id:${companyId}`,
           locale,
         }),
       });

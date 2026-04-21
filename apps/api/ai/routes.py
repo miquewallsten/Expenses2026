@@ -21,6 +21,7 @@ class ChatRequest(BaseModel):
     prompt: str
     context: str | None = None
     locale: str | None = None
+    system_prompt: str | None = None  # optional override for admin copilots
 
 
 class ExpenseReviewRequest(BaseModel):
@@ -65,12 +66,15 @@ def ai_status() -> dict:
 @router.post("/chat")
 def ai_chat(request: ChatRequest) -> dict:
     """General-purpose financial operations copilot chat."""
-    system_prompt = (
-        "You are a financial operations copilot embedded in an enterprise expense management platform. "
-        "You help employees understand their expenses, navigate validation results, determine correct "
-        "project and cost center allocation, and identify the next steps needed to get an expense approved. "
-        f"Be concise, practical, and professional. {_lang_instruction(request.locale)}"
-    )
+    if request.system_prompt:
+        system_prompt = request.system_prompt
+    else:
+        system_prompt = (
+            "You are a financial operations copilot embedded in an enterprise expense management platform. "
+            "You help employees understand their expenses, navigate validation results, determine correct "
+            "project and cost center allocation, and identify the next steps needed to get an expense approved. "
+            f"Be concise, practical, and professional. {_lang_instruction(request.locale)}"
+        )
 
     user_prompt = request.prompt
     if request.context:
