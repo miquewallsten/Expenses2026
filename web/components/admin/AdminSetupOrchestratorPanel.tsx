@@ -602,6 +602,7 @@ export default function AdminSetupOrchestratorPanel({
     const result = msg.result!;
     const { drafts, executions, approvalState, appliedSections, categoriesApplying, categoriesApplied, categoriesError } = msg;
 
+    const hasActions = (result.executable_actions?.length ?? 0) > 0;
     const totalPatches = PATCH_SECTIONS.reduce(
       (n, s) => n + Object.keys(result.suggested_patches[s.key] ?? {}).filter((k) => ALLOWED_PATCH_KEYS[s.key].has(k)).length,
       0,
@@ -794,6 +795,8 @@ export default function AdminSetupOrchestratorPanel({
             </div>
           );
         })}
+
+        {!hasActions && (<>
 
         {/* Next steps */}
         {(result.next_steps?.length ?? 0) > 0 && (
@@ -1033,6 +1036,8 @@ export default function AdminSetupOrchestratorPanel({
           )}
 
         </>)}
+
+        </>)} {/* end !hasActions */}
 
         {/* Save summary */}
         {result.summary && (
