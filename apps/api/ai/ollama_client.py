@@ -61,7 +61,7 @@ def chat_with_ollama(system_prompt: str, user_prompt: str) -> dict:
         response = requests.post(
             f"{OLLAMA_BASE_URL}/api/chat",
             json=payload,
-            timeout=120,
+            timeout=300,
         )
         response.raise_for_status()
         data = response.json()
@@ -119,7 +119,7 @@ def chat_with_messages(messages: list[dict]) -> dict:
         response = requests.post(
             f"{OLLAMA_BASE_URL}/api/chat",
             json=payload,
-            timeout=120,
+            timeout=300,
         )
         response.raise_for_status()
         data = response.json()
