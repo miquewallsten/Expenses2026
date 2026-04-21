@@ -1,11 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bot, LogOut, Menu, Search, Settings } from "lucide-react";
 import { clearSession, getCurrentRole } from "@/lib/session";
 import { useTranslations } from "next-intl";
+import SettingsModal from "./SettingsModal";
 
 interface TopBarProps {
   title: string;
@@ -17,6 +17,7 @@ interface TopBarProps {
 export default function TopBar({ title, portal, onMenuOpen, onAiOpen }: TopBarProps) {
   const router = useRouter();
   const [role, setRole] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const t = useTranslations("shell");
   const tc = useTranslations("common");
   const tn = useTranslations("nav");
@@ -91,14 +92,16 @@ export default function TopBar({ title, portal, onMenuOpen, onAiOpen }: TopBarPr
           </button>
         )}
 
-        <Link
-          href="/settings"
+        <button
+          type="button"
+          onClick={() => setSettingsOpen(true)}
           title={tn("settings")}
           aria-label={tn("settings")}
           className="hidden w-8 items-center justify-center border-r border-white/[0.05] text-white/28 transition-colors hover:bg-white/[0.04] hover:text-white/55 md:flex"
         >
           <Settings className="h-3.5 w-3.5" />
-        </Link>
+        </button>
+        <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
         <button
           type="button"
