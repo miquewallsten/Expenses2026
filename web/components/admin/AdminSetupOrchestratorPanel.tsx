@@ -74,6 +74,7 @@ interface AnalyzeResponse {
   current_state_assessment?: string;
   impact?: string[];
   risks_gaps?: string[];
+  next_steps?: string[];
   action_state?: "awaiting_approval" | "no_changes";
 }
 
@@ -709,6 +710,26 @@ export default function AdminSetupOrchestratorPanel({
                   </li>
                 ))}
               </ul>
+            )}
+
+            {/* Next steps — always-visible clickable follow-ups */}
+            {(result.next_steps?.length ?? 0) > 0 && (
+              <div className="space-y-1">
+                <p className="text-[8.5px] font-bold uppercase tracking-widest text-white/18">What to do next</p>
+                <div className="flex flex-col gap-1">
+                  {result.next_steps!.map((step, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => { setPrompt(step); handleSubmit(step); }}
+                      className="flex items-center gap-1.5 rounded border border-violet-500/15 bg-violet-500/[0.04] px-2.5 py-1.5 text-left text-[10px] text-violet-300/55 transition-colors hover:border-violet-500/30 hover:bg-violet-500/[0.09] hover:text-violet-300/80"
+                    >
+                      <Zap className="h-2.5 w-2.5 shrink-0 opacity-60" />
+                      {step}
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
 
