@@ -551,7 +551,11 @@ def _parse_ai_response(parsed: dict[str, Any], prompt: str, config: dict[str, An
         "no_changes" if action_state_raw == "no_changes" else "awaiting_approval"
     )
 
-    generated_categories, accounting_mode, next_actions = _build_category_fields(prompt, config)
+    generated_categories, accounting_mode, next_actions = (
+        _build_category_fields(prompt, config)
+        if action_state != "no_changes"
+        else ([], None, [])
+    )
 
     return AnalyzeResponse(
         summary=str(parsed.get("summary", "")).strip()[:600],
@@ -867,11 +871,15 @@ def _deterministic_analysis(config: dict[str, Any], prompt: str = "") -> Analyze
     if missing:
         summary_parts.append(f"{len(missing)} decision(s) require clarification.")
 
-    generated_categories, accounting_mode, next_actions = _build_category_fields(prompt, config)
-
     patch_count = sum(len(getattr(patches, root)) for root in _PATCH_ROOTS)
     det_action_state: Literal["awaiting_approval", "no_changes"] = (
         "awaiting_approval" if patch_count > 0 else "no_changes"
+    )
+
+    generated_categories, accounting_mode, next_actions = (
+        _build_category_fields(prompt, config)
+        if det_action_state != "no_changes"
+        else ([], None, [])
     )
 
     return AnalyzeResponse(

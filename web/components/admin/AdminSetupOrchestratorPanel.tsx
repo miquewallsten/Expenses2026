@@ -722,7 +722,16 @@ export default function AdminSetupOrchestratorPanel({
             </div>
           )}
 
-          {/* C3 — Operational impact (AI-generated when available, else derived) */}
+          {/* Early-exit for no_changes: skip all analysis sections */}
+          {result.action_state === "no_changes" && totalPatches === 0 && (
+            <div className="flex items-center gap-2 px-0.5">
+              <CheckCircle2 className="h-3 w-3 text-white/25" />
+              <span className="text-[10px] text-white/30">No configuration changes needed</span>
+            </div>
+          )}
+
+          {result.action_state !== "no_changes" && (
+          <>{/* C3 — Operational impact (AI-generated when available, else derived) */}
           {(result.impact?.length ?? 0) > 0 ? (
             <div>
               <SectionLabel>Impact</SectionLabel>
@@ -1002,6 +1011,7 @@ export default function AdminSetupOrchestratorPanel({
               <span className="text-[10px] text-white/30">Diagnosis complete — no changes proposed</span>
             </div>
           )}
+          </>)}
 
           {/* H — Save summary + notes to company setup */}
           <div className="space-y-1.5 border-t border-white/[0.06] pt-3">
