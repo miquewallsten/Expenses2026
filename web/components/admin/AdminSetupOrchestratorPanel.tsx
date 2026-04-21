@@ -57,6 +57,31 @@ interface GeneratedCategory {
   requires_project?: boolean;
 }
 
+type ExecutableActionType =
+  | "create_user"
+  | "bulk_invite_users"
+  | "create_accounting_category"
+  | "bulk_create_accounting_categories"
+  | "update_user_role";
+
+interface ExecutableAction {
+  action_id: string;
+  action_type: ExecutableActionType;
+  label: string;
+  params: Record<string, any>;
+  requires_confirmation?: boolean;
+}
+
+const EXEC_ACTION_LABEL: Record<ExecutableActionType, string> = {
+  create_user:                       "Create user",
+  bulk_invite_users:                 "Bulk invite users",
+  create_accounting_category:        "Add category",
+  bulk_create_accounting_categories: "Bulk add categories",
+  update_user_role:                  "Update role",
+};
+
+interface ExecStatus { status: "pending" | "running" | "done" | "error"; result?: any; error?: string; }
+
 interface AnalyzeResponse {
   summary: string;
   company_profile: CompanyProfile;
@@ -76,6 +101,7 @@ interface AnalyzeResponse {
   risks_gaps?: string[];
   next_steps?: string[];
   action_state?: "awaiting_approval" | "no_changes";
+  executable_actions?: ExecutableAction[];
 }
 
 // ── Patch section labels ──────────────────────────────────────────────────────
@@ -379,7 +405,30 @@ export default function AdminSetupOrchestratorPanel({
   const [saving, setSaving]         = useState(false);
   const [saved, setSaved]           = useState(false);
   const [saveError, setSaveError]   = useState<string | null>(null);
+  const [executions, setExecutions] = useState<Record<string, ExecStatus>>({});
   const locale = useLocale();
+
+  async function executeAction(action: ExecutableAction) {
+    setExecutions((prev) => ({ ...prev, [action.action_id]: { status: "running" } }));
+    try {
+      const res = await fetch(
+        `${API}/admin/setup-orchestrator/execute/${companyId}`,
+        {
+          method: "POST",
+          headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+          body: JSON.stringify({ action }),
+        },
+      );
+      const data = await res.json();
+      if (data.ok) {
+        setExecutions((prev) => ({ ...prev, [action.action_id]: { status: "done", result: data.result } }));
+      } else {
+        setExecutions((prev) => ({ ...prev, [action.action_id]: { status: "error", error: data.error ?? "Unknown error" } }));
+      }
+    } catch (err: any) {
+      setExecutions((prev) => ({ ...prev, [action.action_id]: { status: "error", error: String(err) } }));
+    }
+  }
 
   // Fetch queue counts non-blocking whenever portalConfig is available
   useEffect(() => {
@@ -710,6 +759,62 @@ export default function AdminSetupOrchestratorPanel({
                   </li>
                 ))}
               </ul>
+            )}
+
+            {/* Executable Actions — AI-proposed operations to confirm and run */}
+            {(result.executable_actions?.length ?? 0) > 0 && (
+              <div className="space-y-1">
+                <p className="text-[8.5px] font-bold uppercase tracking-widest text-white/18">Pending actions</p>
+                <div className="flex flex-col gap-1">
+                  {result.executable_actions!.map((action) => {
+                    const st = executions[action.action_id];
+                    return (
+                      <div
+                        key={action.action_id}
+                        className={`rounded border px-2.5 py-2 ${
+                          st?.status === "done"    ? "border-emerald-500/25 bg-emerald-500/[0.05]" :
+                          st?.status === "error"   ? "border-red-500/25 bg-red-500/[0.05]" :
+                          st?.status === "running" ? "border-blue-500/20 bg-blue-500/[0.04]" :
+                                                     "border-white/[0.07] bg-white/[0.02]"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-white/30">
+                            {EXEC_ACTION_LABEL[action.action_type] ?? action.action_type}
+                          </span>
+                          <span className="min-w-0 flex-1 truncate text-[10px] text-white/50">{action.label}</span>
+                          {!st && (
+                            <button
+                              type="button"
+                              onClick={() => executeAction(action)}
+                              className="ml-auto shrink-0 rounded border border-emerald-500/25 bg-emerald-500/[0.07] px-2 py-0.5 text-[9px] font-semibold text-emerald-300/70 transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/[0.12] hover:text-emerald-300/90"
+                            >
+                              Execute
+                            </button>
+                          )}
+                          {st?.status === "running" && (
+                            <Loader2 className="ml-auto h-3 w-3 shrink-0 animate-spin text-blue-400/50" />
+                          )}
+                          {st?.status === "done" && (
+                            <CheckCircle2 className="ml-auto h-3 w-3 shrink-0 text-emerald-400/60" />
+                          )}
+                          {st?.status === "error" && (
+                            <AlertCircle className="ml-auto h-3 w-3 shrink-0 text-red-400/60" />
+                          )}
+                        </div>
+                        {st?.status === "done" && st.result && (
+                          <p className="mt-1 text-[9px] text-emerald-300/55">
+                            {Object.entries(st.result).map(([k, v]) => `${k}: ${v}`).join(" · ")}
+                          </p>
+                        )}
+                        {st?.status === "error" && (
+                          <p className="mt-1 text-[9px] text-red-400/60">{st.error}</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             )}
 
             {/* Next steps — always-visible clickable follow-ups */}

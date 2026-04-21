@@ -12,6 +12,10 @@ from apps.api.deps import get_db
 from apps.api.ai.ollama_client import chat_with_ollama, resolve_model
 from packages.core.platform.models_orchestrator_session import OrchestratorSession
 from packages.core.platform.models_orchestrator_audit import OrchestratorAuditLog
+from packages.core.platform.models_accounting_category import AccountingCategory, TAX_BEHAVIOR_VALUES
+from packages.core.platform.models_user import User
+from packages.core.platform.schemas_user import UserCreate, USER_ROLES
+from packages.core.platform.service_user import create_user
 from packages.modules.admin.service.company_setup_service import get_or_create_company_setup
 from packages.modules.admin.service.accounting_setup_service import get_or_create_accounting_setup
 from packages.modules.admin.service.approval_setup_service import get_or_create_approval_setup
@@ -67,6 +71,40 @@ class SuggestedPatches(BaseModel):
     workflow_setup: dict[str, Any] = {}
 
 
+_VALID_EXECUTABLE_TYPES = {
+    "create_user",
+    "bulk_invite_users",
+    "create_accounting_category",
+    "bulk_create_accounting_categories",
+    "update_user_role",
+}
+
+
+class ExecutableAction(BaseModel):
+    action_id: str
+    action_type: Literal[
+        "create_user",
+        "bulk_invite_users",
+        "create_accounting_category",
+        "bulk_create_accounting_categories",
+        "update_user_role",
+    ]
+    label: str
+    params: dict[str, Any] = {}
+    requires_confirmation: bool = True
+
+
+class ExecuteActionRequest(BaseModel):
+    action: ExecutableAction
+
+
+class ExecuteActionResponse(BaseModel):
+    ok: bool
+    action_id: str
+    result: dict[str, Any] = {}
+    error: str | None = None
+
+
 class AnalyzeResponse(BaseModel):
     summary: str
     company_profile: CompanyProfile
@@ -78,6 +116,7 @@ class AnalyzeResponse(BaseModel):
     accounting_mode: str | None = None
     next_actions: list[str] = []
     next_steps: list[str] = []   # clickable follow-up prompts for the user
+    executable_actions: list[ExecutableAction] = []  # actions the AI proposes to execute directly
     ok: bool
     error: str | None = None
     engine_mode: Literal["DIAGNOSE", "CONFIGURE", "ADAPT"] = "CONFIGURE"
@@ -247,12 +286,27 @@ SYSTEM_PROMPT = (
     "'Walk me through expense policy setup', 'What else needs to be configured?'.\n\n"
 
     "OUT-OF-SCOPE REQUESTS:\n"
-    "  If the request is NOT about platform configuration (adding/removing users, assigning "
-    "roles to people, creating accounting records, importing data, UI navigation), set "
-    "engine_mode to 'DIAGNOSE', action_state to 'no_changes', leave suggested_patches empty, "
-    "and use 'understanding' to briefly redirect the admin to the right place (e.g. "
-    "'To add a user, go to Administration \u2192 Users in the left navigation.'). "
-    "Still populate next_steps with useful related config actions.\n\n"
+    "  If the request cannot be handled by configuration patches OR executable actions "
+    "(e.g. UI navigation questions, billing, integrations not in the schema), set "
+    "engine_mode to 'DIAGNOSE', action_state to 'no_changes', leave suggested_patches and "
+    "executable_actions empty, and use 'understanding' to briefly explain what area handles it. "
+    "Still populate next_steps with useful related actions.\n\n"
+
+    "EXECUTABLE ACTIONS (you are an executive assistant, not just a configurator):\n"
+    "  You can execute real operations — not just propose config patches. When the admin "
+    "asks to add a user, invite people, add accounting categories, update a role — do it "
+    "by populating executable_actions[]. NEVER say 'go to Administration → Users' for "
+    "things you can execute here.\n"
+    "  Supported action types:\n"
+    "  - create_user: { email, full_name, role (employee|manager|accounting|admin|executive|secretary), department?, job_title?, send_invite? }\n"
+    "  - bulk_invite_users: { users: [{ email, full_name, role, department? }] }\n"
+    "  - create_accounting_category: { code, name, expense_account_code?, tax_behavior? (none|creditable|non_creditable) }\n"
+    "  - bulk_create_accounting_categories: { categories: [{ code, name, expense_account_code?, tax_behavior? }] }\n"
+    "  - update_user_role: { email, role }\n"
+    "  If information is incomplete (e.g. no email provided for a user), ask for it via "
+    "missing_decisions (one question). Once answered, populate executable_actions immediately.\n"
+    "  Set action_state to 'awaiting_approval' whenever executable_actions has items — "
+    "the admin reviews and confirms before anything executes.\n\n"
 
     "HARD RULES:\n"
     "  1. Never invent field names. Only use keys listed in the schema below.\n"
@@ -315,7 +369,8 @@ SYSTEM_PROMPT = (
     '  ai_workflow_assist_enabled ai_workflow_notes */ '
     '} '
     '}, '
-    '"action_state": "awaiting_approval"|"no_changes" '
+    '"action_state": "awaiting_approval"|"no_changes", '
+    '"executable_actions": [{ "action_id": string, "action_type": "create_user"|"bulk_invite_users"|"create_accounting_category"|"bulk_create_accounting_categories"|"update_user_role", "label": string, "params": object }] '
     "}"
 )
 # fmt: on
@@ -581,6 +636,29 @@ def _parse_ai_response(parsed: dict[str, Any], prompt: str, config: dict[str, An
         "no_changes" if action_state_raw == "no_changes" else "awaiting_approval"
     )
 
+    # Parse executable actions
+    executable_actions: list[ExecutableAction] = []
+    for item in (parsed.get("executable_actions") or []):
+        if not isinstance(item, dict):
+            continue
+        action_type = str(item.get("action_type", "")).strip()
+        if action_type not in _VALID_EXECUTABLE_TYPES:
+            continue
+        action_id = str(item.get("action_id", f"action_{len(executable_actions) + 1}")).strip()[:64]
+        label = str(item.get("label", "")).strip()[:300]
+        params = item.get("params", {}) if isinstance(item.get("params"), dict) else {}
+        executable_actions.append(ExecutableAction(
+            action_id=action_id,
+            action_type=action_type,  # type: ignore[arg-type]
+            label=label,
+            params=params,
+        ))
+    executable_actions = executable_actions[:20]
+
+    # If there are executable actions, escalate action_state so the frontend shows the confirm panel
+    if executable_actions and action_state == "no_changes":
+        action_state = "awaiting_approval"
+
     generated_categories, accounting_mode, next_actions = (
         _build_category_fields(prompt, config)
         if action_state != "no_changes"
@@ -600,6 +678,7 @@ def _parse_ai_response(parsed: dict[str, Any], prompt: str, config: dict[str, An
         accounting_mode=accounting_mode,
         next_actions=next_actions,
         next_steps=next_steps,
+        executable_actions=executable_actions,
         ok=True,
         engine_mode=engine_mode,
         understanding=understanding,
@@ -1141,6 +1220,174 @@ def apply_setup(
         categories_applied=cats_applied,
         audit_id=audit_id,
     )
+
+
+@router.post("/execute/{company_id}", response_model=ExecuteActionResponse)
+def execute_action(
+    company_id: int,
+    body: ExecuteActionRequest,
+    db: Session = Depends(get_db),
+) -> ExecuteActionResponse:
+    """
+    Execute a single action proposed by the AI (create user, add category, etc.).
+    Only call this after the admin has confirmed the action in the UI.
+    """
+    action = body.action
+    try:
+        if action.action_type == "create_user":
+            p = action.params
+            role = str(p.get("role", "employee")).strip().lower()
+            if role not in USER_ROLES:
+                role = "employee"
+            payload = UserCreate(
+                company_id=company_id,
+                email=str(p.get("email", "")).strip(),
+                full_name=str(p.get("full_name", "")).strip(),
+                role=role,
+                department=p.get("department") or None,
+                job_title=p.get("job_title") or None,
+                phone=p.get("phone") or None,
+                send_invite=bool(p.get("send_invite", False)),
+            )
+            if not payload.email or not payload.full_name:
+                return ExecuteActionResponse(
+                    ok=False, action_id=action.action_id,
+                    error="email and full_name are required",
+                )
+            user = create_user(db, payload)
+            return ExecuteActionResponse(
+                ok=True, action_id=action.action_id,
+                result={"user_id": user.id, "email": user.email, "full_name": user.full_name, "role": user.role},
+            )
+
+        elif action.action_type == "bulk_invite_users":
+            users_data = action.params.get("users", [])
+            if not isinstance(users_data, list):
+                return ExecuteActionResponse(ok=False, action_id=action.action_id, error="params.users must be a list")
+            created, errors = [], []
+            for u in users_data[:50]:
+                try:
+                    role = str(u.get("role", "employee")).strip().lower()
+                    if role not in USER_ROLES:
+                        role = "employee"
+                    payload = UserCreate(
+                        company_id=company_id,
+                        email=str(u.get("email", "")).strip(),
+                        full_name=str(u.get("full_name", "")).strip(),
+                        role=role,
+                        department=u.get("department") or None,
+                        send_invite=bool(u.get("send_invite", False)),
+                    )
+                    if not payload.email or not payload.full_name:
+                        errors.append(f"Missing email or full_name: {u}")
+                        continue
+                    user = create_user(db, payload)
+                    created.append({"user_id": user.id, "email": user.email, "role": user.role})
+                except Exception as ex:
+                    errors.append(str(ex))
+            return ExecuteActionResponse(
+                ok=True, action_id=action.action_id,
+                result={"created_count": len(created), "created": created, "errors": errors},
+            )
+
+        elif action.action_type == "create_accounting_category":
+            p = action.params
+            code = str(p.get("code", "")).strip()
+            name = str(p.get("name", "")).strip()
+            if not code or not name:
+                return ExecuteActionResponse(ok=False, action_id=action.action_id, error="code and name are required")
+            existing = (
+                db.query(AccountingCategory)
+                .filter(AccountingCategory.company_id == company_id, AccountingCategory.code == code)
+                .first()
+            )
+            if existing:
+                return ExecuteActionResponse(ok=False, action_id=action.action_id, error=f"Category '{code}' already exists")
+            tax_behavior = str(p.get("tax_behavior", "none"))
+            if tax_behavior not in TAX_BEHAVIOR_VALUES:
+                tax_behavior = "none"
+            category = AccountingCategory(
+                company_id=company_id, code=code, name=name,
+                expense_account_code=p.get("expense_account_code") or None,
+                liability_account_code=p.get("liability_account_code") or None,
+                tax_behavior=tax_behavior,
+                requires_project=bool(p.get("requires_project", False)),
+            )
+            db.add(category)
+            db.commit()
+            db.refresh(category)
+            return ExecuteActionResponse(
+                ok=True, action_id=action.action_id,
+                result={"category_id": category.id, "code": category.code, "name": category.name},
+            )
+
+        elif action.action_type == "bulk_create_accounting_categories":
+            categories_data = action.params.get("categories", [])
+            if not isinstance(categories_data, list):
+                return ExecuteActionResponse(ok=False, action_id=action.action_id, error="params.categories must be a list")
+            created, errors = [], []
+            for cat in categories_data[:100]:
+                code = str(cat.get("code", "")).strip()
+                name = str(cat.get("name", "")).strip()
+                if not code or not name:
+                    errors.append(f"Missing code/name: {cat}")
+                    continue
+                existing = (
+                    db.query(AccountingCategory)
+                    .filter(AccountingCategory.company_id == company_id, AccountingCategory.code == code)
+                    .first()
+                )
+                if existing:
+                    errors.append(f"Code '{code}' already exists — skipped")
+                    continue
+                tax_behavior = str(cat.get("tax_behavior", "none"))
+                if tax_behavior not in TAX_BEHAVIOR_VALUES:
+                    tax_behavior = "none"
+                db.add(AccountingCategory(
+                    company_id=company_id, code=code, name=name,
+                    expense_account_code=cat.get("expense_account_code") or None,
+                    liability_account_code=cat.get("liability_account_code") or None,
+                    tax_behavior=tax_behavior,
+                    requires_project=bool(cat.get("requires_project", False)),
+                ))
+                created.append(code)
+            try:
+                db.commit()
+            except Exception as ex:
+                db.rollback()
+                return ExecuteActionResponse(ok=False, action_id=action.action_id, error=str(ex))
+            return ExecuteActionResponse(
+                ok=True, action_id=action.action_id,
+                result={"created_count": len(created), "created_codes": created, "errors": errors},
+            )
+
+        elif action.action_type == "update_user_role":
+            p = action.params
+            email = str(p.get("email", "")).strip().lower()
+            new_role = str(p.get("role", "")).strip().lower()
+            if not email or not new_role:
+                return ExecuteActionResponse(ok=False, action_id=action.action_id, error="email and role are required")
+            if new_role not in USER_ROLES:
+                return ExecuteActionResponse(
+                    ok=False, action_id=action.action_id,
+                    error=f"Invalid role '{new_role}'. Allowed: {', '.join(USER_ROLES)}",
+                )
+            user = db.query(User).filter(User.email == email, User.company_id == company_id).first()
+            if not user:
+                return ExecuteActionResponse(ok=False, action_id=action.action_id, error=f"User '{email}' not found")
+            user.role = new_role
+            db.commit()
+            return ExecuteActionResponse(
+                ok=True, action_id=action.action_id,
+                result={"user_id": user.id, "email": user.email, "new_role": new_role},
+            )
+
+        else:
+            return ExecuteActionResponse(ok=False, action_id=action.action_id, error=f"Unknown action_type: {action.action_type}")
+
+    except Exception as exc:
+        db.rollback()
+        return ExecuteActionResponse(ok=False, action_id=action.action_id, error=str(exc))
 
 
 @router.get("/sessions/{company_id}", response_model=list[SessionSummary])
