@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
-import {
 import { getAuthHeaders } from "@/lib/session";
+import {
   Save, Loader2, CheckCircle2, AlertCircle, Sparkles,
   Building2, Plus, Pencil, Trash2, X, ImagePlus,
 } from "lucide-react";

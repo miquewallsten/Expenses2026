@@ -5,8 +5,8 @@ import {
   Bot, Zap, Loader2, CheckCircle2,
   AlertTriangle, AlertCircle, HelpCircle, ChevronDown, ChevronRight,
 } from "lucide-react";
-import {
 import { getAuthHeaders } from "@/lib/session";
+import {
   getPortalConfigConflicts,
   type PortalConfigConflict,
 } from "@/lib/portal-config-conflicts";

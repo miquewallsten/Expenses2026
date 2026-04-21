@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Save, Loader2, CheckCircle2, Sparkles, AlertTriangle, AlertCircle } from "lucide-react";
-import {
 import { getAuthHeaders } from "@/lib/session";
+import {
   getPortalConfigConflicts,
   type PortalConfigConflict,
 } from "@/lib/portal-config-conflicts";
