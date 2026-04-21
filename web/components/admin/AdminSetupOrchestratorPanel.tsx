@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocale } from "next-intl";
 import {
   Bot, Zap, Loader2, CheckCircle2,
-  AlertTriangle, AlertCircle, HelpCircle, ChevronDown, ChevronRight,
+  AlertTriangle, AlertCircle, HelpCircle, ChevronDown, ChevronRight, UserPlus,
 } from "lucide-react";
 import { getAuthHeaders } from "@/lib/session";
 import {
@@ -405,10 +405,35 @@ export default function AdminSetupOrchestratorPanel({
   const [saving, setSaving]         = useState(false);
   const [saved, setSaved]           = useState(false);
   const [saveError, setSaveError]   = useState<string | null>(null);
-  const [executions, setExecutions] = useState<Record<string, ExecStatus>>({});
+  const [executions, setExecutions]   = useState<Record<string, ExecStatus>>({});
+  // Per-action editable param drafts — initialized from AI params, admin can fill in missing fields
+  const [actionDrafts, setActionDrafts] = useState<Record<string, Record<string, any>>>({});
   const locale = useLocale();
 
+  // When a new result arrives, initialise drafts from the AI-populated params
+  const prevResultRef = useRef<AnalyzeResponse | null>(null);
+  useEffect(() => {
+    if (!result || result === prevResultRef.current) return;
+    prevResultRef.current = result;
+    if (!result.executable_actions?.length) return;
+    setExecutions({});
+    const drafts: Record<string, Record<string, any>> = {};
+    for (const a of result.executable_actions) {
+      drafts[a.action_id] = { ...a.params };
+    }
+    setActionDrafts(drafts);
+  }, [result]);
+
+  function setDraftField(actionId: string, field: string, value: any) {
+    setActionDrafts((prev) => ({
+      ...prev,
+      [actionId]: { ...(prev[actionId] ?? {}), [field]: value },
+    }));
+  }
+
   async function executeAction(action: ExecutableAction) {
+    const mergedParams = { ...action.params, ...(actionDrafts[action.action_id] ?? {}) };
+    const mergedAction = { ...action, params: mergedParams };
     setExecutions((prev) => ({ ...prev, [action.action_id]: { status: "running" } }));
     try {
       const res = await fetch(
@@ -416,7 +441,7 @@ export default function AdminSetupOrchestratorPanel({
         {
           method: "POST",
           headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
-          body: JSON.stringify({ action }),
+          body: JSON.stringify({ action: mergedAction }),
         },
       );
       const data = await res.json();
@@ -761,61 +786,168 @@ export default function AdminSetupOrchestratorPanel({
               </ul>
             )}
 
-            {/* Executable Actions — AI-proposed operations to confirm and run */}
-            {(result.executable_actions?.length ?? 0) > 0 && (
-              <div className="space-y-1">
-                <p className="text-[8.5px] font-bold uppercase tracking-widest text-white/18">Pending actions</p>
-                <div className="flex flex-col gap-1">
-                  {result.executable_actions!.map((action) => {
-                    const st = executions[action.action_id];
-                    return (
-                      <div
-                        key={action.action_id}
-                        className={`rounded border px-2.5 py-2 ${
-                          st?.status === "done"    ? "border-emerald-500/25 bg-emerald-500/[0.05]" :
-                          st?.status === "error"   ? "border-red-500/25 bg-red-500/[0.05]" :
-                          st?.status === "running" ? "border-blue-500/20 bg-blue-500/[0.04]" :
-                                                     "border-white/[0.07] bg-white/[0.02]"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-white/30">
-                            {EXEC_ACTION_LABEL[action.action_type] ?? action.action_type}
-                          </span>
-                          <span className="min-w-0 flex-1 truncate text-[10px] text-white/50">{action.label}</span>
-                          {!st && (
-                            <button
-                              type="button"
-                              onClick={() => executeAction(action)}
-                              className="ml-auto shrink-0 rounded border border-emerald-500/25 bg-emerald-500/[0.07] px-2 py-0.5 text-[9px] font-semibold text-emerald-300/70 transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/[0.12] hover:text-emerald-300/90"
-                            >
-                              Execute
-                            </button>
-                          )}
-                          {st?.status === "running" && (
-                            <Loader2 className="ml-auto h-3 w-3 shrink-0 animate-spin text-blue-400/50" />
-                          )}
-                          {st?.status === "done" && (
-                            <CheckCircle2 className="ml-auto h-3 w-3 shrink-0 text-emerald-400/60" />
-                          )}
-                          {st?.status === "error" && (
-                            <AlertCircle className="ml-auto h-3 w-3 shrink-0 text-red-400/60" />
-                          )}
-                        </div>
-                        {st?.status === "done" && st.result && (
-                          <p className="mt-1 text-[9px] text-emerald-300/55">
-                            {Object.entries(st.result).map(([k, v]) => `${k}: ${v}`).join(" · ")}
-                          </p>
-                        )}
-                        {st?.status === "error" && (
-                          <p className="mt-1 text-[9px] text-red-400/60">{st.error}</p>
-                        )}
-                      </div>
-                    );
-                  })}
+            {/* Executable Actions — inline forms, no extra round-trips */}
+            {(result.executable_actions?.length ?? 0) > 0 && result.executable_actions!.map((action) => {
+              const st = executions[action.action_id];
+              const draft = actionDrafts[action.action_id] ?? {};
+
+              if (st?.status === "done") return (
+                <div key={action.action_id} className="flex items-center gap-2 rounded border border-emerald-500/20 bg-emerald-500/[0.04] px-2.5 py-2">
+                  <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-400/60" />
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-emerald-300/70">{action.label}</p>
+                    {st.result && (
+                      <p className="text-[9px] text-emerald-300/40">
+                        {Object.entries(st.result).filter(([k]) => !["user_id","category_id"].includes(k)).map(([k,v]) => `${k.replace(/_/g," ")}: ${v}`).join(" · ")}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+
+              if (action.action_type === "create_user" || action.action_type === "bulk_invite_users") {
+                const isBulk = action.action_type === "bulk_invite_users";
+                const userRows: Record<string,any>[] = isBulk
+                  ? (Array.isArray(draft.users) ? draft.users : [{ full_name: draft.full_name ?? "", email: "", role: draft.role ?? "employee" }])
+                  : [draft];
+
+                return (
+                  <div key={action.action_id} className="rounded border border-white/[0.08] bg-white/[0.02] px-3 py-2.5 space-y-2.5">
+                    <div className="flex items-center gap-2">
+                      <UserPlus className="h-3 w-3 shrink-0 text-white/30" />
+                      <p className="flex-1 text-[10px] font-medium text-white/60">{action.label}</p>
+                      {st?.status === "running" && <Loader2 className="h-3 w-3 shrink-0 animate-spin text-white/30" />}
+                    </div>
+
+                    {!isBulk && (
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                        {([
+                          { key: "full_name",  label: "Full name",   type: "text",  required: true },
+                          { key: "email",      label: "Email",       type: "email", required: true },
+                          { key: "department", label: "Department",  type: "text",  required: false },
+                          { key: "job_title",  label: "Job title",   type: "text",  required: false },
+                        ] as const).map(({ key, label, type, required }) => (
+                          <label key={key} className="flex flex-col gap-0.5">
+                            <span className="text-[8.5px] font-semibold uppercase tracking-wider text-white/25">
+                              {label}{required ? " *" : ""}
+                            </span>
+                            <input
+                              type={type}
+                              value={String(draft[key] ?? "")}
+                              onChange={(e) => setDraftField(action.action_id, key, e.target.value)}
+                              className="rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1 text-[10px] text-white/70 outline-none placeholder:text-white/20 focus:border-white/20"
+                              placeholder={required ? "required" : "optional"}
+                            />
+                          </label>
+                        ))}
+                        <label className="flex flex-col gap-0.5">
+                          <span className="text-[8.5px] font-semibold uppercase tracking-wider text-white/25">Role *</span>
+                          <select
+                            value={String(draft.role ?? "employee")}
+                            onChange={(e) => setDraftField(action.action_id, "role", e.target.value)}
+                            className="rounded border border-white/[0.08] bg-[#1a1a1f] px-2 py-1 text-[10px] text-white/70 outline-none focus:border-white/20"
+                          >
+                            {["employee","manager","accounting","admin","executive","secretary"].map((r) => (
+                              <option key={r} value={r}>{r}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="flex items-center gap-2 pt-3">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(draft.send_invite)}
+                            onChange={(e) => setDraftField(action.action_id, "send_invite", e.target.checked)}
+                            className="h-3 w-3 accent-violet-500"
+                          />
+                          <span className="text-[9px] text-white/35">Send invite email</span>
+                        </label>
+                      </div>
+                    )}
+
+                    {st?.status === "error" && (
+                      <p className="text-[9px] text-red-400/60">{st.error}</p>
+                    )}
+
+                    {st?.status !== "done" && (
+                      <button
+                        type="button"
+                        disabled={st?.status === "running" || (!isBulk && (!draft.email?.trim() || !draft.full_name?.trim()))}
+                        onClick={() => executeAction(action)}
+                        className="w-full rounded border border-emerald-500/25 bg-emerald-500/[0.07] py-1 text-[9px] font-semibold text-emerald-300/70 transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/[0.13] hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-30"
+                      >
+                        {st?.status === "running" ? "Creating…" : isBulk ? `Invite ${userRows.length} user${userRows.length !== 1 ? "s" : ""}` : "Create user"}
+                      </button>
+                    )}
+                  </div>
+                );
+              }
+
+              if (action.action_type === "create_accounting_category" || action.action_type === "bulk_create_accounting_categories") {
+                const isBulk = action.action_type === "bulk_create_accounting_categories";
+                const cats: Record<string,any>[] = isBulk
+                  ? (Array.isArray(draft.categories) ? draft.categories : [])
+                  : [draft];
+
+                return (
+                  <div key={action.action_id} className="rounded border border-white/[0.08] bg-white/[0.02] px-3 py-2.5 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-white/30">Category</span>
+                      <p className="flex-1 text-[10px] text-white/55">{action.label}</p>
+                      {st?.status === "running" && <Loader2 className="h-3 w-3 shrink-0 animate-spin text-white/30" />}
+                    </div>
+
+                    {isBulk ? (
+                      <p className="text-[9px] text-white/30">{cats.length} categor{cats.length !== 1 ? "ies" : "y"} ready to create</p>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                        {([{key:"code",label:"Code",required:true},{key:"name",label:"Name",required:true},{key:"expense_account_code",label:"Account code",required:false}] as const).map(({key,label,required}) => (
+                          <label key={key} className="flex flex-col gap-0.5">
+                            <span className="text-[8.5px] font-semibold uppercase tracking-wider text-white/25">{label}{required ? " *" : ""}</span>
+                            <input
+                              type="text" value={String(draft[key] ?? "")}
+                              onChange={(e) => setDraftField(action.action_id, key, e.target.value)}
+                              className="rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1 text-[10px] text-white/70 outline-none placeholder:text-white/20 focus:border-white/20"
+                              placeholder={required ? "required" : "optional"}
+                            />
+                          </label>
+                        ))}
+                        <label className="flex flex-col gap-0.5">
+                          <span className="text-[8.5px] font-semibold uppercase tracking-wider text-white/25">Tax behavior</span>
+                          <select value={String(draft.tax_behavior ?? "none")} onChange={(e) => setDraftField(action.action_id, "tax_behavior", e.target.value)}
+                            className="rounded border border-white/[0.08] bg-[#1a1a1f] px-2 py-1 text-[10px] text-white/70 outline-none focus:border-white/20">
+                            <option value="none">None</option>
+                            <option value="creditable">Creditable</option>
+                            <option value="non_creditable">Non-creditable</option>
+                          </select>
+                        </label>
+                      </div>
+                    )}
+
+                    {st?.status === "error" && <p className="text-[9px] text-red-400/60">{st.error}</p>}
+                    {st?.status !== "done" && (
+                      <button type="button" disabled={st?.status === "running"} onClick={() => executeAction(action)}
+                        className="w-full rounded border border-emerald-500/25 bg-emerald-500/[0.07] py-1 text-[9px] font-semibold text-emerald-300/70 transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/[0.13] hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-30">
+                        {st?.status === "running" ? "Creating…" : isBulk ? `Create ${cats.length} categories` : "Create category"}
+                      </button>
+                    )}
+                  </div>
+                );
+              }
+
+              // update_user_role and fallback
+              return (
+                <div key={action.action_id} className="rounded border border-white/[0.08] bg-white/[0.02] px-3 py-2.5 space-y-2">
+                  <p className="text-[10px] text-white/55">{action.label}</p>
+                  {st?.status === "error" && <p className="text-[9px] text-red-400/60">{st.error}</p>}
+                  {st?.status !== "done" && (
+                    <button type="button" disabled={st?.status === "running"} onClick={() => executeAction(action)}
+                      className="w-full rounded border border-emerald-500/25 bg-emerald-500/[0.07] py-1 text-[9px] font-semibold text-emerald-300/70 transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/[0.13] hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-30">
+                      {st?.status === "running" ? "Running…" : "Execute"}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
 
             {/* Next steps — always-visible clickable follow-ups */}
             {(result.next_steps?.length ?? 0) > 0 && (
