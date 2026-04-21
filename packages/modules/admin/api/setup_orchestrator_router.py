@@ -13,7 +13,11 @@ from apps.api.ai.ollama_client import chat_with_ollama, resolve_model
 from packages.core.platform.models_orchestrator_session import OrchestratorSession
 from packages.core.platform.models_orchestrator_audit import OrchestratorAuditLog
 from packages.core.platform.models_accounting_category import AccountingCategory, TAX_BEHAVIOR_VALUES
+from packages.core.platform.models_cost_center import CostCenter
+from packages.core.platform.models_legal_entity import LegalEntity
+from packages.core.platform.models_project import Project
 from packages.core.platform.models_user import User
+from packages.modules.expenses.models.report import ExpenseReport
 from packages.core.platform.schemas_user import UserCreate, USER_ROLES
 from packages.core.platform.service_user import create_user
 from packages.modules.admin.service.company_setup_service import get_or_create_company_setup
@@ -249,7 +253,9 @@ SYSTEM_PROMPT = (
     "You are an AI assistant embedded in an enterprise financial operations platform. "
     "You help the platform administrator configure the company's expense management setup, "
     "fix problems, and carry out operational tasks like creating users or adding accounting categories. "
-    "You have full context of the current configuration and conversation history.\n\n"
+    "You have full context of the current configuration AND the live operational state of the company "
+    "(actual users in the system, accounting categories configured, legal entities, expense report queue, "
+    "cost centres, and projects).\n\n"
 
     "You can do two types of things:\n"
     "1. Propose configuration changes (suggested_patches) — changes to company setup, expense policy, "
@@ -257,10 +263,17 @@ SYSTEM_PROMPT = (
     "2. Execute actions (executable_actions) — create users, invite people, add accounting categories, "
     "update roles. Populate these with everything you know; the UI will let the admin fill in any blanks.\n\n"
 
+    "Be proactive: when you see gaps or problems in the live data (e.g. no accounting categories "
+    "but they are required, no manager user but approval mode needs one, expense reports piling up "
+    "in a status that suggests a workflow block), mention it and offer to fix it. "
+    "You know who the users are, what categories exist, which entities are configured, and how many "
+    "reports are in each status — use that knowledge to give real, specific answers.\n\n"
+
     "Use your judgment. Be direct. If something is broken, say so and fix it. "
     "If the admin asks to add a user, create the action — don't redirect them. "
+    "If the admin asks 'how many users do I have?' answer from the live data. "
     "If you need one genuinely critical piece of information before you can proceed, ask for it. "
-    "Suggest logical next steps. Keep responses concise and useful.\n\n"
+    "Keep responses concise and useful.\n\n"
 
     "Respond with a single JSON object — no markdown, no prose outside the JSON:\n"
     '{ '
@@ -393,8 +406,10 @@ def _build_user_prompt(
     prompt: str,
     config: dict[str, Any],
     prior_turns: list[dict] | None = None,
+    snapshot: dict[str, Any] | None = None,
 ) -> str:
-    config_text = json.dumps(config, default=str, indent=2) if config else "{}"
+    config_text   = json.dumps(config,   default=str, indent=2) if config   else "{}"
+    snapshot_text = json.dumps(snapshot, default=str, indent=2) if snapshot else "{}"
     prior_context = ""
     if prior_turns:
         lines = []
@@ -409,7 +424,8 @@ def _build_user_prompt(
         )
     return (
         f"Company ID: {company_id}.\n\n"
-        f"Current portal config:\n{config_text}\n\n"
+        f"Current portal configuration (settings):\n{config_text}\n\n"
+        f"Live operational state (actual data in the system right now — users, categories, entities, reports):\n{snapshot_text}\n\n"
         f"{prior_context}"
         f"User instruction: {prompt.strip()}"
     )
@@ -461,6 +477,123 @@ def _load_portal_config(db: Session, company_id: int) -> dict[str, Any]:
             "accounting_flow_enabled":       accounting_flow_enabled,
             "workflow_mode":                 wf.default_expense_workflow_mode or "standard",
         },
+    }
+
+
+def _load_live_snapshot(db: Session, company_id: int) -> dict[str, Any]:
+    """Query the live operational state of the company for AI context.
+
+    Returns a concise JSON-serialisable summary of real data in the system:
+    users, accounting categories, legal entities, expense report queue,
+    cost centres and projects.  All heavy lists are capped to keep the
+    prompt size reasonable.
+    """
+    from sqlalchemy import func as sqlfunc  # local import avoids shadowing
+
+    # ── Users ──────────────────────────────────────────────────────────────────
+    all_users = (
+        db.query(User)
+        .filter(User.company_id == company_id)
+        .order_by(User.created_at)
+        .all()
+    )
+    role_counts: dict[str, int] = {}
+    for u in all_users:
+        role_counts[u.role] = role_counts.get(u.role, 0) + 1
+
+    user_list = [
+        {
+            "id": u.id,
+            "name": u.full_name,
+            "email": u.email,
+            "role": u.role,
+            "active": u.is_active,
+            "department": u.department or None,
+            "job_title": u.job_title or None,
+        }
+        for u in all_users[:40]
+    ]
+
+    # ── Accounting categories ──────────────────────────────────────────────────
+    categories = (
+        db.query(AccountingCategory)
+        .filter(
+            AccountingCategory.company_id == company_id,
+            AccountingCategory.is_active.is_(True),
+        )
+        .order_by(AccountingCategory.code)
+        .all()
+    )
+    category_list = [
+        {
+            "code": c.code,
+            "name": c.name,
+            "tax_behavior": c.tax_behavior,
+            "expense_account": c.expense_account_code,
+        }
+        for c in categories[:60]
+    ]
+
+    # ── Legal entities ─────────────────────────────────────────────────────────
+    entities = (
+        db.query(LegalEntity)
+        .filter(LegalEntity.company_id == company_id, LegalEntity.is_active.is_(True))
+        .all()
+    )
+    entity_list = [
+        {
+            "name": e.entity_name,
+            "country": e.country_code,
+            "rfc": e.rfc,
+            "is_reimbursement_entity": e.is_reimbursement_entity,
+            "is_invoice_receiver": e.is_invoice_receiver_entity,
+        }
+        for e in entities
+    ]
+
+    # ── Expense reports by status ──────────────────────────────────────────────
+    report_rows = (
+        db.query(ExpenseReport.status, sqlfunc.count(ExpenseReport.id).label("n"))
+        .filter(ExpenseReport.company_id == company_id)
+        .group_by(ExpenseReport.status)
+        .all()
+    )
+    reports_by_status = {row.status: row.n for row in report_rows}
+    total_reports = sum(reports_by_status.values())
+
+    # ── Cost centres & projects (counts only) ─────────────────────────────────
+    cc_count = (
+        db.query(sqlfunc.count(CostCenter.id))
+        .filter(CostCenter.company_id == company_id, CostCenter.status == "active")
+        .scalar() or 0
+    )
+    proj_count = (
+        db.query(sqlfunc.count(Project.id))
+        .filter(Project.company_id == company_id, Project.status == "active")
+        .scalar() or 0
+    )
+
+    return {
+        "users": {
+            "total": len(all_users),
+            "active": sum(1 for u in all_users if u.is_active),
+            "by_role": role_counts,
+            "list": user_list,
+        },
+        "accounting_categories": {
+            "total": len(category_list),
+            "list": category_list,
+        },
+        "legal_entities": {
+            "total": len(entity_list),
+            "list": entity_list,
+        },
+        "expense_reports": {
+            "total": total_reports,
+            "by_status": reports_by_status,
+        },
+        "cost_centers": {"active": cc_count},
+        "projects": {"active": proj_count},
     }
 
 
@@ -955,6 +1088,9 @@ def analyze_setup(
         else _load_portal_config(db, company_id)
     )
 
+    # Live operational snapshot — always loaded fresh from the DB
+    live_snapshot = _load_live_snapshot(db, company_id)
+
     # Load prior session turns for multi-turn context
     prior_turns: list[dict] = []
     if body.session_id:
@@ -966,7 +1102,7 @@ def analyze_setup(
     if not ai_available:
         response = _deterministic_analysis(portal_config, body.prompt)
     else:
-        user_prompt = _build_user_prompt(company_id, body.prompt, portal_config, prior_turns)
+        user_prompt = _build_user_prompt(company_id, body.prompt, portal_config, prior_turns, live_snapshot)
         lang = "Respond exclusively in Spanish. Use formal business language (usted form)." if (body.locale or "").startswith("es") else "Respond in English."
         system_prompt = SYSTEM_PROMPT + f"\n\n{lang}"
         result = chat_with_ollama(system_prompt, user_prompt)
