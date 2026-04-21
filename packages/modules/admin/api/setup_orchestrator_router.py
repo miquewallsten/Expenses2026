@@ -275,10 +275,16 @@ SYSTEM_PROMPT = (
     "If you need one genuinely critical piece of information before you can proceed, ask for it. "
     "Keep responses concise and useful.\n\n"
 
+    "CRITICAL — the `understanding` field is the ANSWER or RESPONSE that the admin will read. "
+    "For factual questions ('how many users?', 'what categories exist?') write the direct answer "
+    "('Tienen 2 usuarios: Admin User y Employee User.'). "
+    "NEVER write a paraphrase of the question there ('El administrador solicita conocer...'). "
+    "For configuration tasks, briefly state what you are about to do.\n\n"
+
     "Respond with a single JSON object — no markdown, no prose outside the JSON:\n"
     '{ '
     '"engine_mode": "DIAGNOSE"|"CONFIGURE"|"ADAPT", '
-    '"understanding": string, '
+    '"understanding": "direct answer or brief statement of intent — NOT a paraphrase of the question", '
     '"summary": string, '
     '"company_profile": { "company_type": string, "complexity": "simple"|"medium"|"complex", "notes": string[] }, '
     '"current_state_assessment": string, '
