@@ -32,22 +32,29 @@ function WorkList({
 }) {
   const t = useTranslations("settings");
   return (
-    <ul className="py-1">
-      {SECTION_KEYS.map((key) => (
-        <li key={key}>
-          <button
-            onClick={() => onSelect(key)}
-            className={`w-full px-4 py-2.5 text-left text-xs transition-colors ${
-              active === key
-                ? "bg-white/10 text-white font-semibold"
-                : "text-white/50 hover:text-white/75 hover:bg-white/5"
-            }`}
-          >
-            {t(`sections.${key}` as Parameters<typeof t>[0])}
-          </button>
-        </li>
-      ))}
-    </ul>
+    <div>
+      <div className="flex h-9 shrink-0 items-center border-b border-white/[0.07] px-3">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
+          {t("title")}
+        </span>
+      </div>
+      <ul className="py-1">
+        {SECTION_KEYS.map((key) => (
+          <li key={key}>
+            <button
+              onClick={() => onSelect(key)}
+              className={`w-full px-4 py-2.5 text-left text-xs transition-colors ${
+                active === key
+                  ? "bg-white/10 text-white font-semibold"
+                  : "text-white/50 hover:text-white/75 hover:bg-white/5"
+              }`}
+            >
+              {t(`sections.${key}` as Parameters<typeof t>[0])}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -253,8 +260,9 @@ export default function SettingsPage() {
   return (
     <AppShell
       title={tn("settings")}
-      globalNavItems={globalNavItems}
+      globalNavItems={[]}
       workListTitle={t("title")}
+      mergedNav
       workList={
         <WorkList active={activeSection} onSelect={setActiveSection} />
       }

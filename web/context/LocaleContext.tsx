@@ -4,6 +4,7 @@ import {
   createContext,
   useContext,
   useState,
+  useEffect,
   type ReactNode,
 } from "react";
 import { NextIntlClientProvider } from "next-intl";
@@ -30,11 +31,12 @@ const LocaleContext = createContext<LocaleContextValue>({
 });
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(() => {
-    if (typeof window === "undefined") return "es";
+  const [locale, setLocaleState] = useState<Locale>("es");
+
+  useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY) as Locale | null;
-    return (stored === "en" || stored === "es") ? stored : "es";
-  });
+    if (stored === "en" || stored === "es") setLocaleState(stored);
+  }, []);
 
   const setLocale = (l: Locale) => {
     setLocaleState(l);
