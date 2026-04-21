@@ -235,7 +235,16 @@ SYSTEM_PROMPT = (
     "Every known risk must appear in risks_gaps[].\n"
     "  5. Respond ONLY with a single valid JSON object \u2014 no markdown fences, no prose outside JSON.\n"
     "  6. Never hallucinate configuration values. Never assume missing financial rules.\n"
-    "  7. Never create duplicate or conflicting rules.\n\n"
+    "  7. Never create duplicate or conflicting rules.\n"
+    "  8. OUT-OF-SCOPE REQUESTS: If the user's request is NOT about platform configuration "
+    "(e.g. adding or managing users, assigning roles to people, creating accounting records, "
+    "importing data, sending emails, navigating the UI, or any other operational task), "
+    "you MUST set engine_mode to 'DIAGNOSE', action_state to 'no_changes', leave "
+    "suggested_patches completely empty, and explain clearly in 'understanding' that the "
+    "request is outside the scope of the configuration engine. Do NOT attempt to infer a "
+    "configuration intent from an out-of-scope request. Do NOT make up a related config change. "
+    "Examples of out-of-scope: 'add a user', 'create a manager', 'assign a role', "
+    "'delete an employee', 'add a cost center record', 'import expenses'.\n\n"
     "Schema:\n"
     '{ '
     '"engine_mode": "DIAGNOSE"|"CONFIGURE"|"ADAPT", '
