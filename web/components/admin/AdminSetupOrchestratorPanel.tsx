@@ -417,6 +417,7 @@ export default function AdminSetupOrchestratorPanel({
   const [apiError, setApiError]   = useState<string | null>(null);
   const [managerQueueCount, setManagerQueueCount]       = useState<number | null>(null);
   const [accountingQueueCount, setAccountingQueueCount] = useState<number | null>(null);
+  const [legalEntities, setLegalEntities] = useState<{ id: number; entity_name: string; rfc?: string | null }[]>([]);
   const locale       = useLocale();
   const threadEndRef = useRef<HTMLDivElement>(null);
 
@@ -424,6 +425,17 @@ export default function AdminSetupOrchestratorPanel({
   useEffect(() => {
     threadEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Fetch legal entities once on mount
+  useEffect(() => {
+    if (!companyId) return;
+    fetch(`${API}/admin/company-setup/${companyId}/legal-entities`, { headers: getAuthHeaders() })
+      .then((r) => r.ok ? r.json() : [])
+      .then((data: { id: number; entity_name: string; rfc?: string | null }[]) => {
+        if (Array.isArray(data)) setLegalEntities(data);
+      })
+      .catch(() => {});
+  }, [companyId]);
 
   // Fetch queue counts non-blocking whenever portalConfig is available
   useEffect(() => {
@@ -716,6 +728,21 @@ export default function AdminSetupOrchestratorPanel({
                         ))}
                       </select>
                     </label>
+                    {legalEntities.length > 0 && (
+                      <label className="flex flex-col gap-0.5">
+                        <span className="text-[8.5px] font-semibold uppercase tracking-wider text-white/25">Company</span>
+                        <select
+                          value={String(draft.legal_entity_id ?? "")}
+                          onChange={(e) => setDraftField(msg.id, action.action_id, "legal_entity_id", e.target.value ? Number(e.target.value) : null)}
+                          className="rounded border border-white/[0.08] bg-[#1a1a1f] px-2 py-1 text-[10px] text-white/70 outline-none focus:border-white/20"
+                        >
+                          <option value="">— none —</option>
+                          {legalEntities.map((le) => (
+                            <option key={le.id} value={le.id}>{le.entity_name}{le.rfc ? ` (${le.rfc})` : ""}</option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
                     <label className="flex items-center gap-2 pt-3">
                       <input
                         type="checkbox"

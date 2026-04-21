@@ -1339,6 +1339,7 @@ def execute_action(
             role = str(p.get("role", "employee")).strip().lower()
             if role not in USER_ROLES:
                 role = "employee"
+            legal_entity_id_raw = p.get("legal_entity_id")
             payload = UserCreate(
                 company_id=company_id,
                 email=str(p.get("email", "")).strip(),
@@ -1348,6 +1349,7 @@ def execute_action(
                 job_title=p.get("job_title") or None,
                 phone=p.get("phone") or None,
                 send_invite=bool(p.get("send_invite", False)),
+                legal_entity_id=int(legal_entity_id_raw) if legal_entity_id_raw is not None else None,
             )
             if not payload.email or not payload.full_name:
                 return ExecuteActionResponse(
@@ -1370,6 +1372,7 @@ def execute_action(
                     role = str(u.get("role", "employee")).strip().lower()
                     if role not in USER_ROLES:
                         role = "employee"
+                    le_id_raw = u.get("legal_entity_id")
                     payload = UserCreate(
                         company_id=company_id,
                         email=str(u.get("email", "")).strip(),
@@ -1377,6 +1380,7 @@ def execute_action(
                         role=role,
                         department=u.get("department") or None,
                         send_invite=bool(u.get("send_invite", False)),
+                        legal_entity_id=int(le_id_raw) if le_id_raw is not None else None,
                     )
                     if not payload.email or not payload.full_name:
                         errors.append(f"Missing email or full_name: {u}")

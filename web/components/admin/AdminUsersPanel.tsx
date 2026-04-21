@@ -5,6 +5,7 @@ import {
   Users, Plus, Trash2, Loader2, Check, ChevronRight,
   ToggleLeft, ToggleRight, ArrowLeft,
 } from "lucide-react";
+import { getAuthHeaders } from "@/lib/session";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -143,7 +144,7 @@ function UserDetailPanel({
     try {
       const res = await fetch(`${API}/users/${user.id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({
           full_name: fullName,
           role,
@@ -179,7 +180,7 @@ function UserDetailPanel({
     if (!confirmDel) { setConfirmDel(true); return; }
     setDeleting(true);
     try {
-      const res = await fetch(`${API}/users/${user.id}`, { method: "DELETE" });
+      const res = await fetch(`${API}/users/${user.id}`, { method: "DELETE", headers: getAuthHeaders() });
       if (!res.ok) throw new Error(`${res.status}`);
       onDeleted(user.id);
     } finally { setDeleting(false); }
@@ -365,7 +366,7 @@ function InviteForm({
     try {
       const res = await fetch(`${API}/users/`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({
           company_id: companyId,
           email: email.trim(),
@@ -445,8 +446,8 @@ export default function AdminUsersPanel({ companyId, users, onUsersChanged }: Pr
 
   useEffect(() => {
     Promise.all([
-      fetch(`${API}/projects/?company_id=${companyId}`).then((r) => r.ok ? r.json() : []).catch(() => []),
-      fetch(`${API}/admin/company-setup/${companyId}/legal-entities`).then((r) => r.ok ? r.json() : []).catch(() => []),
+      fetch(`${API}/projects/?company_id=${companyId}`, { headers: getAuthHeaders() }).then((r) => r.ok ? r.json() : []).catch(() => []),
+      fetch(`${API}/admin/company-setup/${companyId}/legal-entities`, { headers: getAuthHeaders() }).then((r) => r.ok ? r.json() : []).catch(() => []),
     ]).then(([p, e]) => {
       if (Array.isArray(p)) setProjects(p);
       if (Array.isArray(e)) setLegalEntities(e);
