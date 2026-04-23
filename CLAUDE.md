@@ -117,6 +117,17 @@ Give it self-contained instructions with: the exact files to touch, the pattern 
 - `ENVIRONMENT`, `DEBUG`
 - `OLLAMA_*` — local LLM config
 
+## Testing
+
+Frontend: `cd web && npm test` (vitest). Files in `web/__tests__/`. See `TESTING.md` for full details.
+
+Expectations:
+- When writing new functions, write a corresponding test
+- When fixing a bug, write a regression test
+- When adding error handling, write a test that triggers the error
+- When adding a conditional (if/else), write tests for both paths
+- Never commit code that makes existing tests fail
+
 ## gstack
 
 Use the `/browse` skill from gstack for all web browsing. Never use `mcp__claude-in-chrome__*` tools directly.
