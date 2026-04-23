@@ -78,6 +78,7 @@ function buildInsightPayload(
     ),
   ];
   return {
+    expense_text:   JSON.stringify({ description: ac.description, amount: ac.amount, status: ac.currentStatus }),
     module:         ac.moduleId,
     expense_id:     ac.expenseId,
     workflow_step:  ac.workflowStep,
@@ -314,7 +315,7 @@ export default function MyWorkAssistant() {
 
   // AI status (once on mount)
   useEffect(() => {
-    fetch(`${API}/ai/status`)
+    fetch(`${API}/ai/status`, { headers: getAuthHeaders() })
       .then((r) => r.ok ? r.json() : null)
       .then((d) => setAiStatus(d
         ? { available: d.available, active_model: d.active_model ?? null }

@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -91,6 +91,83 @@ def create_document_route(payload: ExpenseDocumentCreate, db: Session = Depends(
         return document
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+def _extract_text_from_upload(filename: str, data: bytes) -> str:
+    """Return best-effort ``content_text`` for the uploaded file.
+
+    * ``.xml`` / ``.txt`` — UTF-8 decode with error replacement.
+    * ``.pdf``             — pdfplumber text extraction of every page.
+    * Anything else        — a minimal ``[BINARY_FILE]`` placeholder so the
+      document row can still be created + classified server-side.
+    """
+    lower = (filename or "").lower()
+    if lower.endswith(".xml") or lower.endswith(".txt"):
+        try:
+            return data.decode("utf-8", errors="replace")
+        except Exception:
+            return ""
+    if lower.endswith(".pdf"):
+        try:
+            import io
+            import pdfplumber
+            with pdfplumber.open(io.BytesIO(data)) as pdf:
+                return "\n".join((p.extract_text() or "") for p in pdf.pages)
+        except Exception:
+            return f"[BINARY_FILE]\nfilename: {filename}\nsize: {len(data)}"
+    return f"[BINARY_FILE]\nfilename: {filename}\nsize: {len(data)}"
+
+
+@router.post("/documents/upload", response_model=ExpenseDocumentRead)
+async def upload_document_route(
+    company_id: int = Form(...),
+    expense_id: int | None = Form(None),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Multipart upload for XML/PDF/image receipts.
+
+    Accepts raw file bytes and extracts ``content_text`` server-side so PDFs
+    (which cannot be decoded as text in the browser) produce a real,
+    classifiable document.
+    """
+    try:
+        require_same_company(company_id, current_user)
+        data = await file.read()
+        if not data:
+            raise HTTPException(status_code=400, detail="Empty file")
+        content_text = _extract_text_from_upload(file.filename or "upload", data)
+        payload = ExpenseDocumentCreate(
+            company_id=company_id,
+            expense_id=expense_id,
+            filename=file.filename or "upload",
+            content_text=content_text,
+        )
+        document = create_document(db, payload, file_bytes=data)
+
+        # Mirror the JSON-endpoint ticket-policy guard.
+        if document.document_type == "ticket":
+            policy = get_or_create_company_expense_policy(db, document.company_id)
+            if not policy.tickets_allowed:
+                document.validation_status = "failed"
+                db.add(ValidationResult(
+                    document_id=document.id,
+                    source="policy",
+                    rule_code="TICKET_NOT_ALLOWED",
+                    status="failed",
+                    message="Company policy does not allow ticket/receipt documents.",
+                ))
+                db.commit()
+                db.refresh(document)
+
+        return document
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {e}")
 
 
 @router.get("/documents", response_model=list[ExpenseDocumentRead])
@@ -472,6 +549,28 @@ def validate_sat_route(payload: SatValidationPayload):
     return run_sat_validation(payload.content_text)
 
 
+# ── Tags ──────────────────────────────────────────────────────────────────────
+# Must be declared BEFORE /{expense_id} — FastAPI matches routes in order and
+# "tags" would otherwise be parsed as an integer expense_id, returning 422.
+
+@router.get("/tags")
+def list_tags_route(company_id: int, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
+    return db.query(ExpenseTag).filter(ExpenseTag.company_id == company_id).order_by(ExpenseTag.name).all()
+
+
+@router.post("/tags")
+def create_tag_route(payload: dict, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    tag = ExpenseTag(
+        company_id=payload.get("company_id") or current_user.company_id,
+        name=payload["name"],
+        color=payload.get("color"),
+    )
+    db.add(tag)
+    db.commit()
+    db.refresh(tag)
+    return tag
+
+
 # ── Expense by ID ─────────────────────────────────────────────────────────────
 
 @router.get("/{expense_id}", response_model=ExpenseRead)
@@ -544,26 +643,6 @@ def delete_expense_route(expense_id: int, db: Session = Depends(get_db), current
         return {"status": "deleted"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-
-
-# ── Tags ──────────────────────────────────────────────────────────────────────
-
-@router.get("/tags")
-def list_tags_route(company_id: int, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
-    return db.query(ExpenseTag).filter(ExpenseTag.company_id == company_id).order_by(ExpenseTag.name).all()
-
-
-@router.post("/tags")
-def create_tag_route(payload: dict, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    tag = ExpenseTag(
-        company_id=payload.get("company_id") or current_user.company_id,
-        name=payload["name"],
-        color=payload.get("color"),
-    )
-    db.add(tag)
-    db.commit()
-    db.refresh(tag)
-    return tag
 
 
 # ── Expense-level validation results (all docs for this expense) ─────────────

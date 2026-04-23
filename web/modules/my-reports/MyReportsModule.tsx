@@ -198,7 +198,7 @@ function AiInsightPanel({ expenses, visible, onClose }: {
   const tr = useTranslations("reports");
 
   useEffect(() => {
-    fetch(`${API}/ai/status`).then((r) => r.json()).then((d) => setAiAvail(d.available)).catch(() => setAiAvail(false));
+    fetch(`${API}/ai/status`, { headers: getAuthHeaders() }).then((r) => r.json()).then((d) => setAiAvail(d.available)).catch(() => setAiAvail(false));
   }, []);
 
   useEffect(() => {

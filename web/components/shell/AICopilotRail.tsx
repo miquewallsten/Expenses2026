@@ -125,7 +125,7 @@ export default function AICopilotRail({
 
   // ── Fetch AI status on mount ───────────────────────────────────────────────
   useEffect(() => {
-    fetch(`${API}/ai/status`)
+    fetch(`${API}/ai/status`, { headers: getAuthHeaders() })
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
         setAiStatus(
