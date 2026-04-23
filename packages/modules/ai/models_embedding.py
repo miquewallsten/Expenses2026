@@ -26,7 +26,13 @@ from sqlalchemy import (
     Text,
     func,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import JSON
+try:
+    from sqlalchemy.dialects.postgresql import JSONB as _JSONB
+    # Use JSONB on PostgreSQL; fall back to plain JSON for SQLite (tests).
+    _meta_type = _JSONB().with_variant(JSON(), "sqlite")
+except ImportError:  # pragma: no cover
+    _meta_type = JSON()
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from apps.api.db import Base
@@ -75,7 +81,7 @@ class DocumentEmbedding(Base):
     )
 
     # Metadata bag — document_type, filename, detected_category, etc.
-    meta: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    meta: Mapped[dict | None] = mapped_column(_meta_type, nullable=True)
 
     # Auditing
     model_name: Mapped[str] = mapped_column(

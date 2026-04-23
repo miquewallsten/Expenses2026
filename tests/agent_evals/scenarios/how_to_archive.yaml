@@ -1,0 +1,10 @@
+name: how_to_archive
+prompt: "¿Cómo configuro el archivo documental?"
+persona: admin
+canned_tool_calls:
+  - name: how_to
+    arguments:
+      question: "cómo configuro el archivo documental"
+final_content: "Listo."
+expect_tools: [how_to]
+expect_no_filler: true

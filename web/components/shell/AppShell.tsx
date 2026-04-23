@@ -258,7 +258,7 @@ export default function AppShell({
              * pb-[var(--sai-b)] — scrollable content clears the home indicator.
              */}
             <div
-              className="fixed inset-y-0 left-0 z-50 flex w-[min(280px,85vw)] flex-col overflow-hidden bg-zinc-950 shadow-2xl"
+              className="animate-slide-in-left fixed inset-y-0 left-0 z-50 flex w-[min(280px,85vw)] flex-col overflow-hidden bg-zinc-950 shadow-2xl"
               style={{ paddingTop: "var(--sai-t)", paddingBottom: "var(--sai-b)" }}
             >
               <div className="flex h-11 shrink-0 items-center justify-between border-b border-white/[0.07] px-4">
@@ -294,7 +294,7 @@ export default function AppShell({
              * is never hidden under the iOS home indicator.
              */}
             <div
-              className="fixed inset-x-0 bottom-0 z-50 flex max-h-[75dvh] flex-col rounded-t-2xl bg-zinc-900 shadow-2xl ring-1 ring-white/[0.08]"
+              className="animate-slide-up-sheet fixed inset-x-0 bottom-0 z-50 flex max-h-[75dvh] flex-col rounded-t-2xl bg-zinc-900 shadow-2xl ring-1 ring-white/[0.08]"
               style={{ paddingBottom: "var(--sai-b)" }}
             >
               {/* Drag-handle pill */}
@@ -407,7 +407,7 @@ export default function AppShell({
               onClick={() => setAiSheetOpen(false)}
               aria-hidden="true"
             />
-            <div className="fixed inset-y-0 right-0 z-50 flex w-80 flex-col overflow-hidden bg-zinc-900 shadow-2xl ring-1 ring-white/[0.08]">
+            <div className="animate-slide-in-right fixed inset-y-0 right-0 z-50 flex w-80 flex-col overflow-hidden bg-zinc-900 shadow-2xl ring-1 ring-white/[0.08]">
               <div className="flex h-9 shrink-0 items-center justify-between border-b border-white/[0.07] px-4">
                 <div className="flex items-center gap-2">
                   <Bot className="h-3 w-3 text-indigo-300/60" />

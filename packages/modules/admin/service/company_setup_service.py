@@ -22,7 +22,6 @@ _COMPANY_SETUP_DEFAULTS = {
     "expenses_module_enabled": True,
     "time_allocation_module_enabled": False,
     "subcontractor_module_enabled": False,
-    "reimbursements_module_enabled": True,
     "approvals_module_enabled": True,
     "accounting_module_enabled": True,
     "archive_module_enabled": True,

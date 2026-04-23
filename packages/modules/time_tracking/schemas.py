@@ -7,7 +7,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 # ── Projects ───────────────────────────────────────────────────────────────────
@@ -39,6 +39,8 @@ class TimeProjectUpdate(BaseModel):
 
 
 class TimeProjectRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     company_id: int
     code: str | None
@@ -54,9 +56,6 @@ class TimeProjectRead(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
-
 
 # ── Activities ─────────────────────────────────────────────────────────────────
 
@@ -68,6 +67,8 @@ class TimeActivityCreate(BaseModel):
 
 
 class TimeActivityRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     company_id: int
     code: str | None
@@ -75,9 +76,6 @@ class TimeActivityRead(BaseModel):
     discipline: str | None
     is_active: bool
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 # ── Assignments ────────────────────────────────────────────────────────────────
@@ -90,6 +88,8 @@ class TimeAssignmentCreate(BaseModel):
 
 
 class TimeAssignmentRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     company_id: int
     project_id: int
@@ -99,9 +99,6 @@ class TimeAssignmentRead(BaseModel):
     budget_hours: Decimal | None
     is_active: bool
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 # ── Time entries ───────────────────────────────────────────────────────────────
@@ -116,6 +113,8 @@ class TimeEntryUpsert(BaseModel):
 
 
 class TimeEntryRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     company_id: int
     user_id: int
@@ -135,9 +134,6 @@ class TimeEntryRead(BaseModel):
     rejection_reason: str | None
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 # ── Week view ──────────────────────────────────────────────────────────────────

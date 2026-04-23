@@ -25,7 +25,7 @@ class User(Base):
     # ── Org assignment ──────────────────────────────────────────────────────────
     # Soft FK — avoids complex cross-model dependency during migrations
     legal_entity_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    # Secretary → boss: who this user submits expenses on behalf of
+    # Executive Assistant → boss: who this user submits expenses on behalf of
     delegates_for_user_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )

@@ -37,17 +37,18 @@ class CompanySetup(Base):
     expenses_module_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     time_allocation_module_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     subcontractor_module_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    reimbursements_module_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     approvals_module_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     accounting_module_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     archive_module_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     ai_copilot_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     purchase_requests_module_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    agent_v2_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     # AI Setup
     ai_setup_completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     ai_setup_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     ai_setup_last_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    company_profile_narrative: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Audit
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   CheckCircle2,
   ChevronRight,
@@ -49,18 +50,6 @@ interface ActivityMeta {
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
-  submitted:         { label: "Submitted",    cls: "text-blue-300/80 bg-blue-500/[0.10]" },
-  partial:           { label: "Partial",      cls: "text-amber-300/80 bg-amber-500/[0.10]" },
-  approved:          { label: "Approved",     cls: "text-emerald-300/80 bg-emerald-500/[0.10]" },
-  rejected:          { label: "Rejected",     cls: "text-red-300/80 bg-red-500/[0.10]" },
-  partially_approved:{ label: "Partial",      cls: "text-amber-300/80 bg-amber-500/[0.10]" },
-};
-
-const DAY_LABELS: Record<string, string> = {
-  "1": "Mon", "2": "Tue", "3": "Wed", "4": "Thu", "5": "Fri", "6": "Sat", "0": "Sun",
-};
-
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function fmtDate(iso: string): string {
@@ -77,10 +66,26 @@ function fmtWeek(iso: string): string {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const cfg = STATUS_CONFIG[status] ?? { label: status, cls: "text-white/30 bg-white/[0.06]" };
+  const tt = useTranslations("timesheets");
+  const STATUS_LABELS: Record<string, string> = {
+    submitted:          tt("statusSubmitted"),
+    partial:            tt("statusPartial"),
+    approved:           tt("statusApproved"),
+    rejected:           tt("statusRejected"),
+    partially_approved: tt("statusPartial"),
+  };
+  const STATUS_CLS: Record<string, string> = {
+    submitted:          "text-blue-300/80 bg-blue-500/[0.10]",
+    partial:            "text-amber-300/80 bg-amber-500/[0.10]",
+    approved:           "text-emerald-300/80 bg-emerald-500/[0.10]",
+    rejected:           "text-red-300/80 bg-red-500/[0.10]",
+    partially_approved: "text-amber-300/80 bg-amber-500/[0.10]",
+  };
+  const label = STATUS_LABELS[status] ?? status;
+  const cls   = STATUS_CLS[status]   ?? "text-white/30 bg-white/[0.06]";
   return (
-    <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${cfg.cls}`}>
-      {cfg.label}
+    <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${cls}`}>
+      {label}
     </span>
   );
 }
@@ -98,6 +103,11 @@ function EntryTable({
 }) {
   const projMap = Object.fromEntries(projects.map((p) => [p.id, p]));
   const actMap  = Object.fromEntries(activities.map((a) => [a.id, a]));
+  const tt = useTranslations("timesheets");
+  const DAY_LABELS_T: Record<string, string> = {
+    "1": tt("dayMon"), "2": tt("dayTue"), "3": tt("dayWed"),
+    "4": tt("dayThu"), "5": tt("dayFri"), "6": tt("daySat"), "0": tt("daySun"),
+  };
 
   // Group by date
   const byDate: Record<string, TimeEntry[]> = {};
@@ -112,11 +122,11 @@ function EntryTable({
       <table className="w-full text-[10px]">
         <thead>
           <tr className="border-b border-white/[0.07]">
-            <th className="px-3 py-1.5 text-left text-[9px] font-bold uppercase tracking-widest text-white/22">Date</th>
-            <th className="px-3 py-1.5 text-left text-[9px] font-bold uppercase tracking-widest text-white/22">Project</th>
-            <th className="px-3 py-1.5 text-left text-[9px] font-bold uppercase tracking-widest text-white/22">Activity</th>
-            <th className="px-2 py-1.5 text-right text-[9px] font-bold uppercase tracking-widest text-white/22">Hours</th>
-            <th className="px-2 py-1.5 text-center text-[9px] font-bold uppercase tracking-widest text-white/22">Status</th>
+            <th className="px-3 py-1.5 text-left text-[9px] font-bold uppercase tracking-widest text-white/22">{tt("colDate")}</th>
+            <th className="px-3 py-1.5 text-left text-[9px] font-bold uppercase tracking-widest text-white/22">{tt("colProject")}</th>
+            <th className="px-3 py-1.5 text-left text-[9px] font-bold uppercase tracking-widest text-white/22">{tt("colActivity")}</th>
+            <th className="px-2 py-1.5 text-right text-[9px] font-bold uppercase tracking-widest text-white/22">{tt("colHours")}</th>
+            <th className="px-2 py-1.5 text-center text-[9px] font-bold uppercase tracking-widest text-white/22">{tt("colStatus")}</th>
           </tr>
         </thead>
         <tbody>
@@ -124,7 +134,7 @@ function EntryTable({
             byDate[d].map((e, i) => {
               const proj = projMap[e.project_id];
               const act  = e.activity_id ? actMap[e.activity_id] : null;
-              const dayLabel = DAY_LABELS[String(new Date(d + "T00:00:00").getDay())];
+              const dayLabel = DAY_LABELS_T[String(new Date(d + "T00:00:00").getDay())];
               return (
                 <tr key={e.id} className="border-b border-white/[0.04] hover:bg-white/[0.015]">
                   <td className="px-3 py-1.5 text-white/40">
@@ -158,7 +168,7 @@ function EntryTable({
         </tbody>
         <tfoot>
           <tr className="border-t border-white/[0.07]">
-            <td colSpan={3} className="px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-white/22">Total</td>
+            <td colSpan={3} className="px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-white/22">{tt("totalFooter")}</td>
             <td className="px-2 py-1.5 text-right text-[11px] font-bold text-white/55">
               {entries.reduce((s, e) => s + Number(e.hours), 0).toFixed(1)}
             </td>
@@ -189,6 +199,7 @@ function WeekDetail({
 }) {
   const [notesInput,  setNotesInput]  = useState("");
   const [rejectInput, setRejectInput] = useState("");
+  const tt = useTranslations("timesheets");
 
   const submittedEntries = entries.filter((e) => e.status === "submitted");
   const canAct = submittedEntries.length > 0;
@@ -207,36 +218,36 @@ function WeekDetail({
         {/* Summary row */}
         <div className="flex items-center gap-4 rounded-lg border border-white/[0.07] px-3 py-2.5">
           <div>
-            <p className="text-[9px] text-white/28">Total Hours</p>
+            <p className="text-[9px] text-white/28">{tt("totalHours")}</p>
             <p className="text-[18px] font-bold text-white/65">{Number(week.total_hours).toFixed(1)}</p>
           </div>
           <div>
-            <p className="text-[9px] text-white/28">Entries</p>
+            <p className="text-[9px] text-white/28">{tt("entriesCount")}</p>
             <p className="text-[14px] font-semibold text-white/40">{week.entry_count}</p>
           </div>
           <div>
-            <p className="text-[9px] text-white/28">Week</p>
+            <p className="text-[9px] text-white/28">{tt("weekLabel")}</p>
             <p className="text-[11px] font-medium text-white/40">{fmtWeek(week.week_start)}</p>
           </div>
         </div>
 
         {/* Entry table */}
         <div>
-          <p className="mb-2 text-[9px] font-bold uppercase tracking-widest text-white/22">Time Entries</p>
+          <p className="mb-2 text-[9px] font-bold uppercase tracking-widest text-white/22">{tt("sectionTimeEntries")}</p>
           <EntryTable entries={entries} projects={projects} activities={activities} />
         </div>
 
         {/* Action area */}
         {canAct && (
           <div className="rounded-lg border border-white/[0.07] bg-white/[0.02] p-3">
-            <p className="mb-2.5 text-[9px] font-bold uppercase tracking-widest text-white/25">Review Action</p>
+            <p className="mb-2.5 text-[9px] font-bold uppercase tracking-widest text-white/25">{tt("sectionReviewAction")}</p>
 
             <div className="mb-2.5">
               <textarea
                 value={notesInput}
                 onChange={(e) => setNotesInput(e.target.value)}
                 rows={2}
-                placeholder="Approval / review notes (optional)…"
+                placeholder={tt("placeholderApprovalNotes")}
                 className="w-full resize-none rounded border border-white/[0.07] bg-white/[0.03] px-2.5 py-1.5 text-[10px] text-white/65 placeholder-white/18 outline-none focus:border-white/[0.12]"
               />
             </div>
@@ -245,7 +256,7 @@ function WeekDetail({
                 value={rejectInput}
                 onChange={(e) => setRejectInput(e.target.value)}
                 rows={2}
-                placeholder="Rejection reason (required only when rejecting)…"
+                placeholder={tt("placeholderRejectionReason")}
                 className="w-full resize-none rounded border border-white/[0.07] bg-white/[0.03] px-2.5 py-1.5 text-[10px] text-white/65 placeholder-white/18 outline-none focus:border-white/[0.12]"
               />
             </div>
@@ -257,7 +268,7 @@ function WeekDetail({
                 className="flex items-center gap-1.5 rounded bg-emerald-600/70 px-3 py-1.5 text-[10px] font-semibold text-white/90 transition-colors hover:bg-emerald-600/90 disabled:opacity-50"
               >
                 {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
-                Approve All
+                {tt("actionApproveAll")}
               </button>
               <button
                 type="button"
@@ -266,7 +277,7 @@ function WeekDetail({
                 className="flex items-center gap-1.5 rounded border border-red-500/20 px-3 py-1.5 text-[10px] font-medium text-red-300/60 transition-colors hover:bg-red-900/[0.12] disabled:opacity-50"
               >
                 {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
-                Reject All
+                {tt("actionRejectAll")}
               </button>
             </div>
           </div>
@@ -275,13 +286,13 @@ function WeekDetail({
         {week.status === "approved" && (
           <div className="flex items-center gap-2 rounded border border-emerald-500/20 bg-emerald-900/[0.08] px-3 py-2">
             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400/60" />
-            <span className="text-[10px] text-emerald-300/60">Week fully approved</span>
+            <span className="text-[10px] text-emerald-300/60">{tt("bannerApproved")}</span>
           </div>
         )}
         {week.status === "rejected" && (
           <div className="flex items-center gap-2 rounded border border-red-500/20 bg-red-900/[0.08] px-3 py-2">
             <XCircle className="h-3.5 w-3.5 text-red-400/60" />
-            <span className="text-[10px] text-red-300/60">Week rejected — awaiting resubmission</span>
+            <span className="text-[10px] text-red-300/60">{tt("bannerRejected")}</span>
           </div>
         )}
       </div>
@@ -293,6 +304,7 @@ function WeekDetail({
 
 function TimesheetsInbox() {
   const { companyId, userId, displayName } = useUserContext();
+  const tt = useTranslations("timesheets");
 
   const [weeks, setWeeks] = useState<SubmittedWeek[]>([]);
   const [selected, setSelected] = useState<SubmittedWeek | null>(null);
@@ -367,7 +379,7 @@ function TimesheetsInbox() {
       {/* List */}
       <div className="flex w-[280px] shrink-0 flex-col overflow-hidden border-r border-white/[0.06]">
         <div className="flex h-9 shrink-0 items-center border-b border-white/[0.06] px-3">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">Timesheets</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">{tt("pageTitle")}</span>
         </div>
 
         {/* Tabs */}
@@ -381,7 +393,7 @@ function TimesheetsInbox() {
                 tab === t ? "border-b border-indigo-500/50 text-white/60" : "text-white/22 hover:text-white/40"
               }`}
             >
-              {t === "pending" ? `Pending (${pending.length})` : `Done (${done.length})`}
+              {t === "pending" ? tt("tabPending", { count: pending.length }) : tt("tabDone", { count: done.length })}
             </button>
           ))}
         </div>
@@ -395,7 +407,7 @@ function TimesheetsInbox() {
             <div className="flex flex-col items-center justify-center gap-2 px-4 py-10 text-center">
               <Clock className="h-5 w-5 text-white/12" />
               <p className="text-[10px] text-white/22">
-                {tab === "pending" ? "No pending timesheets" : "No completed timesheets"}
+                {tab === "pending" ? tt("emptyPending") : tt("emptyDone")}
               </p>
             </div>
           ) : (
@@ -443,7 +455,7 @@ function TimesheetsInbox() {
           <div className="flex h-full items-center justify-center">
             <div className="text-center">
               <Clock className="mx-auto mb-2 h-6 w-6 text-white/12" />
-              <p className="text-[11px] text-white/22">Select a timesheet to review</p>
+              <p className="text-[11px] text-white/22">{tt("selectTimesheet")}</p>
             </div>
           </div>
         ) : loadingDetail ? (

@@ -11,7 +11,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # In-memory engine for test isolation — no production DB touched.
-TEST_DATABASE_URL = "sqlite://:memory:"
+TEST_DATABASE_URL = "sqlite:///:memory:"
 os.environ.setdefault("ENVIRONMENT", "development")
 
 from apps.api.db import Base
@@ -46,6 +46,11 @@ from packages.core.platform.models_archive_config import ArchiveConfig  # noqa: 
 from packages.modules.expenses.models import Expense, ExpenseDocument, ExpenseReport, Poliza  # noqa: F401
 from packages.modules.expenses.models.expense_allocation import ExpenseAllocation  # noqa: F401
 from packages.modules.expenses.models.expense_attachment import ExpenseAttachment  # noqa: F401
+from packages.modules.ai.models_embedding import DocumentEmbedding  # noqa: F401
+from packages.modules.agent.models import (  # noqa: F401 — registers agent_* tables
+    AgentSession, AgentToolCall, AgentPendingAction, AgentUpload,
+    AgentMemory, AgentInsight, AgentUsage,
+)
 
 
 @pytest.fixture(scope="function")
@@ -86,7 +91,7 @@ def client(db_session):
             pass
 
     app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app, raise_server_exceptions=False) as c:
+    with TestClient(app, raise_server_exceptions=True) as c:
         yield c
     app.dependency_overrides.clear()
 

@@ -1,0 +1,41 @@
+# Module flags on CompanySetup — what each flag controls.
+modules:
+  reimbursements_module_enabled:
+    name_es: Reembolsos
+    description: Permite a empleados solicitar reembolso de gastos pagados de su bolsillo.
+    enables: [employee reimbursement flow, extra UI in /mywork]
+    default: true
+
+  archive_module_enabled:
+    name_es: Archivo documental
+    description: Guarda CFDIs, PDFs y exportaciones en el backend de almacenamiento (S3/Azure/local).
+    enables: ["archive_config", "storage backends", "/admin?section=Archive"]
+    default: false
+    depends_on: storage_config configured
+
+  time_allocation_module_enabled:
+    name_es: Control de tiempos
+    description: Empleados pueden registrar horas contra proyectos/actividades.
+    enables: [/timesheets, project time reports, time entry API]
+    default: false
+
+  subcontractor_module_enabled:
+    name_es: Subcontratistas
+    description: Gestión de subcontratistas como un tipo de solicitante con flujo diferente.
+    default: false
+
+  ai_copilot_enabled:
+    name_es: Copiloto IA
+    description: Habilita el agente IA (este sistema) en todo el portal.
+    default: true
+
+  agent_v2_enabled:
+    name_es: Agente unificado v2
+    description: Si está true, reemplaza los copilotos por-sección con un único AdminAgentChat.
+    default: true
+
+  purchase_requests_module_enabled:
+    name_es: Solicitudes de compra
+    description: Flujo de PR → PO → Expense para compras previamente autorizadas.
+    enables: [/purchases, /pr-approvals, purchase_request tables]
+    default: false

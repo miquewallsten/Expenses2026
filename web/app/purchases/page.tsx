@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   BedDouble,
   Briefcase,
@@ -75,6 +76,7 @@ function fmtBytes(b: number) {
 }
 
 function AttachmentsSection({ requestId, companyId }: { requestId: number; companyId: string }) {
+  const tp = useTranslations("purchases");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -91,7 +93,7 @@ function AttachmentsSection({ requestId, companyId }: { requestId: number; compa
     <div>
       <p className="mb-1.5 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-white/22">
         <Paperclip className="h-2.5 w-2.5" />
-        Attachments ({attachments.length})
+        {tp("attachments", { count: attachments.length })}
       </p>
       <div className="space-y-0.5 rounded-lg border border-white/[0.07] px-2 py-1.5">
         {attachments.map((att) => (
@@ -133,19 +135,6 @@ const TYPE_ICONS: Record<string, React.ElementType> = {
   software: Monitor, service: Briefcase, other: HelpCircle,
 };
 
-const TYPE_LABELS: Record<string, string> = {
-  travel: "Travel", hotel: "Hotel", equipment: "Equipment",
-  software: "Software", service: "Service", other: "Other",
-};
-
-const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
-  submitted:    { label: "Submitted",    cls: "text-blue-300/80 bg-blue-500/[0.10]" },
-  under_review: { label: "Under Review", cls: "text-amber-300/80 bg-amber-500/[0.10]" },
-  approved:     { label: "Approved",     cls: "text-emerald-300/80 bg-emerald-500/[0.10]" },
-  rejected:     { label: "Rejected",     cls: "text-red-300/80 bg-red-500/[0.10]" },
-  fulfilled:    { label: "Fulfilled",    cls: "text-purple-300/80 bg-purple-500/[0.10]" },
-};
-
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function fmtDate(iso: string | null): string {
@@ -159,10 +148,26 @@ function TypeIcon({ type, cls }: { type: string | null; cls?: string }) {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const cfg = STATUS_CONFIG[status] ?? { label: status, cls: "text-white/30 bg-white/[0.06]" };
+  const tp = useTranslations("purchases");
+  const STATUS_LABELS: Record<string, string> = {
+    submitted:    tp("statusSubmitted"),
+    under_review: tp("statusUnderReview"),
+    approved:     tp("statusApproved"),
+    rejected:     tp("statusRejected"),
+    fulfilled:    tp("statusFulfilled"),
+  };
+  const STATUS_CLS: Record<string, string> = {
+    submitted:    "text-blue-300/80 bg-blue-500/[0.10]",
+    under_review: "text-amber-300/80 bg-amber-500/[0.10]",
+    approved:     "text-emerald-300/80 bg-emerald-500/[0.10]",
+    rejected:     "text-red-300/80 bg-red-500/[0.10]",
+    fulfilled:    "text-purple-300/80 bg-purple-500/[0.10]",
+  };
+  const label = STATUS_LABELS[status] ?? status;
+  const cls   = STATUS_CLS[status]   ?? "text-white/30 bg-white/[0.06]";
   return (
-    <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${cfg.cls}`}>
-      {cfg.label}
+    <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${cls}`}>
+      {label}
     </span>
   );
 }
@@ -172,7 +177,16 @@ function StatusBadge({ status }: { status: string }) {
 function RequestRow({
   req, active, onClick,
 }: { req: PurchaseRequest; active: boolean; onClick: () => void }) {
-  const label = req.title ?? (req.request_type ? TYPE_LABELS[req.request_type] : "Request");
+  const tp = useTranslations("purchases");
+  const TYPE_LABELS_T: Record<string, string> = {
+    travel:    tp("typeTravel"),
+    hotel:     tp("typeHotel"),
+    equipment: tp("typeEquipment"),
+    software:  tp("typeSoftware"),
+    service:   tp("typeService"),
+    other:     tp("typeOther"),
+  };
+  const label = req.title ?? (req.request_type ? (TYPE_LABELS_T[req.request_type] ?? req.request_type) : tp("typeOther"));
   return (
     <button
       type="button"
@@ -225,6 +239,7 @@ function IncomingDetail({
 }) {
   const [notesInput, setNotesInput]   = useState("");
   const [rejectInput, setRejectInput] = useState("");
+  const tp = useTranslations("purchases");
 
   const canApprove  = ["submitted", "under_review"].includes(req.status);
   const canReject   = ["submitted", "under_review"].includes(req.status);
@@ -237,17 +252,17 @@ function IncomingDetail({
     <div className="flex flex-col gap-3">
       {/* Requester */}
       <div>
-        <p className="mb-1 text-[8px] font-bold uppercase tracking-widest text-white/25">Submitted by</p>
+        <p className="mb-1 text-[8px] font-bold uppercase tracking-widest text-white/25">{tp("labelSubmittedBy")}</p>
         <p className="text-[10px] font-medium text-white/60">{req.requester_name ?? `User ${req.requester_id}`}</p>
         <p className="text-[9px] text-white/28">{fmtDate(req.submitted_at)}</p>
       </div>
 
       {/* Status */}
       <div>
-        <p className="mb-1 text-[8px] font-bold uppercase tracking-widest text-white/25">Status</p>
+        <p className="mb-1 text-[8px] font-bold uppercase tracking-widest text-white/25">{tp("labelStatus")}</p>
         <StatusBadge status={req.status} />
         {req.viewed_at && req.status === "submitted" && (
-          <p className="mt-0.5 text-[9px] text-white/28">Opened {fmtDate(req.viewed_at)}</p>
+          <p className="mt-0.5 text-[9px] text-white/28">{tp("labelOpenedDate", { date: fmtDate(req.viewed_at) })}</p>
         )}
       </div>
 
@@ -255,7 +270,7 @@ function IncomingDetail({
       {req.status === "approved" && (
         <div className="rounded border border-emerald-500/20 bg-emerald-900/[0.08] px-2 py-1.5">
           <p className="flex items-center gap-1 text-[9px] font-medium text-emerald-300/60">
-            <CheckCircle2 className="h-3 w-3" /> Approved
+            <CheckCircle2 className="h-3 w-3" /> {tp("labelApproved")}
           </p>
           {req.reviewer_notes && <p className="mt-0.5 text-[9px] text-emerald-300/40">{req.reviewer_notes}</p>}
         </div>
@@ -263,7 +278,7 @@ function IncomingDetail({
       {req.status === "fulfilled" && (
         <div className="rounded border border-purple-500/20 bg-purple-900/[0.08] px-2 py-1.5">
           <p className="flex items-center gap-1 text-[9px] font-medium text-purple-300/60">
-            <CheckCircle2 className="h-3 w-3" /> Fulfilled
+            <CheckCircle2 className="h-3 w-3" /> {tp("labelFulfilled")}
           </p>
           {req.reviewer_notes && <p className="mt-0.5 text-[9px] text-purple-300/40">{req.reviewer_notes}</p>}
         </div>
@@ -271,7 +286,7 @@ function IncomingDetail({
       {req.status === "rejected" && (
         <div className="rounded border border-red-500/20 bg-red-900/[0.08] px-2 py-1.5">
           <p className="flex items-center gap-1 text-[9px] font-medium text-red-300/60">
-            <XCircle className="h-3 w-3" /> Rejected
+            <XCircle className="h-3 w-3" /> {tp("labelRejected")}
           </p>
           {req.rejection_reason && <p className="mt-0.5 text-[9px] text-red-300/40">{req.rejection_reason}</p>}
         </div>
@@ -280,7 +295,7 @@ function IncomingDetail({
       {/* Priority badge */}
       {req.priority !== "normal" && (
         <div>
-          <p className="mb-1 text-[8px] font-bold uppercase tracking-widest text-white/25">Priority</p>
+          <p className="mb-1 text-[8px] font-bold uppercase tracking-widest text-white/25">{tp("labelPriority")}</p>
           <span className={`rounded px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider ${
             req.priority === "urgent" ? "bg-red-500/[0.12] text-red-300/70"
             : "bg-amber-500/[0.12] text-amber-300/70"
@@ -293,7 +308,7 @@ function IncomingDetail({
       {/* Amount */}
       {req.estimated_amount && (
         <div>
-          <p className="mb-1 text-[8px] font-bold uppercase tracking-widest text-white/25">Amount</p>
+          <p className="mb-1 text-[8px] font-bold uppercase tracking-widest text-white/25">{tp("labelAmount")}</p>
           <p className="text-[11px] font-semibold text-white/65">
             {req.currency ?? ""} {Number(req.estimated_amount).toLocaleString()}
           </p>
@@ -308,7 +323,7 @@ function IncomingDetail({
               value={notesInput}
               onChange={(e) => setNotesInput(e.target.value)}
               rows={2}
-              placeholder={canFulfill ? "Fulfillment notes…" : "Approval notes (optional)…"}
+              placeholder={canFulfill ? tp("placeholderFulfillmentNotes") : tp("placeholderApprovalNotes")}
               className="w-full resize-none rounded border border-white/[0.07] bg-white/[0.03] px-2 py-1.5 text-[10px] text-white/65 placeholder-white/18 outline-none focus:border-white/[0.12]"
             />
           )}
@@ -317,7 +332,7 @@ function IncomingDetail({
               value={rejectInput}
               onChange={(e) => setRejectInput(e.target.value)}
               rows={2}
-              placeholder="Rejection reason…"
+              placeholder={tp("placeholderRejectionReason")}
               className="w-full resize-none rounded border border-white/[0.07] bg-white/[0.03] px-2 py-1.5 text-[10px] text-white/65 placeholder-white/18 outline-none focus:border-white/[0.12]"
             />
           )}
@@ -330,7 +345,7 @@ function IncomingDetail({
                 className="flex items-center gap-1.5 rounded bg-emerald-600/70 px-2 py-1.5 text-[10px] font-semibold text-white/90 transition-colors hover:bg-emerald-600/90 disabled:opacity-50"
               >
                 {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
-                Approve
+                {tp("actionApprove")}
               </button>
             )}
             {canFulfill && (
@@ -341,7 +356,7 @@ function IncomingDetail({
                 className="flex items-center gap-1.5 rounded bg-purple-600/70 px-2 py-1.5 text-[10px] font-semibold text-white/90 transition-colors hover:bg-purple-600/90 disabled:opacity-50"
               >
                 {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
-                Mark Fulfilled
+                {tp("actionFulfill")}
               </button>
             )}
             {canReject && (
@@ -352,7 +367,7 @@ function IncomingDetail({
                 className="flex items-center gap-1.5 rounded border border-red-500/20 px-2 py-1.5 text-[10px] font-medium text-red-300/60 transition-colors hover:bg-red-900/[0.12] disabled:opacity-50"
               >
                 {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
-                Reject
+                {tp("actionReject")}
               </button>
             )}
           </div>
@@ -366,6 +381,7 @@ function IncomingDetail({
 
 function PurchasesInbox() {
   const { companyId } = useUserContext();
+  const tp = useTranslations("purchases");
   const [requests, setRequests] = useState<PurchaseRequest[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -439,7 +455,7 @@ function PurchasesInbox() {
         {/* Header */}
         <div className="flex h-9 shrink-0 items-center border-b border-white/[0.06] px-3">
           <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">
-            Purchase Requests
+            {tp("pageTitle")}
           </span>
         </div>
 
@@ -454,7 +470,7 @@ function PurchasesInbox() {
                 tab === t ? "text-white/60 border-b border-indigo-500/50" : "text-white/22 hover:text-white/40"
               }`}
             >
-              {t === "pending" ? `Pending (${pending.length})` : `Done (${done.length})`}
+              {t === "pending" ? tp("tabPending", { count: pending.length }) : tp("tabDone", { count: done.length })}
             </button>
           ))}
         </div>
@@ -469,7 +485,7 @@ function PurchasesInbox() {
             <div className="flex flex-col items-center justify-center gap-2 px-4 py-10 text-center">
               <Clock className="h-5 w-5 text-white/12" />
               <p className="text-[10px] text-white/22">
-                {tab === "pending" ? "No pending requests" : "No completed requests"}
+                {tab === "pending" ? tp("emptyPending") : tp("emptyDone")}
               </p>
             </div>
           ) : (
@@ -493,7 +509,7 @@ function PurchasesInbox() {
           <div className="flex h-full items-center justify-center">
             <div className="text-center">
               <Briefcase className="mx-auto mb-2 h-6 w-6 text-white/12" />
-              <p className="text-[11px] text-white/22">Select a request to review</p>
+              <p className="text-[11px] text-white/22">{tp("selectRequest")}</p>
             </div>
           </div>
         ) : (
@@ -505,7 +521,7 @@ function PurchasesInbox() {
                 requestNo={selected.request_no ?? `PR-${String(selected.id).padStart(5, "0")}`}
                 requestDate={selected.created_at}
                 requesterName={selected.requester_name ?? "—"}
-                companyId={companyId ?? ""}
+                companyId={String(companyId ?? "")}
                 data={(selected.details ?? {}) as Parameters<typeof PurchaseRequisitionForm>[0]["data"]}
                 attachments={attachments}
                 status={selected.status}
@@ -513,7 +529,7 @@ function PurchasesInbox() {
             </div>
             {/* Action sidebar */}
             <div className="flex w-[220px] shrink-0 flex-col overflow-y-auto border-l border-white/[0.06] bg-zinc-950 px-3 py-3">
-              <IncomingDetail req={selected} companyId={companyId ?? ""} onAction={handleAction} acting={acting} />
+              <IncomingDetail req={selected} companyId={String(companyId ?? "")} onAction={handleAction} acting={acting} />
             </div>
           </div>
         )}

@@ -1,7 +1,9 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useState } from "react";
-import { Mail } from "lucide-react";
+import { Mail, ArrowRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -37,69 +39,142 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-4">
-      <div className="w-full max-w-sm">
-        <div className="mb-8">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-1">
-            {t("platformName")}
-          </p>
-          <h1 className="text-xl font-semibold text-white">{t("signIn")}</h1>
-          <p className="mt-1 text-xs text-white/35">
-            {t("enterEmailHint")}
-          </p>
-        </div>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-zinc-950 px-4">
 
-        {sent ? (
-          <div className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-5">
-            <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600/20">
-              <Mail className="h-4 w-4 text-indigo-400" />
-            </div>
-            <p className="text-sm font-medium text-white/80">{t("checkEmail")}</p>
-            <p className="mt-1 text-xs text-white/40">
-              {t("emailSentTo")} <span className="text-white/60">{email}</span>.{" "}
-              {t("expiresIn15")}
-            </p>
-            {devLink && (
-              <div className="mt-4 rounded border border-amber-500/20 bg-amber-500/[0.06] p-3">
-                <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-amber-400/60">
-                  {t("devMode")}
-                </p>
-                <a
-                  href={devLink}
-                  className="break-all text-[11px] text-indigo-400 underline-offset-2 hover:underline"
-                >
-                  {devLink}
-                </a>
+      {/* ── Geometric background ───────────────────────────────────────────── */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+        {/* Radial indigo glow — top-left */}
+        <div className="absolute -left-64 -top-64 h-[600px] w-[600px] rounded-full bg-indigo-600/[0.06] blur-3xl" />
+        {/* Radial glow — bottom-right */}
+        <div className="absolute -bottom-48 -right-48 h-[500px] w-[500px] rounded-full bg-indigo-500/[0.04] blur-3xl" />
+        {/* Grid lines */}
+        <svg
+          className="absolute inset-0 h-full w-full opacity-[0.025]"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+              <path d="M 48 0 L 0 0 0 48" fill="none" stroke="white" strokeWidth="0.5" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#grid)" />
+        </svg>
+        {/* Diagonal accent line */}
+        <div
+          className="absolute left-0 top-0 h-px w-full origin-top-left bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent"
+          style={{ transform: "rotate(-8deg) translateY(38vh) scaleX(1.4)" }}
+        />
+      </div>
+
+      {/* ── Card ──────────────────────────────────────────────────────────────── */}
+      <div className="animate-scale-in relative w-full max-w-sm">
+
+        {/* Glow ring behind card */}
+        <div className="absolute -inset-px rounded-2xl bg-gradient-to-br from-indigo-500/20 via-transparent to-transparent" />
+
+        <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-zinc-900/80 shadow-[0_32px_80px_rgba(0,0,0,0.6)] backdrop-blur-sm">
+
+          {/* Top accent bar */}
+          <div className="h-px w-full bg-gradient-to-r from-transparent via-indigo-500/40 to-transparent" />
+
+          <div className="px-8 py-8">
+
+            {/* Brand mark */}
+            <div className="mb-7 flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600/25 ring-1 ring-indigo-500/30">
+                <svg viewBox="0 0 16 16" fill="none" className="h-4 w-4">
+                  <rect x="2" y="2" width="5" height="5" rx="1" fill="currentColor" className="text-indigo-300/80" />
+                  <rect x="9" y="2" width="5" height="5" rx="1" fill="currentColor" className="text-indigo-300/40" />
+                  <rect x="2" y="9" width="5" height="5" rx="1" fill="currentColor" className="text-indigo-300/40" />
+                  <rect x="9" y="9" width="5" height="5" rx="1" fill="currentColor" className="text-indigo-300/20" />
+                </svg>
               </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/35">
+                  {t("platformName")}
+                </p>
+              </div>
+            </div>
+
+            {/* Heading */}
+            <div className="mb-6">
+              <h1 className="text-lg font-semibold tracking-tight text-white">{t("signIn")}</h1>
+              <p className="mt-1 text-[11px] leading-relaxed text-white/40">
+                {t("enterEmailHint")}
+              </p>
+            </div>
+
+            {sent ? (
+              <div className="animate-slide-up">
+                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600/20 ring-1 ring-indigo-500/25">
+                  <Mail className="h-4.5 w-4.5 text-indigo-400" />
+                </div>
+                <p className="text-sm font-medium text-white/85">{t("checkEmail")}</p>
+                <p className="mt-1.5 text-[11px] leading-relaxed text-white/40">
+                  {t("emailSentTo")}{" "}
+                  <span className="font-medium text-white/65">{email}</span>.{" "}
+                  {t("expiresIn15")}
+                </p>
+                {devLink && (
+                  <div className="mt-5 rounded-lg border border-amber-500/15 bg-amber-500/[0.05] p-3">
+                    <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-amber-400/55">
+                      {t("devMode")}
+                    </p>
+                    <a
+                      href={devLink}
+                      className="break-all text-[11px] text-indigo-400/80 underline-offset-2 hover:text-indigo-300 hover:underline transition-colors"
+                    >
+                      {devLink}
+                    </a>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-white/40">
+                    {t("emailLabel")}
+                  </label>
+                  <input
+                    type="email"
+                    autoFocus
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setError(""); }}
+                    placeholder={t("emailPlaceholder")}
+                    className="w-full rounded-lg border border-white/[0.1] bg-white/[0.04] px-3 py-2.5 text-sm text-white placeholder-white/22 outline-none transition-all focus:border-indigo-500/50 focus:bg-indigo-950/20 focus:ring-1 focus:ring-indigo-500/15"
+                  />
+                </div>
+
+                {error && (
+                  <p className="text-[11px] text-red-400/80">{error}</p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="group flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-indigo-500 active:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {loading ? (
+                    <span className="flex gap-1">
+                      {[0, 1, 2].map((d) => (
+                        <span
+                          key={d}
+                          className="h-1.5 w-1.5 animate-bounce rounded-full bg-white/60"
+                          style={{ animationDelay: `${d * 120}ms` }}
+                        />
+                      ))}
+                    </span>
+                  ) : (
+                    <>
+                      {t("sendLink")}
+                      <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                    </>
+                  )}
+                </button>
+              </form>
             )}
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1.5">
-                {t("emailLabel")}
-              </label>
-              <input
-                type="email"
-                autoFocus
-                value={email}
-                onChange={(e) => { setEmail(e.target.value); setError(""); }}
-                placeholder={t("emailPlaceholder")}
-                className="w-full rounded border border-white/[0.1] bg-white/[0.04] px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-indigo-500/50 transition-colors"
-              />
-            </div>
-
-            {error && <p className="text-xs text-red-400">{error}</p>}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded border border-white/[0.1] bg-white/[0.07] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/[0.11] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {loading ? t("sending") : t("sendLink")}
-            </button>
-          </form>
-        )}
+        </div>
       </div>
     </div>
   );

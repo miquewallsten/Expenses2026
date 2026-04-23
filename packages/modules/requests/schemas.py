@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class ChatMessage(BaseModel):
@@ -21,6 +21,8 @@ class PurchaseRequestBase(BaseModel):
 
 
 class PurchaseRequestRead(PurchaseRequestBase):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     company_id: int
     requester_id: int
@@ -39,9 +41,6 @@ class PurchaseRequestRead(PurchaseRequestBase):
     fulfilled_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class AIChatRequest(BaseModel):
@@ -75,6 +74,8 @@ class ReviewAction(BaseModel):
 
 
 class AttachmentRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     request_id: int
     attachment_type: str
@@ -84,9 +85,6 @@ class AttachmentRead(BaseModel):
     url: str | None = None
     label: str | None = None
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class AddUrlAttachment(BaseModel):

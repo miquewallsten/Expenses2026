@@ -170,6 +170,18 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
   const [allowedDomains,      setAllowedDomains]      = useState<string[]>([]);
   const [sessionTimeout,      setSessionTimeout]      = useState(24);
 
+  // Demo mode — localStorage only, not persisted to API
+  const [demoMode, setDemoMode] = useState(false);
+  useEffect(() => {
+    setDemoMode(localStorage.getItem("demo_mode_enabled") === "true");
+  }, []);
+  const handleDemoToggle = (v: boolean) => {
+    setDemoMode(v);
+    localStorage.setItem("demo_mode_enabled", String(v));
+    // Notify other tabs / DevLoginCheat listener
+    window.dispatchEvent(new StorageEvent("storage", { key: "demo_mode_enabled", newValue: String(v) }));
+  };
+
   useEffect(() => {
     setLoading(true);
     fetch(`${API}/admin/auth-settings/${companyId}`)
@@ -319,6 +331,22 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
           <p className="text-[11px] text-white/30 leading-relaxed">
             Upload a CSV or Excel file. AI will map columns to user fields, detect roles and delegations, and show a confirmation preview before inviting anyone.
           </p>
+        </div>
+      </div>
+
+      {/* ── Demo Mode ───────────────────────────────────────────────────────── */}
+      <div className="overflow-hidden rounded-lg border border-amber-500/20">
+        <div className="flex items-center gap-2 border-b border-amber-500/15 bg-amber-500/[0.04] px-4 py-2.5">
+          <Shield className="h-3.5 w-3.5 text-amber-400/50" />
+          <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400/50">Demo / Presentation Mode</p>
+        </div>
+        <div className="px-4">
+          <ToggleRow
+            label="Enable Demo Mode"
+            description="Shows the quick user-switcher panel for live demos. Stored locally — does not affect other users."
+            value={demoMode}
+            onChange={handleDemoToggle}
+          />
         </div>
       </div>
 

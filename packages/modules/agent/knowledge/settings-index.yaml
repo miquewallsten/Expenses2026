@@ -1,0 +1,94 @@
+# Curated index of high-value settings the agent must know how to explain.
+# Not every field — only the ones users ask about.
+settings:
+  # ── CompanySetup ──
+  - key: company_setup.default_currency
+    name_es: Moneda predeterminada
+    valid: [MXN, USD]
+    default: MXN
+
+  - key: company_setup.default_locale
+    name_es: Idioma predeterminado
+    valid: [es, en]
+    default: es
+    notes: Afecta la UI y los prompts del agente.
+
+  - key: company_setup.fiscal_year_start_month
+    name_es: Mes de inicio de año fiscal
+    valid_range: [1, 12]
+    default: 1
+
+  # ── ExpensePolicy ──
+  - key: expense_policy.require_cfdi
+    name_es: Exigir CFDI
+    description: Si true, gastos sin CFDI pareado no pueden pasar de 'submitted'.
+    default: true
+
+  - key: expense_policy.max_amount_without_receipt
+    name_es: Monto máximo sin comprobante
+    default: 500
+    notes: En la moneda predeterminada de la empresa.
+
+  - key: expense_policy.auto_categorize
+    name_es: Categorización automática
+    description: Usa IA para sugerir categoría al crear un gasto.
+    default: true
+
+  # ── AccountingSetup ──
+  - key: accounting_setup.chart_of_accounts_source
+    name_es: Origen del catálogo de cuentas
+    valid: [manual, sat_standard, imported]
+    default: manual
+
+  - key: accounting_setup.default_poliza_format
+    name_es: Formato de póliza
+    valid: [sua, contpaq, xml_custom, json]
+    default: json
+
+  # ── ApprovalSetup ──
+  - key: approval_setup.require_manager_approval
+    name_es: Requiere aprobación de manager
+    default: true
+
+  - key: approval_setup.director_threshold
+    name_es: Umbral para director
+    description: Gastos por encima exigen aprobación de director.
+    default: 5000
+
+  # ── WorkflowSetup ──
+  - key: workflow_setup.allow_parallel_approvals
+    name_es: Permitir aprobaciones en paralelo
+    default: false
+
+  # ── ReportCycle ──
+  - key: report_cycle.frequency
+    name_es: Frecuencia del ciclo de reportes
+    valid: [weekly, biweekly, monthly, manual]
+    default: biweekly
+
+  # ── ArchiveConfig ──
+  - key: archive_config.file_name_template
+    name_es: Plantilla de nombre de archivo
+    tokens: ["{company}", "{date}", "{expense_id}", "{year}", "{month}", "{day}", "{filename}"]
+    default: "{company}/{year}/{month}/{expense_id}-{filename}"
+
+  # ── ChannelSettings ──
+  - key: channel_settings.whatsapp_enabled
+    name_es: WhatsApp activo
+    depends_on: channel_settings.whatsapp_token set
+    default: false
+
+  - key: channel_settings.email_intake_enabled
+    name_es: Entrada por correo
+    default: false
+
+  # ── AuthSettings ──
+  - key: auth_settings.magic_link_ttl_minutes
+    name_es: Vigencia del magic-link
+    valid_range: [5, 60]
+    default: 15
+
+  - key: auth_settings.sso_enabled
+    name_es: SSO
+    depends_on: auth_settings.sso_metadata_url set
+    default: false

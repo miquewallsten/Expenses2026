@@ -149,7 +149,7 @@ def list_documents_by_expense_route(expense_id: int, db: Session = Depends(get_d
 
 
 @router.post("/documents/{document_id}/validate", response_model=list[ValidationResultRead])
-def validate_document_route(document_id: int, db: Session = Depends(get_db)):
+def validate_document_route(document_id: int, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
     results = validate_document(db, document_id)
 
     if results is None:
@@ -159,7 +159,7 @@ def validate_document_route(document_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/documents/{document_id}/validation-results", response_model=list[ValidationResultRead])
-def list_validation_results_route(document_id: int, db: Session = Depends(get_db)):
+def list_validation_results_route(document_id: int, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
     return (
         db.query(ValidationResult)
         .filter(ValidationResult.document_id == document_id)
@@ -178,17 +178,21 @@ def create_report_route(payload: ExpenseReportCreate, db: Session = Depends(get_
 
 
 @router.get("/reports", response_model=list[ExpenseReportRead])
-def list_reports_route(company_id: int | None = None, db: Session = Depends(get_db)):
+def list_reports_route(company_id: int | None = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if current_user.role != "admin":
+        company_id = current_user.company_id
     return list_reports(db, company_id)
 
 
 @router.get("/reports/summary")
-def get_report_summary_route(company_id: int | None = None, db: Session = Depends(get_db)):
+def get_report_summary_route(company_id: int | None = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if current_user.role != "admin":
+        company_id = current_user.company_id
     return get_report_summary(db, company_id)
 
 
 @router.get("/reports/{report_id}", response_model=ExpenseReportRead)
-def get_report_route(report_id: int, db: Session = Depends(get_db)):
+def get_report_route(report_id: int, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
     report = get_report(db, report_id)
 
     if report is None:
@@ -198,7 +202,7 @@ def get_report_route(report_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/reports/{report_id}/expenses/{expense_id}", response_model=ExpenseRead)
-def add_expense_to_report_route(report_id: int, expense_id: int, db: Session = Depends(get_db)):
+def add_expense_to_report_route(report_id: int, expense_id: int, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
     try:
         expense = add_expense_to_report(db, expense_id=expense_id, report_id=report_id)
 
@@ -211,12 +215,12 @@ def add_expense_to_report_route(report_id: int, expense_id: int, db: Session = D
 
 
 @router.get("/reports/{report_id}/expenses", response_model=list[ExpenseRead])
-def list_report_expenses_route(report_id: int, db: Session = Depends(get_db)):
+def list_report_expenses_route(report_id: int, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
     return list_report_expenses(db, report_id)
 
 
 @router.post("/reports/{report_id}/submit", response_model=ExpenseReportRead)
-def submit_report_route(report_id: int, db: Session = Depends(get_db)):
+def submit_report_route(report_id: int, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
     try:
         report = submit_report(db, report_id)
 
@@ -255,7 +259,7 @@ def reject_report_route(report_id: int, db: Session = Depends(get_db), current_u
 
 
 @router.post("/reports/{report_id}/generate-poliza", response_model=PolizaRead)
-def generate_poliza_route(report_id: int, db: Session = Depends(get_db)):
+def generate_poliza_route(report_id: int, db: Session = Depends(get_db), _user: User = Depends(require_manager_or_accountant)):
     try:
         result = generate_poliza_for_report(db, report_id)
 
@@ -268,17 +272,21 @@ def generate_poliza_route(report_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/polizas", response_model=list[PolizaRead])
-def list_polizas_route(company_id: int | None = None, db: Session = Depends(get_db)):
+def list_polizas_route(company_id: int | None = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if current_user.role != "admin":
+        company_id = current_user.company_id
     return list_polizas(db, company_id)
 
 
 @router.get("/polizas/summary")
-def get_poliza_summary_route(company_id: int | None = None, db: Session = Depends(get_db)):
+def get_poliza_summary_route(company_id: int | None = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if current_user.role != "admin":
+        company_id = current_user.company_id
     return get_poliza_summary(db, company_id)
 
 
 @router.get("/polizas/{poliza_id}", response_model=PolizaRead)
-def get_poliza_route(poliza_id: int, db: Session = Depends(get_db)):
+def get_poliza_route(poliza_id: int, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
     poliza = get_poliza(db, poliza_id)
 
     if poliza is None:
@@ -314,7 +322,7 @@ def reject_poliza_route(poliza_id: int, db: Session = Depends(get_db), current_u
 
 
 @router.get("/reports/{report_id}/poliza", response_model=PolizaRead)
-def get_poliza_by_report_route(report_id: int, db: Session = Depends(get_db)):
+def get_poliza_by_report_route(report_id: int, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
     poliza = get_poliza_by_report(db, report_id)
 
     if poliza is None:
@@ -390,60 +398,66 @@ def create_submission_from_documents_route(
 # ── Projects ─────────────────────────────────────────────────────────────────
 
 @router.post("/projects", response_model=ProjectRead)
-def create_project_route(payload: ProjectCreate, db: Session = Depends(get_db)):
+def create_project_route(payload: ProjectCreate, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
     return create_project(db, payload)
 
 
 @router.get("/projects", response_model=list[ProjectRead])
-def list_projects_route(company_id: int | None = None, db: Session = Depends(get_db)):
+def list_projects_route(company_id: int | None = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if current_user.role != "admin":
+        company_id = current_user.company_id
     return list_projects(db, company_id)
 
 
 # ── Clients ───────────────────────────────────────────────────────────────────
 
 @router.post("/clients", response_model=ClientRead)
-def create_client_route(payload: ClientCreate, db: Session = Depends(get_db)):
+def create_client_route(payload: ClientCreate, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
     return create_client(db, payload)
 
 
 @router.get("/clients", response_model=list[ClientRead])
-def list_clients_route(company_id: int | None = None, db: Session = Depends(get_db)):
+def list_clients_route(company_id: int | None = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if current_user.role != "admin":
+        company_id = current_user.company_id
     return list_clients(db, company_id)
 
 
 # ── Cost Centers ──────────────────────────────────────────────────────────────
 
 @router.post("/cost-centers", response_model=CostCenterRead)
-def create_cost_center_route(payload: CostCenterCreate, db: Session = Depends(get_db)):
+def create_cost_center_route(payload: CostCenterCreate, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
     return create_cost_center(db, payload)
 
 
 @router.get("/cost-centers", response_model=list[CostCenterRead])
-def list_cost_centers_route(company_id: int | None = None, db: Session = Depends(get_db)):
+def list_cost_centers_route(company_id: int | None = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if current_user.role != "admin":
+        company_id = current_user.company_id
     return list_cost_centers(db, company_id)
 
 
 # ── Allocations ───────────────────────────────────────────────────────────────
 
 @router.post("/allocations", response_model=ExpenseAllocationRead)
-def create_allocation_route(payload: ExpenseAllocationCreate, db: Session = Depends(get_db)):
+def create_allocation_route(payload: ExpenseAllocationCreate, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
     return create_expense_allocation(db, payload)
 
 
 @router.get("/allocations/{expense_id}", response_model=list[ExpenseAllocationRead])
-def list_allocations_route(expense_id: int, db: Session = Depends(get_db)):
+def list_allocations_route(expense_id: int, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
     return list_expense_allocations(db, expense_id)
 
 
 # ── Attachments ───────────────────────────────────────────────────────────────
 
 @router.post("/attachments", response_model=ExpenseAttachmentRead)
-def create_attachment_route(payload: ExpenseAttachmentCreate, db: Session = Depends(get_db)):
+def create_attachment_route(payload: ExpenseAttachmentCreate, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
     return create_expense_attachment(db, payload)
 
 
 @router.get("/attachments/{expense_id}", response_model=list[ExpenseAttachmentRead])
-def list_attachments_route(expense_id: int, db: Session = Depends(get_db)):
+def list_attachments_route(expense_id: int, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
     return list_expense_attachments(db, expense_id)
 
 
@@ -510,7 +524,7 @@ def update_expense_route(expense_id: int, payload: ExpenseUpdate, db: Session = 
 
 
 @router.get("/config/account-mapping/{setup_session_id}")
-def get_account_mapping_config_route(setup_session_id: int, db: Session = Depends(get_db)):
+def get_account_mapping_config_route(setup_session_id: int, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
     config_text = get_account_mapping_config(db, setup_session_id)
 
     if config_text is None:
@@ -520,7 +534,7 @@ def get_account_mapping_config_route(setup_session_id: int, db: Session = Depend
 
 
 @router.delete("/{expense_id}")
-def delete_expense_route(expense_id: int, db: Session = Depends(get_db)):
+def delete_expense_route(expense_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     try:
         result = delete_expense(db, expense_id)
 
@@ -535,14 +549,14 @@ def delete_expense_route(expense_id: int, db: Session = Depends(get_db)):
 # ── Tags ──────────────────────────────────────────────────────────────────────
 
 @router.get("/tags")
-def list_tags_route(company_id: int, db: Session = Depends(get_db)):
+def list_tags_route(company_id: int, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
     return db.query(ExpenseTag).filter(ExpenseTag.company_id == company_id).order_by(ExpenseTag.name).all()
 
 
 @router.post("/tags")
-def create_tag_route(payload: dict, db: Session = Depends(get_db)):
+def create_tag_route(payload: dict, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     tag = ExpenseTag(
-        company_id=payload.get("company_id", 1),
+        company_id=payload.get("company_id") or current_user.company_id,
         name=payload["name"],
         color=payload.get("color"),
     )
@@ -555,7 +569,7 @@ def create_tag_route(payload: dict, db: Session = Depends(get_db)):
 # ── Expense-level validation results (all docs for this expense) ─────────────
 
 @router.get("/{expense_id}/validations", response_model=list[ValidationResultRead])
-def list_expense_validations_route(expense_id: int, db: Session = Depends(get_db)):
+def list_expense_validations_route(expense_id: int, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
     doc_ids = [
         row[0] for row in
         db.query(ExpenseDocument.id).filter(ExpenseDocument.expense_id == expense_id).all()

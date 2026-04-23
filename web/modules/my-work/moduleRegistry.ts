@@ -21,7 +21,7 @@ import React from "react";
 // the session helpers in lib/session.ts.
 
 export interface ModuleVisibilityContext {
-  /** Role string from session storage ("employee" | "manager" | "accounting" | "admin" | "executive" | "secretary" | null) */
+  /** Role string from session storage ("employee" | "manager" | "accounting" | "admin" | "executive" | "secretary" | null) — "secretary" displays as "Executive Assistant" */
   role: string | null;
   /** Flat list of permission_keys from /roles/user-permissions/:id */
   permissionKeys: string[];
@@ -99,33 +99,6 @@ function hasModule(ctx: ModuleVisibilityContext, key: string): boolean {
   return ctx.derived?.enabled_modules.includes(key) ?? false;
 }
 
-// ── Placeholder component (used for modules not yet fully built) ───────────────
-
-function buildPlaceholder(label: string): React.FC {
-  function Placeholder() {
-    return React.createElement(
-      "div",
-      { className: "flex h-full items-center justify-center" },
-      React.createElement(
-        "div",
-        { className: "text-center" },
-        React.createElement(
-          "p",
-          { className: "text-sm font-medium text-white/30" },
-          label,
-        ),
-        React.createElement(
-          "p",
-          { className: "mt-1 text-xs text-white/18" },
-          "This workspace is not yet available.",
-        ),
-      ),
-    );
-  }
-  Placeholder.displayName = `${label.replace(/\s+/g, "")}Placeholder`;
-  return Placeholder;
-}
-
 // ── Module registry ────────────────────────────────────────────────────────────
 
 export const MY_WORK_MODULES: readonly MyWorkModule[] = [
@@ -143,19 +116,6 @@ export const MY_WORK_MODULES: readonly MyWorkModule[] = [
       (hasRole(ctx, "employee", "manager", "admin", "executive", "secretary") ||
         hasPermission(ctx, "submit_expense")),
     component: React.lazy(() => import("@/modules/my-expenses/MyExpensesModule")),
-  },
-
-  // ── Corporate Expenses ───────────────────────────────────────────────────────
-  // Any role — gated purely on the per-user can_create_corporate_expenses flag.
-  // These are non-project expenses (presales, operations, equipment, etc.).
-  {
-    id: "corporate_expenses",
-    label: "Corporate Expenses",
-    icon: "Building2",
-    isVisible: (ctx) =>
-      hasModule(ctx, "expenses") &&
-      (ctx.capabilities?.can_create_corporate_expenses ?? false),
-    component: buildPlaceholder("Corporate Expenses"),
   },
 
   // ── My Approvals ────────────────────────────────────────────────────────────
@@ -201,33 +161,6 @@ export const MY_WORK_MODULES: readonly MyWorkModule[] = [
         (hasRole(ctx, "employee", "admin") ||
           hasPermission(ctx, "submit_timesheet"))),
     component: React.lazy(() => import("@/modules/my-time/MyTimeModule")),
-  },
-
-  // ── Archive ──────────────────────────────────────────────────────────────────
-  // Visible to accounting, admins, and anyone with view_archive when the
-  // archive module is enabled.
-  {
-    id: "archive",
-    label: "Archive",
-    icon: "Archive",
-    isVisible: (ctx) =>
-      hasModule(ctx, "archive") &&
-      (hasRole(ctx, "accounting", "admin") ||
-        hasPermission(ctx, "view_archive")),
-    component: buildPlaceholder("Archive"),
-  },
-
-  // ── Exports ──────────────────────────────────────────────────────────────────
-  // Visible only to admins and users with export_data when the archive module
-  // is enabled (export bundles depend on archived documents).
-  {
-    id: "exports",
-    label: "Exports",
-    icon: "Download",
-    isVisible: (ctx) =>
-      hasModule(ctx, "archive") &&
-      (hasRole(ctx, "admin") || hasPermission(ctx, "export_data")),
-    component: buildPlaceholder("Exports"),
   },
 
   // ── My Reports ───────────────────────────────────────────────────────────────

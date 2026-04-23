@@ -38,3 +38,59 @@ body {
   color: #fafafa;            /* zinc-50  */
   font-family: var(--font-geist-sans, Arial, Helvetica, sans-serif);
 }
+
+/* ── Motion keyframes ───────────────────────────────────────────────────────── */
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slide-in-left {
+  from { transform: translateX(-100%); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+@keyframes slide-up-sheet {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+@keyframes scale-in {
+  from { transform: scale(0.96); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.animate-fade-in        { animation: fade-in         0.18s ease both; }
+.animate-slide-in-left  { animation: slide-in-left   0.22s cubic-bezier(0.25,0.46,0.45,0.94) both; }
+.animate-slide-in-right { animation: slide-in-right  0.22s cubic-bezier(0.25,0.46,0.45,0.94) both; }
+.animate-slide-up       { animation: slide-up        0.20s cubic-bezier(0.25,0.46,0.45,0.94) both; }
+.animate-slide-up-sheet { animation: slide-up-sheet  0.28s cubic-bezier(0.25,0.46,0.45,0.94) both; }
+.animate-scale-in       { animation: scale-in        0.18s cubic-bezier(0.25,0.46,0.45,0.94) both; }
+
+/* Skeleton shimmer */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.04) 25%,
+    rgba(255,255,255,0.08) 50%,
+    rgba(255,255,255,0.04) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}

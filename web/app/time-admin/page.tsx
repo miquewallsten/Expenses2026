@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
   ChevronDown,
@@ -12,7 +13,9 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { UserProvider, useUserContext } from "@/context/UserContext";
+import { getAuthHeaders } from "@/lib/session";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -79,6 +82,7 @@ function ProjectForm({
   onCancel: () => void;
   saving: boolean;
 }) {
+  const t = useTranslations("timeAdmin");
   const [form, setForm] = useState<Partial<TimeProject>>(
     initial ?? { status: "active" }
   );
@@ -88,7 +92,7 @@ function ProjectForm({
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="mb-0.5 block text-[9px] font-bold uppercase tracking-widest text-white/28">Code</label>
+          <label className="mb-0.5 block text-[9px] font-bold uppercase tracking-widest text-white/28">{t("labelCode")}</label>
           <input
             value={form.code ?? ""}
             onChange={(e) => set("code", e.target.value || null)}
@@ -97,31 +101,31 @@ function ProjectForm({
           />
         </div>
         <div>
-          <label className="mb-0.5 block text-[9px] font-bold uppercase tracking-widest text-white/28">Status</label>
+          <label className="mb-0.5 block text-[9px] font-bold uppercase tracking-widest text-white/28">{t("labelStatus")}</label>
           <select
             value={form.status ?? "active"}
             onChange={(e) => set("status", e.target.value)}
             className="w-full rounded border border-white/[0.07] bg-white/[0.03] px-2.5 py-1.5 text-[10px] text-white/70 outline-none focus:border-white/[0.14]"
           >
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="on_hold">On Hold</option>
-            <option value="completed">Completed</option>
+            <option value="active">{t("statusActive")}</option>
+            <option value="inactive">{t("statusInactive")}</option>
+            <option value="on_hold">{t("statusOnHold")}</option>
+            <option value="completed">{t("statusCompleted")}</option>
           </select>
         </div>
       </div>
       <div>
-        <label className="mb-0.5 block text-[9px] font-bold uppercase tracking-widest text-white/28">Name *</label>
+        <label className="mb-0.5 block text-[9px] font-bold uppercase tracking-widest text-white/28">{t("labelName")} *</label>
         <input
           value={form.name ?? ""}
           onChange={(e) => set("name", e.target.value)}
-          placeholder="Project name"
+          placeholder={t("projectNamePlaceholder")}
           className="w-full rounded border border-white/[0.07] bg-white/[0.03] px-2.5 py-1.5 text-[10px] text-white/70 outline-none focus:border-white/[0.14]"
         />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="mb-0.5 block text-[9px] font-bold uppercase tracking-widest text-white/28">Client</label>
+          <label className="mb-0.5 block text-[9px] font-bold uppercase tracking-widest text-white/28">{t("labelClient")}</label>
           <input
             value={form.client ?? ""}
             onChange={(e) => set("client", e.target.value || null)}
@@ -129,7 +133,7 @@ function ProjectForm({
           />
         </div>
         <div>
-          <label className="mb-0.5 block text-[9px] font-bold uppercase tracking-widest text-white/28">Cost Center</label>
+          <label className="mb-0.5 block text-[9px] font-bold uppercase tracking-widest text-white/28">{t("labelCostCenter")}</label>
           <input
             value={form.cost_center ?? ""}
             onChange={(e) => set("cost_center", e.target.value || null)}
@@ -139,7 +143,7 @@ function ProjectForm({
       </div>
       <div className="grid grid-cols-3 gap-3">
         <div>
-          <label className="mb-0.5 block text-[9px] font-bold uppercase tracking-widest text-white/28">Budget Hours</label>
+          <label className="mb-0.5 block text-[9px] font-bold uppercase tracking-widest text-white/28">{t("labelBudgetHours")}</label>
           <input
             type="number"
             value={form.budget_hours ?? ""}
@@ -148,7 +152,7 @@ function ProjectForm({
           />
         </div>
         <div>
-          <label className="mb-0.5 block text-[9px] font-bold uppercase tracking-widest text-white/28">Start</label>
+          <label className="mb-0.5 block text-[9px] font-bold uppercase tracking-widest text-white/28">{t("labelStart")}</label>
           <input
             type="date"
             value={form.start_date ?? ""}
@@ -157,7 +161,7 @@ function ProjectForm({
           />
         </div>
         <div>
-          <label className="mb-0.5 block text-[9px] font-bold uppercase tracking-widest text-white/28">End</label>
+          <label className="mb-0.5 block text-[9px] font-bold uppercase tracking-widest text-white/28">{t("labelEnd")}</label>
           <input
             type="date"
             value={form.end_date ?? ""}
@@ -167,7 +171,7 @@ function ProjectForm({
         </div>
       </div>
       <div>
-        <label className="mb-0.5 block text-[9px] font-bold uppercase tracking-widest text-white/28">Description</label>
+        <label className="mb-0.5 block text-[9px] font-bold uppercase tracking-widest text-white/28">{t("labelDescription")}</label>
         <textarea
           value={form.description ?? ""}
           onChange={(e) => set("description", e.target.value || null)}
@@ -183,14 +187,14 @@ function ProjectForm({
           className="flex items-center gap-1.5 rounded bg-indigo-600/70 px-3 py-1.5 text-[10px] font-semibold text-white/90 transition-colors hover:bg-indigo-600/90 disabled:opacity-40"
         >
           {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
-          {initial?.id ? "Save Changes" : "Create Project"}
+          {initial?.id ? t("saveChanges") : t("createProject")}
         </button>
         <button
           type="button"
           onClick={onCancel}
           className="px-3 py-1.5 text-[10px] text-white/30 hover:text-white/55"
         >
-          Cancel
+          {t("cancel")}
         </button>
       </div>
     </div>
@@ -239,6 +243,7 @@ function ProjectRow({
   onEdit: () => void;
   onDeleted: () => void;
 }) {
+  const t = useTranslations("timeAdmin");
   const [expanded, setExpanded] = useState(false);
   const [assignments, setAssignments] = useState<TimeAssignment[]>([]);
   const [loadingAsgn, setLoadingAsgn] = useState(false);
@@ -294,9 +299,6 @@ function ProjectRow({
   }
 
   const statusCls = STATUS_CLS[proj.status] ?? "text-white/25 bg-white/[0.04]";
-  const util = proj.budget_hours
-    ? null // would need logged hours from server; just show budget for now
-    : null;
 
   return (
     <div className="overflow-hidden rounded-lg border border-white/[0.07] bg-white/[0.01]">
@@ -334,13 +336,13 @@ function ProjectRow({
         <div className="border-t border-white/[0.06] px-3 pb-3 pt-2.5">
           <div className="mb-2 flex items-center gap-1.5">
             <Users className="h-3 w-3 text-white/22" />
-            <span className="text-[9px] font-bold uppercase tracking-widest text-white/22">Assigned Personnel</span>
+            <span className="text-[9px] font-bold uppercase tracking-widest text-white/22">{t("assignedPersonnel")}</span>
             <button
               type="button"
               onClick={() => setShowAssignForm((v) => !v)}
               className="ml-auto flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] text-white/28 hover:bg-white/[0.05] hover:text-white/55"
             >
-              <Plus className="h-2.5 w-2.5" /> Assign
+              <Plus className="h-2.5 w-2.5" /> {t("assign")}
             </button>
           </div>
 
@@ -352,7 +354,7 @@ function ProjectRow({
                 <AssignmentRow key={a.id} asgn={a} onRemove={() => removeAssignment(a.id)} />
               ))}
               {assignments.filter((a) => a.is_active).length === 0 && (
-                <p className="text-[9px] text-white/20">No personnel assigned.</p>
+                <p className="text-[9px] text-white/20">{t("noPersonnel")}</p>
               )}
             </div>
           )}
@@ -361,7 +363,7 @@ function ProjectRow({
             <div className="mt-2.5 space-y-2 rounded border border-white/[0.07] p-2.5">
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="mb-0.5 block text-[8px] font-bold uppercase tracking-widest text-white/22">User ID *</label>
+                  <label className="mb-0.5 block text-[8px] font-bold uppercase tracking-widest text-white/22">{t("labelUserId")} *</label>
                   <input
                     value={newUserId}
                     onChange={(e) => setNewUserId(e.target.value)}
@@ -370,30 +372,30 @@ function ProjectRow({
                   />
                 </div>
                 <div>
-                  <label className="mb-0.5 block text-[8px] font-bold uppercase tracking-widest text-white/22">Full Name</label>
+                  <label className="mb-0.5 block text-[8px] font-bold uppercase tracking-widest text-white/22">{t("labelFullName")}</label>
                   <input
                     value={newUserName}
                     onChange={(e) => setNewUserName(e.target.value)}
-                    placeholder="Display name"
+                    placeholder={t("displayNamePlaceholder")}
                     className="w-full rounded border border-white/[0.07] bg-white/[0.03] px-2 py-1 text-[10px] text-white/70 outline-none"
                   />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="mb-0.5 block text-[8px] font-bold uppercase tracking-widest text-white/22">Role</label>
+                  <label className="mb-0.5 block text-[8px] font-bold uppercase tracking-widest text-white/22">{t("labelRole")}</label>
                   <select
                     value={newRole}
                     onChange={(e) => setNewRole(e.target.value)}
                     className="w-full rounded border border-white/[0.07] bg-white/[0.03] px-2 py-1 text-[10px] text-white/70 outline-none"
                   >
-                    <option value="team_member">Team Member</option>
-                    <option value="lead">Lead</option>
-                    <option value="coordinator">Coordinator</option>
+                    <option value="team_member">{t("roleTeamMember")}</option>
+                    <option value="lead">{t("roleLead")}</option>
+                    <option value="coordinator">{t("roleCoordinator")}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="mb-0.5 block text-[8px] font-bold uppercase tracking-widest text-white/22">Budget Hours</label>
+                  <label className="mb-0.5 block text-[8px] font-bold uppercase tracking-widest text-white/22">{t("labelBudgetHours")}</label>
                   <input
                     type="number"
                     value={newBudget}
@@ -410,10 +412,10 @@ function ProjectRow({
                   className="flex items-center gap-1 rounded bg-indigo-600/60 px-2.5 py-1 text-[9px] font-semibold text-white/90 disabled:opacity-40 hover:bg-indigo-600/80"
                 >
                   {savingAsgn ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : null}
-                  Assign
+                  {t("assign")}
                 </button>
                 <button type="button" onClick={() => setShowAssignForm(false)} className="text-[9px] text-white/28 hover:text-white/50">
-                  Cancel
+                  {t("cancel")}
                 </button>
               </div>
             </div>
@@ -427,6 +429,7 @@ function ProjectRow({
 // ── Activities panel ──────────────────────────────────────────────────────────
 
 function ActivitiesPanel({ companyId }: { companyId: number }) {
+  const t = useTranslations("timeAdmin");
   const [activities, setActivities] = useState<TimeActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -468,13 +471,13 @@ function ActivitiesPanel({ companyId }: { companyId: number }) {
   return (
     <div>
       <div className="mb-3 flex items-center gap-2">
-        <h3 className="text-[10px] font-bold uppercase tracking-widest text-white/35">Activity / Discipline Catalog</h3>
+        <h3 className="text-[10px] font-bold uppercase tracking-widest text-white/35">{t("activityCatalog")}</h3>
         <button
           type="button"
           onClick={() => setShowForm((v) => !v)}
           className="ml-auto flex items-center gap-1 rounded px-2 py-1 text-[9px] text-white/30 hover:bg-white/[0.05] hover:text-white/55"
         >
-          <Plus className="h-2.5 w-2.5" /> New Activity
+          <Plus className="h-2.5 w-2.5" /> {t("newActivity")}
         </button>
       </div>
 
@@ -482,16 +485,16 @@ function ActivitiesPanel({ companyId }: { companyId: number }) {
         <div className="mb-3 space-y-2 rounded-lg border border-white/[0.07] p-3">
           <div className="grid grid-cols-3 gap-2">
             <div>
-              <label className="mb-0.5 block text-[8px] font-bold uppercase tracking-widest text-white/22">Code</label>
+              <label className="mb-0.5 block text-[8px] font-bold uppercase tracking-widest text-white/22">{t("labelCode")}</label>
               <input value={newCode} onChange={(e) => setNewCode(e.target.value)} className="w-full rounded border border-white/[0.07] bg-white/[0.03] px-2 py-1 text-[10px] text-white/70 outline-none" />
             </div>
             <div>
-              <label className="mb-0.5 block text-[8px] font-bold uppercase tracking-widest text-white/22">Name *</label>
+              <label className="mb-0.5 block text-[8px] font-bold uppercase tracking-widest text-white/22">{t("labelName")} *</label>
               <input value={newName} onChange={(e) => setNewName(e.target.value)} className="w-full rounded border border-white/[0.07] bg-white/[0.03] px-2 py-1 text-[10px] text-white/70 outline-none" />
             </div>
             <div>
-              <label className="mb-0.5 block text-[8px] font-bold uppercase tracking-widest text-white/22">Discipline</label>
-              <input value={newDiscipline} onChange={(e) => setNewDiscipline(e.target.value)} placeholder="e.g. Engineering" className="w-full rounded border border-white/[0.07] bg-white/[0.03] px-2 py-1 text-[10px] text-white/70 outline-none" />
+              <label className="mb-0.5 block text-[8px] font-bold uppercase tracking-widest text-white/22">{t("labelDiscipline")}</label>
+              <input value={newDiscipline} onChange={(e) => setNewDiscipline(e.target.value)} placeholder={t("disciplinePlaceholder")} className="w-full rounded border border-white/[0.07] bg-white/[0.03] px-2 py-1 text-[10px] text-white/70 outline-none" />
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -502,9 +505,9 @@ function ActivitiesPanel({ companyId }: { companyId: number }) {
               className="flex items-center gap-1 rounded bg-indigo-600/60 px-2.5 py-1 text-[9px] font-semibold text-white/90 disabled:opacity-40 hover:bg-indigo-600/80"
             >
               {saving ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : null}
-              Create
+              {t("create")}
             </button>
-            <button type="button" onClick={() => setShowForm(false)} className="text-[9px] text-white/28 hover:text-white/50">Cancel</button>
+            <button type="button" onClick={() => setShowForm(false)} className="text-[9px] text-white/28 hover:text-white/50">{t("cancel")}</button>
           </div>
         </div>
       )}
@@ -512,16 +515,16 @@ function ActivitiesPanel({ companyId }: { companyId: number }) {
       {loading ? (
         <Loader2 className="h-4 w-4 animate-spin text-white/20" />
       ) : activities.length === 0 ? (
-        <p className="text-[10px] text-white/22">No activities configured yet.</p>
+        <p className="text-[10px] text-white/22">{t("noActivities")}</p>
       ) : (
         <div className="overflow-hidden rounded-lg border border-white/[0.07]">
           <table className="w-full text-[10px]">
             <thead>
               <tr className="border-b border-white/[0.06]">
-                <th className="px-3 py-1.5 text-left text-[9px] font-bold uppercase tracking-widest text-white/22">Code</th>
-                <th className="px-3 py-1.5 text-left text-[9px] font-bold uppercase tracking-widest text-white/22">Name</th>
-                <th className="px-3 py-1.5 text-left text-[9px] font-bold uppercase tracking-widest text-white/22">Discipline</th>
-                <th className="px-3 py-1.5 text-center text-[9px] font-bold uppercase tracking-widest text-white/22">Active</th>
+                <th className="px-3 py-1.5 text-left text-[9px] font-bold uppercase tracking-widest text-white/22">{t("labelCode")}</th>
+                <th className="px-3 py-1.5 text-left text-[9px] font-bold uppercase tracking-widest text-white/22">{t("labelName")}</th>
+                <th className="px-3 py-1.5 text-left text-[9px] font-bold uppercase tracking-widest text-white/22">{t("labelDiscipline")}</th>
+                <th className="px-3 py-1.5 text-center text-[9px] font-bold uppercase tracking-widest text-white/22">{t("labelActive")}</th>
               </tr>
             </thead>
             <tbody>
@@ -552,7 +555,10 @@ function ActivitiesPanel({ companyId }: { companyId: number }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 function TimeAdminPanel() {
+  const t = useTranslations("timeAdmin");
+  const router = useRouter();
   const { companyId } = useUserContext();
+  const [moduleCheck, setModuleCheck] = useState<"pending" | "allowed" | "blocked">("pending");
   const [tab, setTab] = useState<AdminTab>("projects");
   const [projects, setProjects] = useState<TimeProject[]>([]);
   const [loading, setLoading] = useState(true);
@@ -560,13 +566,51 @@ function TimeAdminPanel() {
   const [editingProject, setEditingProject] = useState<TimeProject | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Guard: Time Allocation is an add-on module. If it is not installed for this
+  // company, deny access entirely — no data, no UI — and bounce to /mywork.
+  useEffect(() => {
+    if (!companyId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API}/admin/portal-config/${companyId}`, {
+          headers: getAuthHeaders(),
+        });
+        if (!res.ok) {
+          if (!cancelled) {
+            setModuleCheck("blocked");
+            router.replace("/mywork");
+          }
+          return;
+        }
+        const cfg = await res.json();
+        const enabled: string[] = cfg?.derived?.enabled_modules ?? [];
+        if (!enabled.includes("time_allocation")) {
+          if (!cancelled) {
+            setModuleCheck("blocked");
+            router.replace("/mywork");
+          }
+          return;
+        }
+        if (!cancelled) setModuleCheck("allowed");
+      } catch {
+        if (!cancelled) {
+          setModuleCheck("blocked");
+          router.replace("/mywork");
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [companyId, router]);
+
   const loadProjects = useCallback(async () => {
     if (!companyId) return;
+    if (moduleCheck !== "allowed") return;
     setLoading(true);
     const res = await fetch(`${API}/time/${companyId}/projects`);
     if (res.ok) setProjects(await res.json());
     setLoading(false);
-  }, [companyId]);
+  }, [companyId, moduleCheck]);
 
   useEffect(() => { loadProjects(); }, [loadProjects]);
 
@@ -593,22 +637,30 @@ function TimeAdminPanel() {
     }
   }
 
+  if (moduleCheck !== "allowed") {
+    return (
+      <div className="flex h-[100dvh] items-center justify-center bg-zinc-950 text-white/40">
+        <Loader2 className="h-5 w-5 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden bg-zinc-950 text-white">
       {/* Header */}
       <div className="flex h-9 shrink-0 items-center border-b border-white/[0.06] px-4">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">Time Tracking Setup</span>
+        <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">{t("pageTitle")}</span>
         <div className="ml-8 flex gap-1">
-          {(["projects", "activities"] as AdminTab[]).map((t) => (
+          {(["projects", "activities"] as AdminTab[]).map((tabKey) => (
             <button
-              key={t}
+              key={tabKey}
               type="button"
-              onClick={() => setTab(t)}
+              onClick={() => setTab(tabKey)}
               className={`rounded px-3 py-1 text-[9px] font-bold uppercase tracking-widest transition-colors ${
-                tab === t ? "bg-white/[0.07] text-white/65" : "text-white/25 hover:text-white/45"
+                tab === tabKey ? "bg-white/[0.07] text-white/65" : "text-white/25 hover:text-white/45"
               }`}
             >
-              {t === "projects" ? "Projects" : "Activities"}
+              {tabKey === "projects" ? t("tabProjects") : t("tabActivities")}
             </button>
           ))}
         </div>
@@ -618,13 +670,13 @@ function TimeAdminPanel() {
         {tab === "projects" && (
           <>
             <div className="mb-4 flex items-center gap-2">
-              <h2 className="text-[11px] font-semibold text-white/50">Projects</h2>
+              <h2 className="text-[11px] font-semibold text-white/50">{t("projectsHeading")}</h2>
               <button
                 type="button"
                 onClick={() => { setShowNewProject(true); setEditingProject(null); }}
                 className="ml-auto flex items-center gap-1.5 rounded bg-indigo-600/60 px-3 py-1.5 text-[10px] font-semibold text-white/90 hover:bg-indigo-600/80"
               >
-                <Plus className="h-3 w-3" /> New Project
+                <Plus className="h-3 w-3" /> {t("newProject")}
               </button>
             </div>
 
@@ -633,7 +685,7 @@ function TimeAdminPanel() {
               <div className="mb-4 rounded-lg border border-indigo-500/20 bg-indigo-900/[0.06] p-4">
                 <div className="mb-3 flex items-center justify-between">
                   <span className="text-[10px] font-semibold text-white/50">
-                    {editingProject ? "Edit Project" : "New Project"}
+                    {editingProject ? t("editProject") : t("newProject")}
                   </span>
                   <button
                     type="button"
@@ -657,7 +709,7 @@ function TimeAdminPanel() {
                 <Loader2 className="h-5 w-5 animate-spin text-white/20" />
               </div>
             ) : projects.length === 0 ? (
-              <p className="py-8 text-center text-[11px] text-white/22">No projects yet.</p>
+              <p className="py-8 text-center text-[11px] text-white/22">{t("noProjects")}</p>
             ) : (
               <div className="space-y-2">
                 {projects.map((p) => (

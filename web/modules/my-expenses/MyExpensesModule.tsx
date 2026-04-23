@@ -22,6 +22,7 @@ import EmployeeExpenseList from "@/components/employee/EmployeeExpenseList";
 import EmployeeExpenseDetail from "@/components/employee/EmployeeExpenseDetail";
 import { useMyWorkContext } from "@/context/MyWorkContext";
 import { useUserContext } from "@/context/UserContext";
+import { getAuthHeaders } from "@/lib/session";
 import { MODULE_IDS, deriveExpenseDecision } from "@/lib/my-work/expenseDecision";
 import {
   type ExtractedData,
@@ -138,7 +139,7 @@ export default function MyExpensesModule() {
   // for doc completeness / parsed XML) and re-broadcasts to context so
   // the Copilot assistant and deriveExpenseDecision see the full picture.
   const loadDraftDocs = useCallback(async (expenseId: number) => {
-    const headers = { "X-User-Id": userIdStr ?? "1" };
+    const headers = { ...getAuthHeaders() };
 
     // Mark loading — seed a stub if this is a new selection.
     setDraftState((prev) =>
@@ -277,7 +278,7 @@ export default function MyExpensesModule() {
 
   const loadExpenses = useCallback((selectNewest = false, preferExpenseId?: number) => {
     setLoading(true);
-    fetch(`${API}/expenses/`, { headers: { "X-User-Id": userIdStr ?? "1" } })
+    fetch(`${API}/expenses/`, { headers: { ...getAuthHeaders() } })
       .then((r) => r.json())
       .then((data: Expense[]) => {
         setExpenses(data);
@@ -313,7 +314,7 @@ export default function MyExpensesModule() {
         const content = await file.text().catch(() => "");
         const res = await fetch(`${API}/expenses/documents`, {
           method:  "POST",
-          headers: { "Content-Type": "application/json", "X-User-Id": userIdStr ?? "1" },
+          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
           body:    JSON.stringify({ company_id: cid, filename: file.name, content_text: content }),
         });
         if (!res.ok) return null;
@@ -373,7 +374,7 @@ export default function MyExpensesModule() {
     try {
       const res = await fetch(`${API}/expenses/`, {
         method:  "POST",
-        headers: { "Content-Type": "application/json", "X-User-Id": userIdStr ?? "1" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body:    JSON.stringify({
           company_id:   cid,
           amount:       parseFloat(simpleAmount),

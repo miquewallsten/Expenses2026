@@ -7,6 +7,7 @@ import {
   FileText, Filter, Search, Send, SlidersHorizontal, TrendingUp, X,
 } from "lucide-react";
 import { useUserContext } from "@/context/UserContext";
+import { getAuthHeaders } from "@/lib/session";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -353,7 +354,7 @@ export default function MyReportsModule() {
     const load = async () => {
       setLoading(true); setError(null);
       try {
-        const r = await fetch(`${API}/expenses/`, { headers: { "X-User-Id": user.userIdStr ?? "1" } });
+        const r = await fetch(`${API}/expenses/`, { headers: { ...getAuthHeaders() } });
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const data = await r.json();
         setExpenses(data);

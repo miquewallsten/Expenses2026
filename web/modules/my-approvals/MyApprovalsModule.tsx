@@ -14,6 +14,7 @@ import ReviewActionBar from "@/components/review/ReviewActionBar";
 import StatusNextAction from "@/components/my-work/StatusNextAction";
 import { useMyWorkContext } from "@/context/MyWorkContext";
 import { useUserContext } from "@/context/UserContext";
+import { getAuthHeaders } from "@/lib/session";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
 import {
   MODULE_IDS,
@@ -264,7 +265,7 @@ function ApprovalDetail({
 
 export default function MyApprovalsModule() {
   const { effectiveConfig } = useMyWorkContext();
-  const { userIdStr, companyId } = useUserContext();
+  const { companyId } = useUserContext();
   const t = useTranslations("manager");
 
   const [expenses,       setExpenses]       = useState<Expense[]>([]);
@@ -287,7 +288,6 @@ export default function MyApprovalsModule() {
     hasDetail: showDetail,
   });
 
-  const uid = userIdStr ?? "1";
   const cid = companyId ?? 1;
 
   // ── Decision context ──────────────────────────────────────────────────────
@@ -312,7 +312,7 @@ export default function MyApprovalsModule() {
     setListLoading(true);
     try {
       const data = await fetch(`${API}/manager/queue/${cid}`, {
-        headers: { "X-User-Id": uid },
+        headers: { ...getAuthHeaders() },
       })
         .then((r) => r.ok ? r.json() : { items: [], summary: null })
         .catch(() => ({ items: [], summary: null })) as { items: Expense[]; summary: QueueSummary };
@@ -324,7 +324,7 @@ export default function MyApprovalsModule() {
     } finally {
       setListLoading(false);
     }
-  }, [cid, uid]);
+  }, [cid]);
 
   useEffect(() => {
     if (effectiveConfig?.derived.manager_flow_enabled) {
@@ -341,13 +341,13 @@ export default function MyApprovalsModule() {
     if (!selected) { setManagerActions(null); return; }
     let cancelled = false;
     fetch(`${API}/expenses/actions/${selected.id}?portal_role=manager`, {
-      headers: { "X-User-Id": uid },
+      headers: { ...getAuthHeaders() },
     })
       .then((r) => r.ok ? r.json() : null)
       .then((d) => { if (!cancelled) setManagerActions(d?.actions ?? null); })
       .catch(() => { if (!cancelled) setManagerActions(null); });
     return () => { cancelled = true; };
-  }, [selected?.id, uid]);
+  }, [selected?.id]);
 
   // ── Post-action refresh ────────────────────────────────────────────────────
   //
@@ -358,7 +358,7 @@ export default function MyApprovalsModule() {
     setListLoading(true);
     try {
       const data = await fetch(`${API}/manager/queue/${cid}`, {
-        headers: { "X-User-Id": uid },
+        headers: { ...getAuthHeaders() },
       })
         .then((r) => r.ok ? r.json() : { items: [], summary: null })
         .catch(() => ({ items: [], summary: null })) as { items: Expense[]; summary: QueueSummary };
@@ -377,7 +377,7 @@ export default function MyApprovalsModule() {
         // Still in queue (returned-to-draft, etc.) — refresh in-place.
         setSelected(items.find((e) => e.id === actedId)!);
         const ar = await fetch(`${API}/expenses/actions/${actedId}?portal_role=manager`, {
-          headers: { "X-User-Id": uid },
+          headers: { ...getAuthHeaders() },
         });
         if (ar.ok) { const ad = await ar.json(); setManagerActions(ad?.actions ?? null); }
       } else {
@@ -386,14 +386,14 @@ export default function MyApprovalsModule() {
         const next   = items[oldIdx] ?? items[Math.max(0, oldIdx - 1)] ?? items[0];
         setSelected(next);
         const ar = await fetch(`${API}/expenses/actions/${next.id}?portal_role=manager`, {
-          headers: { "X-User-Id": uid },
+          headers: { ...getAuthHeaders() },
         });
         if (ar.ok) { const ad = await ar.json(); setManagerActions(ad?.actions ?? null); }
       }
     } finally {
       setListLoading(false);
     }
-  }, [cid, uid]);
+  }, [cid]);
 
   // ── Actions ────────────────────────────────────────────────────────────────
 
@@ -404,7 +404,7 @@ export default function MyApprovalsModule() {
     try {
       const r = await fetch(`${API}/expenses/review-actions/${selected.id}/${endpoint}`, {
         method: "POST",
-        headers: { "X-User-Id": uid },
+        headers: { ...getAuthHeaders() },
       });
       if (r.ok) {
         await postActionRefresh(selected.id);
@@ -417,7 +417,7 @@ export default function MyApprovalsModule() {
     } finally {
       setActing(false);
     }
-  }, [selected, uid, postActionRefresh]);
+  }, [selected, postActionRefresh]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
 

@@ -12,6 +12,7 @@ import {
 } from "@/lib/expenses/xmlExtract";
 import { useTranslations } from "next-intl";
 import XmlDetailModal from "@/components/employee/XmlDetailModal";
+import { getAuthHeaders } from "@/lib/session";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -179,8 +180,22 @@ const TAG_COLOR_CLS: Record<string, string> = {
   zinc: "border-white/10 bg-white/[0.04] text-white/40",
 };
 
+const TAG_DOT_CLS: Record<string, string> = {
+  sky: "bg-sky-400/70",
+  indigo: "bg-indigo-400/70",
+  violet: "bg-violet-400/70",
+  emerald: "bg-emerald-400/70",
+  amber: "bg-amber-400/70",
+  rose: "bg-rose-400/70",
+  zinc: "bg-zinc-500/70",
+};
+
 function tagCls(color: string | null | undefined): string {
   return TAG_COLOR_CLS[color ?? "zinc"] ?? TAG_COLOR_CLS.zinc;
+}
+
+function tagDotCls(color: string | null | undefined): string {
+  return TAG_DOT_CLS[color ?? "zinc"] ?? TAG_DOT_CLS.zinc;
 }
 
 function parseTags(raw: string | null | undefined): string[] {
@@ -273,7 +288,7 @@ export default function EmployeeExpenseDetail({
 
   // ── Fetch org units + predefined tags ─────────────────────────────────────
   useEffect(() => {
-    const h = { "X-User-Id": "1" };
+    const h = getAuthHeaders();
     Promise.all([
       fetch(`${API}/expenses/projects?company_id=1`,     { headers: h }).then((r) => r.ok ? r.json() : []),
       fetch(`${API}/expenses/clients?company_id=1`,      { headers: h }).then((r) => r.ok ? r.json() : []),
@@ -286,7 +301,7 @@ export default function EmployeeExpenseDetail({
   useEffect(() => {
     if (!expenseId) { setExpense(null); return; }
     setLoadingExpense(true);
-    fetch(`${API}/expenses/${expenseId}`, { headers: { "X-User-Id": "1" } })
+    fetch(`${API}/expenses/${expenseId}`, { headers: getAuthHeaders() })
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
         setExpense(data);
@@ -300,8 +315,8 @@ export default function EmployeeExpenseDetail({
   // ── Fetch allocations ──────────────────────────────────────────────────────
   const loadAllocations = useCallback(async (id: number) => {
     const [r, sr] = await Promise.all([
-      fetch(`${API}/expenses/allocations/${id}`,         { headers: { "X-User-Id": "1" } }),
-      fetch(`${API}/expenses/allocations-summary/${id}`, { headers: { "X-User-Id": "1" } }),
+      fetch(`${API}/expenses/allocations/${id}`,         { headers: getAuthHeaders() }),
+      fetch(`${API}/expenses/allocations-summary/${id}`, { headers: getAuthHeaders() }),
     ]);
     if (r.ok) {
       const data: AllocationRead[] = await r.json();
@@ -327,8 +342,8 @@ export default function EmployeeExpenseDetail({
   useEffect(() => {
     if (!expenseId) { setEmployeeActions(null); setExpenseBlockers(null); return; }
     Promise.all([
-      fetch(`${API}/expenses/actions/${expenseId}?portal_role=employee`, { headers: { "X-User-Id": "1" } }),
-      fetch(`${API}/expenses/blockers/${expenseId}`, { headers: { "X-User-Id": "1" } }),
+      fetch(`${API}/expenses/actions/${expenseId}?portal_role=employee`, { headers: getAuthHeaders() }),
+      fetch(`${API}/expenses/blockers/${expenseId}`, { headers: getAuthHeaders() }),
     ]).then(async ([ar, br]) => {
       if (ar.ok) { const d = await ar.json(); setEmployeeActions(d?.actions ?? null); }
       if (br.ok) setExpenseBlockers(await br.json());
@@ -339,7 +354,7 @@ export default function EmployeeExpenseDetail({
   useEffect(() => {
     if (!expenseId) { setValidations([]); return; }
     setLoadingVals(true);
-    fetch(`${API}/expenses/${expenseId}/validations`, { headers: { "X-User-Id": "1" } })
+    fetch(`${API}/expenses/${expenseId}/validations`, { headers: getAuthHeaders() })
       .then((r) => r.ok ? r.json() : [])
       .then(setValidations)
       .catch(() => setValidations([]))
@@ -352,7 +367,7 @@ export default function EmployeeExpenseDetail({
     setSavingTitle(true);
     try {
       const r = await fetch(`${API}/expenses/${expense.id}`, {
-        method: "PATCH", headers: { "Content-Type": "application/json", "X-User-Id": "1" },
+        method: "PATCH", headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ description: titleDraft.trim() }),
       });
       if (r.ok) { const u = await r.json(); setExpense(u); onExpenseUpdated?.(u); }
@@ -365,7 +380,7 @@ export default function EmployeeExpenseDetail({
     setSavingNotes(true);
     try {
       const r = await fetch(`${API}/expenses/${expense.id}`, {
-        method: "PATCH", headers: { "Content-Type": "application/json", "X-User-Id": "1" },
+        method: "PATCH", headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ notes }),
       });
       if (r.ok) { const u = await r.json(); setExpense(u); onExpenseUpdated?.(u); }
@@ -377,13 +392,13 @@ export default function EmployeeExpenseDetail({
     setDeletingDocId(docId);
     try {
       const r = await fetch(`${API}/expenses/documents/${docId}`, {
-        method: "DELETE", headers: { "X-User-Id": "1" },
+        method: "DELETE", headers: getAuthHeaders(),
       });
       if (r.ok) {
         setConfirmDeleteDocId(null);
         onDocRefreshNeeded();
         // refresh validations (some may reference deleted doc)
-        const vr = await fetch(`${API}/expenses/${expenseId}/validations`, { headers: { "X-User-Id": "1" } });
+        const vr = await fetch(`${API}/expenses/${expenseId}/validations`, { headers: getAuthHeaders() });
         if (vr.ok) setValidations(await vr.json());
       }
     } finally { setDeletingDocId(null); }
@@ -394,7 +409,7 @@ export default function EmployeeExpenseDetail({
     if (!expense) return;
     setActiveTags(newTags);
     await fetch(`${API}/expenses/${expense.id}`, {
-      method: "PATCH", headers: { "Content-Type": "application/json", "X-User-Id": "1" },
+      method: "PATCH", headers: { "Content-Type": "application/json", ...getAuthHeaders() },
       body: JSON.stringify({ tags: JSON.stringify(newTags) }),
     });
   };
@@ -421,7 +436,7 @@ export default function EmployeeExpenseDetail({
       try {
         const content = await file.text().catch(() => "");
         const r = await fetch(`${API}/expenses/documents`, {
-          method: "POST", headers: { "Content-Type": "application/json", "X-User-Id": "1" },
+          method: "POST", headers: { "Content-Type": "application/json", ...getAuthHeaders() },
           body: JSON.stringify({ company_id: 1, expense_id: expenseId, filename: file.name, content_text: content }),
         });
         setUploadQueue((prev) => prev.map((e) => e.localId === localId ? { ...e, status: r.ok ? "done" : "error" } : e));
@@ -430,9 +445,9 @@ export default function EmployeeExpenseDetail({
       }
     }));
     onDocRefreshNeeded();
-    const er = await fetch(`${API}/expenses/${expenseId}`, { headers: { "X-User-Id": "1" } });
+    const er = await fetch(`${API}/expenses/${expenseId}`, { headers: getAuthHeaders() });
     if (er.ok) { const u: Expense = await er.json(); setExpense(u); onExpenseUpdated?.(u); }
-    const br = await fetch(`${API}/expenses/blockers/${expenseId}`, { headers: { "X-User-Id": "1" } });
+    const br = await fetch(`${API}/expenses/blockers/${expenseId}`, { headers: getAuthHeaders() });
     if (br.ok) setExpenseBlockers(await br.json());
     setTimeout(() => setUploadQueue((prev) => prev.filter((e) => e.status !== "done")), 1500);
   };
@@ -448,14 +463,14 @@ export default function EmployeeExpenseDetail({
         .map((row) => ({ project_id: row.project_id, client_id: row.client_id, cost_center_id: row.cost_center_id, percent: parseFloat(row.percent) || 100 }));
       if (!items.length) return; // nothing selected yet, skip silently
       const r = await fetch(`${API}/expenses/allocation-edit/${expenseId}`, {
-        method: "PUT", headers: { "Content-Type": "application/json", "X-User-Id": "1" },
+        method: "PUT", headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ items }),
       });
       if (!r.ok) { const b = await r.json().catch(() => ({})); setAllocSaveError(b?.detail ?? `Save failed (${r.status}).`); return; }
       await loadAllocations(expenseId);
       const [br, ar] = await Promise.all([
-        fetch(`${API}/expenses/blockers/${expenseId}`, { headers: { "X-User-Id": "1" } }),
-        fetch(`${API}/expenses/actions/${expenseId}?portal_role=employee`, { headers: { "X-User-Id": "1" } }),
+        fetch(`${API}/expenses/blockers/${expenseId}`, { headers: getAuthHeaders() }),
+        fetch(`${API}/expenses/actions/${expenseId}?portal_role=employee`, { headers: getAuthHeaders() }),
       ]);
       if (br.ok) setExpenseBlockers(await br.json());
       if (ar.ok) { const d = await ar.json(); setEmployeeActions(d?.actions ?? null); }
@@ -479,7 +494,7 @@ export default function EmployeeExpenseDetail({
     if (!expense) return;
     setDeletingDraft(true);
     try {
-      const r = await fetch(`${API}/expenses/${expense.id}`, { method: "DELETE", headers: { "X-User-Id": "1" } });
+      const r = await fetch(`${API}/expenses/${expense.id}`, { method: "DELETE", headers: getAuthHeaders() });
       if (r.ok) onDeleted?.();
     } catch { /* silent */ } finally { setDeletingDraft(false); }
   };
@@ -489,10 +504,10 @@ export default function EmployeeExpenseDetail({
     if (!expense) return;
     setSubmittingExpense(true); setSubmitError(null);
     try {
-      const r = await fetch(`${API}/expenses/review-actions/${expense.id}/submit`, { method: "POST", headers: { "X-User-Id": "1" } });
+      const r = await fetch(`${API}/expenses/review-actions/${expense.id}/submit`, { method: "POST", headers: getAuthHeaders() });
       if (r.ok) {
         const u = await r.json(); setExpense(u); onExpenseUpdated?.(u);
-        const ar = await fetch(`${API}/expenses/actions/${expense.id}?portal_role=employee`, { headers: { "X-User-Id": "1" } });
+        const ar = await fetch(`${API}/expenses/actions/${expense.id}?portal_role=employee`, { headers: getAuthHeaders() });
         if (ar.ok) { const d = await ar.json(); setEmployeeActions(d?.actions ?? null); }
       } else {
         const b = await r.json().catch(() => ({}));
@@ -687,7 +702,11 @@ export default function EmployeeExpenseDetail({
                         ? "border-indigo-500/70 text-white/80"
                         : "border-transparent text-white/35 hover:text-white/55"
                     }`}>
-                    {tab === "validations" ? td("validations") : tab === "documents" ? td("documents") : td("overview")}
+                    {(() => {
+                      if (tab === "validations") return td("validations");
+                      if (tab === "documents")   return td("documents");
+                      return td("overview");
+                    })()}
                   </button>
                 ))}
                 {expense.status === "draft" && (
@@ -863,7 +882,7 @@ export default function EmployeeExpenseDetail({
                                 .map((p) => (
                                   <button key={p.id} type="button" onMouseDown={() => addTag(p.name)}
                                     className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[10px] text-white/55 hover:bg-white/[0.06]">
-                                    <span className={`inline-flex h-1.5 w-1.5 rounded-full ${p.color === "sky" ? "bg-sky-400/70" : p.color === "indigo" ? "bg-indigo-400/70" : p.color === "emerald" ? "bg-emerald-400/70" : p.color === "amber" ? "bg-amber-400/70" : p.color === "rose" ? "bg-rose-400/70" : p.color === "violet" ? "bg-violet-400/70" : "bg-zinc-500/70"}`} />
+                                    <span className={`inline-flex h-1.5 w-1.5 rounded-full ${tagDotCls(p.color)}`} />
                                     {p.name}
                                   </button>
                                 ))}
@@ -926,7 +945,11 @@ export default function EmployeeExpenseDetail({
                     <Upload className={`h-3.5 w-3.5 shrink-0 ${dragOver ? "text-indigo-400/70" : "text-white/20"}`} />
                     <div className="min-w-0">
                       <p className="text-[11px] text-white/45">
-                        {xmlRequired && !hasXml ? td("uploadXmlCfdi") : pdfPairRequired && hasXml && !hasPdf ? td("uploadPdf") : td("uploadFile")}
+                        {(() => {
+                          if (xmlRequired && !hasXml) return td("uploadXmlCfdi");
+                          if (pdfPairRequired && hasXml && !hasPdf) return td("uploadPdf");
+                          return td("uploadFile");
+                        })()}
                       </p>
                       <p className="text-[10px] text-white/22">{td("uploadHint")}</p>
                     </div>

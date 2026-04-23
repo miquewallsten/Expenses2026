@@ -29,6 +29,7 @@ Supported Expense statuses (from packages.modules.expenses.models.expense):
 Any status not in this set is treated as unknown and all actions are denied.
 """
 
+from sqlalchemy import select as sa_select
 from sqlalchemy.orm import Session
 
 from packages.modules.expenses.models.document import ExpenseDocument
@@ -108,7 +109,7 @@ def get_validation_flags(db: Session, expense_id: int) -> dict:
         row[0]
         for row in (
             db.query(ValidationResult.status)
-            .filter(ValidationResult.document_id.in_(doc_ids))
+            .filter(ValidationResult.document_id.in_(sa_select(doc_ids.c.id)))
             .distinct()
             .all()
         )

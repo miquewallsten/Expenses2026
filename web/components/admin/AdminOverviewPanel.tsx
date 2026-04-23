@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactElement } from "react";
 import { useTranslations } from "next-intl";
 import {
   CheckCircle2,
@@ -12,6 +13,7 @@ import {
   GitBranch,
 } from "lucide-react";
 import { getPortalConfigConflicts } from "@/lib/portal-config-conflicts";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 
 type SetupSection =
   | "Company Setup"
@@ -57,32 +59,21 @@ const SECTION_CONFLICT_CODES: Record<SetupSection, string[]> = {
 
 function cardStatus(
   data: any,
+  savedMarker: unknown,
   conflictCodes: Set<string>,
   sectionCodes: string[]
 ): CardStatus {
-  if (!data || Object.keys(data).length === 0) return "unconfigured";
+  // A section is only "configured" once its signature field has been saved.
+  // The GET endpoints hydrate defaults even before the admin saves, so
+  // ``Object.keys(data).length`` alone is not a reliable signal.
+  if (!data || savedMarker == null || savedMarker === "") return "unconfigured";
   if (sectionCodes.some((c) => conflictCodes.has(c))) return "warn";
   return "ok";
 }
 
-function StatusBadge({ status, labels }: { status: CardStatus; labels: { ok: string; warn: string; unconfigured: string } }) {
-  if (status === "ok")
-    return (
-      <span className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-widest text-emerald-400/60">
-        <CheckCircle2 className="h-2.5 w-2.5" /> {labels.ok}
-      </span>
-    );
-  if (status === "warn")
-    return (
-      <span className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-widest text-amber-400/60">
-        <AlertTriangle className="h-2.5 w-2.5" /> {labels.warn}
-      </span>
-    );
-  return (
-    <span className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-widest text-white/20">
-      <Circle className="h-2.5 w-2.5" /> {labels.unconfigured}
-    </span>
-  );
+function CardStatusBadge({ status, labels }: { status: CardStatus; labels: { ok: string; warn: string; unconfigured: string } }): ReactElement {
+  const label = labels[status];
+  return <StatusBadge status={status} label={label} size="card" />;
 }
 
 function SetupCard({
@@ -112,8 +103,8 @@ function SetupCard({
     <button
       type="button"
       onClick={() => onEdit(section)}
-      className={`flex flex-col overflow-hidden rounded-lg border text-left transition-colors hover:border-white/[0.18] hover:bg-white/[0.015] ${
-        status === "warn" ? "border-amber-500/20" : "border-white/[0.07]"
+      className={`flex flex-col overflow-hidden rounded-lg border text-left transition-all hover:border-white/[0.20] hover:bg-white/[0.02] hover:shadow-lg ${
+        status === "warn" ? "border-amber-500/20" : "border-white/[0.08]"
       } ${fullWidth ? "col-span-2" : ""}`}
     >
       <div className="flex items-center justify-between border-b border-white/[0.05] bg-black/20 px-4 py-2.5">
@@ -121,7 +112,7 @@ function SetupCard({
           <span className="text-white/30">{icon}</span>
           <span className="text-[11px] font-semibold text-white/70">{sectionLabel}</span>
         </div>
-        <StatusBadge status={status} labels={statusLabels} />
+        <CardStatusBadge status={status} labels={statusLabels} />
       </div>
 
       <div className="flex-1">
@@ -182,10 +173,6 @@ export default function AdminOverviewPanel({
   const conflicts = getPortalConfigConflicts(portalConfig ?? {});
   const issueCount = conflicts.length;
   const conflictCodes = new Set(conflicts.map((c) => c.code));
-  // Count sections with no data at all — distinct from conflicts.
-  const unconfiguredCount = [companySetup, expensePolicy, accountingSetup, approvalSetup, workflowSetup].filter(
-    (d) => !d || Object.keys(d).length === 0
-  ).length;
 
   const b = (v: any) => (v === true ? "Yes" : v === false ? "No" : "—");
   const s = (v: any) => (v != null ? String(v).replace(/_/g, " ") : "—");
@@ -196,11 +183,24 @@ export default function AdminOverviewPanel({
   const ap = approvalSetup ?? {};
   const wf = workflowSetup ?? {};
 
-  const companyStatus  = cardStatus(cs, conflictCodes, SECTION_CONFLICT_CODES["Company Setup"]);
-  const expenseStatus  = cardStatus(ep, conflictCodes, SECTION_CONFLICT_CODES["Expense Policy"]);
-  const accountStatus  = cardStatus(ac, conflictCodes, SECTION_CONFLICT_CODES["Accounting Setup"]);
-  const approvalStatus = cardStatus(ap, conflictCodes, SECTION_CONFLICT_CODES["Approval Setup"]);
-  const workflowStatus = cardStatus(wf, conflictCodes, SECTION_CONFLICT_CODES["Workflow Setup"]);
+  // Saved-marker per section — the signature field that goes from null/"" to
+  // a value the first time the admin hits Save.
+  const companyMarker  = cs.display_name;
+  const expenseMarker  = ep.xml_required_mode;
+  const accountMarker  = ac.accounting_review_mode;
+  const approvalMarker = ap.approval_mode;
+  const workflowMarker = wf.default_expense_workflow_mode;
+
+  const companyStatus  = cardStatus(cs, companyMarker,  conflictCodes, SECTION_CONFLICT_CODES["Company Setup"]);
+  const expenseStatus  = cardStatus(ep, expenseMarker,  conflictCodes, SECTION_CONFLICT_CODES["Expense Policy"]);
+  const accountStatus  = cardStatus(ac, accountMarker,  conflictCodes, SECTION_CONFLICT_CODES["Accounting Setup"]);
+  const approvalStatus = cardStatus(ap, approvalMarker, conflictCodes, SECTION_CONFLICT_CODES["Approval Setup"]);
+  const workflowStatus = cardStatus(wf, workflowMarker, conflictCodes, SECTION_CONFLICT_CODES["Workflow Setup"]);
+
+  // Count sections with no saved marker — distinct from conflicts.
+  const unconfiguredCount = [
+    companyStatus, expenseStatus, accountStatus, approvalStatus, workflowStatus,
+  ].filter((st) => st === "unconfigured").length;
 
   // First section with a conflict, for the "Fix setup" button
   const fixTarget: SetupSection | null = (() => {

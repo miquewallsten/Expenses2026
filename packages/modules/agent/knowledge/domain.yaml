@@ -1,0 +1,100 @@
+# Core domain entities. Keep each entry terse — the agent gets these verbatim.
+entities:
+  expense:
+    name_es: Gasto
+    name_en: Expense
+    purpose: Registro de un desembolso de empleado, tarjeta o proveedor. Es la unidad central del sistema.
+    lifecycle: draft → submitted → manager_approved → approved → paid (o rejected en cualquier paso)
+    key_fields: [amount, currency, description, category_id, cost_center_id, project_id, employee_id, cfdi_uuid, status]
+    invariants:
+      - "amount > 0"
+      - "currency in {MXN, USD}"
+      - "approved requires non-null category_id and cfdi_uuid (si aplica CFDI)"
+    glossary:
+      - "Un 'gasto' puede venir de: formulario web, foto en WhatsApp, reconciliación AMEX, archivo PDF/XML."
+
+  cfdi:
+    name_es: CFDI
+    name_en: Tax receipt (Mexico)
+    purpose: XML fiscal del SAT que comprueba un gasto. Se empareja con un Expense por UUID/RFC/monto.
+    key_fields: [uuid, rfc_emisor, rfc_receptor, total, fecha, tipo (I|E|P)]
+    glossary:
+      - "Sin CFDI pareado un gasto NO puede incluirse en una Poliza."
+      - "CFDI tipo 'E' (egreso) es nota de crédito y reduce el total del gasto."
+
+  poliza:
+    name_es: Póliza contable
+    name_en: Accounting voucher
+    purpose: Bundle exportable al ERP; contiene N expenses + sus CFDIs + metadatos contables.
+    key_fields: [poliza_id, company_id, period, total, status, export_format]
+    glossary:
+      - "Una póliza agrupa gastos del mismo período y tipo contable."
+
+  approval_chain:
+    name_es: Cadena de aprobación
+    name_en: Approval chain
+    purpose: Secuencia ordenada de etapas (WorkflowStage) con reglas (monto, categoría, solicitante).
+    key_fields: [module_key, stages, transitions, rules]
+    glossary:
+      - "Una cadena puede ramificar: montos >$5000 van a director, el resto a manager."
+
+  workflow_stage:
+    name_es: Etapa de workflow
+    purpose: Un estado nombrado (ej. submitted, manager_approved).
+    key_fields: [stage_key, stage_name, stage_order, is_terminal]
+
+  workflow_transition:
+    name_es: Transición de workflow
+    purpose: Regla que lleva de una etapa a la siguiente (puede condicionar por rol, monto, categoría).
+    key_fields: [from_stage, to_stage, required_role, condition_json]
+
+  cost_center:
+    name_es: Centro de costos
+    purpose: Agrupación organizacional para imputar gastos (ej. "Marketing MX", "Operaciones US").
+    glossary:
+      - "Puede anidarse con parent_id."
+
+  client:
+    name_es: Cliente
+    purpose: Contraparte facturable. Se usa para imputar gastos reembolsables a un proyecto de cliente.
+
+  project:
+    name_es: Proyecto
+    purpose: Trabajo asignado, con presupuesto y client_id opcional. Los gastos/horas se imputan aquí.
+    key_fields: [project_code, name, client_id, budget, status]
+
+  legal_entity:
+    name_es: Entidad legal
+    purpose: RFC + razón social. Una empresa puede tener varias (holding + subsidiarias).
+    key_fields: [rfc, legal_name, is_default]
+
+  accounting_category:
+    name_es: Categoría contable
+    purpose: Cuenta/subcuenta SAT o interna para clasificar gastos (ej. "Viáticos nacionales").
+    key_fields: [code, name, parent_id, tax_type]
+
+  expense_policy:
+    name_es: Política de gastos
+    purpose: "Reglas declarativas: límites por categoría, umbrales que exigen aprobación extra, comprobación CFDI requerida."
+
+  report_cycle:
+    name_es: Ciclo de reportes
+    purpose: Configuración de cuándo se cierran y envían reportes (weekly/biweekly/monthly + día/hora).
+
+  channel_settings:
+    name_es: Canales de entrada
+    purpose: Configuración de WhatsApp y correo para ingestar gastos. Secrets nunca leídos, solo escritos.
+
+  archive_config:
+    name_es: Configuración de archivo
+    purpose: Plantilla de nombre de archivo + destino (S3/Azure/local) para guardar comprobantes y pólizas.
+
+roles_and_capabilities:
+  - role: admin
+    can: [configurar todo, aprobar cualquier etapa, exportar pólizas, gestionar usuarios]
+  - role: manager
+    can: [aprobar gastos asignados, ver equipo]
+  - role: employee
+    can: [crear gastos propios, ver propios, subir comprobantes]
+  - role: accountant
+    can: [exportar pólizas, mapear categorías, emparejar CFDIs]

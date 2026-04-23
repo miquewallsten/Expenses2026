@@ -1,0 +1,12 @@
+name: remember_preference
+prompt: "Recuerda que el umbral de aprobación del director es 10000."
+persona: admin
+canned_tool_calls:
+  - name: remember
+    arguments:
+      key: "director_threshold"
+      value: 10000
+      kind: "decision"
+final_content: "Listo."
+expect_tools: [remember]
+expect_no_filler: true

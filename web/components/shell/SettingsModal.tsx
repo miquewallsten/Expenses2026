@@ -131,16 +131,18 @@ function SettingsDetail({ sectionKey }: { sectionKey: SectionKey }) {
         )}
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex gap-2">
+        {/* Primary */}
         <button
           onClick={handleSave}
-          className="rounded border border-indigo-500/30 bg-indigo-500/10 px-4 py-1.5 text-xs font-medium text-indigo-200 hover:bg-indigo-500/20 transition-colors"
+          className="rounded-md bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-indigo-500 active:bg-indigo-700"
         >
           {saved ? `✓ ${t("saved")}` : t("saveChanges")}
         </button>
+        {/* Tertiary */}
         <button
           onClick={handleReset}
-          className="rounded px-4 py-1.5 text-xs font-medium text-white/35 hover:text-white/60 transition-colors"
+          className="rounded-md px-4 py-1.5 text-xs font-medium text-white/40 transition-colors hover:bg-white/[0.06] hover:text-white/65"
         >
           {t("resetDefault")}
         </button>
@@ -183,7 +185,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
         role="dialog"
         aria-modal="true"
         aria-label={tn("settings")}
-        className="fixed inset-y-0 right-0 z-50 flex w-[min(680px,100vw)] flex-col overflow-hidden bg-zinc-950 shadow-2xl ring-1 ring-white/[0.07]"
+        className="animate-slide-in-right fixed inset-y-0 right-0 z-50 flex w-[min(680px,100vw)] flex-col overflow-hidden bg-zinc-950 shadow-2xl ring-1 ring-white/[0.07]"
       >
         {/* Header */}
         <div className="flex h-9 shrink-0 items-center justify-between border-b border-white/[0.07] px-4">
@@ -215,10 +217,10 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
                 <li key={key}>
                   <button
                     onClick={() => setActiveSection(key)}
-                    className={`w-full px-3 py-2 text-left text-xs transition-colors ${
+                    className={`relative w-full rounded-md px-3 py-2 text-left text-xs transition-colors ${
                       activeSection === key
-                        ? "bg-white/10 text-white font-semibold"
-                        : "text-white/50 hover:text-white/75 hover:bg-white/5"
+                        ? "bg-indigo-600/[0.15] font-semibold text-white"
+                        : "text-white/45 hover:bg-white/[0.06] hover:text-white/75"
                     }`}
                   >
                     {t(`sections.${key}` as Parameters<typeof t>[0])}

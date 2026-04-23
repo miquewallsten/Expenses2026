@@ -1,0 +1,15 @@
+name: create_approval_chain_basic
+prompt: "Crea una cadena de aprobación para expenses con tres etapas."
+persona: admin
+canned_tool_calls:
+  - name: create_approval_chain
+    arguments:
+      module_key: "expenses"
+      stages:
+        - { stage_key: "draft",     stage_name: "Borrador",  is_terminal: false }
+        - { stage_key: "submitted", stage_name: "Enviado",   is_terminal: false }
+        - { stage_key: "approved",  stage_name: "Aprobado",  is_terminal: true  }
+final_content: "Listo."
+expect_tools: [create_approval_chain]
+expect_receipt_for: create_approval_chain
+expect_no_filler: true

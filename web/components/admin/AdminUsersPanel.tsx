@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Users, Plus, Trash2, Loader2, Check, ChevronRight,
   ToggleLeft, ToggleRight, ArrowLeft,
@@ -11,6 +12,12 @@ const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 const ROLES = ["employee", "manager", "accounting", "admin", "executive", "secretary"] as const;
 type RoleOption = (typeof ROLES)[number];
+
+// Display labels for roles that differ from the stored key
+const ROLE_LABELS: Record<string, string> = {
+  secretary: "Executive Assistant",
+};
+const roleLabel = (r: string) => ROLE_LABELS[r] ?? (r.charAt(0).toUpperCase() + r.slice(1));
 
 interface UserFull {
   id: number;
@@ -67,7 +74,7 @@ function RoleBadge({ role }: { role: string }) {
   const cls = ROLE_COLORS[role] ?? ROLE_COLORS.employee;
   return (
     <span className={`rounded border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${cls}`}>
-      {role}
+      {roleLabel(role)}
     </span>
   );
 }
@@ -138,6 +145,7 @@ function UserDetailPanel({
   const [error,         setError]         = useState<string | null>(null);
   const [confirmDel,    setConfirmDel]    = useState(false);
   const [deleting,      setDeleting]      = useState(false);
+  const tu = useTranslations("admin.users");
 
   const handleSave = async () => {
     setSaving(true); setError(null);
@@ -213,34 +221,34 @@ function UserDetailPanel({
       <div className="px-4 py-4 space-y-5">
         {/* Identity */}
         <div>
-          <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.12em] text-white/18">Identity</p>
+          <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.12em] text-white/18">{tu("sectionIdentity")}</p>
           <div className="grid grid-cols-2 gap-2">
-            <div>{fieldLabel("Full Name")}{inp(fullName, setFullName, "Full name")}</div>
-            <div>{fieldLabel("Job Title")}{inp(jobTitle, setJobTitle, "e.g. Finance Manager")}</div>
-            <div>{fieldLabel("Department")}{inp(department, setDepartment, "e.g. Finance")}</div>
-            <div>{fieldLabel("Phone")}{inp(phone, setPhone, "+52 55 1234 5678")}</div>
+            <div>{fieldLabel(tu("fieldFullName"))}{inp(fullName, setFullName, tu("invitePlaceholderName"))}</div>
+            <div>{fieldLabel(tu("fieldJobTitle"))}{inp(jobTitle, setJobTitle, "e.g. Finance Manager")}</div>
+            <div>{fieldLabel(tu("fieldDepartment"))}{inp(department, setDepartment, "e.g. Finance")}</div>
+            <div>{fieldLabel(tu("fieldPhone"))}{inp(phone, setPhone, "+52 55 1234 5678")}</div>
           </div>
         </div>
 
         {/* Role & Status */}
         <div>
-          <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.12em] text-white/18">Role & Status</p>
+          <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.12em] text-white/18">{tu("sectionRoleStatus")}</p>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              {fieldLabel("Role")}
+              {fieldLabel(tu("fieldRole"))}
               <select value={role} onChange={(e) => setRole(e.target.value as RoleOption)}
                 className="w-full rounded border border-white/[0.08] bg-zinc-900 px-2.5 py-1.5 text-[11px] text-white/70 outline-none focus:border-indigo-500/40">
-                {ROLES.map((r) => <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>)}
+                {ROLES.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}
               </select>
             </div>
             <div>
-              {fieldLabel("Status")}
+              {fieldLabel(tu("fieldStatus"))}
               <button type="button" onClick={() => setIsActive(!isActive)}
                 className={`inline-flex items-center gap-1.5 rounded border px-3 py-1.5 text-[10px] font-semibold transition-colors ${
                   isActive ? "border-emerald-500/25 bg-emerald-500/[0.08] text-emerald-300/70" : "border-white/[0.07] bg-white/[0.03] text-white/30"
                 }`}>
                 <StatusDot active={isActive} />
-                {isActive ? "Active" : "Inactive"}
+                {isActive ? tu("statusActive") : tu("statusInactive")}
               </button>
             </div>
           </div>
@@ -248,22 +256,22 @@ function UserDetailPanel({
 
         {/* Organisation */}
         <div>
-          <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.12em] text-white/18">Organisation</p>
+          <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.12em] text-white/18">{tu("sectionOrganisation")}</p>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              {fieldLabel("Legal Entity")}
+              {fieldLabel(tu("fieldLegalEntity"))}
               <select value={legalEntityId} onChange={(e) => setLegalEntityId(e.target.value)}
                 className="w-full rounded border border-white/[0.08] bg-zinc-900 px-2.5 py-1.5 text-[11px] text-white/70 outline-none focus:border-indigo-500/40">
-                <option value="">— None —</option>
+                <option value="">{tu("entityNone")}</option>
                 {legalEntities.map((e) => <option key={e.id} value={String(e.id)}>{e.entity_name}</option>)}
               </select>
             </div>
             {role === "secretary" && (
               <div>
-                {fieldLabel("Delegates for (Boss)")}
+                {fieldLabel(tu("fieldDelegatesFor"))}
                 <select value={delegatesForId} onChange={(e) => setDelegatesForId(e.target.value)}
                   className="w-full rounded border border-white/[0.08] bg-zinc-900 px-2.5 py-1.5 text-[11px] text-white/70 outline-none focus:border-indigo-500/40">
-                  <option value="">— Not assigned —</option>
+                  <option value="">{tu("entityNotAssigned")}</option>
                   {bossCandidates.map((u) => <option key={u.id} value={String(u.id)}>{u.full_name} ({u.role})</option>)}
                 </select>
               </div>
@@ -274,7 +282,7 @@ function UserDetailPanel({
         {/* Projects */}
         {projects.length > 0 && (
           <div>
-            <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.12em] text-white/18">Project Assignments</p>
+            <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.12em] text-white/18">{tu("sectionProjects")}</p>
             <div className="flex flex-wrap gap-1.5">
               {projects.map((p) => {
                 const on = projectIds.includes(p.id);
@@ -294,23 +302,23 @@ function UserDetailPanel({
 
         {/* Capabilities */}
         <div>
-          <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.12em] text-white/18">Capabilities</p>
+          <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.12em] text-white/18">{tu("sectionCapabilities")}</p>
           <div className="flex flex-wrap gap-1.5">
-            <FlagToggle label="Create Expenses"        value={canExpenses}   onChange={setCanExpenses} />
-            <FlagToggle label="Corporate Expenses"     value={canCorp}       onChange={setCanCorp} />
-            <FlagToggle label="Invoice Corporation"    value={canInvoice}    onChange={setCanInvoice} />
-            <FlagToggle label="Amex Reconciler"        value={isAmex}        onChange={setIsAmex} />
-            <FlagToggle label="Time Tracking"          value={timeTracking}  onChange={setTimeTracking} />
-            <FlagToggle label="Executive Reporting"    value={execReporting} onChange={setExecReporting} />
+            <FlagToggle label={tu("capCreateExpenses")}    value={canExpenses}   onChange={setCanExpenses} />
+            <FlagToggle label={tu("capCorporateExpenses")}  value={canCorp}       onChange={setCanCorp} />
+            <FlagToggle label={tu("capInvoiceCorporation")} value={canInvoice}    onChange={setCanInvoice} />
+            <FlagToggle label={tu("capAmexReconciler")}     value={isAmex}        onChange={setIsAmex} />
+            <FlagToggle label={tu("capTimeTracking")}       value={timeTracking}  onChange={setTimeTracking} />
+            <FlagToggle label={tu("capExecReporting")}      value={execReporting} onChange={setExecReporting} />
           </div>
           {role === "secretary" && (
-            <p className="mt-2 text-[9px] text-white/20">Secretary — sees boss's expense assignments on sign-in and can submit on their behalf.</p>
+            <p className="mt-2 text-[9px] text-white/20">{tu("secretaryNote")}</p>
           )}
         </div>
 
         {/* Timestamps */}
         <div className="grid grid-cols-3 gap-2 rounded-lg border border-white/[0.06] bg-white/[0.015] p-3 text-center">
-          {[["Created", user.created_at], ["Invited", user.invited_at], ["Last Login", user.last_login_at]].map(([label, value]) => (
+          {[[tu("timestampCreated"), user.created_at], [tu("timestampInvited"), user.invited_at], [tu("timestampLastLogin"), user.last_login_at]].map(([label, value]) => (
             <div key={label as string}>
               <p className="text-[9px] uppercase tracking-widest text-white/20">{label}</p>
               <p className="mt-0.5 font-mono text-[9.5px] text-white/40">{formatDate(value as string | null)}</p>
@@ -327,11 +335,11 @@ function UserDetailPanel({
               confirmDel ? "border-red-500/30 bg-red-600/15 text-red-400/80" : "border-white/[0.07] text-white/25 hover:text-red-400/60"
             }`}>
             {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
-            {confirmDel ? "Confirm remove" : "Remove"}
+            {confirmDel ? tu("actionConfirmRemove") : tu("actionRemove")}
           </button>
           <button type="button" onClick={handleSave} disabled={saving}
             className="inline-flex items-center gap-1.5 rounded border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] font-semibold text-white/60 transition-colors hover:bg-white/[0.09] disabled:opacity-50">
-            {saving ? <><Loader2 className="h-3 w-3 animate-spin" /> Saving…</> : <><Check className="h-3 w-3" /> Save</>}
+            {saving ? <><Loader2 className="h-3 w-3 animate-spin" /> {tu("inviteCreating")}…</> : <><Check className="h-3 w-3" /> {tu("update")}</>}
           </button>
         </div>
       </div>
@@ -359,9 +367,11 @@ function InviteForm({
   const [sendInvite, setSendInvite] = useState(false);
   const [saving,   setSaving]   = useState(false);
   const [error,    setError]    = useState<string | null>(null);
+  const tu = useTranslations("admin.users");
+  const tc = useTranslations("common");
 
   const handleCreate = async () => {
-    if (!email.trim() || !fullName.trim()) { setError("Email and full name are required."); return; }
+    if (!email.trim() || !fullName.trim()) { setError(tu("inviteErrorRequired")); return; }
     setSaving(true); setError(null);
     try {
       const res = await fetch(`${API}/users/`, {
@@ -390,46 +400,46 @@ function InviteForm({
   return (
     <div className="mt-3 overflow-hidden rounded-lg border border-white/[0.07] bg-white/[0.02]">
       <div className="border-b border-white/[0.05] px-4 py-2.5">
-        <p className="text-[9px] font-bold uppercase tracking-widest text-white/22">Invite new user</p>
+        <p className="text-[9px] font-bold uppercase tracking-widest text-white/22">{tu("inviteFormTitle")}</p>
       </div>
       <div className="px-4 py-3">
         <div className="grid grid-cols-2 gap-2 mb-3">
-          <input type="text" placeholder="Full name" value={fullName} onChange={(e) => setFullName(e.target.value)}
+          <input type="text" placeholder={tu("invitePlaceholderName")} value={fullName} onChange={(e) => setFullName(e.target.value)}
             className="rounded border border-white/[0.08] bg-zinc-900 px-2 py-1.5 text-[11px] text-white/70 placeholder:text-white/20 outline-none focus:border-indigo-500/40" />
-          <input type="email" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)}
+          <input type="email" placeholder={tu("invitePlaceholderEmail")} value={email} onChange={(e) => setEmail(e.target.value)}
             className="rounded border border-white/[0.08] bg-zinc-900 px-2 py-1.5 font-mono text-[10px] text-white/55 placeholder:text-white/20 outline-none focus:border-indigo-500/40" />
-          <input type="text" placeholder="Job title (optional)" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)}
+          <input type="text" placeholder={tu("invitePlaceholderJobTitle")} value={jobTitle} onChange={(e) => setJobTitle(e.target.value)}
             className="rounded border border-white/[0.08] bg-zinc-900 px-2 py-1.5 text-[11px] text-white/70 placeholder:text-white/20 outline-none focus:border-indigo-500/40" />
           <select value={role} onChange={(e) => setRole(e.target.value as RoleOption)}
             className="rounded border border-white/[0.08] bg-zinc-900 px-2 py-1.5 text-[10px] text-white/55 outline-none focus:border-indigo-500/40">
-            {ROLES.map((r) => <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>)}
+            {ROLES.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}
           </select>
           {legalEntities.length > 0 && (
             <select value={entityId} onChange={(e) => setEntityId(e.target.value)}
               className="rounded border border-white/[0.08] bg-zinc-900 px-2 py-1.5 text-[10px] text-white/55 outline-none focus:border-indigo-500/40">
-              <option value="">Legal entity (optional)</option>
+              <option value="">{tu("inviteLegalEntityOptional")}</option>
               {legalEntities.map((e) => <option key={e.id} value={String(e.id)}>{e.entity_name}</option>)}
             </select>
           )}
           {role === "secretary" && bossCandidates.length > 0 && (
             <select value={delegatesForId} onChange={(e) => setDelegatesForId(e.target.value)}
               className="rounded border border-white/[0.08] bg-zinc-900 px-2 py-1.5 text-[10px] text-white/55 outline-none focus:border-indigo-500/40">
-              <option value="">Delegates for (boss)</option>
+              <option value="">{tu("inviteDelegatesFor")}</option>
               {bossCandidates.map((u) => <option key={u.id} value={String(u.id)}>{u.full_name}</option>)}
             </select>
           )}
         </div>
         <label className="mb-3 flex cursor-pointer items-center gap-2">
           <input type="checkbox" checked={sendInvite} onChange={(e) => setSendInvite(e.target.checked)} className="h-3 w-3 accent-indigo-500" />
-          <span className="text-[10px] text-white/40">Send magic link invite immediately</span>
+          <span className="text-[10px] text-white/40">{tu("inviteSendLink")}</span>
         </label>
         {error && <p className="mb-2 text-[10px] text-red-400/60">{error}</p>}
         <div className="flex items-center gap-2">
           <button type="button" onClick={handleCreate} disabled={saving}
             className="inline-flex items-center gap-1.5 rounded border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] font-semibold text-white/60 transition-colors hover:bg-white/[0.09] disabled:opacity-50">
-            {saving ? <><Loader2 className="h-3 w-3 animate-spin" /> Creating…</> : "Create user"}
+            {saving ? <><Loader2 className="h-3 w-3 animate-spin" /> {tu("inviteCreating")}…</> : tu("inviteCreateUser")}
           </button>
-          <button type="button" onClick={onCancel} className="text-[10px] text-white/30 hover:text-white/55">Cancel</button>
+          <button type="button" onClick={onCancel} className="text-[10px] text-white/30 hover:text-white/55">{tc("cancel")}</button>
         </div>
       </div>
     </div>
@@ -439,6 +449,7 @@ function InviteForm({
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function AdminUsersPanel({ companyId, users, onUsersChanged }: Props) {
+  const tu = useTranslations("admin.users");
   const [selectedUser,  setSelectedUser]  = useState<UserFull | null>(null);
   const [showForm,      setShowForm]      = useState(false);
   const [projects,      setProjects]      = useState<Project[]>([]);
@@ -473,9 +484,9 @@ export default function AdminUsersPanel({ companyId, users, onUsersChanged }: Pr
   }
 
   const roleGroups = [
-    { label: "Executives & Management", roles: ["admin", "executive", "manager"] },
-    { label: "Operations",              roles: ["secretary", "accounting"] },
-    { label: "Employees",               roles: ["employee"] },
+    { label: tu("groupExecManagement"), roles: ["admin", "executive", "manager"] },
+    { label: tu("groupOperations"),      roles: ["secretary", "accounting"] },
+    { label: tu("groupEmployees"),        roles: ["employee"] },
   ].map((g) => ({ ...g, users: users.filter((u) => g.roles.includes(u.role)) }));
 
   const allGrouped = new Set(roleGroups.flatMap((g) => g.users.map((u) => u.id)));
@@ -486,7 +497,7 @@ export default function AdminUsersPanel({ companyId, users, onUsersChanged }: Pr
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 text-white/25" />
-          <h2 className="text-sm font-semibold text-white">Users</h2>
+          <h2 className="text-sm font-semibold text-white">{tu("title")}</h2>
           <span className="rounded border border-white/[0.08] bg-white/[0.04] px-1.5 py-0.5 font-mono text-[10px] text-white/30">
             {users.filter((u) => u.is_active).length} / {users.length}
           </span>
@@ -495,7 +506,7 @@ export default function AdminUsersPanel({ companyId, users, onUsersChanged }: Pr
           <button type="button" onClick={() => setShowForm(true)}
             className="inline-flex items-center gap-1.5 rounded border border-white/[0.09] bg-white/[0.03] px-2.5 py-1 text-[10px] font-semibold text-white/40 transition-colors hover:border-white/20 hover:text-white/70">
             <Plus className="h-3 w-3" />
-            Invite User
+            {tu("inviteUser")}
           </button>
         )}
       </div>
@@ -503,18 +514,18 @@ export default function AdminUsersPanel({ companyId, users, onUsersChanged }: Pr
       {users.length === 0 && !showForm ? (
         <div className="rounded-lg border border-white/[0.07] bg-white/[0.02] px-4 py-8 text-center">
           <Users className="mx-auto mb-2 h-6 w-6 text-white/10" />
-          <p className="text-xs text-white/20 italic">No users yet. Invite the first user above.</p>
+          <p className="text-xs text-white/20 italic">{tu("noUsers")}</p>
         </div>
       ) : (
         <div className="overflow-hidden rounded-lg border border-white/[0.07]">
           {/* Column headers */}
           <div className="grid grid-cols-[1fr_1.5fr_110px_80px_20px] items-center gap-x-3 border-b border-white/[0.06] bg-white/[0.025] px-4 py-1.5">
-            {["Name", "Email", "Role", "Flags", ""].map((h, i) => (
+            {[tu("colName"), tu("colEmail"), tu("colRole"), tu("colFlags"), ""].map((h, i) => (
               <span key={i} className="text-[8.5px] font-bold uppercase tracking-[0.12em] text-white/18">{h}</span>
             ))}
           </div>
 
-          {[...roleGroups, ...(others.length > 0 ? [{ label: "Other", roles: [], users: others }] : [])].map((group) => {
+          {[...roleGroups, ...(others.length > 0 ? [{ label: tu("groupOther"), roles: [], users: others }] : [])].map((group) => {
             if (group.users.length === 0) return null;
             return (
               <div key={group.label}>

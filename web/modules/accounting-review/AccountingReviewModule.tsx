@@ -25,6 +25,7 @@ import {
 import ReviewActionBar from "@/components/review/ReviewActionBar";
 import { useMyWorkContext } from "@/context/MyWorkContext";
 import { useUserContext } from "@/context/UserContext";
+import { getAuthHeaders } from "@/lib/session";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
 import {
   MODULE_IDS,
@@ -665,13 +666,13 @@ function AccountingDetail({
 // ---------------------------------------- Module 
 export default function AccountingReviewModule() {
   const { effectiveConfig } = useMyWorkContext();
-  const { userIdStr, companyId } = useUserContext();
+  const { companyId } = useUserContext();
   const tm = useTranslations("manager");
 
-  const uid = userIdStr ?? "1";
   const cid = companyId ?? 1;
 
-  // ---------------------------------------- State   const [expenses,       setExpenses]       = useState<Expense[]>([]);
+  // ---------------------------------------- State
+  const [expenses,       setExpenses]       = useState<Expense[]>([]);
   const [summary,        setSummary]        = useState<QueueSummary | null>(null);
   const [selected,       setSelected]       = useState<Expense | null>(null);
   const [listLoading,    setListLoading]    = useState(true);
@@ -720,7 +721,7 @@ export default function AccountingReviewModule() {
     setListLoading(true);
     try {
       const data = await fetch(`${API}/accounting/queue/${cid}`, {
-        headers: { "X-User-Id": uid },
+        headers: { ...getAuthHeaders() },
       })
         .then((r) => r.ok ? r.json() : { items: [], summary: null })
         .catch(() => ({ items: [], summary: null })) as { items: Expense[]; summary: QueueSummary };
@@ -732,7 +733,7 @@ export default function AccountingReviewModule() {
     } finally {
       setListLoading(false);
     }
-  }, [cid, uid]);
+  }, [cid]);
 
   useEffect(() => {
     if (effectiveConfig?.derived.accounting_flow_enabled) {
@@ -762,11 +763,11 @@ export default function AccountingReviewModule() {
     let cancelled = false;
 
     Promise.all([
-      fetch(`${API}/expenses/actions/${selected.id}?portal_role=accounting`, { headers: { "X-User-Id": uid } })
+      fetch(`${API}/expenses/actions/${selected.id}?portal_role=accounting`, { headers: { ...getAuthHeaders() } })
         .then((r) => r.ok ? r.json() : null).catch(() => null),
-      fetch(`${API}/expenses/blockers/${selected.id}`, { headers: { "X-User-Id": uid } })
+      fetch(`${API}/expenses/blockers/${selected.id}`, { headers: { ...getAuthHeaders() } })
         .then((r) => r.ok ? r.json() : null).catch(() => null),
-      fetch(`${API}/expenses/allocations-summary/${selected.id}`, { headers: { "X-User-Id": uid } })
+      fetch(`${API}/expenses/allocations-summary/${selected.id}`, { headers: { ...getAuthHeaders() } })
         .then((r) => r.ok ? r.json() : null).catch(() => null),
     ]).then(([a, b, alloc]) => {
       if (cancelled) return;
@@ -776,14 +777,14 @@ export default function AccountingReviewModule() {
     });
 
     return () => { cancelled = true; };
-  }, [selected?.id, uid]);
+  }, [selected?.id]);
 
   // ---------------------------------------- Post-action refresh 
   const postActionRefresh = useCallback(async (actedId: number) => {
     setListLoading(true);
     try {
       const data = await fetch(`${API}/accounting/queue/${cid}`, {
-        headers: { "X-User-Id": uid },
+        headers: { ...getAuthHeaders() },
       })
         .then((r) => r.ok ? r.json() : { items: [], summary: null })
         .catch(() => ({ items: [], summary: null })) as { items: Expense[]; summary: QueueSummary };
@@ -796,19 +797,19 @@ export default function AccountingReviewModule() {
 
       if (items.some((e) => e.id === actedId)) {
         setSelected(items.find((e) => e.id === actedId)!);
-        const ar = await fetch(`${API}/expenses/actions/${actedId}?portal_role=accounting`, { headers: { "X-User-Id": uid } });
+        const ar = await fetch(`${API}/expenses/actions/${actedId}?portal_role=accounting`, { headers: { ...getAuthHeaders() } });
         if (ar.ok) { const ad = await ar.json(); setActions(ad?.actions ?? null); }
       } else {
         const oldIdx = expensesRef.current.findIndex((e) => e.id === actedId);
         const next   = items[oldIdx] ?? items[Math.max(0, oldIdx - 1)] ?? items[0];
         setSelected(next);
-        const ar = await fetch(`${API}/expenses/actions/${next.id}?portal_role=accounting`, { headers: { "X-User-Id": uid } });
+        const ar = await fetch(`${API}/expenses/actions/${next.id}?portal_role=accounting`, { headers: { ...getAuthHeaders() } });
         if (ar.ok) { const ad = await ar.json(); setActions(ad?.actions ?? null); }
       }
     } finally {
       setListLoading(false);
     }
-  }, [cid, uid]);
+  }, [cid]);
 
   // ---------------------------------------- Actions 
   const handleAction = useCallback(async (endpoint: string, label: string) => {
@@ -818,7 +819,7 @@ export default function AccountingReviewModule() {
     try {
       const r = await fetch(`${API}/expenses/review-actions/${selected.id}/${endpoint}`, {
         method: "POST",
-        headers: { "X-User-Id": uid },
+        headers: { ...getAuthHeaders() },
       });
       if (r.ok) {
         await postActionRefresh(selected.id);
@@ -831,7 +832,7 @@ export default function AccountingReviewModule() {
     } finally {
       setActing(false);
     }
-  }, [selected, uid, postActionRefresh]);
+  }, [selected, postActionRefresh]);
 
   const handleSaveAccountCode = useCallback(async () => {
     if (!selected) return;
@@ -840,7 +841,7 @@ export default function AccountingReviewModule() {
     try {
       const r = await fetch(`${API}/accounting/work/${selected.id}/assign-account-code`, {
         method:  "POST",
-        headers: { "Content-Type": "application/json", "X-User-Id": uid },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body:    JSON.stringify({ account_code: accountCodeDraft }),
       });
       if (r.ok) {
@@ -854,7 +855,7 @@ export default function AccountingReviewModule() {
     } finally {
       setCodesSaving(false);
     }
-  }, [selected, uid, accountCodeDraft, postActionRefresh]);
+  }, [selected, accountCodeDraft, postActionRefresh]);
 
   const handleClearAccountCode = useCallback(async () => {
     if (!selected) return;
@@ -862,7 +863,7 @@ export default function AccountingReviewModule() {
     setCodesError(null);
     try {
       const r = await fetch(`${API}/accounting/work/${selected.id}/clear-account-code`, {
-        method: "POST", headers: { "X-User-Id": uid },
+        method: "POST", headers: { ...getAuthHeaders() },
       });
       if (r.ok) {
         setAccountCodeDraft("");
@@ -876,7 +877,7 @@ export default function AccountingReviewModule() {
     } finally {
       setCodesSaving(false);
     }
-  }, [selected, uid, postActionRefresh]);
+  }, [selected, postActionRefresh]);
 
   const handleGeneratePoliza = useCallback(async () => {
     if (!selected) return;
@@ -885,7 +886,7 @@ export default function AccountingReviewModule() {
     setPolizaError(null);
     try {
       const r = await fetch(`${API}/accounting/work/${selected.id}/generate-poliza`, {
-        method: "POST", headers: { "X-User-Id": uid },
+        method: "POST", headers: { ...getAuthHeaders() },
       });
       if (r.ok) {
         setPolizaResult(await r.json());
@@ -898,7 +899,7 @@ export default function AccountingReviewModule() {
     } finally {
       setPolizaGenerating(false);
     }
-  }, [selected, uid]);
+  }, [selected]);
 
   // ---------------------------------------- Render 
   return (

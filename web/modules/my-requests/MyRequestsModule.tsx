@@ -1176,7 +1176,7 @@ export default function MyRequestsModule() {
                 onSubmit={handleSubmit}
                 submitting={submitting}
                 researchResults={researchResults}
-                companyId={companyId ?? ""}
+                companyId={String(companyId ?? "")}
                 userId={userIdStr ?? ""}
               />
             </div>
@@ -1189,7 +1189,7 @@ export default function MyRequestsModule() {
               requestNo={reqNo}
               requestDate={selected.created_at}
               requesterName={displayName ?? selected.requester_name ?? "—"}
-              companyId={companyId ?? ""}
+              companyId={String(companyId ?? "")}
               data={(selected.details ?? {}) as Parameters<typeof PurchaseRequisitionForm>[0]["data"]}
               attachments={attachments}
               logoUrl={logoUrl}
@@ -1289,7 +1289,7 @@ export default function MyRequestsModule() {
               requestNo={reqNo}
               requestDate={selected.created_at}
               requesterName={selected.requester_name ?? displayName ?? "—"}
-              companyId={companyId ?? ""}
+              companyId={String(companyId ?? "")}
               data={(selected.details ?? {}) as Parameters<typeof PurchaseRequisitionForm>[0]["data"]}
               attachments={attachments}
               logoUrl={logoUrl}

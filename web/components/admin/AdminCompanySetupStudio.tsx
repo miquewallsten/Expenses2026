@@ -406,6 +406,30 @@ export default function AdminCompanySetupStudio({
   const t = useTranslations("admin.companySetup");
   const tc = useTranslations("common");
 
+  const INDUSTRY_OPTIONS_T = [
+    { value: "technology",    label: t("industryTechnology") },
+    { value: "financial",     label: t("industryFinancial") },
+    { value: "retail",        label: t("industryRetail") },
+    { value: "manufacturing", label: t("industryManufacturing") },
+    { value: "consulting",    label: t("industryConsulting") },
+    { value: "construction",  label: t("industryConstruction") },
+    { value: "healthcare",    label: t("industryHealthcare") },
+    { value: "education",     label: t("industryEducation") },
+    { value: "logistics",     label: t("industryLogistics") },
+    { value: "media",         label: t("industryMedia") },
+    { value: "other",         label: t("industryOther") },
+  ];
+
+  const ALLOC_DIM_OPTIONS_T = [
+    { value: "project",                    label: t("allocProject") },
+    { value: "client",                     label: t("allocClient") },
+    { value: "cost_center",                label: t("allocCostCenter") },
+    { value: "project_client",             label: t("allocProjectClient") },
+    { value: "project_cost_center",        label: t("allocProjectCostCenter") },
+    { value: "client_cost_center",         label: t("allocClientCostCenter") },
+    { value: "project_client_cost_center", label: t("allocProjectClientCostCenter") },
+  ];
+
   // ── Derived summary (inside component so we can use t()) ──────────────────
   function buildSummary(form: Record<string, any>): string {
     const parts: string[] = [];
@@ -413,16 +437,16 @@ export default function AdminCompanySetupStudio({
     if (form.employee_count_range) parts.push(form.employee_count_range);
     if (form.country_code) parts.push(form.country_code);
     if (form.base_currency) parts.push(form.base_currency);
-    if (form.operates_multi_entity) parts.push("multi-entity");
-    if (form.operates_multi_country) parts.push("multi-country");
+    if (form.operates_multi_entity) parts.push(t("summaryMultiEntity"));
+    if (form.operates_multi_country) parts.push(t("summaryMultiCountry"));
     const enabledCount = [
       "expenses_module_enabled", "time_allocation_module_enabled",
-      "subcontractor_module_enabled", "reimbursements_module_enabled",
+      "subcontractor_module_enabled",
       "approvals_module_enabled", "accounting_module_enabled",
       "archive_module_enabled", "ai_copilot_enabled",
     ].filter((k) => form[k]).length;
-    parts.push(`${enabledCount} modules active`);
-    return parts.join(" · ") || "No setup configured yet.";
+    parts.push(t("summaryModulesActive", { count: enabledCount }));
+    return parts.join(" · ") || t("summaryNoSetup");
   }
 
   // ── Inline warnings ──────────────────────────────────────────────────────
@@ -709,7 +733,7 @@ export default function AdminCompanySetupStudio({
             label={t("industry")}
             description={t("industryDesc")}
             value={form.industry ?? ""}
-            options={INDUSTRY_OPTIONS}
+            options={INDUSTRY_OPTIONS_T}
             onChange={(v) => set("industry", v)}
           />
         </Panel>
@@ -767,7 +791,7 @@ export default function AdminCompanySetupStudio({
             label={t("allocationDimensions")}
             description={t("allocationDimensionsDesc")}
             value={form.allocation_dimensions ?? "project_client_cost_center"}
-            options={ALLOC_DIM_OPTIONS}
+            options={ALLOC_DIM_OPTIONS_T}
             onChange={(v) => set("allocation_dimensions", v)}
           />
           <ToggleRow
@@ -787,7 +811,6 @@ export default function AdminCompanySetupStudio({
             { key: "expenses_module_enabled",          label: t("moduleExpenses"),          desc: t("moduleExpensesDesc") },
             { key: "time_allocation_module_enabled",   label: t("moduleTimeAllocation"),    desc: t("moduleTimeAllocationDesc") },
             { key: "subcontractor_module_enabled",     label: t("moduleSubcontractors"),    desc: t("moduleSubcontractorsDesc") },
-            { key: "reimbursements_module_enabled",    label: t("moduleReimbursements"),    desc: t("moduleReimbursementsDesc") },
             { key: "approvals_module_enabled",         label: t("moduleApprovals"),         desc: t("moduleApprovalsDesc") },
             { key: "accounting_module_enabled",        label: t("moduleAccounting"),        desc: t("moduleAccountingDesc") },
             { key: "archive_module_enabled",           label: t("moduleArchive"),           desc: t("moduleArchiveDesc") },

@@ -57,10 +57,10 @@ export default function MyWorkSidebar({ onSelect }: MyWorkSidebarProps) {
               onSelect?.();
             }}
             aria-current={isActive ? "page" : undefined}
-            className={`flex min-h-[44px] items-center gap-3 rounded px-2.5 py-2 text-left text-sm font-medium transition-colors md:min-h-0 md:gap-2.5 md:py-1.5 md:text-[11px] ${
+            className={`relative flex min-h-[44px] items-center gap-3 rounded-md px-2.5 py-2 text-left text-sm font-medium transition-colors md:min-h-0 md:gap-2.5 md:py-1.5 md:text-[11px] ${
               isActive
-                ? "bg-white/[0.08] text-white/80"
-                : "text-white/35 hover:bg-white/[0.04] hover:text-white/55"
+                ? "bg-indigo-600/[0.15] text-white shadow-[inset_2px_0_0_0_theme(colors.indigo.400/60%)]"
+                : "text-white/45 hover:bg-white/[0.06] hover:text-white/75"
             }`}
           >
             {Icon && (

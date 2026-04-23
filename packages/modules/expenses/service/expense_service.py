@@ -52,7 +52,7 @@ def _resolve_category_code(
     return candidate if exists else None
 
 
-def _change_expense_status(db: Session, expense_id: int, new_status: str) -> Expense | None:
+def _change_expense_status(db: Session, expense_id: int, new_status: str, actor_user_id: int | None = None) -> Expense | None:
     expense = db.query(Expense).filter(Expense.id == expense_id).first()
 
     if not expense:
@@ -72,7 +72,7 @@ def _change_expense_status(db: Session, expense_id: int, new_status: str) -> Exp
         entity_type="expense",
         entity_id=expense.id,
         action="status_change",
-        actor_user_id=None,
+        actor_user_id=actor_user_id,
         detail_text=f"{old_status} -> {new_status}",
     )
     return expense

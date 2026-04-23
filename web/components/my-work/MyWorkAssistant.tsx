@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Bot, CheckCircle2, Send, TriangleAlert } from "lucide-react";
 import { useMyWorkContext } from "@/context/MyWorkContext";
-import { useUserContext } from "@/context/UserContext";
+import { getAuthHeaders } from "@/lib/session";
 import {
   MODULE_IDS,
   deriveExpenseDecision,
@@ -264,7 +264,6 @@ function Chip({
 
 export default function MyWorkAssistant() {
   const myWork = useMyWorkContext();
-  const user   = useUserContext();
   const locale = useLocale();
   const ta = useTranslations("myWork.assistant");
   const tp = useTranslations("myWork.assistant.prompts");
@@ -396,7 +395,7 @@ export default function MyWorkAssistant() {
 
       const headers = {
         "Content-Type": "application/json",
-        "X-User-Id": user.userIdStr ?? "1",
+        ...getAuthHeaders(),
       };
 
       Promise.all([
@@ -469,7 +468,7 @@ export default function MyWorkAssistant() {
 
       const res = await fetch(`${API}/ai/chat/stream`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-User-Id": user.userIdStr ?? "1" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ prompt: prompt.trim(), locale, context, history }),
       });
 

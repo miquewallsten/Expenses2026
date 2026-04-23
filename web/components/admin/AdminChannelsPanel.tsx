@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { getAuthHeaders } from "@/lib/session";
 import {
   MessageSquare, Mail, CheckCircle2, XCircle, AlertTriangle,
   RefreshCw, Send, Settings2, ChevronRight, ArrowDownLeft, ArrowUpRight,
@@ -158,7 +159,7 @@ function WhatsAppSettingsForm({
       if (!body.wa_access_token) delete body.wa_access_token; // don't overwrite with blank
       const r = await fetch(`${API}/admin/channels/settings/${companyId}/whatsapp`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify(body),
       });
       if (!r.ok) throw new Error(await r.text());
@@ -177,7 +178,7 @@ function WhatsAppSettingsForm({
     try {
       const r = await fetch(`${API}/admin/channels/test/${companyId}/whatsapp`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ recipient: testRecipient }),
       });
       const d = await r.json();
@@ -341,7 +342,7 @@ function EmailSettingsForm({
       if (!body.email_webhook_secret) delete body.email_webhook_secret;
       const r = await fetch(`${API}/admin/channels/settings/${companyId}/email`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify(body),
       });
       if (!r.ok) throw new Error(await r.text());
@@ -360,7 +361,7 @@ function EmailSettingsForm({
     try {
       const r = await fetch(`${API}/admin/channels/test/${companyId}/email`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ recipient: testRecipient }),
       });
       const d = await r.json();
@@ -512,7 +513,7 @@ function MessageLog({ channel, companyId }: { channel: ChannelTab | "all"; compa
       const params = new URLSearchParams();
       if (channel !== "all") params.set("channel", channel);
       params.set("limit", "80");
-      const r = await fetch(`${API}/admin/channels/messages/${companyId}?${params}`);
+      const r = await fetch(`${API}/admin/channels/messages/${companyId}?${params}`, { headers: getAuthHeaders() });
       if (r.ok) setMessages(await r.json());
     } finally {
       setLoading(false);
@@ -625,8 +626,8 @@ export default function AdminChannelsPanel({ companyId }: { companyId: number })
 
   useEffect(() => {
     Promise.all([
-      fetch(`${API}/admin/channels/settings/${companyId}`).then((r) => r.ok ? r.json() : null),
-      fetch(`${API}/admin/channels/stats/${companyId}`).then((r) => r.ok ? r.json() : null),
+      fetch(`${API}/admin/channels/settings/${companyId}`, { headers: getAuthHeaders() }).then((r) => r.ok ? r.json() : null),
+      fetch(`${API}/admin/channels/stats/${companyId}`, { headers: getAuthHeaders() }).then((r) => r.ok ? r.json() : null),
     ]).then(([s, st]) => {
       setSettings(s);
       setStats(st);

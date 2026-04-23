@@ -12,7 +12,6 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp, GripVertical, Loader2, LogIn } from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -33,6 +32,12 @@ interface DevUser {
 // ── Role config ───────────────────────────────────────────────────────────────
 
 const ROLE_ORDER = ["admin", "executive", "manager", "accounting", "secretary", "employee"];
+
+// Display labels for roles that differ from the stored key
+const ROLE_LABELS: Record<string, string> = { secretary: "Executive Assistant" };
+const ROLE_BADGE_ABBR: Record<string, string> = { secretary: "EA" };
+const roleLabel = (r: string) => ROLE_LABELS[r] ?? (r.charAt(0).toUpperCase() + r.slice(1));
+const roleBadge = (r: string) => ROLE_BADGE_ABBR[r] ?? r.slice(0, 3);
 
 const ROLE_COLOR: Record<string, string> = {
   admin:      "text-rose-300/70",
@@ -55,8 +60,6 @@ const ROLE_BADGE: Record<string, string> = {
 // ── Inner panel (always mounts, gate is outside) ──────────────────────────────
 
 function DevLoginPanel() {
-  const router = useRouter();
-
   // ── Position (draggable) ────────────────────────────────────────────────────
   const [pos, setPos] = useState({ x: 16, y: 16 }); // bottom-left
   const dragging = useRef(false);
@@ -123,7 +126,9 @@ function DevLoginPanel() {
 
       const dest = user.role === "admin" ? "/admin" : "/mywork";
 
-      router.push(dest);
+      // Hard navigate so the new localStorage identity is picked up by all
+      // context providers (they read localStorage on mount, not on every render).
+      window.location.href = dest;
     } catch (e: unknown) {
       setLoginError((e as Error)?.message ?? "Login failed");
     } finally {
@@ -182,7 +187,7 @@ function DevLoginPanel() {
                 {/* Role group header */}
                 <div className="border-b border-white/[0.04] bg-white/[0.015] px-2.5 py-1">
                   <span className={`text-[8px] font-bold uppercase tracking-[0.12em] ${ROLE_COLOR[role] ?? "text-white/30"}`}>
-                    {role}
+                    {roleLabel(role)}
                   </span>
                 </div>
 
@@ -205,7 +210,7 @@ function DevLoginPanel() {
                       <p className="truncate font-mono text-[8.5px] text-white/25">{user.email}</p>
                     </div>
                     <span className={`shrink-0 rounded border px-1 py-0.5 text-[7.5px] font-semibold uppercase tracking-wide ${ROLE_BADGE[role] ?? ROLE_BADGE.employee}`}>
-                      {role.slice(0, 3)}
+                      {roleBadge(role)}
                     </span>
                   </button>
                 ))}
@@ -227,7 +232,16 @@ function DevLoginPanel() {
 // ── Exported gate component ───────────────────────────────────────────────────
 
 export default function DevLoginCheat() {
-  // Compile-time + env-var gate — no panel in production
-  if (!IS_DEV || DEV_CHEAT === "false") return null;
+  const [demoEnabled, setDemoEnabled] = useState(false);
+
+  useEffect(() => {
+    const check = () => setDemoEnabled(localStorage.getItem("demo_mode_enabled") === "true");
+    check();
+    window.addEventListener("storage", check);
+    return () => window.removeEventListener("storage", check);
+  }, []);
+
+  const isDevMode = IS_DEV || DEV_CHEAT === "true";
+  if (!isDevMode && !demoEnabled) return null;
   return <DevLoginPanel />;
 }

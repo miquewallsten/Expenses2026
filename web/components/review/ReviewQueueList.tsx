@@ -1,7 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { AlertTriangle, ReceiptText } from "lucide-react";
+import { AlertTriangle, ReceiptText, ClipboardList } from "lucide-react";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -14,23 +15,29 @@ interface ReviewQueueListProps {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const STATUS_CLS: Record<string, string> = {
-  draft:            "border-zinc-500/30 bg-zinc-500/15 text-zinc-400",
-  submitted:        "border-sky-500/30 bg-sky-500/15 text-sky-300",
-  manager_approved: "border-violet-500/30 bg-violet-500/15 text-violet-300",
-  approved:         "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
-  rejected:         "border-red-500/30 bg-red-500/15 text-red-300",
-};
-function statusCls(s: string) {
-  return STATUS_CLS[s] ?? "border-zinc-500/30 bg-zinc-500/15 text-zinc-400";
-}
-
 function formatDate(iso: string) {
   try {
     return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
   } catch {
     return iso;
   }
+}
+
+// ── Skeleton row ──────────────────────────────────────────────────────────────
+
+function SkeletonRow() {
+  return (
+    <li className="border-b border-white/[0.05] px-4 py-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="skeleton h-2.5 w-3/5 rounded" />
+        <div className="skeleton h-4 w-16 rounded-full" />
+      </div>
+      <div className="mt-1.5 flex items-center justify-between gap-2">
+        <div className="skeleton h-2 w-24 rounded" />
+        <div className="skeleton h-2 w-12 rounded" />
+      </div>
+    </li>
+  );
 }
 
 // ── Issue badges ──────────────────────────────────────────────────────────────
@@ -43,7 +50,7 @@ function IssueBadges({ item, variant }: { item: any; variant: "manager" | "accou
     badges.push(
       <span
         key="no-code"
-        className="inline-flex items-center gap-0.5 rounded border border-amber-500/20 bg-amber-500/[0.05] px-1.5 py-0.5 text-[8px] text-amber-300/55"
+        className="inline-flex items-center gap-0.5 rounded border border-amber-500/20 bg-amber-500/[0.06] px-1.5 py-0.5 text-[8px] text-amber-300/65"
       >
         <AlertTriangle className="h-2 w-2 shrink-0" />
         {t("noAccountCode")}
@@ -55,16 +62,16 @@ function IssueBadges({ item, variant }: { item: any; variant: "manager" | "accou
     badges.push(
       <span
         key="category"
-        className="inline-flex items-center gap-0.5 rounded border border-white/[0.07] bg-white/[0.03] px-1.5 py-0.5 text-[8px] text-white/30"
+        className="inline-flex items-center gap-0.5 rounded border border-white/[0.08] bg-white/[0.03] px-1.5 py-0.5 text-[8px] text-white/38"
       >
-        <ReceiptText className="h-2 w-2 shrink-0 text-amber-400/40" />
+        <ReceiptText className="h-2 w-2 shrink-0 text-amber-400/50" />
         {item.detected_category}
       </span>
     );
   }
 
   if (!badges.length) return null;
-  return <div className="mt-1 flex flex-wrap gap-1">{badges}</div>;
+  return <div className="mt-1.5 flex flex-wrap gap-1">{badges}</div>;
 }
 
 // ── Row ───────────────────────────────────────────────────────────────────────
@@ -80,12 +87,26 @@ function QueueRow({
   onSelect: () => void;
   variant: "manager" | "accounting";
 }) {
-  const tc = useTranslations("common");
+  const t = useTranslations("review");
+
   const secondaryParts: string[] = [];
   if (item.id) secondaryParts.push(`#${item.id}`);
   if (item.created_at) secondaryParts.push(formatDate(item.created_at));
   if (item.report_id != null) secondaryParts.push(`Report ${item.report_id}`);
   if (variant === "accounting" && item.account_code) secondaryParts.push(item.account_code);
+
+  const status = item.status ?? "draft";
+  let hint: string | null = null;
+  if (variant === "manager") {
+    if (status === "submitted")     hint = t("approvalPending");
+    else if (status === "approved") hint = t("approvedStatus");
+    else if (status === "rejected") hint = t("rejectedNoAction");
+  } else {
+    if (status === "manager_approved" || status === "submitted") hint = t("accountingReviewPending");
+    else if (status === "approved") hint = t("approvedStatus");
+    else if (status === "rejected") hint = t("rejectedNoAction");
+  }
+  const codePending = variant === "accounting" && !item.account_code;
 
   return (
     <li>
@@ -93,56 +114,38 @@ function QueueRow({
         type="button"
         onClick={onSelect}
         className={`w-full border-b border-white/[0.05] px-4 py-3 text-left transition-colors ${
-          selected ? "bg-white/[0.06]" : "hover:bg-white/[0.03]"
+          selected
+            ? "bg-indigo-950/40 shadow-[inset_2px_0_0_0_theme(colors.indigo.500/50%)]"
+            : "hover:bg-white/[0.05]"
         }`}
       >
-        {/* Row 1: description + status */}
+        {/* Row 1: description + status badge */}
         <div className="flex items-start justify-between gap-2">
-          <span className="min-w-0 flex-1 truncate text-xs font-medium text-white/80">
-            {item.description || "Untitled"}
+          <span className={`min-w-0 flex-1 truncate text-xs font-medium ${selected ? "text-white" : "text-white/80"}`}>
+            {item.description || t("untitled")}
           </span>
-          <span
-            className={`shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${statusCls(item.status ?? "draft")}`}
-          >
-            {item.status ?? "—"}
-          </span>
+          <StatusBadge status={status} />
         </div>
 
         {/* Row 2: secondary meta + amount */}
         <div className="mt-0.5 flex items-center justify-between gap-2">
-          <span className="text-[10px] text-white/30">
-            {secondaryParts.join(" · ") || "\u00a0"}
+          <span className="text-[10px] text-white/38">
+            {secondaryParts.join(" · ") || " "}
           </span>
-          <span className="shrink-0 font-mono text-[10px] font-semibold text-white/50">
+          <span className="shrink-0 font-mono text-[10px] font-semibold text-white/55">
             {item.amount != null ? `$${Number(item.amount).toFixed(2)}` : "—"}
           </span>
         </div>
 
-        {/* Row 3: hint line */}
-        {(() => {
-          const status = item.status ?? "";
-          let hint: string | null = null;
-          if (variant === "manager") {
-            if (status === "submitted")       hint = "Approval pending";
-            else if (status === "approved")   hint = "Approved";
-            else if (status === "rejected")   hint = "Rejected — no further action";
-          } else {
-            if (status === "manager_approved" || status === "submitted")
-                                              hint = "Accounting review pending";
-            else if (status === "approved")   hint = "Approved";
-            else if (status === "rejected")   hint = "Rejected — no further action";
-          }
-          const codePending = variant === "accounting" && !item.account_code;
-          if (!hint && !codePending) return null;
-          return (
-            <>
-              {hint && <p className="mt-0.5 text-[9px] text-white/22">{hint}</p>}
-              {codePending && <p className="mt-0.5 text-[9px] text-white/18">Account code pending</p>}
-            </>
-          );
-        })()}
+        {/* Hint line */}
+        {(hint || codePending) && (
+          <div className="mt-0.5">
+            {hint && <p className="text-[9px] text-white/30">{hint}</p>}
+            {codePending && <p className="text-[9px] text-white/25">{t("accountCodePending")}</p>}
+          </div>
+        )}
 
-        {/* Row 4: issue badges */}
+        {/* Issue badges */}
         <IssueBadges item={item} variant={variant} />
       </button>
     </li>
@@ -157,10 +160,20 @@ export default function ReviewQueueList({
   onSelect,
   variant,
 }: ReviewQueueListProps) {
+  const t = useTranslations("review");
+
   if (!items.length) {
     return (
-      <div className="px-4 py-6 text-center text-xs text-white/25">
-        No expenses pending {variant === "manager" ? "manager" : "accounting"} review.
+      <div className="flex flex-col items-center gap-3 px-4 py-14 text-center">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.04] ring-1 ring-white/[0.06]">
+          <ClipboardList className="h-5 w-5 text-white/20" />
+        </div>
+        <div>
+          <p className="text-xs font-medium text-white/35">{t("queueEmpty")}</p>
+          <p className="mt-0.5 text-[10px] text-white/22">
+            {variant === "manager" ? t("queueEmptyManagerHint") : t("queueEmptyAccountingHint")}
+          </p>
+        </div>
       </div>
     );
   }
@@ -179,3 +192,5 @@ export default function ReviewQueueList({
     </ul>
   );
 }
+
+export { SkeletonRow as ReviewSkeletonRow };

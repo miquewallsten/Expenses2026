@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from apps.api.auth import require_admin
+from apps.api.auth import get_current_user
 from apps.api.deps import get_db
 from packages.modules.admin.service.company_setup_service import get_or_create_company_setup
 from packages.modules.admin.service.accounting_setup_service import get_or_create_accounting_setup
@@ -21,7 +21,7 @@ from packages.modules.admin.schemas.approval_setup import ApprovalSetupRead
 from packages.modules.admin.schemas.workflow_setup import WorkflowSetupRead
 from packages.modules.expenses.schemas.policy import CompanyExpensePolicyRead
 
-router = APIRouter(prefix="/admin/portal-config", tags=["admin"], dependencies=[Depends(require_admin)])
+router = APIRouter(prefix="/admin/portal-config", tags=["admin"])
 
 
 class DerivedConfig(BaseModel):
@@ -81,7 +81,6 @@ def _compute_enabled_modules(cs: Any) -> list[str]:
         "expenses": cs.expenses_module_enabled,
         "time_allocation": cs.time_allocation_module_enabled,
         "subcontractor": cs.subcontractor_module_enabled,
-        "reimbursements": cs.reimbursements_module_enabled,
         "approvals": cs.approvals_module_enabled,
         "accounting": cs.accounting_module_enabled,
         "archive": cs.archive_module_enabled,
@@ -155,7 +154,7 @@ def _compute_effective_review_route(
 
 
 @router.get("/{company_id}", response_model=PortalConfigRead)
-def get_portal_config(company_id: int, db: Session = Depends(get_db)):
+def get_portal_config(company_id: int, db: Session = Depends(get_db), _: object = Depends(get_current_user)):
     company_setup = get_or_create_company_setup(db, company_id)
     expense_policy = get_or_create_company_expense_policy(db, company_id)
     accounting_setup = get_or_create_accounting_setup(db, company_id)

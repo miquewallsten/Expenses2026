@@ -1,0 +1,43 @@
+# Canonical end-to-end flows. One per row; short and declarative.
+flows:
+  expense_lifecycle:
+    name_es: Ciclo de un gasto
+    stages: [draft, submitted, manager_approved, approved, paid]
+    terminal: [approved, paid, rejected]
+    rules:
+      - "submitted requires: amount, category (opcional), descripción."
+      - "manager_approved requires: role=manager y monto <= director_threshold."
+      - "approved requires: CFDI pareado si expense_policy.require_cfdi=true."
+
+  cfdi_pairing:
+    name_es: Emparejamiento de CFDI
+    steps:
+      - "Usuario sube XML (individual o ZIP)."
+      - "Sistema extrae UUID, RFC, total, fecha."
+      - "Empareja con expense por (monto ± tolerancia, fecha, rfc_emisor)."
+      - "Si no hay match, queda en 'CFDI huérfano' para revisión manual."
+
+  poliza_export:
+    name_es: Exportación de póliza
+    steps:
+      - "Selección de gastos aprobados del período."
+      - "Agrupación por tipo/centro de costos según accounting_setup."
+      - "Generación según default_poliza_format."
+      - "Archivo queda en ArchiveFile si archive_module_enabled."
+
+  purchase_request_flow:
+    name_es: Solicitud de compra
+    requires_flag: purchase_requests_module_enabled
+    steps:
+      - "Empleado crea PR (monto estimado, proveedor, justificación)."
+      - "Aprobación según approval_setup del módulo 'purchase_request'."
+      - "Una vez aprobado, genera PO (purchase order)."
+      - "Al recibir factura, se convierte en Expense pareado al PO."
+
+  time_entry_to_billing:
+    name_es: Horas a facturación
+    requires_flag: time_allocation_module_enabled
+    steps:
+      - "Empleado registra horas por proyecto/actividad."
+      - "Al cierre del período se genera reporte por cliente."
+      - "Horas facturables alimentan factura al cliente."

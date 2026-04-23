@@ -47,7 +47,7 @@ function buildTags(portalConfig: Props["portalConfig"], portalType: PortalType, 
   if (portalType === "admin" && derived?.enabled_modules?.length) {
     const MODULE_KEYS: Record<string, string> = {
       expenses: "moduleExpenses", time_allocation: "moduleTime",
-      subcontractor: "moduleSubcontractors", reimbursements: "moduleReimbursements",
+      subcontractor: "moduleSubcontractors",
       approvals: "moduleApprovals", accounting: "moduleAccounting",
       archive: "moduleArchive", ai_copilot: "moduleAiCopilot",
     };

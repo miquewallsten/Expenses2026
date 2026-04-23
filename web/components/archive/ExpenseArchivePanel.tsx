@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Archive } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { getAuthHeaders } from "@/lib/session";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -56,7 +57,7 @@ export default function ExpenseArchivePanel({ expenseId }: Props) {
     if (!expenseId) { setItems([]); return; }
     setLoading(true);
     fetch(`${API}/archive/query/expense/${expenseId}`, {
-      headers: { "X-User-Id": "1" },
+      headers: getAuthHeaders(),
     })
       .then((r) => (r.ok ? (r.json() as Promise<ArchiveListResponse>) : null))
       .then((data) => setItems(data?.items ?? []))

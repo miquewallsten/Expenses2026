@@ -58,7 +58,6 @@ from packages.modules.admin.api.portal_config_router import router as portal_con
 from packages.modules.admin.api.accounting_category_router import router as accounting_category_router
 from packages.modules.admin.api.accounting_category_apply_router import router as accounting_category_apply_router
 from packages.modules.admin.api.accounting_learning_router import router as accounting_learning_router
-from packages.modules.admin.api.setup_orchestrator_router import router as setup_orchestrator_router
 from packages.modules.expenses.api.manager_queue_router import router as manager_queue_router
 from packages.modules.expenses.api.accounting_queue_router import router as accounting_queue_router
 from packages.modules.expenses.api.expense_actions_router import router as expense_actions_router
@@ -100,12 +99,17 @@ from packages.core.platform.models_report_cycle import ReportCycleSettings  # no
 from packages.modules.admin.api.report_cycle_router import router as report_cycle_router
 from packages.core.platform.models_storage_config import StorageConfig  # noqa: F401 — registers storage_configs table
 from packages.modules.admin.api.storage_config_router import router as storage_config_router
+from packages.modules.agent.models import (  # noqa: F401 — registers agent_* tables
+    AgentSession, AgentToolCall, AgentPendingAction, AgentUpload,
+    AgentMemory, AgentInsight, AgentUsage,
+)
+from packages.modules.agent.api.agent_router import router as agent_router
 
 app = FastAPI(title=settings.app_name)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -186,7 +190,6 @@ app.include_router(portal_config_router)
 app.include_router(accounting_category_router)
 app.include_router(accounting_category_apply_router)
 app.include_router(accounting_learning_router)
-app.include_router(setup_orchestrator_router)
 app.include_router(manager_queue_router)
 app.include_router(accounting_queue_router)
 app.include_router(accounting_work_router)
@@ -212,6 +215,7 @@ app.include_router(purchase_requests_router)
 app.include_router(time_tracking_router)
 app.include_router(report_cycle_router)
 app.include_router(storage_config_router)
+app.include_router(agent_router)
 
 
 @app.get("/")

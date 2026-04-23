@@ -1,0 +1,60 @@
+services:
+
+  # ── PostgreSQL 16 ─────────────────────────────────────────────────────────
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: financial_ops
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d financial_ops"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ── Backend (FastAPI + uvicorn) ───────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://app:${POSTGRES_PASSWORD:-changeme}@db:5432/financial_ops
+      # Ollama runs on the host Mac — host.docker.internal resolves on OrbStack
+      # & Docker Desktop. Hardcoded here (no ${} substitution) so a native-dev
+      # .env pointing at 127.0.0.1 can't leak into containers.
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-deepseek-v3.1:671b-cloud}
+      OLLAMA_NUM_CTX: ${OLLAMA_NUM_CTX:-32768}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      DEBUG: ${DEBUG:-false}
+      SECRET_KEY: ${SECRET_KEY:-dev-only-secret}
+    ports:
+      - "8000:8000"
+    command: ["sh", "-c", "python scripts/docker_entrypoint.py && python -m uvicorn apps.api.main:app --host 0.0.0.0 --port 8000 --log-level info"]
+
+  # ── Frontend (Next.js) ────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./web
+      dockerfile: ../infrastructure/docker/Dockerfile.frontend
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+        NEXT_PUBLIC_DEV_CHEAT: ${NEXT_PUBLIC_DEV_CHEAT:-true}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:

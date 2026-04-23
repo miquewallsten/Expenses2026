@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+export const dynamic = "force-dynamic";
+
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { storeSession } from "@/lib/session";
 import { useTranslations } from "next-intl";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-export default function AuthVerifyPage() {
+function AuthVerifyInner() {
   const t = useTranslations("auth");
   const router       = useRouter();
   const searchParams = useSearchParams();
@@ -82,5 +84,13 @@ export default function AuthVerifyPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function AuthVerifyPage() {
+  return (
+    <Suspense>
+      <AuthVerifyInner />
+    </Suspense>
   );
 }

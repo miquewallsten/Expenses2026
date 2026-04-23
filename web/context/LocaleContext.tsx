@@ -45,7 +45,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
 
   return (
     <LocaleContext.Provider value={{ locale, setLocale }}>
-      <NextIntlClientProvider locale={locale} messages={MESSAGES[locale]}>
+      <NextIntlClientProvider locale={locale} messages={MESSAGES[locale]} onError={() => {}}>
         {children}
       </NextIntlClientProvider>
     </LocaleContext.Provider>

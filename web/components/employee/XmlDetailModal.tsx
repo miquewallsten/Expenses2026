@@ -112,6 +112,14 @@ function fmtAmount(v: string | null): string {
 export default function XmlDetailModal({ open, onClose, extractedData, satStatus }: Props) {
   const t = useTranslations("employee.xmlDetail");
   const tc = useTranslations("common");
+
+  const sectionTitleMap: Record<string, string> = {
+    "Comprobante":            t("sectionComprobante"),
+    "Emisor":                 t("sectionEmisor"),
+    "Receptor":               t("sectionReceptor"),
+    "Importes":               t("sectionImportes"),
+    "Timbre fiscal digital":  t("sectionTimbre"),
+  };
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -185,7 +193,7 @@ export default function XmlDetailModal({ open, onClose, extractedData, satStatus
                   return (
                     <div key={section.title}>
                       <p className="mb-1 text-[8px] font-bold uppercase tracking-widest text-white/22">
-                        {section.title}
+                        {sectionTitleMap[section.title] ?? section.title}
                       </p>
                       <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-white/[0.07] bg-white/[0.04]">
                         {section.fields.map(({ label, key, mono, full }) => {
@@ -265,13 +273,13 @@ export default function XmlDetailModal({ open, onClose, extractedData, satStatus
 
                 {/* SAT */}
                 <div>
-                  <p className="mb-1 text-[8px] font-bold uppercase tracking-widest text-white/22">SAT</p>
+                  <p className="mb-1 text-[8px] font-bold uppercase tracking-widest text-white/22">{t("satLabel")}</p>
                   <div className="flex items-center justify-between gap-3 overflow-hidden rounded-lg border border-white/[0.07] bg-black/20 px-2.5 py-1.5">
                     {satStatus === "valid" ? (
                       <>
                         <p className="text-[9px] text-white/35">{t("satPassed")}</p>
                         <span className="inline-flex shrink-0 items-center gap-1 rounded border border-emerald-500/20 bg-emerald-500/[0.07] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-emerald-400/70">
-                          <CheckCircle2 className="h-2 w-2" /> Vigente
+                          <CheckCircle2 className="h-2 w-2" /> {t("badgeVigente")}
                         </span>
                       </>
                     ) : satStatus === "warning" ? (
@@ -285,7 +293,7 @@ export default function XmlDetailModal({ open, onClose, extractedData, satStatus
                       <>
                         <p className="text-[9px] text-white/35">{t("satFailed")}</p>
                         <span className="inline-flex shrink-0 items-center gap-1 rounded border border-red-500/20 bg-red-500/[0.07] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-red-400/70">
-                          <XCircle className="h-2 w-2" /> No Vigente
+                          <XCircle className="h-2 w-2" /> {t("badgeNoVigente")}
                         </span>
                       </>
                     ) : (

@@ -1,8 +1,11 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useCallback, useMemo, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useTranslations } from "next-intl";
+import { getAuthHeaders } from "@/lib/session";
 
 type ValidationResult = {
   id?: number;
@@ -137,7 +140,7 @@ export default function EmployeeUploadPage() {
         const contentText = await getFileContent(file);
         const uploadRes = await fetch(`${API}/expenses/documents`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "X-User-Id": "1" },
+          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
           body: JSON.stringify({ company_id: 1, filename: file.name, content_text: contentText }),
         });
         if (!uploadRes.ok) {
@@ -151,7 +154,7 @@ export default function EmployeeUploadPage() {
         // Fetch document to parse XML extracted block
         let extractedData: ExtractedData | undefined;
         const docRes = await fetch(`${API}/expenses/documents/${uploadedDoc.id}`, {
-          headers: { "X-User-Id": "1" },
+          headers: { ...getAuthHeaders() },
         });
         if (docRes.ok) {
           const doc = await docRes.json();
@@ -162,7 +165,7 @@ export default function EmployeeUploadPage() {
 
         const validationRes = await fetch(
           `${API}/expenses/documents/${uploadedDoc.id}/validation-results`,
-          { headers: { "X-User-Id": "1" } }
+          { headers: { ...getAuthHeaders() } }
         );
         if (!validationRes.ok) {
           const txt = await validationRes.text();
@@ -205,7 +208,7 @@ export default function EmployeeUploadPage() {
     try {
       const res = await fetch(`${API}/expenses/submissions/from-documents`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-User-Id": "1" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ company_id: 1, document_ids: documentIds }),
       });
       if (!res.ok) throw new Error("Submission failed");
@@ -249,11 +252,18 @@ export default function EmployeeUploadPage() {
     }
   };
 
-  const validationBadgeClass = (status: string) => {
+  const validationBadgeClass = (status: string): string => {
     if (status === "passed") return "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30";
     if (status === "warning") return "bg-amber-500/15 text-amber-300 border border-amber-500/30";
     if (status === "failed")  return "bg-red-500/15 text-red-300 border border-red-500/30";
     return "bg-zinc-500/15 text-zinc-300 border border-zinc-500/30";
+  };
+
+  const emptyValidationMessage = (file: UploadItem): string => {
+    if (file.status === "uploading")  return "Uploading document...";
+    if (file.status === "validating") return "Loading validation results...";
+    if (file.status === "error")      return file.errorMessage ?? "Could not process this file.";
+    return "No validation results.";
   };
 
   return (
@@ -464,10 +474,7 @@ export default function EmployeeUploadPage() {
                     </div>
                     {!file.validationResults.length ? (
                       <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white/50">
-                        {file.status === "uploading"   ? "Uploading document..." :
-                         file.status === "validating"  ? "Loading validation results..." :
-                         file.status === "error"       ? (file.errorMessage ?? "Could not process this file.") :
-                                                         "No validation results."}
+                        {emptyValidationMessage(file)}
                       </div>
                     ) : (
                       <div className="space-y-2">

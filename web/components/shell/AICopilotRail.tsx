@@ -6,6 +6,7 @@ import {
   Bot, ChevronDown, ChevronLeft, ChevronRight, Send,
 } from "lucide-react";
 import { useUserContext } from "@/context/UserContext";
+import { getAuthHeaders } from "@/lib/session";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -101,6 +102,7 @@ export default function AICopilotRail({
   selectedExpense,
   selectedDocument,
   validationResults,
+  expenseContext,
 }: Props) {
   const [messages, setMessages]                   = useState<Message[]>([]);
   const [input, setInput]                         = useState("");
@@ -115,7 +117,6 @@ export default function AICopilotRail({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef    = useRef<AbortController | null>(null);
   const user        = useUserContext();
-  const userIdStr   = user.userIdStr ?? "1";
   const locale      = useLocale();
 
   const [internalCollapsed, setInternalCollapsed] = useState(false);
@@ -178,7 +179,7 @@ export default function AICopilotRail({
       const ctrl    = new AbortController();
       abortRef.current = ctrl;
 
-      const h       = { "Content-Type": "application/json", "X-User-Id": userIdStr };
+      const h       = { "Content-Type": "application/json", ...getAuthHeaders() };
       const expText = JSON.stringify(selectedExpense);
       const valText = JSON.stringify(validationResults ?? []);
       const docText = JSON.stringify(selectedDocument ?? {});
@@ -269,7 +270,7 @@ export default function AICopilotRail({
       });
       const res = await fetch(`${API}/ai/chat/stream`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-User-Id": userIdStr },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ prompt: prompt.trim(), context, locale, history }),
       });
 
@@ -453,37 +454,50 @@ export default function AICopilotRail({
           );
         })() : (
           !messages.length && (
-            <p className="mt-8 text-center text-[11px] text-white/18">
-              Select an expense to see AI insights.
-            </p>
+            <div className="mt-10 flex flex-col items-center gap-2.5 px-3 text-center">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600/10 ring-1 ring-indigo-500/15">
+                <Bot className="h-5 w-5 text-indigo-300/40" />
+              </div>
+              <p className="text-[11px] leading-relaxed text-white/28">
+                Select an expense to see AI insights and recommendations.
+              </p>
+            </div>
           )
         )}
 
         {/* Chat thread */}
         {messages.length > 0 && (
-          <div className="space-y-1.5 pt-1">
+          <div className="space-y-2 pt-1">
             {messages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+              <div key={i} className={`flex items-end gap-1.5 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                {msg.role === "assistant" && (
+                  <div className="mb-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-600/20 ring-1 ring-indigo-500/20">
+                    <Bot className="h-2.5 w-2.5 text-indigo-300/70" />
+                  </div>
+                )}
                 <div
-                  className={`max-w-[88%] rounded px-2.5 py-1.5 text-[11px] leading-snug ${
+                  className={`max-w-[84%] rounded-xl px-3 py-2 text-[11px] leading-relaxed ${
                     msg.role === "user"
-                      ? "bg-indigo-600/20 text-indigo-100/80"
-                      : "border border-white/[0.06] bg-white/[0.03] text-white/50"
+                      ? "rounded-br-sm bg-indigo-600/35 text-white/90"
+                      : "rounded-bl-sm border border-white/[0.08] bg-white/[0.05] text-white/65"
                   }`}
                 >
                   {msg.content}
                 </div>
               </div>
             ))}
-            {/* Streaming cursor — shown only while the last assistant turn is empty (first tokens not yet arrived) */}
+            {/* Streaming cursor */}
             {chatLoading && messages[messages.length - 1]?.role === "assistant" && messages[messages.length - 1]?.content === "" && (
-              <div className="flex justify-start">
-                <div className="rounded border border-white/[0.06] bg-white/[0.03] px-2.5 py-1.5">
+              <div className="flex items-end gap-1.5 justify-start">
+                <div className="mb-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-600/20 ring-1 ring-indigo-500/20">
+                  <Bot className="h-2.5 w-2.5 text-indigo-300/70" />
+                </div>
+                <div className="rounded-xl rounded-bl-sm border border-white/[0.08] bg-white/[0.05] px-3 py-2">
                   <span className="inline-flex gap-1">
                     {[0, 1, 2].map((d) => (
                       <span
                         key={d}
-                        className="h-1 w-1 animate-bounce rounded-full bg-white/25"
+                        className="h-1.5 w-1.5 animate-bounce rounded-full bg-white/30"
                         style={{ animationDelay: `${d * 150}ms` }}
                       />
                     ))}
@@ -496,21 +510,21 @@ export default function AICopilotRail({
         )}
       </div>
 
-      {/* Sticky chat input — always available, never gated on AI card loading */}
-      <div className="shrink-0 border-t border-white/[0.07] px-2.5 py-2">
-        <form onSubmit={handleSubmit} className="flex items-center gap-1.5">
+      {/* Sticky chat input */}
+      <div className="shrink-0 border-t border-white/[0.07] px-2.5 py-2.5">
+        <form onSubmit={handleSubmit} className="flex items-center gap-1.5 rounded-lg border border-white/[0.1] bg-white/[0.03] px-2.5 py-1.5 transition-colors focus-within:border-indigo-500/35 focus-within:bg-indigo-950/10">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             disabled={chatLoading}
             placeholder="Ask Copilot…"
-            className="min-w-0 flex-1 rounded border border-white/[0.09] bg-white/[0.03] px-2.5 py-1.5 text-[11px] text-white placeholder-white/20 outline-none transition-colors focus:border-indigo-500/40 disabled:cursor-not-allowed disabled:opacity-40"
+            className="min-w-0 flex-1 bg-transparent text-[11px] text-white/80 placeholder-white/28 outline-none disabled:cursor-not-allowed disabled:opacity-40"
           />
           <button
             type="submit"
             disabled={!input.trim() || chatLoading}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded border border-indigo-500/25 bg-indigo-600/20 text-indigo-300 transition-colors hover:bg-indigo-600/30 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-indigo-600/30 text-indigo-300/80 transition-colors hover:bg-indigo-600/50 hover:text-indigo-200 disabled:cursor-not-allowed disabled:opacity-35"
             aria-label="Send"
           >
             <Send className="h-3 w-3" />

@@ -30,8 +30,8 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session
 
+from packages.core.platform.models_archive_config import ArchiveConfig
 from packages.core.platform.models_archive_file import ArchiveFile
-from packages.core.platform.models_export_config import ExportConfig
 from packages.core.platform.models_storage_config import StorageConfig
 from packages.modules.archive.service.storage_backend import get_storage_backend
 
@@ -98,8 +98,8 @@ def _resolve_hints(
     """
     try:
         cfg = (
-            db.query(ExportConfig)
-            .filter(ExportConfig.company_id == company_id)
+            db.query(ArchiveConfig)
+            .filter(ArchiveConfig.company_id == company_id)
             .first()
         )
 

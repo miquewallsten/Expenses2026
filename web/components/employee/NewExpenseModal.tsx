@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { X, Paperclip } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { getAuthHeaders } from "@/lib/session";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -38,7 +39,6 @@ export default function NewExpenseModal({ open, onClose, onCreated }: Props) {
   const t = useTranslations("employee.newExpenseModal");
   const tc = useTranslations("common");
 
-  // Focus first field on open; reset on close
   useEffect(() => {
     if (open) {
       setForm(EMPTY);
@@ -47,7 +47,6 @@ export default function NewExpenseModal({ open, onClose, onCreated }: Props) {
     }
   }, [open]);
 
-  // Close on Escape
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
@@ -81,7 +80,7 @@ export default function NewExpenseModal({ open, onClose, onCreated }: Props) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-User-Id": "1",
+          ...getAuthHeaders(),
         },
         body: JSON.stringify({
           company_id: 1,
@@ -108,7 +107,7 @@ export default function NewExpenseModal({ open, onClose, onCreated }: Props) {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+        className="animate-fade-in fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -121,9 +120,12 @@ export default function NewExpenseModal({ open, onClose, onCreated }: Props) {
         className="fixed inset-0 z-50 flex items-center justify-center p-4"
       >
         <div
-          className="relative w-full max-w-lg overflow-hidden rounded-xl border border-white/[0.09] bg-zinc-900 shadow-[0_24px_80px_rgba(0,0,0,0.7)] ring-1 ring-inset ring-white/[0.04]"
+          className="animate-scale-in relative w-full max-w-lg overflow-hidden rounded-xl border border-white/[0.09] bg-zinc-900 shadow-[0_32px_80px_rgba(0,0,0,0.7)] ring-1 ring-inset ring-white/[0.04]"
           onClick={(e) => e.stopPropagation()}
         >
+          {/* Top accent line */}
+          <div className="h-px w-full bg-gradient-to-r from-transparent via-indigo-500/40 to-transparent" />
+
           {/* Header */}
           <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-3.5">
             <div>
@@ -133,13 +135,13 @@ export default function NewExpenseModal({ open, onClose, onCreated }: Props) {
               >
                 {t("title")}
               </h2>
-              <p className="mt-0.5 text-[10px] text-white/35">
+              <p className="mt-0.5 text-[10px] text-white/40">
                 {t("subtitle")}
               </p>
             </div>
             <button
               onClick={onClose}
-              className="ml-4 shrink-0 rounded-md p-1.5 text-white/30 transition-colors hover:bg-white/[0.06] hover:text-white/60"
+              className="ml-4 shrink-0 rounded-md p-1.5 text-white/35 transition-colors hover:bg-white/[0.07] hover:text-white/65"
               aria-label="Close"
             >
               <X className="h-4 w-4" />
@@ -150,7 +152,6 @@ export default function NewExpenseModal({ open, onClose, onCreated }: Props) {
           <form onSubmit={handleSubmit} noValidate>
             <div className="space-y-0 divide-y divide-white/[0.05] px-5 py-4">
 
-              {/* Description */}
               <FieldRow label={t("fieldDescription")} required>
                 <input
                   ref={descRef}
@@ -162,10 +163,9 @@ export default function NewExpenseModal({ open, onClose, onCreated }: Props) {
                 />
               </FieldRow>
 
-              {/* Amount */}
               <FieldRow label={t("fieldAmount")} required>
                 <div className="relative">
-                  <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-xs text-white/30">
+                  <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-xs text-white/35">
                     $
                   </span>
                   <input
@@ -180,7 +180,7 @@ export default function NewExpenseModal({ open, onClose, onCreated }: Props) {
                 </div>
               </FieldRow>
 
-              {/* Project / Client / Cost Center — 3-up */}
+              {/* Project / Client / Cost Center */}
               <div className="grid grid-cols-3 gap-3 py-3">
                 <div>
                   <label className={labelCls}>{t("fieldProject")}</label>
@@ -214,7 +214,6 @@ export default function NewExpenseModal({ open, onClose, onCreated }: Props) {
                 </div>
               </div>
 
-              {/* Notes */}
               <FieldRow label={t("fieldNotes")}>
                 <textarea
                   value={form.notes}
@@ -231,12 +230,12 @@ export default function NewExpenseModal({ open, onClose, onCreated }: Props) {
                 <div className="mt-1 flex items-center gap-2">
                   <button
                     type="button"
-                    className="flex items-center gap-1.5 rounded-md border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-white/50 transition-colors hover:border-white/20 hover:bg-white/[0.07] hover:text-white/70"
+                    className="flex items-center gap-1.5 rounded-md border border-white/[0.1] bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-white/50 transition-colors hover:border-white/[0.18] hover:bg-white/[0.08] hover:text-white/75"
                   >
                     <Paperclip className="h-3.5 w-3.5" />
                     {t("uploadFile")}
                   </button>
-                  <p className="mt-1 text-[10px] text-white/20">
+                  <p className="text-[10px] text-white/25">
                     {t("uploadHint")}
                   </p>
                 </div>
@@ -245,24 +244,26 @@ export default function NewExpenseModal({ open, onClose, onCreated }: Props) {
 
             {/* Error */}
             {error && (
-              <div className="mx-5 mb-3 rounded-md border border-red-500/25 bg-red-500/10 px-3 py-2 text-xs text-red-400">
+              <div className="mx-5 mb-3 rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2 text-xs text-red-400/90">
                 {error}
               </div>
             )}
 
             {/* Footer */}
             <div className="flex items-center justify-end gap-2 border-t border-white/[0.07] px-5 py-3">
+              {/* Tertiary */}
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-md px-4 py-1.5 text-xs font-medium text-white/40 transition-colors hover:bg-white/[0.05] hover:text-white/60"
+                className="rounded-md px-4 py-1.5 text-xs font-medium text-white/40 transition-colors hover:bg-white/[0.06] hover:text-white/65"
               >
                 {tc("cancel")}
               </button>
+              {/* Primary */}
               <button
                 type="submit"
                 disabled={saving}
-                className="rounded-md bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-indigo-500 active:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-md bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-indigo-500 active:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {saving ? t("saving") : t("saveExpense")}
               </button>
@@ -277,10 +278,10 @@ export default function NewExpenseModal({ open, onClose, onCreated }: Props) {
 // ── Shared micro-styles ──────────────────────────────────────────────────────
 
 const inputCls =
-  "w-full rounded-md border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-xs text-white placeholder-white/20 outline-none transition-colors focus:border-indigo-500/50 focus:bg-indigo-950/20";
+  "w-full rounded-md border border-white/[0.1] bg-white/[0.04] px-2.5 py-1.5 text-xs text-white placeholder-white/25 outline-none transition-all focus:border-indigo-500/50 focus:bg-indigo-950/20 focus:ring-1 focus:ring-indigo-500/15";
 
 const labelCls =
-  "mb-1 block text-[11px] text-white/40";
+  "mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-white/40";
 
 function FieldRow({
   label,
@@ -295,7 +296,7 @@ function FieldRow({
     <div className="py-3">
       <label className={labelCls}>
         {label}
-        {required && <span className="ml-0.5 text-indigo-400">*</span>}
+        {required && <span className="ml-0.5 text-indigo-400/80">*</span>}
       </label>
       {children}
     </div>

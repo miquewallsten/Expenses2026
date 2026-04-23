@@ -260,9 +260,14 @@ export default function PRApprovalsModule() {
 
             {/* Form (read-only) */}
             <PurchaseRequisitionForm
-              data={selected as any}
-              attachments={attachments}
+              requestId={selected.id}
               requestNo={reqNo}
+              requestDate={selected.submitted_at ?? ""}
+              requesterName={selected.requester_name ?? "—"}
+              companyId={String(COMPANY_ID)}
+              data={(selected.details ?? {}) as Parameters<typeof PurchaseRequisitionForm>[0]["data"]}
+              attachments={attachments}
+              status={selected.status}
               editable={false}
             />
 

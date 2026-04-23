@@ -1,0 +1,17 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# pgvector Python client needs libpq at runtime; numpy/pillow need build tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+EXPOSE 8000
+
+CMD ["sh", "-c", "python scripts/docker_entrypoint.py && python -m uvicorn apps.api.main:app --host 0.0.0.0 --port 8000 --log-level info"]
