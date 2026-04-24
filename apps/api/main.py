@@ -49,15 +49,17 @@ from packages.core.platform.models_accounting_category import AccountingCategory
 from packages.core.platform.models_accounting_learning import AccountingLearning
 from packages.core.platform.models_accounting_setup import AccountingSetup
 from packages.core.platform.models_approval_setup import ApprovalSetup
-from packages.core.platform.models_workflow_setup import WorkflowSetup
 from packages.modules.admin.api.company_setup_router import router as company_setup_router
 from packages.modules.admin.api.accounting_setup_router import router as accounting_setup_router
 from packages.modules.admin.api.approval_setup_router import router as approval_setup_router
-from packages.modules.admin.api.workflow_setup_router import router as workflow_setup_router
+from packages.modules.admin.api.dimensions_router import router as dimensions_router
+from packages.core.platform.models_ai_policy import AIPolicy  # noqa: F401 — registers ai_policies table
+from packages.modules.admin.api.ai_policy_router import router as ai_policy_router
 from packages.modules.admin.api.portal_config_router import router as portal_config_router
 from packages.modules.admin.api.accounting_category_router import router as accounting_category_router
 from packages.modules.admin.api.accounting_category_apply_router import router as accounting_category_apply_router
 from packages.modules.admin.api.accounting_learning_router import router as accounting_learning_router
+from packages.modules.accounting.api.chart_of_accounts_router import router as coa_router
 from packages.modules.expenses.api.manager_queue_router import router as manager_queue_router
 from packages.modules.expenses.api.accounting_queue_router import router as accounting_queue_router
 from packages.modules.expenses.api.expense_actions_router import router as expense_actions_router
@@ -66,6 +68,8 @@ from packages.modules.expenses.api.accounting_work_router import router as accou
 from packages.modules.expenses.api.expense_blockers_router import router as expense_blockers_router
 from packages.modules.expenses.api.expense_allocations_router import router as expense_allocations_router
 from packages.modules.expenses.api.expense_allocation_edit_router import router as expense_allocation_edit_router
+from packages.modules.expenses.api.policy_override_router import router as policy_override_router
+from packages.modules.expenses.models.expense_policy_override import ExpensePolicyOverride  # noqa: F401 — registers table
 from packages.modules.accounting.api.export_router import router as accounting_export_router
 from packages.modules.accounting.api.export_bundle_router import router as export_bundle_router
 from packages.modules.accounting.api.export_config_router import router as accounting_export_config_router
@@ -104,6 +108,14 @@ from packages.modules.agent.models import (  # noqa: F401 — registers agent_* 
     AgentMemory, AgentInsight, AgentUsage,
 )
 from packages.modules.agent.api.agent_router import router as agent_router
+from packages.modules.amex.models import (  # noqa: F401 — registers amex_* tables
+    AmexStatement, AmexStatementLine, AmexCfdiDocument,
+)
+from packages.modules.amex.router import router as amex_router
+
+# Fail-fast: reject known-insecure defaults in production before the app
+# starts serving requests.
+settings.validate_for_production()
 
 app = FastAPI(title=settings.app_name)
 
@@ -184,8 +196,9 @@ app.include_router(module_settings_router)
 app.include_router(expense_policy_router)
 app.include_router(company_setup_router)
 app.include_router(accounting_setup_router)
+app.include_router(coa_router)
 app.include_router(approval_setup_router)
-app.include_router(workflow_setup_router)
+app.include_router(dimensions_router)
 app.include_router(portal_config_router)
 app.include_router(accounting_category_router)
 app.include_router(accounting_category_apply_router)
@@ -196,6 +209,7 @@ app.include_router(accounting_work_router)
 app.include_router(expense_blockers_router)
 app.include_router(expense_allocations_router)
 app.include_router(expense_allocation_edit_router)
+app.include_router(policy_override_router)
 app.include_router(expense_actions_router)
 app.include_router(review_actions_router)
 app.include_router(accounting_export_router)
@@ -215,7 +229,9 @@ app.include_router(purchase_requests_router)
 app.include_router(time_tracking_router)
 app.include_router(report_cycle_router)
 app.include_router(storage_config_router)
+app.include_router(ai_policy_router)
 app.include_router(agent_router)
+app.include_router(amex_router)
 
 
 @app.get("/")

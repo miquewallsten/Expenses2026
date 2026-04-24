@@ -25,6 +25,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
+from apps.api.config import settings
 from apps.api.deps import get_db
 from packages.core.platform.models_user import MagicLinkToken, User
 
@@ -34,8 +35,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-_ENV         = os.environ.get("ENVIRONMENT", "development").lower()
-_SECRET      = os.environ.get("AUTH_SECRET", "dev-secret-change-in-production-32ch")
+_ENV         = settings.environment.lower()
+_SECRET      = settings.auth_secret
 _BASE_URL    = os.environ.get("APP_BASE_URL", "http://localhost:3000")
 _TOKEN_TTL   = int(os.environ.get("MAGIC_LINK_TTL_MINUTES", "15"))
 _SESSION_TTL = int(os.environ.get("SESSION_TTL_HOURS", "24"))

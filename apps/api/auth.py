@@ -13,19 +13,19 @@ JWT payload:  { sub, email, role, company_id, iat, exp }
 """
 
 import logging
-import os
 
 import jwt
 from fastapi import Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 
+from apps.api.config import settings
 from apps.api.deps import get_db
 from packages.core.platform.models_user import User
 
 _log = logging.getLogger(__name__)
 
-_ENV    = os.environ.get("ENVIRONMENT", "development").lower().strip()
-_SECRET = os.environ.get("AUTH_SECRET", "dev-secret-change-in-production-32ch")
+_ENV    = settings.environment.lower().strip()
+_SECRET = settings.auth_secret
 
 _ALLOW_HEADER_AUTH = _ENV in ("development", "dev", "test", "testing")
 
