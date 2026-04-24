@@ -17,40 +17,14 @@ os.environ.setdefault("ENVIRONMENT", "development")
 from apps.api.db import Base
 from apps.api.deps import get_db
 
-# Import every model so SQLAlchemy's metadata is fully populated before create_all.
-# Keep this list in sync with alembic/env.py.
+# Import the central model aggregator so every SQLAlchemy model is registered
+# with Base.metadata before create_all runs. Single source of truth — shared
+# with alembic/env.py.
+import packages.core.platform.models_all  # noqa: F401
+
+# Re-exported symbols used directly by fixtures below.
 from packages.core.platform.models import Company  # noqa: F401
 from packages.core.platform.models_user import User  # noqa: F401
-from packages.core.platform.models_audit import AuditLog  # noqa: F401
-from packages.core.platform.models_module import PlatformModule  # noqa: F401
-from packages.core.platform.models_company_module import CompanyModule  # noqa: F401
-from packages.core.platform.models_project import Project  # noqa: F401
-from packages.core.platform.models_client import Client  # noqa: F401
-from packages.core.platform.models_cost_center import CostCenter  # noqa: F401
-from packages.core.platform.models_role import Role  # noqa: F401
-from packages.core.platform.models_permission import Permission  # noqa: F401
-from packages.core.platform.models_role_permission import RolePermission  # noqa: F401
-from packages.core.platform.models_user_role import UserRole  # noqa: F401
-from packages.core.platform.models_workflow_stage import WorkflowStage  # noqa: F401
-from packages.core.platform.models_workflow_transition import WorkflowTransition  # noqa: F401
-from packages.core.platform.models_expense_policy import CompanyExpensePolicy  # noqa: F401
-from packages.core.platform.models_company_setup import CompanySetup  # noqa: F401
-from packages.core.platform.models_legal_entity import LegalEntity  # noqa: F401
-from packages.core.platform.models_accounting_category import AccountingCategory  # noqa: F401
-from packages.core.platform.models_accounting_learning import AccountingLearning  # noqa: F401
-from packages.core.platform.models_accounting_setup import AccountingSetup  # noqa: F401
-from packages.core.platform.models_approval_setup import ApprovalSetup  # noqa: F401
-from packages.core.platform.models_workflow_setup import WorkflowSetup  # noqa: F401
-from packages.core.platform.models_archive_file import ArchiveFile  # noqa: F401
-from packages.core.platform.models_archive_config import ArchiveConfig  # noqa: F401
-from packages.modules.expenses.models import Expense, ExpenseDocument, ExpenseReport, Poliza  # noqa: F401
-from packages.modules.expenses.models.expense_allocation import ExpenseAllocation  # noqa: F401
-from packages.modules.expenses.models.expense_attachment import ExpenseAttachment  # noqa: F401
-from packages.modules.ai.models_embedding import DocumentEmbedding  # noqa: F401
-from packages.modules.agent.models import (  # noqa: F401 — registers agent_* tables
-    AgentSession, AgentToolCall, AgentPendingAction, AgentUpload,
-    AgentMemory, AgentInsight, AgentUsage,
-)
 
 
 @pytest.fixture(scope="function")
