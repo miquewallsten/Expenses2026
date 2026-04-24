@@ -21,12 +21,13 @@ import email.mime.text
 from datetime import datetime, timedelta, timezone
 
 import jwt
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
 from apps.api.config import settings
 from apps.api.deps import get_db
+from apps.api.rate_limit import RATE_LIMIT_AUTH, limiter
 from packages.core.platform.models_user import MagicLinkToken, User
 
 _log = logging.getLogger(__name__)
@@ -111,7 +112,8 @@ class VerifyResponse(BaseModel):
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.post("/magic-link/request", response_model=MagicLinkRequestResponse)
-def request_magic_link(body: MagicLinkRequest, db: Session = Depends(get_db)):
+@limiter.limit(RATE_LIMIT_AUTH, key_func=lambda request: request.client.host if request.client else "anon")
+def request_magic_link(request: Request, body: MagicLinkRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == body.email).first()
 
     # Always respond 200 even if email not found — prevents user enumeration
@@ -148,7 +150,8 @@ def request_magic_link(body: MagicLinkRequest, db: Session = Depends(get_db)):
 
 
 @router.get("/magic-link/verify", response_model=VerifyResponse)
-def verify_magic_link(token: str, db: Session = Depends(get_db)):
+@limiter.limit(RATE_LIMIT_AUTH, key_func=lambda request: request.client.host if request.client else "anon")
+def verify_magic_link(request: Request, token: str, db: Session = Depends(get_db)):
     now = datetime.now(tz=timezone.utc)
 
     link_token = (
