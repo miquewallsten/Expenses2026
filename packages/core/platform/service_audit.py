@@ -10,8 +10,10 @@ def log_event(
     action: str,
     actor_user_id: int | None,
     detail_text: str,
+    company_id: int | None = None,
 ) -> AuditLog:
     entry = AuditLog(
+        company_id=company_id,
         entity_type=entity_type,
         entity_id=entity_id,
         action=action,

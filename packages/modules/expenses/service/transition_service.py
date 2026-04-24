@@ -79,9 +79,6 @@ from packages.modules.admin.service.approval_setup_service import (
 from packages.modules.admin.service.company_setup_service import (
     get_or_create_company_setup,
 )
-from packages.modules.admin.service.workflow_setup_service import (
-    get_or_create_workflow_setup,
-)
 from packages.modules.expenses.service.action_resolver_service import (
     get_validation_flags,
 )
@@ -184,6 +181,7 @@ def _apply_transition(
         action="status_change",
         actor_user_id=actor_user_id,
         detail_text=f"{old_status} → {new_status}",
+        company_id=expense.company_id,
     )
     return expense
 
@@ -222,15 +220,15 @@ def submit_expense(db: Session, expense: Expense, actor_user_id: int | None = No
         )
 
     # ── Precondition: validation gate ─────────────────────────────────────────
-    workflow = get_or_create_workflow_setup(db, expense.company_id)
-    if bool(workflow.block_submit_on_failed_validation):
-        flags = get_validation_flags(db, expense.id)
-        if flags["has_failed"]:
-            raise ValueError(
-                f"Expense {expense.id} cannot be submitted: one or more attached "
-                "documents have failed validation and the company workflow blocks "
-                "submission on failed validation."
-            )
+    # Submission is always blocked when documents have failed validation.
+    # The accounting setup's allow_submit_with_warnings can override the
+    # 'warning' severity in the accounting queue, but 'failed' is hard-blocked.
+    flags = get_validation_flags(db, expense.id)
+    if flags["has_failed"]:
+        raise ValueError(
+            f"Expense {expense.id} cannot be submitted: one or more attached "
+            "documents have failed validation."
+        )
 
     # ── Target status ─────────────────────────────────────────────────────────
     # The submit action always moves the expense into the review pipeline.
@@ -255,7 +253,6 @@ def manager_approve_expense(db: Session, expense: Expense, actor_user_id: int | 
     """
     company_setup = get_or_create_company_setup(db, expense.company_id)
     approval      = get_or_create_approval_setup(db, expense.company_id)
-    workflow      = get_or_create_workflow_setup(db, expense.company_id)
 
     if not _manager_flow_enabled(company_setup, approval):
         raise ValueError(
@@ -329,16 +326,12 @@ def manager_return_expense(db: Session, expense: Expense, actor_user_id: int | N
     and resubmit.  There is no dedicated "returned" status in the current model;
     see the module-level note for the rationale and trade-offs.
 
-    The workflow must have allow_resubmit_after_return enabled.
-
     Raises ValueError if:
       - The manager flow is not enabled.
       - The expense is not awaiting manager review.
-      - allow_resubmit_after_return is False.
     """
     company_setup = get_or_create_company_setup(db, expense.company_id)
     approval      = get_or_create_approval_setup(db, expense.company_id)
-    workflow      = get_or_create_workflow_setup(db, expense.company_id)
 
     if not _manager_flow_enabled(company_setup, approval):
         raise ValueError(
@@ -350,12 +343,6 @@ def manager_return_expense(db: Session, expense: Expense, actor_user_id: int | N
         raise ValueError(
             f"Expense {expense.id} cannot be returned from status "
             f"'{expense.status}'. Expected '{_STATUS_SUBMITTED}'."
-        )
-
-    if not bool(workflow.allow_resubmit_after_return):
-        raise ValueError(
-            f"Expense {expense.id}: the workflow policy does not allow "
-            "return-to-employee (allow_resubmit_after_return is not enabled)."
         )
 
     return _apply_transition(db, expense, _STATUS_RETURNED, actor_user_id=actor_user_id)
@@ -426,7 +413,6 @@ def accounting_return_expense(db: Session, expense: Expense, actor_user_id: int 
     company_setup = get_or_create_company_setup(db, expense.company_id)
     accounting    = get_or_create_accounting_setup(db, expense.company_id)
     approval      = get_or_create_approval_setup(db, expense.company_id)
-    workflow      = get_or_create_workflow_setup(db, expense.company_id)
 
     if not _accounting_flow_enabled(company_setup, accounting):
         raise ValueError(
@@ -435,12 +421,6 @@ def accounting_return_expense(db: Session, expense: Expense, actor_user_id: int 
         )
 
     _assert_accounting_eligible(expense, approval)
-
-    if not bool(workflow.allow_resubmit_after_return):
-        raise ValueError(
-            f"Expense {expense.id}: the workflow policy does not allow "
-            "return-to-employee (allow_resubmit_after_return is not enabled)."
-        )
 
     return _apply_transition(db, expense, _STATUS_RETURNED, actor_user_id=actor_user_id)
 

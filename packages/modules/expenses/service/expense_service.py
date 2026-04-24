@@ -74,6 +74,7 @@ def _change_expense_status(db: Session, expense_id: int, new_status: str, actor_
         action="status_change",
         actor_user_id=actor_user_id,
         detail_text=f"{old_status} -> {new_status}",
+        company_id=expense.company_id,
     )
     return expense
 
