@@ -2,7 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from apps.api.auth import get_current_user
 from apps.api.deps import get_db
+from packages.core.platform.models_user import User
+from packages.modules.expenses.api._security import get_expense_for_user
 from packages.modules.expenses.models.expense import Expense
 from packages.modules.expenses.service.action_resolver_service import (
     resolve_accounting_actions,
@@ -25,6 +28,7 @@ def get_expense_actions(
     expense_id: int,
     portal_role: str = Query(..., description="One of: employee, manager, accounting"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     if portal_role not in _VALID_ROLES:
         raise HTTPException(
@@ -32,9 +36,7 @@ def get_expense_actions(
             detail=f"Invalid portal_role '{portal_role}'. Must be one of: {', '.join(sorted(_VALID_ROLES))}.",
         )
 
-    expense = db.query(Expense).filter(Expense.id == expense_id).first()
-    if expense is None:
-        raise HTTPException(status_code=404, detail=f"Expense {expense_id} not found.")
+    expense = get_expense_for_user(expense_id, db, current_user)
 
     if portal_role == "employee":
         actions = resolve_employee_actions(db, expense)

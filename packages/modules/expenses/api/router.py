@@ -1,3 +1,4 @@
+import asyncio
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -36,6 +37,7 @@ from packages.modules.expenses.service.accounting_learning_service import find_l
 from packages.modules.accounting.service.accounting_explanation_service import explain_accounting_decision
 from packages.modules.expenses.service.sat_validation_service import run_sat_validation
 from packages.modules.expenses.service.policy_service import get_or_create_company_expense_policy
+from packages.modules.archive.service.archive_service import purge_archive_files_for_expense
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
 
@@ -98,6 +100,7 @@ def _extract_text_from_upload(filename: str, data: bytes) -> str:
 
     * ``.xml`` / ``.txt`` — UTF-8 decode with error replacement.
     * ``.pdf``             — pdfplumber text extraction of every page.
+    * ``.jpg`` / ``.jpeg`` / ``.png``  — tesseract OCR (Spanish + English), best-effort.
     * Anything else        — a minimal ``[BINARY_FILE]`` placeholder so the
       document row can still be created + classified server-side.
     """
@@ -115,6 +118,21 @@ def _extract_text_from_upload(filename: str, data: bytes) -> str:
                 return "\n".join((p.extract_text() or "") for p in pdf.pages)
         except Exception:
             return f"[BINARY_FILE]\nfilename: {filename}\nsize: {len(data)}"
+    if lower.endswith((".jpg", ".jpeg", ".png")):
+        # Best-effort OCR via pytesseract; spa+eng covers MX ticket receipts.
+        # Falls back silently when tesseract binary or language packs are
+        # missing so uploads never break.
+        try:
+            import io
+            import pytesseract
+            from PIL import Image
+            img = Image.open(io.BytesIO(data))
+            text = pytesseract.image_to_string(img, lang="spa+eng")
+            if text and text.strip():
+                return text
+        except Exception:  # noqa: BLE001 — OCR is optional
+            pass
+        return f"[BINARY_FILE]\nfilename: {filename}\nsize: {len(data)}"
     return f"[BINARY_FILE]\nfilename: {filename}\nsize: {len(data)}"
 
 
@@ -137,14 +155,140 @@ async def upload_document_route(
         data = await file.read()
         if not data:
             raise HTTPException(status_code=400, detail="Empty file")
-        content_text = _extract_text_from_upload(file.filename or "upload", data)
+        content_text = await asyncio.to_thread(_extract_text_from_upload, file.filename or "upload", data)
+
+        # ── Storage dedup ──────────────────────────────────────────────────
+        # Prevent the same bytes from being archived repeatedly when a user
+        # drags the same file in more than once. We match by (company_id,
+        # filename, content_text) because those together uniquely identify an
+        # XML/PDF — content_text is the decoded XML body or the PDF's
+        # extracted text, so byte-equal re-uploads collapse to a single row.
+        existing = (
+            db.query(ExpenseDocument)
+            .filter(
+                ExpenseDocument.company_id == company_id,
+                ExpenseDocument.filename == (file.filename or "upload"),
+                ExpenseDocument.content_text == content_text,
+            )
+            .first()
+        )
+        if existing is not None:
+            # No new archive row, no new expense — just hand back the existing one.
+            return existing
+
+        # ── Bidirectional auto-link by CFDI identity ─────────────────────
+        # When caller didn't specify an expense_id, try to attach the new
+        # upload to the complementary document (PDF↔XML) that shares the
+        # same CFDI identity (UUID / issuer RFC / receiver RFC / total).
+        # This is what pairs files regardless of upload order.
+        effective_expense_id = expense_id
+        if effective_expense_id is None:
+            try:
+                from packages.modules.expenses.service.cfdi_qr_service import extract_cfdi_qr_identity
+                from packages.modules.expenses.service.document_identity_service import extract_xml_identity
+                from packages.modules.expenses.service.cfdi_pairing_service import match_pdf_to_xml_by_cfdi_identity
+
+                fname = (file.filename or "").lower()
+
+                # Path A — uploaded PDF → find matching XML already attached to a draft.
+                if fname.endswith(".pdf"):
+                    pdf_identity = extract_cfdi_qr_identity(file.filename or "upload", content_text)
+                    if pdf_identity and pdf_identity.get("is_cfdi_qr"):
+                        xml_candidates = (
+                            db.query(ExpenseDocument)
+                            .filter(
+                                ExpenseDocument.company_id == company_id,
+                                ExpenseDocument.document_type == "cfdi_xml",
+                                ExpenseDocument.expense_id.isnot(None),
+                            )
+                            .all()
+                        )
+                        for xml_doc in xml_candidates:
+                            xml_identity = extract_xml_identity(
+                                filename=xml_doc.filename,
+                                content_text=xml_doc.content_text or "",
+                            )
+                            m = match_pdf_to_xml_by_cfdi_identity(xml_identity, pdf_identity)
+                            if m.get("is_match") and m.get("confidence") == "high":
+                                effective_expense_id = xml_doc.expense_id
+                                break
+
+                # Path B — uploaded XML → find matching PDF already attached to a draft.
+                # Covers the reverse case: user uploaded the PDF first, then the XML.
+                elif fname.endswith(".xml"):
+                    xml_identity = extract_xml_identity(
+                        filename=file.filename or "upload",
+                        content_text=content_text or "",
+                    )
+                    if xml_identity and xml_identity.get("uuid"):
+                        pdf_candidates = (
+                            db.query(ExpenseDocument)
+                            .filter(
+                                ExpenseDocument.company_id == company_id,
+                                ExpenseDocument.document_type.in_(
+                                    ["cfdi_pdf", "pdf_unclassified", "ticket"]
+                                ),
+                                ExpenseDocument.expense_id.isnot(None),
+                            )
+                            .all()
+                        )
+                        # Pre-fetch expense IDs that already have an XML doc to
+                        # avoid an N+1 query inside the loop below.
+                        xml_paired_expense_ids = {
+                            row[0]
+                            for row in db.query(ExpenseDocument.expense_id)
+                            .filter(
+                                ExpenseDocument.company_id == company_id,
+                                ExpenseDocument.document_type == "cfdi_xml",
+                                ExpenseDocument.expense_id.isnot(None),
+                            )
+                            .all()
+                        }
+                        for pdf_doc in pdf_candidates:
+                            # Skip PDFs whose expense already has an XML attached
+                            # (don't hijack an existing pair).
+                            if pdf_doc.expense_id in xml_paired_expense_ids:
+                                continue
+
+                            pdf_identity = extract_cfdi_qr_identity(
+                                pdf_doc.filename, pdf_doc.content_text or ""
+                            )
+                            if not (pdf_identity and pdf_identity.get("is_cfdi_qr")):
+                                continue
+                            m = match_pdf_to_xml_by_cfdi_identity(xml_identity, pdf_identity)
+                            if m.get("is_match") and m.get("confidence") == "high":
+                                effective_expense_id = pdf_doc.expense_id
+                                break
+            except Exception:  # noqa: BLE001 — pairing is best-effort
+                pass
+
         payload = ExpenseDocumentCreate(
             company_id=company_id,
-            expense_id=expense_id,
+            expense_id=effective_expense_id,
             filename=file.filename or "upload",
             content_text=content_text,
         )
         document = create_document(db, payload, file_bytes=data)
+
+        # If this PDF was attached to an existing expense that already has an
+        # XML doc, re-validate the XML so its stale "MISSING_PDF" warning is
+        # replaced with "PDF_PAIRED".
+        if document.expense_id is not None and document.document_type in ("cfdi_pdf", "pdf_unclassified", "ticket"):
+            try:
+                from packages.modules.expenses.service.document_validation_service import validate_document as _revalidate
+                xml_sibling = (
+                    db.query(ExpenseDocument)
+                    .filter(
+                        ExpenseDocument.expense_id == document.expense_id,
+                        ExpenseDocument.document_type == "cfdi_xml",
+                        ExpenseDocument.id != document.id,
+                    )
+                    .first()
+                )
+                if xml_sibling is not None:
+                    _revalidate(db, xml_sibling.id)
+            except Exception:  # noqa: BLE001 — revalidation is best-effort
+                pass
 
         # Mirror the JSON-endpoint ticket-policy guard.
         if document.document_type == "ticket":
@@ -190,6 +334,102 @@ def get_document_route(document_id: int, db: Session = Depends(get_db), current_
     return document
 
 
+@router.get("/documents/{document_id}/file")
+def get_document_file_route(
+    document_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Stream the original archived bytes for *document_id*.
+
+    Used by the frontend to embed PDF thumbnails / inline previews. Returns
+    404 when the file has no archive row or the backend cannot read it.
+    """
+    from fastapi.responses import Response
+    from packages.core.platform.models_archive_file import ArchiveFile
+    from packages.core.platform.models_storage_config import StorageConfig
+    from packages.modules.archive.service.storage_backend import get_storage_backend
+
+    document = get_document(db, document_id)
+    if document is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if current_user.role != "admin" and document.company_id != current_user.company_id:
+        raise HTTPException(status_code=403, detail="Cross-company access is not allowed")
+
+    # Find the archive row. Prefer one bound to this expense_id, but fall
+    # back to (company_id, filename) only — archive rows are sometimes saved
+    # before the document's expense_id is resolved (see document_service).
+    archive_row = None
+    if document.expense_id is not None:
+        archive_row = (
+            db.query(ArchiveFile)
+            .filter(
+                ArchiveFile.company_id == document.company_id,
+                ArchiveFile.expense_id == document.expense_id,
+                ArchiveFile.file_name == document.filename,
+            )
+            .order_by(ArchiveFile.id.desc())
+            .first()
+        )
+    if archive_row is None:
+        archive_row = (
+            db.query(ArchiveFile)
+            .filter(
+                ArchiveFile.company_id == document.company_id,
+                ArchiveFile.file_name == document.filename,
+            )
+            .order_by(ArchiveFile.id.desc())
+            .first()
+        )
+    if archive_row is None:
+        raise HTTPException(status_code=404, detail="Archived file not found")
+
+    # Resolve storage config to hit the correct backend.
+    scfg = (
+        db.query(StorageConfig).filter(StorageConfig.company_id == document.company_id).first()
+        or db.query(StorageConfig).filter(StorageConfig.company_id == 0).first()
+    )
+    db_cfg = None
+    if scfg:
+        db_cfg = {
+            "backend":         scfg.backend,
+            "local_path":      scfg.local_path,
+            "endpoint_url":    scfg.endpoint_url,
+            "bucket":          scfg.bucket,
+            "prefix":          scfg.prefix,
+            "region":          scfg.region,
+            "azure_account":   scfg.azure_account,
+            "azure_container": scfg.azure_container,
+        }
+    backend = get_storage_backend(db_cfg=db_cfg)
+    data = backend.read_bytes(archive_row.storage_key)
+    if data is None:
+        # Bytes lost (e.g. storage volume reset). Return 204 instead of 404 so
+        # inline thumbnail fetches don't pollute the browser console with red
+        # network errors — the frontend handles 204 as "no preview available".
+        return Response(status_code=204)
+
+    ext = (archive_row.file_type or "").lower()
+    content_type = {
+        "pdf": "application/pdf",
+        "xml": "application/xml",
+        "jpg": "image/jpeg",
+        "jpeg": "image/jpeg",
+        "png": "image/png",
+        "gif": "image/gif",
+        "webp": "image/webp",
+    }.get(ext, "application/octet-stream")
+
+    return Response(
+        content=data,
+        media_type=content_type,
+        headers={
+            "Content-Disposition": f'inline; filename="{archive_row.file_name}"',
+            "Cache-Control": "private, max-age=3600",
+        },
+    )
+
+
 @router.delete("/documents/{document_id}", status_code=204)
 def delete_document_route(document_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     document = get_document(db, document_id)
@@ -197,11 +437,52 @@ def delete_document_route(document_id: int, db: Session = Depends(get_db), curre
         raise HTTPException(status_code=404, detail="Document not found")
     if current_user.role != "admin" and document.company_id != current_user.company_id:
         raise HTTPException(status_code=403, detail="Cross-company access is not allowed")
-    # Delete all linked validation results first to avoid FK violations
+
+    # Block deletion once the expense has left draft OR has been bundled into
+    # a report — the document is part of an immutable accounting record.
+    if document.expense_id is not None:
+        expense = db.query(Expense).filter(Expense.id == document.expense_id).first()
+        if expense is not None:
+            if expense.report_id is not None:
+                raise HTTPException(
+                    status_code=409,
+                    detail="Document belongs to an expense already bundled into a report and cannot be deleted.",
+                )
+            if (expense.status or "").lower() != "draft":
+                raise HTTPException(
+                    status_code=409,
+                    detail="Document belongs to a submitted expense and cannot be deleted.",
+                )
+
+    # Permanent purge: validation results → archived file bytes/rows → document.
     db.query(ValidationResult).filter(ValidationResult.document_id == document_id).delete(synchronize_session=False)
+    try:
+        purge_archive_files_for_expense(
+            db,
+            company_id=document.company_id,
+            expense_id=document.expense_id or 0,
+            filename=document.filename,
+        )
+    except Exception:  # noqa: BLE001 — DB row removal still proceeds
+        db.rollback()
+    linked_expense_id = document.expense_id
     db.delete(document)
     db.commit()
 
+    # If the linked draft expense no longer has any documents, remove it too
+    # so the XML/PDF leaves no trace (matches user expectation for a hard delete).
+    if linked_expense_id is not None:
+        expense = db.query(Expense).filter(Expense.id == linked_expense_id).first()
+        if expense is not None and (expense.status or "").lower() == "draft" and expense.report_id is None:
+            remaining = (
+                db.query(ExpenseDocument)
+                .filter(ExpenseDocument.expense_id == linked_expense_id)
+                .count()
+            )
+            if remaining == 0:
+                db.query(ExpenseTag).filter(ExpenseTag.expense_id == linked_expense_id).delete(synchronize_session=False)
+                db.delete(expense)
+                db.commit()
 
 @router.patch("/documents/{document_id}", response_model=ExpenseDocumentRead)
 def update_document_route(document_id: int, payload: ExpenseDocumentUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -219,10 +500,9 @@ def update_document_route(document_id: int, payload: ExpenseDocumentUpdate, db: 
 
 @router.get("/documents/by-expense/{expense_id}", response_model=list[ExpenseDocumentRead])
 def list_documents_by_expense_route(expense_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    docs = list_documents_by_expense(db, expense_id)
-    if docs and current_user.role != "admin" and docs[0].company_id != current_user.company_id:
-        raise HTTPException(status_code=403, detail="Cross-company access is not allowed")
-    return docs
+    from packages.modules.expenses.api._security import get_expense_for_user
+    get_expense_for_user(expense_id, db, current_user)
+    return list_documents_by_expense(db, expense_id)
 
 
 @router.post("/documents/{document_id}/validate", response_model=list[ValidationResultRead])
@@ -279,7 +559,9 @@ def get_report_route(report_id: int, db: Session = Depends(get_db), _user: User 
 
 
 @router.post("/reports/{report_id}/expenses/{expense_id}", response_model=ExpenseRead)
-def add_expense_to_report_route(report_id: int, expense_id: int, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
+def add_expense_to_report_route(report_id: int, expense_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    from packages.modules.expenses.api._security import get_expense_for_user
+    get_expense_for_user(expense_id, db, current_user)
     try:
         expense = add_expense_to_report(db, expense_id=expense_id, report_id=report_id)
 
@@ -522,7 +804,9 @@ def create_allocation_route(payload: ExpenseAllocationCreate, db: Session = Depe
 
 
 @router.get("/allocations/{expense_id}", response_model=list[ExpenseAllocationRead])
-def list_allocations_route(expense_id: int, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
+def list_allocations_route(expense_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    from packages.modules.expenses.api._security import get_expense_for_user
+    get_expense_for_user(expense_id, db, current_user)
     return list_expense_allocations(db, expense_id)
 
 
@@ -534,7 +818,9 @@ def create_attachment_route(payload: ExpenseAttachmentCreate, db: Session = Depe
 
 
 @router.get("/attachments/{expense_id}", response_model=list[ExpenseAttachmentRead])
-def list_attachments_route(expense_id: int, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
+def list_attachments_route(expense_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    from packages.modules.expenses.api._security import get_expense_for_user
+    get_expense_for_user(expense_id, db, current_user)
     return list_expense_attachments(db, expense_id)
 
 
@@ -575,13 +861,8 @@ def create_tag_route(payload: dict, db: Session = Depends(get_db), current_user:
 
 @router.get("/{expense_id}", response_model=ExpenseRead)
 def get_expense_route(expense_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    expense = get_expense(db, expense_id)
-
-    if expense is None:
-        raise HTTPException(status_code=404, detail="Expense not found")
-
-    if current_user.role != "admin" and expense.company_id != current_user.company_id:
-        raise HTTPException(status_code=403, detail="Cross-company access is not allowed")
+    from packages.modules.expenses.api._security import get_expense_for_user
+    expense = get_expense_for_user(expense_id, db, current_user)
 
     # Load category and learning match for explanation
     category = None
@@ -661,3 +942,19 @@ def list_expense_validations_route(expense_id: int, db: Session = Depends(get_db
         .order_by(ValidationResult.created_at.desc())
         .all()
     )
+
+
+# ── Unified policy checks — admin-configured rules + live status ─────────────
+
+@router.get("/{expense_id}/policy-checks")
+def list_expense_policy_checks_route(
+    expense_id: int,
+    db: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
+):
+    from packages.modules.expenses.service.policy_checks_service import compute_policy_checks
+
+    expense = get_expense(db, expense_id)
+    if expense is None:
+        raise HTTPException(status_code=404, detail=f"Expense {expense_id} not found.")
+    return compute_policy_checks(db, expense)

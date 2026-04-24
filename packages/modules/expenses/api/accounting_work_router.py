@@ -1,7 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from apps.api.auth import require_manager_or_accountant
 from apps.api.deps import get_db
+from packages.core.platform.models_user import User
+from packages.modules.expenses.api._security import get_expense_for_user
 from packages.modules.expenses.models.expense import Expense
 from packages.modules.expenses.schemas.accounting_work import AssignAccountCodeRequest
 from packages.modules.expenses.schemas.expense import ExpenseRead
@@ -61,13 +64,6 @@ router = APIRouter(prefix="/accounting/work", tags=["accounting"])
 
 # ── Shared helpers ─────────────────────────────────────────────────────────────
 
-def _get_expense_or_404(expense_id: int, db: Session) -> Expense:
-    expense = db.query(Expense).filter(Expense.id == expense_id).first()
-    if expense is None:
-        raise HTTPException(status_code=404, detail="Expense not found")
-    return expense
-
-
 # ── Endpoints ──────────────────────────────────────────────────────────────────
 
 @router.post("/{expense_id}/assign-account-code", response_model=ExpenseRead)
@@ -75,8 +71,9 @@ def assign_account_code_route(
     expense_id: int,
     body: AssignAccountCodeRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager_or_accountant),
 ):
-    expense = _get_expense_or_404(expense_id, db)
+    expense = get_expense_for_user(expense_id, db, current_user)
     try:
         updated = assign_account_code(db, expense, body.account_code)
     except ValueError as exc:
@@ -88,8 +85,9 @@ def assign_account_code_route(
 def clear_account_code_route(
     expense_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager_or_accountant),
 ):
-    expense = _get_expense_or_404(expense_id, db)
+    expense = get_expense_for_user(expense_id, db, current_user)
     try:
         updated = clear_account_code(db, expense)
     except ValueError as exc:
@@ -101,8 +99,9 @@ def clear_account_code_route(
 def generate_event_route(
     expense_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager_or_accountant),
 ):
-    expense = _get_expense_or_404(expense_id, db)
+    expense = get_expense_for_user(expense_id, db, current_user)
     try:
         result = generate_accounting_event(db, expense_id)
     except ValueError as exc:

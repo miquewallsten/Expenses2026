@@ -37,10 +37,15 @@ def test_review_actions_requires_auth(client, db_session, test_company):
     assert resp.status_code == 401
 
 
-# ── Test 2: Cross-company expense read returns 403 ──────────────────────────
+# ── Test 2: Cross-company expense read returns 404 ──────────────────────────
 
 def test_cross_company_expense_read_forbidden(client, db_session, test_company, test_user):
-    """A user cannot read an expense belonging to a different company."""
+    """A user cannot read an expense belonging to a different company.
+
+    Returns 404 (not 403) so the API doesn't leak the existence of another
+    company's row — id-probe attacks would otherwise distinguish 'exists in
+    another tenant' from 'does not exist'.
+    """
     from packages.core.platform.models import Company
     from packages.modules.expenses.models.expense import Expense
 
@@ -63,7 +68,7 @@ def test_cross_company_expense_read_forbidden(client, db_session, test_company, 
         f"/expenses/{expense.id}",
         headers={"X-User-Id": str(test_user.id)},
     )
-    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.text}"
+    assert resp.status_code == 404, f"Expected 404, got {resp.status_code}: {resp.text}"
 
 
 # ── Test 3: Audit actor_user_id is recorded on transition ──────────────────
@@ -73,7 +78,6 @@ def test_submit_records_audit_actor(db_session, test_company, test_user):
     from packages.core.platform.models_audit import AuditLog
     from packages.modules.expenses.models.expense import Expense
     from packages.core.platform.models_approval_setup import ApprovalSetup
-    from packages.core.platform.models_workflow_setup import WorkflowSetup
     from packages.modules.expenses.service.transition_service import submit_expense
 
     # Seed required setup rows (transition_service reads both)
@@ -82,7 +86,6 @@ def test_submit_records_audit_actor(db_session, test_company, test_user):
         approval_mode="none",
         allow_resubmission_after_rejection=True,
     ))
-    db_session.add(WorkflowSetup(company_id=test_company.id))
     db_session.commit()
 
     expense = Expense(
