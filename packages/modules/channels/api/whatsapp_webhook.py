@@ -6,22 +6,29 @@ Meta webhook protocol
 GET  /channels/whatsapp/webhook  — Hub verification (must echo hub.challenge)
 POST /channels/whatsapp/webhook  — Inbound messages / delivery receipts
 
-Best practices implemented:
-- Return HTTP 200 immediately before processing (prevents Meta retries)
-- Use BackgroundTasks so the webhook responds in <1 s
-- Verify webhook verify_token on GET
-- Per-company routing: look up ChannelSettings by phone_number_id
-- Deduplicate via wa_message_id (handled in agent.process_message)
+Security:
+- GET verify_token is matched against ChannelSettings per tenant.
+- POST requests must carry a valid X-Hub-Signature-256 header (HMAC-SHA256
+  of the raw body using the Meta App Secret). The secret is read from
+  env var WHATSAPP_APP_SECRET. In production a missing secret rejects
+  every request; in dev a missing secret logs a warning and accepts.
+- Unresolvable phone_number_id → log + 200 (never fall back to a hardcoded
+  tenant; we refuse to accept messages we can't attribute).
+- Deduplication on wa_message_id is handled downstream in agent.process_message.
 """
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import logging
+import os
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, Response
 from sqlalchemy.orm import Session
 
+from apps.api.config import settings as app_settings
 from apps.api.deps import get_db
 from packages.modules.channels.models import ChannelSettings
 from packages.modules.channels.schemas import NormalizedMessage, InboundAttachment
@@ -32,9 +39,36 @@ log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/channels/whatsapp", tags=["channels-whatsapp"])
 
-# ── Company resolver ──────────────────────────────────────────────────────────
+# Global WhatsApp App Secret (Meta App-level). Every webhook payload is signed
+# by Meta with this secret via X-Hub-Signature-256.
+_APP_SECRET = os.environ.get("WHATSAPP_APP_SECRET", "").strip()
 
-_DEFAULT_COMPANY_ID = 1  # fallback for single-tenant deployments
+
+def _verify_meta_signature(raw_body: bytes, header: str | None) -> bool:
+    """Verify X-Hub-Signature-256 header against the raw request body.
+
+    Returns True on match. Returns False on any malformed header, empty
+    secret (production), or signature mismatch. Uses constant-time compare.
+    """
+    if not _APP_SECRET:
+        # Allow in dev so local setups aren't blocked; reject in prod.
+        if app_settings.is_production:
+            log.error("WHATSAPP_APP_SECRET is not set — rejecting webhook")
+            return False
+        log.warning(
+            "WHATSAPP_APP_SECRET is not set — skipping signature check (dev mode)"
+        )
+        return True
+    if not header or not header.startswith("sha256="):
+        return False
+    provided = header.split("=", 1)[1].strip()
+    expected = hmac.new(
+        _APP_SECRET.encode("utf-8"), raw_body, hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(provided, expected)
+
+
+# ── Company resolver ──────────────────────────────────────────────────────────
 
 
 def _resolve_company(db: Session, phone_number_id: str) -> int | None:
@@ -102,8 +136,18 @@ async def whatsapp_webhook_receive(
     Receive inbound WhatsApp messages.
     Must return 200 immediately — processing is async via BackgroundTasks.
     """
+    raw_body = await request.body()
+    signature = request.headers.get("x-hub-signature-256")
+
+    if not _verify_meta_signature(raw_body, signature):
+        log.warning("WhatsApp webhook rejected — bad or missing signature")
+        # 401 tells Meta the caller is unauthorized; a forged attacker gets
+        # the same response as a misconfigured setup.
+        raise HTTPException(status_code=401, detail="Invalid signature")
+
     try:
-        payload: dict[str, Any] = await request.json()
+        import json
+        payload: dict[str, Any] = json.loads(raw_body or b"{}")
     except Exception:
         # Always return 200 to Meta even on parse errors to prevent retry storms
         return Response(status_code=200)
@@ -127,11 +171,17 @@ def _process_whatsapp_payload(payload: dict[str, Any], db: Session) -> None:
     except (KeyError, IndexError):
         phone_number_id = None
 
-    company_id = None
-    if phone_number_id:
-        company_id = _resolve_company(db, phone_number_id)
+    if not phone_number_id:
+        log.warning("WhatsApp payload missing phone_number_id — dropped")
+        return
+    company_id = _resolve_company(db, phone_number_id)
     if not company_id:
-        company_id = _DEFAULT_COMPANY_ID
+        # Refuse to attribute a message to an arbitrary tenant — drop it.
+        log.warning(
+            "WhatsApp payload phone_number_id=%s not registered — dropped",
+            phone_number_id,
+        )
+        return
 
     # Load settings for read-receipts
     settings = (
