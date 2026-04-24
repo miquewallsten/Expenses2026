@@ -5,6 +5,14 @@ import NewExpenseModal from "@/components/employee/NewExpenseModal";
 
 vi.mock("@/lib/session", () => ({
   getAuthHeaders: () => ({ "X-User-Id": "1" }),
+  getStoredSession: () => ({
+    token: "t",
+    userId: 1,
+    email: "e@x.com",
+    role: "employee",
+    companyId: 1,
+    fullName: "Test",
+  }),
 }));
 
 vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "http://localhost:8000");

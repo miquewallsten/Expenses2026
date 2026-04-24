@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 import { useCallback, useMemo, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useTranslations } from "next-intl";
-import { getAuthHeaders } from "@/lib/session";
+import { getAuthHeaders, getStoredSession } from "@/lib/session";
 
 type ValidationResult = {
   id?: number;
@@ -137,11 +137,13 @@ export default function EmployeeUploadPage() {
       ]);
 
       try {
-        const contentText = await getFileContent(file);
-        const uploadRes = await fetch(`${API}/expenses/documents`, {
+        const form = new FormData();
+        form.append("company_id", "1");
+        form.append("file", file, file.name);
+        const uploadRes = await fetch(`${API}/expenses/documents/upload`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-          body: JSON.stringify({ company_id: 1, filename: file.name, content_text: contentText }),
+          headers: { ...getAuthHeaders() },
+          body: form,
         });
         if (!uploadRes.ok) {
           const txt = await uploadRes.text();
@@ -209,7 +211,7 @@ export default function EmployeeUploadPage() {
       const res = await fetch(`${API}/expenses/submissions/from-documents`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ company_id: 1, document_ids: documentIds }),
+        body: JSON.stringify({ company_id: getStoredSession()?.companyId, document_ids: documentIds }),
       });
       if (!res.ok) throw new Error("Submission failed");
       const data = await res.json();

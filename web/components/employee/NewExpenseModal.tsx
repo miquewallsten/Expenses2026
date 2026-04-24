@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { X, Paperclip } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { getAuthHeaders } from "@/lib/session";
+import { getAuthHeaders, getStoredSession } from "@/lib/session";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -83,7 +83,7 @@ export default function NewExpenseModal({ open, onClose, onCreated }: Props) {
           ...getAuthHeaders(),
         },
         body: JSON.stringify({
-          company_id: 1,
+          company_id: getStoredSession()?.companyId,
           amount: parsed,
           description: form.description.trim(),
         }),
