@@ -198,3 +198,52 @@ def channel_stats(company_id: int, db: Session = Depends(get_db)) -> dict:
         "by_channel": {ch: cnt for ch, cnt in by_channel},
         "errors": errors,
     }
+
+
+@router.get("/dispatches/{company_id}")
+def list_dispatches(
+    company_id: int,
+    channel: str | None = Query(default=None),
+    status: str | None = Query(default=None),
+    limit: int = Query(default=100, le=500),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    """Phase 1.8 — recent NotificationDispatch rows for the admin panel.
+
+    Newest first. Optional filters by channel ("email" / "whatsapp") and
+    status ("pending" / "sent" / "failed"). Capped at 500 to keep payloads
+    manageable.
+    """
+    from packages.modules.channels.models import NotificationDispatch
+
+    q = db.query(NotificationDispatch).filter(
+        NotificationDispatch.company_id == company_id
+    )
+    if channel:
+        q = q.filter(NotificationDispatch.channel == channel)
+    if status:
+        q = q.filter(NotificationDispatch.status == status)
+    rows = (
+        q.order_by(NotificationDispatch.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+    return [
+        {
+            "id": r.id,
+            "event_type": r.event_type,
+            "resource_type": r.resource_type,
+            "resource_id": r.resource_id,
+            "recipient_user_id": r.recipient_user_id,
+            "recipient_address": r.recipient_address,
+            "channel": r.channel,
+            "status": r.status,
+            "attempts": r.attempts,
+            "last_error_text": getattr(r, "last_error_text", None),
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+            "sent_at": r.sent_at.isoformat() if getattr(r, "sent_at", None) else None,
+        }
+        for r in rows
+    ]
