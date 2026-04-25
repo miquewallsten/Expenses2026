@@ -7,6 +7,7 @@ from packages.modules.integrations.service.adapters.generic_csv import (
     GenericCsvJsonAdapter,
 )
 from packages.modules.integrations.service.adapters.netsuite import NetSuiteAdapter
+from packages.modules.integrations.service.adapters.oracle_jde import OracleJDEAdapter
 from packages.modules.integrations.service.adapters.protocol import IntegrationAdapter
 from packages.modules.integrations.service.adapters.sap import SapAdapter
 
@@ -16,6 +17,7 @@ ADAPTER_REGISTRY: dict[str, type[IntegrationAdapter]] = {
     "aspel": AspelAdapter,
     "sap": SapAdapter,
     "netsuite": NetSuiteAdapter,
+    "oracle": OracleJDEAdapter,
     "custom": GenericCsvJsonAdapter,
 }
 

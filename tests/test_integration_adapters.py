@@ -487,3 +487,87 @@ def test_netsuite_sync_cost_centers_uses_department_shape(
     rec = result.payload["departments"][0]
     assert set(rec.keys()) == {"externalId", "name", "subsidiaryRef"}
     assert rec["name"] == "One"
+
+
+# ---------------------------------------------------------------------------
+# Phase 7.4 — Oracle / JD Edwards adapter
+# ---------------------------------------------------------------------------
+
+from packages.modules.integrations.service.adapters import OracleJDEAdapter  # noqa: E402
+
+
+def test_registry_resolves_oracle() -> None:
+    assert isinstance(get_adapter("oracle"), OracleJDEAdapter)
+
+
+def test_oracle_export_polizas_emits_f0911z1_csv(
+    db_session: Session, co: Company
+) -> None:
+    integ = Integration(
+        company_id=co.id, kind="erp", vendor="oracle", name="JD Edwards",
+        is_enabled=True,
+    )
+    db_session.add(integ)
+    db_session.commit()
+    _seed_approved_expenses(db_session, co.id, n=2)
+    result = OracleJDEAdapter().export_polizas(db_session, integ, period="2026-04")
+    assert result.items_ok >= 1
+    assert "F0911Z1.csv" in result.artifacts
+    csv_text = result.artifacts["F0911Z1.csv"].decode("utf-8")
+    lines = csv_text.splitlines()
+    assert lines[0].startswith("EDUS,EDBT,EDTN,EDLN,EDOC,EDCT,EDDJ,EXR,ANI,AA")
+    # Each expense produces ≥1 movement row
+    assert len(lines) >= 1 + result.items_ok
+
+
+def test_oracle_export_polizas_empty_when_no_expenses(
+    db_session: Session, co: Company
+) -> None:
+    integ = Integration(
+        company_id=co.id, kind="erp", vendor="oracle", name="JDE",
+        is_enabled=True,
+    )
+    db_session.add(integ)
+    db_session.commit()
+    result = OracleJDEAdapter().export_polizas(db_session, integ, period="2026-04")
+    assert result.items_ok == 0
+    assert "F0911Z1.csv" not in result.artifacts
+
+
+def test_oracle_sync_users_uses_jde_field_names(
+    db_session: Session, co: Company
+) -> None:
+    integ = Integration(
+        company_id=co.id, kind="erp", vendor="oracle", name="JDE",
+        is_enabled=True,
+    )
+    db_session.add(integ)
+    db_session.add_all([
+        User(company_id=co.id, email="a@a.test", full_name="A One", role="admin"),
+        User(company_id=999, email="leak@x.test", full_name="X", role="admin"),
+    ])
+    db_session.commit()
+    result = OracleJDEAdapter().sync_users(db_session, integ)
+    assert result.items_ok == 1
+    rec = result.payload["address_book"][0]
+    assert set(rec.keys()) == {"AN8", "MLNM", "EMAL", "ROLE"}
+    assert rec["EMAL"] == "a@a.test"
+
+
+def test_oracle_sync_cost_centers_uses_business_unit_shape(
+    db_session: Session, co: Company
+) -> None:
+    integ = Integration(
+        company_id=co.id, kind="erp", vendor="oracle", name="JDE",
+        is_enabled=True,
+    )
+    db_session.add(integ)
+    db_session.add_all([
+        CostCenter(company_id=co.id, code="MCU01", name="One", status="active"),
+        CostCenter(company_id=co.id, code="MCU02", name="Two", status="archived"),
+    ])
+    db_session.commit()
+    result = OracleJDEAdapter().sync_cost_centers(db_session, integ)
+    assert result.items_ok == 1
+    rec = result.payload["business_units"][0]
+    assert rec == {"MCU": "MCU01", "DL01": "One"}
