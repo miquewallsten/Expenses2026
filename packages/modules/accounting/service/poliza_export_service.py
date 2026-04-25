@@ -66,17 +66,22 @@ def render_contpaqi(bulk: dict[str, Any]) -> str:
     for r in bulk.get("rows") or []:
         fecha   = r.get("date") or _today()
         concept = escape(str(r.get("description") or ""))
+        cfdi_uuid = (r.get("cfdi_uuid") or "").strip()
         parts.append(
             f'  <Poliza Tipo="Dr" Folio="{r.get("expense_id")}" '
             f'Fecha="{fecha}" Concepto="{concept}">'
         )
         for ln in r.get("lines") or []:
+            comp_nal = (
+                f' CompNal="{escape(cfdi_uuid)}"' if cfdi_uuid else ""
+            )
             parts.append(
                 "    <Movimiento "
                 f'Cuenta="{escape(str(ln.get("account_code") or ""))}" '
                 f'Cargo="{_fmt_amount(ln.get("debit"))}" '
                 f'Abono="{_fmt_amount(ln.get("credit"))}" '
-                f'Concepto="{escape(str(ln.get("note") or ""))}"/>'
+                f'Concepto="{escape(str(ln.get("note") or ""))}"'
+                f"{comp_nal}/>"
             )
         parts.append("  </Poliza>")
     parts.append("</Polizas>")
@@ -108,19 +113,25 @@ def render_sat_polizas(bulk: dict[str, Any], rfc: str = "XAXX010101000") -> str:
     for r in bulk.get("rows") or []:
         fecha   = r.get("date") or _today()
         concept = escape(str(r.get("description") or ""))
+        cfdi_uuid = (r.get("cfdi_uuid") or "").strip()
         parts.append(
             f'  <PLZ:Poliza NumUnIdenPol="EXP-{r.get("expense_id")}" '
             f'Fecha="{fecha}" Concepto="{concept}">'
         )
         for ln in r.get("lines") or []:
-            parts.append(
+            line = (
                 "    <PLZ:Transaccion "
                 f'NumCta="{escape(str(ln.get("account_code") or ""))}" '
                 f'DesCta="{escape(str(ln.get("account_name") or ""))}" '
                 f'Concepto="{escape(str(ln.get("note") or ""))}" '
                 f'Debe="{_fmt_amount(ln.get("debit"))}" '
-                f'Haber="{_fmt_amount(ln.get("credit"))}"/>'
+                f'Haber="{_fmt_amount(ln.get("credit"))}"'
             )
+            if cfdi_uuid:
+                line += ">\n      <PLZ:CompNal UUID_CFDI=\"" + escape(cfdi_uuid) + "\"/>\n    </PLZ:Transaccion>"
+            else:
+                line += "/>"
+            parts.append(line)
         parts.append("  </PLZ:Poliza>")
     parts.append("</PLZ:Polizas>")
     return "\n".join(parts)

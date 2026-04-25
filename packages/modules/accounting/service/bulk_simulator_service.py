@@ -79,6 +79,8 @@ def bulk_simulate(
             "description":   e.description,
             "amount":        f"{Decimal(str(e.amount or 0)):.2f}",
             "category_code": e.category_code,
+            "cfdi_uuid":     getattr(e, "cfdi_uuid", None),
+            "cfdi_status":   getattr(e, "cfdi_status", None),
             "balanced":      bool(sim.get("balanced")),
             "warning_count": len(warnings),
             "warnings":      warnings,

@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, Date, DateTime, Integer, Numeric, String, Text, func
+from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, Integer, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from apps.api.db import Base
@@ -53,3 +53,10 @@ class Expense(Base):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     tags: Mapped[str | None] = mapped_column(String(1000), nullable=True)  # JSON array of strings
     expense_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    # Phase 4.8 — SAT CFDI lifecycle (Anexo 24 + cancel watcher)
+    cfdi_uuid: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    cfdi_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    cfdi_last_checked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    cfdi_amount_mismatch: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false", nullable=False
+    )
