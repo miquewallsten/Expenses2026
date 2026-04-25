@@ -128,14 +128,40 @@ def _notify_submitted(db: Session, expense, submitter_id: int | None) -> None:
     approvers = _resolve_company_approvers(db, expense.company_id)
     if not approvers:
         return
+    # Lazy import to avoid circular dependency on apps.api.config at import.
+    from packages.modules.channels.service.action_links import (
+        create_action_token,
+    )
+
     for approver_recipient in approvers:
         approver_user = (
             db.get(User, approver_recipient.user_id)
             if approver_recipient.user_id
             else None
         )
+        approve_link = _expense_link(expense)
+        if approver_user is not None:
+            try:
+                token, _row = create_action_token(
+                    db,
+                    user_id=approver_user.id,
+                    company_id=expense.company_id,
+                    action="approve",
+                    resource_type="expense",
+                    resource_id=expense.id,
+                )
+                approve_link = (
+                    f"{settings.web_base_url.rstrip('/')}"
+                    f"/channels/action/{token}"
+                )
+            except Exception:
+                log.exception(
+                    "Failed to mint action token for approver %s expense %s",
+                    approver_user.id,
+                    expense.id,
+                )
         ctx = _ctx_for_expense(
-            expense, submitter=submitter, approver=approver_user
+            expense, submitter=submitter, approver=approver_user, link=approve_link
         )
         msg = render_email(
             "expense_submitted_to_approver", _locale_for(approver_user), ctx

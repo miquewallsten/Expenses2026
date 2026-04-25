@@ -168,3 +168,29 @@ class NotificationDispatch(Base):
     created_at         = Column(DateTime(timezone=True), server_default=func.now())
     sent_at            = Column(DateTime(timezone=True), nullable=True)
     updated_at         = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class ActionLink(Base):
+    """One-time-use signed action token (Phase 1.4 — approve-from-email).
+
+    Unique on token_jti so a captured token cannot be replayed after consumption.
+    The JWT itself carries action/resource and is verified before this row is
+    consulted; this table only enforces single-use semantics + audit trail.
+    """
+    __tablename__ = "action_links"
+    __table_args__ = (
+        UniqueConstraint("token_jti", name="uq_action_link_jti"),
+    )
+
+    id            = Column(Integer, primary_key=True)
+    token_jti     = Column(String(64), nullable=False, index=True)
+    company_id    = Column(Integer, nullable=False, index=True)
+    user_id       = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    action        = Column(String(30),  nullable=False)  # approve|reject|return
+    resource_type = Column(String(50), nullable=False)
+    resource_id   = Column(Integer,    nullable=False)
+    expires_at    = Column(DateTime(timezone=True), nullable=False)
+    used_at       = Column(DateTime(timezone=True), nullable=True)
+    created_ip    = Column(String(64), nullable=True)
+    consumed_ip   = Column(String(64), nullable=True)
+    created_at    = Column(DateTime(timezone=True), server_default=func.now())

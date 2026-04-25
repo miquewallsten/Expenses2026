@@ -88,10 +88,12 @@ from packages.core.platform.models_auth_settings import CompanyAuthSettings  # n
 from packages.modules.admin.api.auth_settings_router import router as auth_settings_router
 from packages.modules.channels.models import (  # noqa: F401 — registers channel tables
     ChannelSettings, ChannelConversation, ChannelMessage, ChannelVerification,
+    NotificationDispatch, ActionLink,
 )
 from packages.modules.channels.api.whatsapp_webhook import router as whatsapp_webhook_router
 from packages.modules.channels.api.email_inbound import router as email_inbound_router
 from packages.modules.channels.api.admin_router import router as channels_admin_router
+from packages.modules.channels.api.action_links_router import router as action_links_router
 from packages.core.platform.models_purchase_request import PurchaseRequest as _PurchaseRequestModel  # noqa: F401
 from packages.core.platform.models_request_attachment import RequestAttachment as _RequestAttachmentModel  # noqa: F401
 from packages.modules.requests.router import router as purchase_requests_router
@@ -235,6 +237,7 @@ app.include_router(auth_settings_router)
 app.include_router(whatsapp_webhook_router)
 app.include_router(email_inbound_router)
 app.include_router(channels_admin_router)
+app.include_router(action_links_router)
 app.include_router(purchase_requests_router)
 app.include_router(time_tracking_router)
 app.include_router(report_cycle_router)
