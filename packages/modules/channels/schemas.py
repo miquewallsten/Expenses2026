@@ -109,6 +109,7 @@ class InboundAttachment(BaseModel):
     content_type: str | None = None
     url:          str | None = None   # pre-signed URL (email providers)
     size_bytes:   int | None = None
+    content_b64:  str | None = None   # inline base64 bytes (Postmark)
 
 
 class NormalizedMessage(BaseModel):

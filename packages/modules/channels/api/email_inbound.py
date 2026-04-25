@@ -145,6 +145,7 @@ def _parse_postmark(data: dict) -> dict[str, Any]:
                 "filename":     a.get("Name"),
                 "content_type": a.get("ContentType"),
                 "size_bytes":   a.get("ContentLength"),
+                "content_b64":  a.get("Content"),
             }
             for a in atts
         ],
@@ -228,6 +229,7 @@ def _process_email(parsed: dict[str, Any], db: Session) -> None:
                     filename=m.get("filename") or f"attachment_{i+1}",
                     content_type=m.get("content_type") or "application/octet-stream",
                     size_bytes=m.get("size_bytes"),
+                    content_b64=m.get("content_b64"),
                 )
             )
 
@@ -240,6 +242,16 @@ def _process_email(parsed: dict[str, Any], db: Session) -> None:
             attachments=attachments,
             raw=parsed,
         )
+
+        # Best-effort CFDI XML → draft expense before agent classification.
+        try:
+            from packages.modules.channels.service.inbound_drafts import (
+                try_create_draft_from_email,
+            )
+
+            try_create_draft_from_email(db, norm)
+        except Exception:
+            log.exception("inbound CFDI draft creation crashed")
 
         agent.process_message(db, norm)
 
