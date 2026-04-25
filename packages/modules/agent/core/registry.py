@@ -49,6 +49,9 @@ class ToolSpec:
     personas: frozenset[Persona]
     destructive: bool = False
     requires_confirmation: bool = False
+    # Phase 8.4 — fine-grained permission gate evaluated AFTER persona check.
+    # When set, dispatch consults ``_role_has_permission`` and audits denials.
+    required_permission: str | None = None
 
     def to_ollama_tool(self) -> dict[str, Any]:
         """Emit an OpenAI-compatible tool dict for ``chat_with_tools``."""
@@ -97,6 +100,30 @@ class _Registry:
                 error="forbidden",
             )
 
+        # Phase 8.4 — fine-grained permission gate (post-persona).
+        if spec.required_permission and not _role_has_permission(
+            ctx.user_role, spec.required_permission
+        ):
+            try:
+                from packages.core.platform.service_audit import log_event
+
+                log_event(
+                    ctx.db,
+                    entity_type="agent.tool",
+                    entity_id=ctx.user_id,
+                    action="tool.denied",
+                    actor_user_id=ctx.user_id,
+                    detail_text=f"tool={name} permission={spec.required_permission} role={ctx.user_role}",
+                    company_id=ctx.company_id,
+                )
+            except Exception:  # noqa: BLE001 — audit must never block dispatch.
+                ctx.db.rollback()
+            return ToolResult(
+                ok=False,
+                summary=f"tool {name} requires permission {spec.required_permission}",
+                error="forbidden",
+            )
+
         # Strip any LLM-supplied company_id; the engine controls tenancy.
         safe_args = {k: v for k, v in raw_args.items() if k != "company_id"}
 
@@ -116,3 +143,36 @@ class _Registry:
 
 
 REGISTRY = _Registry()
+
+
+# ── Phase 8.4 — fine-grained permission gate ──────────────────────────────────
+#
+# Layer ON TOP of persona-based access. Personas already keep employees out of
+# admin tools; this gate lets us partition admin further (e.g. only "admin"
+# role gets `agent.tool.rbac`, but a future "operations" role with the
+# admin persona would not). The map is intentionally tiny; expand with
+# ``register_role_permissions`` as Phase 2.3's RBAC table grows.
+_ROLE_PERMISSIONS: dict[str, set[str]] = {
+    # role → granted permission keys
+    "admin": {
+        "agent.tool.rbac",
+        "agent.tool.config",
+        "agent.tool.settings",
+        "agent.tool.ai_policy",
+        "agent.tool.infra",
+        "agent.tool.finance_copilot",
+    },
+    "finance_manager": {
+        "agent.tool.finance_copilot",
+    },
+}
+
+
+def register_role_permissions(role: str, perms: set[str]) -> None:
+    """Add (or extend) the permission set for *role* — call from migrations or
+    a settings boot hook once Phase 2.3's permission table lands."""
+    _ROLE_PERMISSIONS.setdefault(role, set()).update(perms)
+
+
+def _role_has_permission(role: str, permission: str) -> bool:
+    return permission in _ROLE_PERMISSIONS.get(role or "", set())
