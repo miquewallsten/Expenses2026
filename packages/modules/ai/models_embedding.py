@@ -54,7 +54,11 @@ class DocumentEmbedding(Base):
 
     __tablename__ = "document_embeddings"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer(), "sqlite"),
+        primary_key=True,
+        autoincrement=True,
+    )
 
     # Source reference — nullable so orphan embeddings (e.g. from archived
     # docs) survive document deletion without FK errors.

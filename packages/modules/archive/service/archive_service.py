@@ -241,6 +241,28 @@ def store_file(
     db.add(record)
     db.commit()
     db.refresh(record)
+
+    # Phase 8.1 — best-effort embedding ingestion. Non-blocking on failure so
+    # archive writes never fail because of an embedding/Ollama hiccup.
+    if content_text and content_text.strip():
+        try:
+            from packages.modules.ai.service.embedding_service import index_document
+
+            index_document(
+                db,
+                company_id=company_id,
+                text=content_text,
+                expense_id=expense_id,
+                meta={
+                    "archive_file_id": record.id,
+                    "source_type": source_type,
+                    "filename": result["original_filename"],
+                },
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
+
     return record
 
 
