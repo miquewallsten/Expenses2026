@@ -1,0 +1,24 @@
+# Phase 2.8 — coverage configuration
+[run]
+branch = False
+source =
+    packages/modules/expenses
+    packages/modules/channels
+    packages/modules/accounting
+    packages/core/platform
+    apps/api
+omit =
+    */tests/*
+    */__pycache__/*
+    */alembic/*
+    */migrations/*
+
+[report]
+show_missing = False
+skip_covered = True
+exclude_lines =
+    pragma: no cover
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+    \.\.\.
