@@ -137,6 +137,23 @@ _MANAGER_MODES: frozenset[str] = frozenset(
 # approval_mode values that route submitted expenses directly to accounting.
 _DIRECT_ACCOUNTING_MODES: frozenset[str] = frozenset({"accounting_only", "none"})
 
+# Phase 4.5 — minimum length of approver comment when rejecting an expense.
+# Returns are not gated; rejections are.
+MIN_REJECTION_COMMENT_LEN = 10
+
+
+def _validate_rejection_comment(comment: str | None) -> str:
+    """Phase 4.5: a rejection without a substantive comment is not actionable
+    by the submitter. Require at least MIN_REJECTION_COMMENT_LEN trimmed chars.
+    """
+    cleaned = (comment or "").strip()
+    if len(cleaned) < MIN_REJECTION_COMMENT_LEN:
+        raise ValueError(
+            f"Rejection requires a comment of at least "
+            f"{MIN_REJECTION_COMMENT_LEN} characters."
+        )
+    return cleaned
+
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
@@ -159,11 +176,15 @@ def _apply_transition(
     expense: Expense,
     new_status: str,
     actor_user_id: int | None = None,
+    comment: str | None = None,
 ) -> Expense:
     """Write new_status, commit, refresh, and log.  Internal use only.
 
     Asserts that new_status is in _KNOWN_STATUSES before touching the DB so
     that no unrecognised value can ever be persisted by a future code change.
+
+    When *comment* is provided (e.g. on reject/return), it is appended to the
+    audit log detail_text in the form ``"old → new — <comment>"``.
     """
     if new_status not in _KNOWN_STATUSES:
         raise ValueError(
@@ -174,13 +195,16 @@ def _apply_transition(
     expense.status = new_status
     db.commit()
     db.refresh(expense)
+    detail = f"{old_status} → {new_status}"
+    if comment:
+        detail = f"{detail} — {comment}"
     log_event(
         db=db,
         entity_type="expense",
         entity_id=expense.id,
         action="status_change",
         actor_user_id=actor_user_id,
-        detail_text=f"{old_status} → {new_status}",
+        detail_text=detail,
         company_id=expense.company_id,
     )
     # Phase 1.3: fan out notifications. Imported lazily to avoid circular
@@ -303,14 +327,25 @@ def manager_approve_expense(db: Session, expense: Expense, actor_user_id: int | 
     return _apply_transition(db, expense, target, actor_user_id=actor_user_id)
 
 
-def manager_reject_expense(db: Session, expense: Expense, actor_user_id: int | None = None) -> Expense:
+def manager_reject_expense(
+    db: Session,
+    expense: Expense,
+    actor_user_id: int | None = None,
+    comment: str | None = None,
+) -> Expense:
     """
     Reject an expense at the manager review stage.
+
+    Phase 4.5: *comment* is required and must be at least
+    ``MIN_REJECTION_COMMENT_LEN`` trimmed characters; it is appended to the
+    audit-log entry so the submitter can see why their expense was rejected.
 
     Raises ValueError if:
       - The manager flow is not enabled.
       - The expense is not awaiting manager review.
+      - The comment is missing or too short.
     """
+    cleaned_comment = _validate_rejection_comment(comment)
     company_setup = get_or_create_company_setup(db, expense.company_id)
     approval      = get_or_create_approval_setup(db, expense.company_id)
 
@@ -326,10 +361,21 @@ def manager_reject_expense(db: Session, expense: Expense, actor_user_id: int | N
             f"'{expense.status}'. Expected '{_STATUS_SUBMITTED}'."
         )
 
-    return _apply_transition(db, expense, _STATUS_REJECTED, actor_user_id=actor_user_id)
+    return _apply_transition(
+        db,
+        expense,
+        _STATUS_REJECTED,
+        actor_user_id=actor_user_id,
+        comment=cleaned_comment,
+    )
 
 
-def manager_return_expense(db: Session, expense: Expense, actor_user_id: int | None = None) -> Expense:
+def manager_return_expense(
+    db: Session,
+    expense: Expense,
+    actor_user_id: int | None = None,
+    comment: str | None = None,
+) -> Expense:
     """
     Return an expense to the employee for correction (manager stage).
 
@@ -337,10 +383,15 @@ def manager_return_expense(db: Session, expense: Expense, actor_user_id: int | N
     and resubmit.  There is no dedicated "returned" status in the current model;
     see the module-level note for the rationale and trade-offs.
 
+    Phase 4.5: *comment* is optional but, when present, is appended to the
+    audit-log entry. Returns are not blocked on missing comment because they
+    are routinely used for trivial fixes ("please attach the receipt").
+
     Raises ValueError if:
       - The manager flow is not enabled.
       - The expense is not awaiting manager review.
     """
+    cleaned_comment = (comment or "").strip() or None
     company_setup = get_or_create_company_setup(db, expense.company_id)
     approval      = get_or_create_approval_setup(db, expense.company_id)
 
@@ -356,7 +407,13 @@ def manager_return_expense(db: Session, expense: Expense, actor_user_id: int | N
             f"'{expense.status}'. Expected '{_STATUS_SUBMITTED}'."
         )
 
-    return _apply_transition(db, expense, _STATUS_RETURNED, actor_user_id=actor_user_id)
+    return _apply_transition(
+        db,
+        expense,
+        _STATUS_RETURNED,
+        actor_user_id=actor_user_id,
+        comment=cleaned_comment,
+    )
 
 
 def accounting_approve_expense(db: Session, expense: Expense, actor_user_id: int | None = None) -> Expense:
@@ -386,14 +443,24 @@ def accounting_approve_expense(db: Session, expense: Expense, actor_user_id: int
     return _apply_transition(db, expense, _STATUS_APPROVED, actor_user_id=actor_user_id)
 
 
-def accounting_reject_expense(db: Session, expense: Expense, actor_user_id: int | None = None) -> Expense:
+def accounting_reject_expense(
+    db: Session,
+    expense: Expense,
+    actor_user_id: int | None = None,
+    comment: str | None = None,
+) -> Expense:
     """
     Reject an expense at the accounting review stage.
+
+    Phase 4.5: *comment* is required and validated identically to
+    manager_reject_expense.
 
     Raises ValueError if:
       - The accounting flow is not enabled.
       - The expense is not in an accounting-eligible status.
+      - The comment is missing or too short.
     """
+    cleaned_comment = _validate_rejection_comment(comment)
     company_setup = get_or_create_company_setup(db, expense.company_id)
     accounting    = get_or_create_accounting_setup(db, expense.company_id)
     approval      = get_or_create_approval_setup(db, expense.company_id)
@@ -406,21 +473,35 @@ def accounting_reject_expense(db: Session, expense: Expense, actor_user_id: int 
 
     _assert_accounting_eligible(expense, approval)
 
-    return _apply_transition(db, expense, _STATUS_REJECTED, actor_user_id=actor_user_id)
+    return _apply_transition(
+        db,
+        expense,
+        _STATUS_REJECTED,
+        actor_user_id=actor_user_id,
+        comment=cleaned_comment,
+    )
 
 
-def accounting_return_expense(db: Session, expense: Expense, actor_user_id: int | None = None) -> Expense:
+def accounting_return_expense(
+    db: Session,
+    expense: Expense,
+    actor_user_id: int | None = None,
+    comment: str | None = None,
+) -> Expense:
     """
     Return an expense to the employee for correction (accounting stage).
 
     The expense is set to 'draft' (_STATUS_RETURNED) — same model limitation
     and rationale as manager_return_expense.  See the module-level note.
 
+    Phase 4.5: *comment* optional, mirrors manager_return_expense.
+
     Raises ValueError if:
       - The accounting flow is not enabled.
       - The expense is not in an accounting-eligible status.
       - allow_resubmit_after_return is False.
     """
+    cleaned_comment = (comment or "").strip() or None
     company_setup = get_or_create_company_setup(db, expense.company_id)
     accounting    = get_or_create_accounting_setup(db, expense.company_id)
     approval      = get_or_create_approval_setup(db, expense.company_id)
@@ -433,7 +514,13 @@ def accounting_return_expense(db: Session, expense: Expense, actor_user_id: int 
 
     _assert_accounting_eligible(expense, approval)
 
-    return _apply_transition(db, expense, _STATUS_RETURNED, actor_user_id=actor_user_id)
+    return _apply_transition(
+        db,
+        expense,
+        _STATUS_RETURNED,
+        actor_user_id=actor_user_id,
+        comment=cleaned_comment,
+    )
 
 
 # ── Private: accounting eligibility assertion ─────────────────────────────────

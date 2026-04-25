@@ -157,6 +157,7 @@ def test_reject_dispatches_rejection_to_submitter(
         db_session,
         submitted_expense,
         actor_user_id=company_with_users["approver"].id,
+        comment="Missing receipt; please attach.",
     )
     rows = (
         db_session.query(NotificationDispatch)

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from apps.api.auth import get_current_user, require_manager_or_accountant
@@ -25,6 +26,13 @@ from packages.modules.expenses.service.transition_service import (
 router = APIRouter(prefix="/expenses/review-actions", tags=["expenses"])
 
 
+# Phase 4.5: optional body for reject/return endpoints. The 10-char minimum on
+# rejection is enforced inside the service layer (see transition_service
+# `_validate_rejection_comment`) so it applies to every caller, not just HTTP.
+class TransitionCommentBody(BaseModel):
+    comment: str | None = Field(default=None, max_length=2000)
+
+
 def _run(
     fn,
     db: Session,
@@ -33,6 +41,7 @@ def _run(
     actor_user_id: int | None,
     route: str,
     idempotency_key: str | None,
+    comment: str | None = None,
 ) -> dict:
     """Idempotent transition wrapper. Returns a JSON-ready dict so the cache
     holds exactly what FastAPI sends back."""
@@ -40,7 +49,10 @@ def _run(
     if cached is not None:
         return cached
     try:
-        updated = fn(db, expense, actor_user_id=actor_user_id)
+        if comment is None:
+            updated = fn(db, expense, actor_user_id=actor_user_id)
+        else:
+            updated = fn(db, expense, actor_user_id=actor_user_id, comment=comment)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     payload = ExpenseRead.model_validate(updated).model_dump(mode="json")
@@ -87,6 +99,7 @@ def manager_approve(
 @router.post("/{expense_id}/manager-reject", response_model=ExpenseRead)
 def manager_reject(
     expense_id: int,
+    body: TransitionCommentBody | None = None,
     idem: IdempotencyKey = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_manager_or_accountant),
@@ -99,12 +112,14 @@ def manager_reject(
         actor_user_id=current_user.id,
         route="POST /expenses/review-actions/manager-reject",
         idempotency_key=idem,
+        comment=body.comment if body else None,
     )
 
 
 @router.post("/{expense_id}/manager-return", response_model=ExpenseRead)
 def manager_return(
     expense_id: int,
+    body: TransitionCommentBody | None = None,
     idem: IdempotencyKey = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_manager_or_accountant),
@@ -117,6 +132,7 @@ def manager_return(
         actor_user_id=current_user.id,
         route="POST /expenses/review-actions/manager-return",
         idempotency_key=idem,
+        comment=body.comment if body else None,
     )
 
 
@@ -141,6 +157,7 @@ def accounting_approve(
 @router.post("/{expense_id}/accounting-reject", response_model=ExpenseRead)
 def accounting_reject(
     expense_id: int,
+    body: TransitionCommentBody | None = None,
     idem: IdempotencyKey = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_manager_or_accountant),
@@ -153,12 +170,14 @@ def accounting_reject(
         actor_user_id=current_user.id,
         route="POST /expenses/review-actions/accounting-reject",
         idempotency_key=idem,
+        comment=body.comment if body else None,
     )
 
 
 @router.post("/{expense_id}/accounting-return", response_model=ExpenseRead)
 def accounting_return(
     expense_id: int,
+    body: TransitionCommentBody | None = None,
     idem: IdempotencyKey = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_manager_or_accountant),
@@ -171,4 +190,5 @@ def accounting_return(
         actor_user_id=current_user.id,
         route="POST /expenses/review-actions/accounting-return",
         idempotency_key=idem,
+        comment=body.comment if body else None,
     )
