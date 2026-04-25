@@ -24,10 +24,6 @@ class CompanySetup(Base):
     # Organization
     employee_count_range: Mapped[str | None] = mapped_column(String(50), nullable=True)
     has_managers: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    has_accounting_team: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    has_subcontractors: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    operates_multi_entity: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    operates_multi_country: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     # Operating Model
     allocation_dimensions: Mapped[str] = mapped_column(String(255), default="project_client_cost_center", nullable=False)
@@ -40,12 +36,10 @@ class CompanySetup(Base):
     approvals_module_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     accounting_module_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     archive_module_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    ai_copilot_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     purchase_requests_module_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    agent_v2_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    amex_reconciliation_module_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
-    # AI Setup
-    ai_setup_completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # AI context (fed to Copilot prompts; not behavioral)
     ai_setup_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     ai_setup_last_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     company_profile_narrative: Mapped[str | None] = mapped_column(Text, nullable=True)

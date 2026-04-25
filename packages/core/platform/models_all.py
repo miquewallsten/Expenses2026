@@ -91,3 +91,6 @@ from packages.modules.amex.models import (  # noqa: F401
 from packages.modules.integrations.models import (  # noqa: F401
     Integration, IntegrationEndpoint, IntegrationSyncRun, ExpensePaymentStatus,
 )
+from packages.modules.integrations.models_public_api import (  # noqa: F401
+    PlatformApiKey, WebhookSubscription, WebhookDelivery,
+)

@@ -128,8 +128,6 @@ export default function AdminCompanySetupPanel({ companyId, policy, onSaved, dra
     if (form.pdf_pair_required_for_cfdi) tokens.push("CFDI PDF");
     tokens.push(form.tickets_allowed ? t("ticketsAllowed") : "No tickets");
     tokens.push(form.international_expenses_allowed ? t("internationalAllowed") : "No intl.");
-    if (form.manager_approval_required)  tokens.push(t("managerApprovalRequired"));
-    if (form.accounting_review_required) tokens.push(t("accountingReviewRequired"));
     if (form.require_proof)              tokens.push(t("proofRequired"));
     if (form.require_justification)      tokens.push(t("justificationRequired"));
     return tokens;
@@ -284,41 +282,9 @@ export default function AdminCompanySetupPanel({ companyId, policy, onSaved, dra
         </Panel>
       </div>
 
-      {/* C — Approval Flow */}
+      {/* C — Document-Free Expenses */}
       <div>
         <SectionLabel>{t("sectionC")}</SectionLabel>
-        <Panel>
-          <ToggleRow
-            label={t("managerApprovalRequired")}
-            description={t("managerApprovalDesc")}
-            checked={!!form.manager_approval_required}
-            onChange={(v) => set("manager_approval_required", v)}
-          />
-          <ToggleRow
-            label={t("accountingReviewRequired")}
-            description={t("accountingReviewDesc")}
-            checked={!!form.accounting_review_required}
-            onChange={(v) => set("accounting_review_required", v)}
-          />
-        </Panel>
-      </div>
-
-      {/* D — AI Assistance */}
-      <div>
-        <SectionLabel>{t("sectionD")}</SectionLabel>
-        <Panel>
-          <ToggleRow
-            label={t("aiPolicyAssist")}
-            description={t("aiPolicyAssistDesc")}
-            checked={!!form.ai_policy_assist_enabled}
-            onChange={(v) => set("ai_policy_assist_enabled", v)}
-          />
-        </Panel>
-      </div>
-
-      {/* E — Document-Free Expenses */}
-      <div>
-        <SectionLabel>{t("sectionE")}</SectionLabel>
         <Panel>
           <ToggleRow
             label={t("docFreeExpenses")}

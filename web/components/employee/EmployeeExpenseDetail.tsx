@@ -38,6 +38,14 @@ export interface Expense {
 
 interface OrgUnit { id: number; name: string; code: string; }
 interface PredefinedTag { id: number; name: string; color: string | null; }
+interface AccountingCategoryRow {
+  id: number;
+  code: string;
+  name: string;
+  tax_behavior: string;
+  requires_project: boolean;
+  is_active: boolean;
+}
 
 interface AllocationRead {
   id: number;
@@ -92,6 +100,18 @@ interface ValidationResultRow {
   status: string;
   message: string;
   created_at: string;
+}
+
+interface PolicyCheckRow {
+  group: "document" | "sat" | "policy" | "ai";
+  code: string;
+  label: string;
+  status: "passed" | "failed" | "warning" | "pending" | "not_applicable";
+  message: string;
+  source: "validator" | "expense_policy" | "ai_policy";
+  overridden?: boolean;
+  justification_note?: string | null;
+  original_message?: string;
 }
 
 interface ExpensePolicy {
@@ -222,6 +242,173 @@ function SelectField({ value, onChange, options, placeholder }: {
   );
 }
 
+// ── Inline document preview (PDF / image thumbnail) ───────────────────────────
+//
+// Fetches the archived bytes with auth headers and renders a small inline
+// thumbnail. Clicking opens an in-app modal with a full-size preview.
+// PDFs render as a labelled card thumbnail (the browser PDF viewer can't
+// render usefully at 48×64); images render their actual pixels.
+
+function DocPreview({ docId, filename, docType, onOpenXmlModal }: { docId: number; filename: string; docType: string | null; onOpenXmlModal?: () => void }) {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [error,   setError]   = useState(false);
+  const [open,    setOpen]    = useState(false);
+
+  const lower = (filename || "").toLowerCase();
+  const isPdf   = lower.endsWith(".pdf") || docType === "cfdi_pdf" || docType === "pdf_unclassified" || docType === "ticket";
+  const isImage = /\.(png|jpe?g|gif|webp)$/i.test(lower);
+  const isXml   = lower.endsWith(".xml") || docType === "cfdi_xml";
+
+  useEffect(() => {
+    if (!isPdf && !isImage) return;
+    let cancelled = false;
+    let createdUrl: string | null = null;
+    (async () => {
+      try {
+        const res = await fetch(`${API}/expenses/documents/${docId}/file`, { headers: { ...getAuthHeaders() } });
+        // 204 = bytes intentionally unavailable (e.g. storage reset). Treat as
+        // a soft "no preview" so we don't show a loud error tile.
+        if (res.status === 204) { if (!cancelled) setError(true); return; }
+        if (!res.ok) { if (!cancelled) setError(true); return; }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        createdUrl = url;
+        if (!cancelled) setBlobUrl(url);
+        else URL.revokeObjectURL(url);
+      } catch {
+        if (!cancelled) setError(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (createdUrl) URL.revokeObjectURL(createdUrl);
+    };
+  }, [docId, isPdf, isImage]);
+
+  // Close modal on Escape
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  if (!isPdf && !isImage && !isXml) return null;
+
+  // ── Thumbnail tile (always 48×64) ────────────────────────────────────────
+  const tileBase = "group relative flex h-16 w-12 shrink-0 items-center justify-center overflow-hidden rounded border bg-white/[0.02]";
+
+  let tile: React.ReactNode;
+  if (isXml) {
+    tile = (
+      <div className={`${tileBase} border-white/[0.08] hover:border-sky-400/35 cursor-pointer`} title={filename}>
+        <div className="flex h-full w-full flex-col items-stretch justify-between bg-gradient-to-b from-sky-500/[0.06] to-white/[0.01] p-1">
+          <div className="flex flex-col gap-[2px]">
+            <div className="h-[2px] w-3/4 rounded-sm bg-sky-400/30" />
+            <div className="h-[2px] w-full rounded-sm bg-white/10" />
+            <div className="h-[2px] w-5/6 rounded-sm bg-white/10" />
+            <div className="h-[2px] w-2/3 rounded-sm bg-white/10" />
+          </div>
+          <div className="self-end rounded-sm bg-sky-500/30 px-1 text-[7px] font-bold tracking-wider text-sky-100/85">
+            XML
+          </div>
+        </div>
+      </div>
+    );
+  } else if (error) {
+    tile = (
+      <div className={`${tileBase} border-white/[0.07] text-[8px] text-white/30`} title={filename}>
+        N/A
+      </div>
+    );
+  } else if (!blobUrl) {
+    tile = (
+      <div className={`${tileBase} border-white/[0.06]`} title={filename}>
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white/20" />
+      </div>
+    );
+  } else if (isImage) {
+    tile = (
+      <div className={`${tileBase} border-white/[0.08] hover:border-indigo-400/35 cursor-zoom-in`} title={filename}>
+        <img src={blobUrl} alt={filename} className="h-full w-full object-cover" />
+      </div>
+    );
+  } else {
+    // PDF — render a faux first-page card. The browser PDF viewer won't
+    // render usefully at this size; instead show a clear "PDF" affordance.
+    tile = (
+      <div className={`${tileBase} border-white/[0.08] hover:border-indigo-400/35 cursor-zoom-in`} title={filename}>
+        <div className="flex h-full w-full flex-col items-stretch justify-between bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-1">
+          <div className="flex flex-col gap-[2px]">
+            <div className="h-[2px] w-3/4 rounded-sm bg-white/15" />
+            <div className="h-[2px] w-full rounded-sm bg-white/10" />
+            <div className="h-[2px] w-5/6 rounded-sm bg-white/10" />
+            <div className="h-[2px] w-2/3 rounded-sm bg-white/10" />
+          </div>
+          <div className="self-end rounded-sm bg-rose-500/30 px-1 text-[7px] font-bold tracking-wider text-rose-100/85">
+            PDF
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const canOpen = (!!blobUrl && !error) || (isXml && !!onOpenXmlModal);
+  const handleClick = () => {
+    if (isXml && onOpenXmlModal) { onOpenXmlModal(); return; }
+    setOpen(true);
+  };
+  const trigger = canOpen ? (
+    <button type="button" onClick={handleClick} className="contents" aria-label={`Preview ${filename}`}>
+      {tile}
+    </button>
+  ) : tile;
+
+  return (
+    <>
+      {trigger}
+      {open && blobUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="relative flex h-[88vh] w-[min(960px,92vw)] flex-col overflow-hidden rounded-lg border border-white/10 bg-zinc-950 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
+              <div className="min-w-0 flex-1 truncate text-[11px] text-white/70">{filename}</div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={blobUrl}
+                  download={filename}
+                  className="rounded border border-white/10 px-2 py-0.5 text-[10px] text-white/55 hover:border-white/25 hover:text-white/80"
+                >
+                  Download
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="rounded border border-white/10 px-2 py-0.5 text-[10px] text-white/55 hover:border-white/25 hover:text-white/80"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+            <div className="flex flex-1 items-center justify-center bg-zinc-900">
+              {isImage ? (
+                <img src={blobUrl} alt={filename} className="max-h-full max-w-full object-contain" />
+              ) : (
+                <iframe src={blobUrl} title={filename} className="h-full w-full border-0" />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function EmployeeExpenseDetail({
@@ -242,6 +429,8 @@ export default function EmployeeExpenseDetail({
   const [clients, setClients]           = useState<OrgUnit[]>([]);
   const [costCenters, setCostCenters]   = useState<OrgUnit[]>([]);
   const [predefinedTags, setPredefinedTags] = useState<PredefinedTag[]>([]);
+  const [categories, setCategories]     = useState<AccountingCategoryRow[]>([]);
+  const [savingCategory, setSavingCategory] = useState(false);
 
   // Allocations
   const [allocations, setAllocations]           = useState<AllocationRead[]>([]);
@@ -281,6 +470,9 @@ export default function EmployeeExpenseDetail({
   // Validations
   const [validations, setValidations]   = useState<ValidationResultRow[]>([]);
   const [loadingVals, setLoadingVals]   = useState(false);
+  const [policyChecks, setPolicyChecks] = useState<PolicyCheckRow[]>([]);
+  const [checksRefreshNonce, setChecksRefreshNonce] = useState(0);
+  const refreshChecks = useCallback(() => setChecksRefreshNonce((n) => n + 1), []);
 
   // Document deletion
   const [deletingDocId, setDeletingDocId]           = useState<number | null>(null);
@@ -294,7 +486,11 @@ export default function EmployeeExpenseDetail({
       fetch(`${API}/expenses/clients?company_id=1`,      { headers: h }).then((r) => r.ok ? r.json() : []),
       fetch(`${API}/expenses/cost-centers?company_id=1`, { headers: h }).then((r) => r.ok ? r.json() : []),
       fetch(`${API}/expenses/tags?company_id=1`,         { headers: h }).then((r) => r.ok ? r.json() : []),
-    ]).then(([p, c, cc, t]) => { setProjects(p); setClients(c); setCostCenters(cc); setPredefinedTags(t); }).catch(() => {});
+      fetch(`${API}/admin/accounting-categories/1`,      { headers: h }).then((r) => r.ok ? r.json() : []),
+    ]).then(([p, c, cc, t, cats]) => {
+      setProjects(p); setClients(c); setCostCenters(cc); setPredefinedTags(t);
+      setCategories(Array.isArray(cats) ? cats : []);
+    }).catch(() => {});
   }, []);
 
   // ── Fetch expense ──────────────────────────────────────────────────────────
@@ -348,18 +544,21 @@ export default function EmployeeExpenseDetail({
       if (ar.ok) { const d = await ar.json(); setEmployeeActions(d?.actions ?? null); }
       if (br.ok) setExpenseBlockers(await br.json());
     }).catch(() => {});
-  }, [expenseId, expense?.status]);
+  }, [expenseId, expense?.status, checksRefreshNonce]);
 
   // ── Fetch validations eagerly on expense load ────────────────────────────────
   useEffect(() => {
-    if (!expenseId) { setValidations([]); return; }
+    if (!expenseId) { setValidations([]); setPolicyChecks([]); return; }
     setLoadingVals(true);
-    fetch(`${API}/expenses/${expenseId}/validations`, { headers: getAuthHeaders() })
-      .then((r) => r.ok ? r.json() : [])
-      .then(setValidations)
-      .catch(() => setValidations([]))
+    const h = getAuthHeaders();
+    Promise.all([
+      fetch(`${API}/expenses/${expenseId}/validations`,   { headers: h }).then((r) => r.ok ? r.json() : []),
+      fetch(`${API}/expenses/${expenseId}/policy-checks`, { headers: h }).then((r) => r.ok ? r.json() : []),
+    ])
+      .then(([v, pc]) => { setValidations(Array.isArray(v) ? v : []); setPolicyChecks(Array.isArray(pc) ? pc : []); })
+      .catch(() => { setValidations([]); setPolicyChecks([]); })
       .finally(() => setLoadingVals(false));
-  }, [expenseId]);
+  }, [expenseId, checksRefreshNonce]);
 
   // ── Save title ─────────────────────────────────────────────────────────────
   const saveTitle = async () => {
@@ -385,6 +584,19 @@ export default function EmployeeExpenseDetail({
       });
       if (r.ok) { const u = await r.json(); setExpense(u); onExpenseUpdated?.(u); }
     } finally { setSavingNotes(false); }
+  };
+
+  // ── Save category (tipo de gasto) ──────────────────────────────────────────
+  const saveCategory = async (code: string) => {
+    if (!expense) return;
+    setSavingCategory(true);
+    try {
+      const r = await fetch(`${API}/expenses/${expense.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ category_code: code || null }),
+      });
+      if (r.ok) { const u = await r.json(); setExpense(u); onExpenseUpdated?.(u); }
+    } finally { setSavingCategory(false); }
   };
 
   // ── Delete document ────────────────────────────────────────────────────────
@@ -434,10 +646,15 @@ export default function EmployeeExpenseDetail({
     await Promise.allSettled(arr.map(async (file, i) => {
       const localId = entries[i].localId;
       try {
-        const content = await file.text().catch(() => "");
-        const r = await fetch(`${API}/expenses/documents`, {
-          method: "POST", headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-          body: JSON.stringify({ company_id: 1, expense_id: expenseId, filename: file.name, content_text: content }),
+        // Multipart upload — server extracts text from PDFs via pdfplumber
+        // and archives the original bytes. The JSON endpoint cannot accept
+        // binary files.
+        const form = new FormData();
+        form.append("company_id", "1");
+        form.append("expense_id", String(expenseId));
+        form.append("file", file, file.name);
+        const r = await fetch(`${API}/expenses/documents/upload`, {
+          method: "POST", headers: { ...getAuthHeaders() }, body: form,
         });
         setUploadQueue((prev) => prev.map((e) => e.localId === localId ? { ...e, status: r.ok ? "done" : "error" } : e));
       } catch {
@@ -552,11 +769,11 @@ export default function EmployeeExpenseDetail({
   for (const v of validations) {
     if (!latestByCode.has(v.rule_code) || new Date(v.created_at) > new Date(latestByCode.get(v.rule_code)!.created_at)) latestByCode.set(v.rule_code, v);
   }
-  const policyVals = [...latestByCode.values()].filter((v) => v.rule_code !== "SAT_VALIDATION" && v.rule_code !== "EFOS_CHECK");
+  const policyChecksForDot = policyChecks.filter((c) => c.group !== "sat" && c.status !== "not_applicable" && c.status !== "pending");
   const policyDotStatus: "passed" | "warning" | "failed" | null =
-    policyVals.length === 0 ? null
-    : policyVals.some((v) => v.status === "failed")  ? "failed"
-    : policyVals.some((v) => v.status === "warning") ? "warning"
+    policyChecksForDot.length === 0 ? null
+    : policyChecksForDot.some((c) => c.status === "failed")  ? "failed"
+    : policyChecksForDot.some((c) => c.status === "warning") ? "warning"
     : "passed";
 
   const xmlFormattedDate = parsedXml?.fecha
@@ -647,12 +864,6 @@ export default function EmployeeExpenseDetail({
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5 pt-0.5">
-                  {parsedXml && (
-                    <button type="button" onClick={() => setShowXmlModal(true)}
-                      className="flex items-center gap-1 rounded border border-white/[0.07] px-2 py-0.5 text-[9px] text-white/30 hover:border-white/[0.15] hover:text-white/55">
-                      <FileText className="h-2.5 w-2.5" /> XML
-                    </button>
-                  )}
                   {employeeActions?.can_delete && (
                     <button type="button" onClick={deleteDraft} disabled={deletingDraft}
                       className="rounded p-0.5 text-white/18 hover:text-red-400/60 disabled:opacity-40">
@@ -829,13 +1040,46 @@ export default function EmployeeExpenseDetail({
 
                     {/* Expense type — 1/4 */}
                     <div className="flex-1">
-                      <p className="mb-2 text-[11px] font-semibold text-white/70">{td("expenseType")}</p>
-                      <select
-                        disabled
-                        className="w-full cursor-not-allowed rounded border border-white/[0.06] bg-transparent px-2 py-1 text-[10px] text-white/22 outline-none"
-                      >
-                        <option>{td("pendingCatalogue")}</option>
-                      </select>
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <p className="text-[11px] font-semibold text-white/70">{td("expenseType")}</p>
+                        {expense?.detected_category && !expense?.category_code && (
+                          <span className="rounded bg-indigo-500/15 px-1.5 py-0.5 text-[9px] font-medium text-indigo-300/80">
+                            {td("aiSuggested")}
+                          </span>
+                        )}
+                        {savingCategory && <span className="text-[9px] text-white/25">{td("saving")}</span>}
+                      </div>
+                      {categories.length === 0 ? (
+                        <select
+                          disabled
+                          className="w-full cursor-not-allowed rounded border border-white/[0.06] bg-transparent px-2 py-1 text-[10px] text-white/22 outline-none"
+                        >
+                          <option>{td("pendingCatalogue")}</option>
+                        </select>
+                      ) : (
+                        <select
+                          value={expense?.category_code ?? ""}
+                          disabled={savingCategory || expense?.status !== "draft"}
+                          onChange={(e) => saveCategory(e.target.value)}
+                          className="w-full rounded border border-white/[0.08] bg-white/[0.02] px-2 py-1 text-[10px] text-white/80 outline-none focus:border-white/25 disabled:cursor-not-allowed disabled:text-white/30"
+                        >
+                          <option value="">{td("selectCategory")}</option>
+                          {categories.map((c) => (
+                            <option key={c.id} value={c.code}>
+                              {c.code} — {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      {expense?.detected_category && !expense?.category_code && (
+                        <button
+                          type="button"
+                          onClick={() => saveCategory(expense.detected_category as string)}
+                          className="mt-1 text-[9px] text-indigo-300/70 hover:text-indigo-200 underline underline-offset-2"
+                        >
+                          {td("applyAiSuggestion", { code: expense.detected_category })}
+                        </button>
+                      )}
                     </div>
 
                   </div>
@@ -997,6 +1241,12 @@ export default function EmployeeExpenseDetail({
                       const isXml = doc.document_type === "cfdi_xml";
                       return (
                         <div key={doc.id} className="flex items-center gap-2.5 rounded-lg border border-white/[0.06] bg-white/[0.015] px-3 py-2">
+                          <DocPreview
+                            docId={doc.id}
+                            filename={doc.filename ?? ""}
+                            docType={doc.document_type ?? null}
+                            onOpenXmlModal={isXml && parsedXml ? () => setShowXmlModal(true) : undefined}
+                          />
                           <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-white/[0.07] bg-white/[0.02]">
                             <FileText className={`h-3 w-3 ${docTypeCls(doc.document_type)}`} />
                           </div>
@@ -1033,69 +1283,193 @@ export default function EmployeeExpenseDetail({
             {/* VALIDATIONS TAB                                       */}
             {/* ══════════════════════════════════════════════════════ */}
             {activeTab === "validations" && (() => {
-              const DOCUMENT_RULES   = ["XML_FORMAT", "UUID_PRESENT"];
-              const SAT_RULES        = ["SAT_VALIDATION", "EFOS_CHECK"];
-              const PLANNED_CHECKS   = [
-                { code: "RFC_MATCH",       label: td("plannedChecks.RFC_MATCH") },
-                { code: "USO_CFDI",        label: td("plannedChecks.USO_CFDI") },
-                { code: "CP_MATCH",        label: td("plannedChecks.CP_MATCH") },
-                { code: "DATE_RANGE",      label: td("plannedChecks.DATE_RANGE") },
-                { code: "AMOUNT_MATCH",    label: td("plannedChecks.AMOUNT_MATCH") },
-                { code: "DUPLICATE_CHECK", label: td("plannedChecks.DUPLICATE_CHECK") },
-              ];
-
-              const docResults  = [...latestByCode.values()].filter(v => DOCUMENT_RULES.includes(v.rule_code));
-              const satResults  = [...latestByCode.values()].filter(v => SAT_RULES.includes(v.rule_code));
-              const policyRes   = [...latestByCode.values()].filter(v => !DOCUMENT_RULES.includes(v.rule_code) && !SAT_RULES.includes(v.rule_code));
-              const plannedMissing = PLANNED_CHECKS.filter(p => !latestByCode.has(p.code));
-
               const fmtTs = (iso: string) => {
                 const d = new Date(iso);
                 return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) + " · " + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
               };
+              const ruleLabelMap = { XML_FORMAT: td("ruleLabel.XML_FORMAT"), UUID_PRESENT: td("ruleLabel.UUID_PRESENT"), SAT_VALIDATION: td("ruleLabel.SAT_VALIDATION"), MISSING_PDF: td("ruleLabel.MISSING_PDF"), EFOS_CHECK: td("ruleLabel.EFOS_CHECK"), POLICY_CHECK: td("ruleLabel.POLICY_CHECK"), AMOUNT_MATCH: td("ruleLabel.AMOUNT_MATCH"), DATE_RANGE: td("ruleLabel.DATE_RANGE"), PDF_PAIRED: td("ruleLabel.PDF_PAIRED"), DUPLICATE_UUID: td("ruleLabel.DUPLICATE_UUID") };
+              const validationByCode = new Map(validations.map(v => [v.rule_code, v]));
 
-              const ruleLabelMap = { XML_FORMAT: td("ruleLabel.XML_FORMAT"), UUID_PRESENT: td("ruleLabel.UUID_PRESENT"), SAT_VALIDATION: td("ruleLabel.SAT_VALIDATION"), MISSING_PDF: td("ruleLabel.MISSING_PDF"), EFOS_CHECK: td("ruleLabel.EFOS_CHECK"), POLICY_CHECK: td("ruleLabel.POLICY_CHECK"), AMOUNT_MATCH: td("ruleLabel.AMOUNT_MATCH"), DATE_RANGE: td("ruleLabel.DATE_RANGE") };
-              const ValRow = ({ v, showTs = false }: { v: ValidationResultRow; showTs?: boolean }) => (
-                <div className="flex items-start gap-2.5 px-3 py-2.5">
-                  <div className="mt-0.5 shrink-0">
-                    {v.status === "passed"  && <CheckCircle2  className="h-3.5 w-3.5 text-emerald-400/65" />}
-                    {v.status === "warning" && <AlertTriangle className="h-3.5 w-3.5 text-amber-400/60"  />}
-                    {v.status === "failed"  && <XCircle       className="h-3.5 w-3.5 text-red-400/60"    />}
+              const checkLabel = (c: PolicyCheckRow) => {
+                if (c.source === "validator") return ruleLabel(c.code, ruleLabelMap);
+                return c.label;
+              };
+
+              const statusBadge = (status: PolicyCheckRow["status"]) => {
+                const cls = status === "passed"
+                  ? "border-emerald-500/20 bg-emerald-500/[0.07] text-emerald-400/70"
+                  : status === "warning"
+                  ? "border-amber-500/20 bg-amber-500/[0.07] text-amber-400/65"
+                  : status === "failed"
+                  ? "border-red-500/20 bg-red-500/[0.07] text-red-400/65"
+                  : status === "not_applicable"
+                  ? "border-white/[0.07] bg-white/[0.02] text-white/22"
+                  : "border-white/[0.07] bg-white/[0.02] text-white/25";
+                return (
+                  <span className={`mt-0.5 shrink-0 rounded border px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide ${cls}`}>
+                    {status === "not_applicable" ? "n/a" : status}
+                  </span>
+                );
+              };
+
+              const CheckRow = ({ c, showTs }: { c: PolicyCheckRow; showTs?: boolean }) => {
+                const stampedV = showTs ? validationByCode.get(c.code) : undefined;
+                const sourceHint = c.source === "ai_policy"
+                  ? td("sourceAiPolicy")
+                  : c.source === "expense_policy"
+                  ? td("sourceExpensePolicy")
+                  : null;
+                const [editingNote, setEditingNote] = useState(false);
+                const [noteDraft, setNoteDraft] = useState("");
+                const [savingNote, setSavingNote] = useState(false);
+                const canJustify =
+                  !!expenseId &&
+                  !c.overridden &&
+                  (c.status === "failed" || c.status === "warning") &&
+                  c.code !== "SAT_VALIDATION"; // SAT status is external, not overridable
+
+                const saveOverride = async () => {
+                  const note = noteDraft.trim();
+                  if (!note || !expenseId) return;
+                  setSavingNote(true);
+                  try {
+                    const r = await fetch(`${API}/expenses/${expenseId}/policy-overrides`, {
+                      method: "POST",
+                      headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+                      body: JSON.stringify({ rule_code: c.code, note }),
+                    });
+                    if (r.ok) {
+                      setEditingNote(false);
+                      setNoteDraft("");
+                      refreshChecks();
+                    }
+                  } finally {
+                    setSavingNote(false);
+                  }
+                };
+
+                const removeOverride = async () => {
+                  if (!expenseId) return;
+                  const r = await fetch(
+                    `${API}/expenses/${expenseId}/policy-overrides/${encodeURIComponent(c.code)}`,
+                    { method: "DELETE", headers: getAuthHeaders() }
+                  );
+                  if (r.ok) refreshChecks();
+                };
+
+                return (
+                  <div className="px-3 py-2.5">
+                    <div className="flex items-start gap-2.5">
+                      <div className="mt-0.5 shrink-0">
+                        {c.status === "passed"          && <CheckCircle2  className="h-3.5 w-3.5 text-emerald-400/65" />}
+                        {c.status === "warning"         && <AlertTriangle className="h-3.5 w-3.5 text-amber-400/60"  />}
+                        {c.status === "failed"          && <XCircle       className="h-3.5 w-3.5 text-red-400/60"    />}
+                        {(c.status === "pending" || c.status === "not_applicable") && (
+                          <div className="h-3.5 w-3.5 rounded-full border border-white/[0.12] bg-zinc-800" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className={`text-[11px] font-medium ${c.status === "not_applicable" || c.status === "pending" ? "text-white/30" : "text-white/70"}`}>{checkLabel(c)}</p>
+                        {c.message && <p className="mt-0.5 text-[10px] text-white/40">{c.message}</p>}
+                        {c.overridden && c.original_message && (
+                          <p className="mt-0.5 text-[10px] text-white/30 line-through">{c.original_message}</p>
+                        )}
+                        {sourceHint && <p className="mt-1 text-[9px] uppercase tracking-widest text-white/22">{sourceHint}</p>}
+                        {stampedV && <p className="mt-1 font-mono text-[9px] text-white/22">Checked: {fmtTs(stampedV.created_at)}</p>}
+                        {canJustify && !editingNote && (
+                          <button
+                            type="button"
+                            onClick={() => setEditingNote(true)}
+                            className="mt-1.5 text-[10px] text-amber-300/80 underline underline-offset-2 hover:text-amber-200"
+                          >
+                            {td("addJustification")}
+                          </button>
+                        )}
+                        {canJustify && editingNote && (
+                          <div className="mt-1.5 space-y-1.5">
+                            <textarea
+                              value={noteDraft}
+                              onChange={(e) => setNoteDraft(e.target.value)}
+                              placeholder={td("justificationPlaceholder")}
+                              rows={3}
+                              className="w-full rounded border border-white/10 bg-zinc-900/60 px-2 py-1.5 text-[11px] text-white/80 placeholder:text-white/25 focus:border-amber-400/40 focus:outline-none"
+                            />
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                disabled={savingNote || !noteDraft.trim()}
+                                onClick={saveOverride}
+                                className="rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-300 hover:bg-emerald-500/15 disabled:opacity-40"
+                              >
+                                {td("saveJustification")}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => { setEditingNote(false); setNoteDraft(""); }}
+                                className="text-[10px] text-white/40 hover:text-white/60"
+                              >
+                                {td("cancel")}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                        {c.overridden && (
+                          <button
+                            type="button"
+                            onClick={removeOverride}
+                            className="mt-1 text-[10px] text-white/35 underline underline-offset-2 hover:text-red-300/80"
+                          >
+                            {td("removeJustification")}
+                          </button>
+                        )}
+                      </div>
+                      {c.overridden ? (
+                        <span className="mt-0.5 shrink-0 rounded border border-emerald-500/25 bg-emerald-500/[0.08] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-emerald-300/80">
+                          {td("justified")}
+                        </span>
+                      ) : (
+                        statusBadge(c.status)
+                      )}
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-medium text-white/70">{ruleLabel(v.rule_code, ruleLabelMap)}</p>
-                    <p className="mt-0.5 text-[10px] text-white/40">{v.message}</p>
-                    {showTs && (
-                      <p className="mt-1 font-mono text-[9px] text-white/22">Checked: {fmtTs(v.created_at)}</p>
-                    )}
+                );
+              };
+
+              const bySource = {
+                document: policyChecks.filter(c => c.group === "document"),
+                sat:      policyChecks.filter(c => c.group === "sat"),
+                policy:   policyChecks.filter(c => c.group === "policy"),
+                ai:       policyChecks.filter(c => c.group === "ai"),
+              };
+
+              const Section = ({ title, items, showTs }: { title: string; items: PolicyCheckRow[]; showTs?: boolean }) => {
+                if (items.length === 0) return null;
+                return (
+                  <div>
+                    <p className="mb-1 px-1 text-[9px] font-semibold uppercase tracking-widest text-white/22">{title}</p>
+                    <div className="overflow-hidden rounded-lg border border-white/[0.07]">
+                      {items.map((c, i) => (
+                        <div key={c.code} className={i > 0 ? "border-t border-white/[0.05]" : ""}>
+                          <CheckRow c={c} showTs={showTs} />
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <span className={`mt-0.5 shrink-0 rounded border px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide ${
-                    v.status === "passed"  ? "border-emerald-500/20 bg-emerald-500/[0.07] text-emerald-400/70" :
-                    v.status === "warning" ? "border-amber-500/20 bg-amber-500/[0.07] text-amber-400/65" :
-                    "border-red-500/20 bg-red-500/[0.07] text-red-400/65"
-                  }`}>{v.status}</span>
-                </div>
-              );
+                );
+              };
 
               return (
                 <div className="space-y-2 pb-20">
                   {loadingVals && <p className="text-[10px] text-white/25">{tc("loading")}</p>}
 
-                  {/* Document integrity */}
-                  {docResults.length > 0 && (
-                    <div>
-                      <p className="mb-1 px-1 text-[9px] font-semibold uppercase tracking-widest text-white/22">{td("valDocIntegrity")}</p>
-                      <div className="overflow-hidden rounded-lg border border-white/[0.07]">
-                        {docResults.map((v, i) => <div key={v.id} className={i > 0 ? "border-t border-white/[0.05]" : ""}><ValRow v={v} /></div>)}
-                      </div>
-                    </div>
-                  )}
+                  <Section title={td("valDocIntegrity")} items={bySource.document} />
 
-                  {/* SAT Verification */}
-                  <div>
-                    <p className="mb-1 px-1 text-[9px] font-semibold uppercase tracking-widest text-white/22">{td("valSatVerification")}</p>
-                    <div className="overflow-hidden rounded-lg border border-white/[0.07]">
-                      {satResults.length === 0 && (
+                  {bySource.sat.length > 0 ? (
+                    <Section title={td("valSatVerification")} items={bySource.sat} showTs />
+                  ) : (
+                    <div>
+                      <p className="mb-1 px-1 text-[9px] font-semibold uppercase tracking-widest text-white/22">{td("valSatVerification")}</p>
+                      <div className="overflow-hidden rounded-lg border border-white/[0.07]">
                         <div className="flex items-start gap-2.5 px-3 py-2.5">
                           <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full border border-white/[0.12] bg-zinc-800" />
                           <div>
@@ -1103,36 +1477,18 @@ export default function EmployeeExpenseDetail({
                             <p className="mt-0.5 text-[10px] text-white/22">{td("valSatNotRunHint")}</p>
                           </div>
                         </div>
-                      )}
-                      {satResults.map((v, i) => (
-                        <div key={v.id} className={i > 0 ? "border-t border-white/[0.05]" : ""}>
-                          <ValRow v={v} showTs />
-                        </div>
-                      ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Policy & Compliance */}
-                  <div>
-                    <p className="mb-1 px-1 text-[9px] font-semibold uppercase tracking-widest text-white/22">{td("valPolicyCompliance")}</p>
-                    <div className="overflow-hidden rounded-lg border border-white/[0.07]">
-                      {policyRes.map((v, i) => (
-                        <div key={v.id} className={i > 0 ? "border-t border-white/[0.05]" : ""}><ValRow v={v} /></div>
-                      ))}
-                      {plannedMissing.map((p, i) => (
-                        <div key={p.code} className={`flex items-center gap-2.5 px-3 py-2 ${policyRes.length + i > 0 ? "border-t border-white/[0.05]" : ""}`}>
-                          <div className="h-3.5 w-3.5 shrink-0 rounded-full border border-white/[0.10] bg-zinc-800/60" />
-                          <div className="flex-1">
-                            <p className="text-[11px] text-white/30">{p.label}</p>
-                          </div>
-                          <span className="rounded border border-white/[0.07] px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-wide text-white/18">pending</span>
-                        </div>
-                      ))}
-                      {policyRes.length === 0 && plannedMissing.length === 0 && (
-                        <div className="px-3 py-2.5 text-[10px] text-white/25">{td("valNoPolicyChecks")}</div>
-                      )}
+                  <Section title={td("valPolicyCompliance")} items={bySource.policy} />
+                  <Section title={td("valAiPolicies")} items={bySource.ai} />
+
+                  {!loadingVals && policyChecks.length === 0 && (
+                    <div className="rounded-lg border border-white/[0.07] px-3 py-3 text-[10px] text-white/25">
+                      {td("valNoPolicyChecks")}
                     </div>
-                  </div>
+                  )}
                 </div>
               );
             })()}

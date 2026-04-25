@@ -24,9 +24,6 @@ from packages.modules.admin.service.approval_setup_service import (
 from packages.modules.admin.service.company_setup_service import (
     get_or_create_company_setup,
 )
-from packages.modules.admin.service.workflow_setup_service import (
-    get_or_create_workflow_setup,
-)
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -365,12 +362,8 @@ def is_accounting_reviewable(
     # model alone; conservatively defer to the validation flag path only.
     review_mode = accounting.accounting_review_mode or "all"
     if review_mode == "exceptions_only":
-        workflow = get_or_create_workflow_setup(db, expense.company_id)
         flags    = _get_expense_validation_flags(db, expense.id)
-        warnings_routed = bool(
-            accounting.allow_submit_with_warnings
-            or workflow.allow_submit_with_warnings
-        )
+        warnings_routed = bool(accounting.allow_submit_with_warnings)
         is_exception = flags["has_failed"] or (
             flags["has_warning"] and warnings_routed
         )
@@ -470,7 +463,6 @@ def list_accounting_queue(db: Session, company_id: int) -> list[Expense]:
     company_setup = get_or_create_company_setup(db, company_id)
     accounting = get_or_create_accounting_setup(db, company_id)
     approval = get_or_create_approval_setup(db, company_id)
-    workflow = get_or_create_workflow_setup(db, company_id)
     policy = get_or_create_company_expense_policy(db, company_id)
 
     if not _accounting_flow_enabled(company_setup, accounting):
@@ -508,7 +500,7 @@ def list_accounting_queue(db: Session, company_id: int) -> list[Expense]:
         # are intentionally identical so that queue membership and action
         # availability are always in parity.
         flag_statuses: list[str] = ["failed"]
-        if accounting.allow_submit_with_warnings or workflow.allow_submit_with_warnings:
+        if accounting.allow_submit_with_warnings:
             flag_statuses.append("warning")
 
         flagged_ids = _expense_ids_with_flagged_validations(

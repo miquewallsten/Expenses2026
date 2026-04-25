@@ -9,13 +9,15 @@ interface Props {
   /** Which admin worklist section the user is looking at. Drives preset chips. */
   section?:  string;
   variant?:  "rail" | "page";
+  /** Called after every successful tool confirmation so the host can refetch. */
+  onToolConfirmed?: (tool: string) => void;
 }
 
 /**
  * Admin persona wrapper. Preset chips change with the active admin section
  * so the same chat handles every domain (Company, Policy, Accounting, …).
  */
-export default function AdminAgentChat({ companyId, section = "Overview", variant = "rail" }: Props) {
+export default function AdminAgentChat({ companyId, section = "Overview", variant = "rail", onToolConfirmed }: Props) {
   const t  = useTranslations("agent.admin");
   const tp = useTranslations("agent.admin.presets");
 
@@ -30,6 +32,7 @@ export default function AdminAgentChat({ companyId, section = "Overview", varian
       greeting={greeting}
       allowUpload
       variant={variant}
+      onToolConfirmed={onToolConfirmed}
     />
   );
 }

@@ -48,6 +48,12 @@ interface Props {
   companyId: number;
   users: UserFull[];
   onUsersChanged: (users: UserFull[]) => void;
+  /**
+   * Company setup flags. Used to hide capability chips that belong to
+   * add-on modules the company has not installed (e.g. Time Tracking,
+   * Amex Reconciliation).
+   */
+  companySetup?: Record<string, unknown> | null;
 }
 
 interface Project {
@@ -114,6 +120,7 @@ function UserDetailPanel({
   allUsers,
   projects,
   legalEntities,
+  companySetup,
   onSaved,
   onDeleted,
   onBack,
@@ -122,6 +129,7 @@ function UserDetailPanel({
   allUsers: UserFull[];
   projects: Project[];
   legalEntities: LegalEntity[];
+  companySetup: Record<string, unknown> | null;
   onSaved: (u: UserFull) => void;
   onDeleted: (id: number) => void;
   onBack: () => void;
@@ -300,15 +308,22 @@ function UserDetailPanel({
           </div>
         )}
 
-        {/* Capabilities */}
+        {/* Capabilities
+            Only show chips whose underlying module is actually installed.
+            Time Tracking and Amex Reconciliation are add-on modules — their
+            capability chips must disappear when the add-on is not installed,
+            otherwise admins could grant a capability that has no UI anywhere. */}
         <div>
           <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.12em] text-white/18">{tu("sectionCapabilities")}</p>
           <div className="flex flex-wrap gap-1.5">
             <FlagToggle label={tu("capCreateExpenses")}    value={canExpenses}   onChange={setCanExpenses} />
             <FlagToggle label={tu("capCorporateExpenses")}  value={canCorp}       onChange={setCanCorp} />
-            <FlagToggle label={tu("capInvoiceCorporation")} value={canInvoice}    onChange={setCanInvoice} />
-            <FlagToggle label={tu("capAmexReconciler")}     value={isAmex}        onChange={setIsAmex} />
-            <FlagToggle label={tu("capTimeTracking")}       value={timeTracking}  onChange={setTimeTracking} />
+            {companySetup?.time_allocation_module_enabled ? (
+              <FlagToggle label={tu("capTimeTracking")}     value={timeTracking}  onChange={setTimeTracking} />
+            ) : null}
+            {companySetup?.amex_reconciliation_module_enabled ? (
+              <FlagToggle label={tu("capAmexReconciler")}   value={isAmex}        onChange={setIsAmex} />
+            ) : null}
             <FlagToggle label={tu("capExecReporting")}      value={execReporting} onChange={setExecReporting} />
           </div>
           {role === "secretary" && (
@@ -448,7 +463,7 @@ function InviteForm({
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function AdminUsersPanel({ companyId, users, onUsersChanged }: Props) {
+export default function AdminUsersPanel({ companyId, users, onUsersChanged, companySetup }: Props) {
   const tu = useTranslations("admin.users");
   const [selectedUser,  setSelectedUser]  = useState<UserFull | null>(null);
   const [showForm,      setShowForm]      = useState(false);
@@ -477,6 +492,7 @@ export default function AdminUsersPanel({ companyId, users, onUsersChanged }: Pr
       <div className="max-w-xl">
         <UserDetailPanel
           user={selectedUser} allUsers={users} projects={projects} legalEntities={legalEntities}
+          companySetup={companySetup ?? null}
           onSaved={handleSaved} onDeleted={handleDeleted} onBack={() => setSelectedUser(null)}
         />
       </div>

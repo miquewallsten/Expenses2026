@@ -83,23 +83,55 @@ def run_validation_pipeline(
                 message=f"UUID {uuid_value} already exists in document #{duplicate.id}.",
             ))
 
-    # ── D. SAT validation ──────────────────────────────────────────────────────
-    sat = run_sat_validation(document.content_text or "")
-    results.append(_result(
-        rule_code="SAT_VALIDATION",
-        status="passed" if sat.get("is_valid") else "warning",
-        message=sat.get("message", "SAT validation completed."),
-    ))
+    # ── D. SAT validation (XML only) ───────────────────────────────────────────
+    # Running SAT on PDFs / images produces a misleading "heuristic" warning
+    # because they have no UUID/RFC/total — skip unless the document is a CFDI XML.
+    if is_xml_declared or is_xml_parsed:
+        sat = run_sat_validation(document.content_text or "")
+        results.append(_result(
+            rule_code="SAT_VALIDATION",
+            status="passed" if sat.get("is_valid") else "warning",
+            message=sat.get("message", "SAT validation completed."),
+        ))
 
     # ── E. PDF pairing (XML only) ──────────────────────────────────────────────
     if is_xml_declared or is_xml_parsed:
-        paired = find_best_pdf_match_for_xml(db, document.company_id, document.id)
-        if not paired:
+        # Fast path: if this XML is already attached to an expense and that
+        # expense has any PDF/ticket doc, it's paired by association — the user
+        # explicitly uploaded them as a pair.
+        paired_by_expense = False
+        if document.expense_id is not None:
+            sibling_pdf = (
+                db.query(ExpenseDocument)
+                .filter(
+                    ExpenseDocument.expense_id == document.expense_id,
+                    ExpenseDocument.id != document.id,
+                    ExpenseDocument.document_type.in_(["cfdi_pdf", "pdf_unclassified", "ticket"]),
+                )
+                .first()
+            )
+            paired_by_expense = sibling_pdf is not None
+
+        if paired_by_expense:
             results.append(_result(
-                rule_code="MISSING_PDF",
-                status="warning",
-                message="No paired PDF found for this XML document.",
+                rule_code="PDF_PAIRED",
+                status="passed",
+                message="Paired PDF attached to this expense.",
             ))
+        else:
+            paired = find_best_pdf_match_for_xml(db, document.company_id, document.id)
+            if paired:
+                results.append(_result(
+                    rule_code="PDF_PAIRED",
+                    status="passed",
+                    message=f"PDF matched by CFDI identity (document #{paired.get('pdf_document_id')}).",
+                ))
+            else:
+                results.append(_result(
+                    rule_code="MISSING_PDF",
+                    status="warning",
+                    message="No paired PDF found for this XML document.",
+                ))
 
     # ── F. Receiver RFC allowlist ──────────────────────────────────────────────
     _settings = settings or {}

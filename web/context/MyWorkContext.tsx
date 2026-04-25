@@ -332,10 +332,8 @@ export function MyWorkProvider({ children }: { children: ReactNode }) {
     [accountingFlowEnabled, user],
   );
 
-  const showAiCopilot = useMemo(
-    () => !!(portalConfig?.company_setup?.ai_copilot_enabled),
-    [portalConfig],
-  );
+  // AI Copilot is now always on — it's part of the platform, not an add-on.
+  const showAiCopilot = true;
 
   // ── Assemble value ───────────────────────────────────────────────────────
 

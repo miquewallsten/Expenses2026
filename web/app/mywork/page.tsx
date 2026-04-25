@@ -6,8 +6,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Receipt, CheckSquare, Calculator, Clock, Archive, Download, BarChart2, ShoppingCart,
-  ClipboardList, BadgeCheck,
-  ChevronLeft, ChevronRight, HelpCircle, LayoutGrid,
+  ClipboardList, BadgeCheck, CreditCard,
+  ChevronLeft, ChevronRight, LayoutGrid,
   Menu, Settings, X,
   type LucideIcon,
 } from "lucide-react";
@@ -21,6 +21,7 @@ import { buildGlobalNav } from "@/lib/navigation";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import MyWorkAssistant from "@/components/my-work/MyWorkAssistant";
+import SettingsModal from "@/components/shell/SettingsModal";
 import type { NavRailItem } from "@/components/shell/NavRail";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -32,7 +33,7 @@ const SIDEBAR_COL_W = 48;    // collapsed (icon-only)
 
 const MOD_ICONS: Record<string, LucideIcon> = {
   Receipt, CheckSquare, Calculator, Clock, Archive, Download, BarChart2, ShoppingCart,
-  ClipboardList, BadgeCheck,
+  ClipboardList, BadgeCheck, CreditCard,
 };
 
 function resolveIcon(name?: string): LucideIcon | null {
@@ -182,29 +183,6 @@ function UnifiedSidebar({
         )}
       </div>
 
-      {/* Footer */}
-      <div className={`shrink-0 space-y-px border-t border-white/[0.05] py-2 ${collapsed ? "px-1.5" : "px-2"}`}>
-        <Link
-          href="/settings"
-          title={collapsed ? tn("settings") : undefined}
-          className={`flex items-center gap-2.5 rounded text-[11px] font-medium text-white/28 transition-colors hover:bg-white/[0.04] hover:text-white/55 ${
-            collapsed ? "justify-center px-2 py-1.5" : "px-3 py-1.5"
-          }`}
-        >
-          <Settings className="h-3.5 w-3.5 shrink-0 text-white/25" />
-          {!collapsed && <span className="truncate">{tn("settings")}</span>}
-        </Link>
-        <Link
-          href="/help"
-          title={collapsed ? tn("help") : undefined}
-          className={`flex items-center gap-2.5 rounded text-[11px] font-medium text-white/28 transition-colors hover:bg-white/[0.04] hover:text-white/55 ${
-            collapsed ? "justify-center px-2 py-1.5" : "px-3 py-1.5"
-          }`}
-        >
-          <HelpCircle className="h-3.5 w-3.5 shrink-0 text-white/25" />
-          {!collapsed && <span className="truncate">{tn("help")}</span>}
-        </Link>
-      </div>
     </nav>
   );
 }
@@ -224,6 +202,9 @@ function MyWorkShell() {
 
   // Mobile overlay
   const [navDrawerOpen, setNavDrawerOpen] = useState(false);
+
+  // Settings modal (gear icon — mirrors other portals' TopBar)
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Close nav drawer when viewport grows past mobile
   useEffect(() => {
@@ -247,6 +228,21 @@ function MyWorkShell() {
     </div>
   );
 
+  // ── Floating top-right toolbar (gear — opens shared SettingsModal) ────────
+  const topRightToolbar = (
+    <div className="pointer-events-none absolute right-2 top-1.5 z-20 flex items-center gap-1">
+      <button
+        type="button"
+        onClick={() => setSettingsOpen(true)}
+        title={tnShell("settings")}
+        aria-label={tnShell("settings")}
+        className="pointer-events-auto flex h-7 w-7 items-center justify-center rounded border border-white/[0.08] bg-zinc-900/70 text-white/40 shadow-sm transition-colors hover:border-white/[0.18] hover:bg-white/[0.06] hover:text-white/75 backdrop-blur-sm"
+      >
+        <Settings className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+
   // ── Mobile ─────────────────────────────────────────────────────────────────
   if (isMobile) {
     return (
@@ -267,6 +263,14 @@ function MyWorkShell() {
           <span className="flex-1 px-2 text-[10px] font-bold uppercase tracking-widest text-white/55 truncate">
             {activeModule?.label ?? tnShell("myWork")}
           </span>
+          <button
+            type="button"
+            onClick={() => setSettingsOpen(true)}
+            aria-label={tnShell("settings")}
+            className="flex h-8 w-8 items-center justify-center rounded text-white/35 transition-colors hover:bg-white/[0.06] hover:text-white/65"
+          >
+            <Settings className="h-4 w-4" />
+          </button>
         </header>
 
         {/* Workspace */}
@@ -328,6 +332,7 @@ function MyWorkShell() {
             </div>
           </>
         )}
+        <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       </div>
     );
   }
@@ -336,7 +341,7 @@ function MyWorkShell() {
   if (isTablet) {
     return (
       <div
-        className="flex h-[100dvh] overflow-hidden bg-zinc-950 text-white"
+        className="relative flex h-[100dvh] overflow-hidden bg-zinc-950 text-white"
         style={{ paddingTop: "var(--sai-t)", paddingBottom: "var(--sai-b)" }}
       >
         {/* Icon-only sidebar */}
@@ -350,13 +355,16 @@ function MyWorkShell() {
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {workspace}
         </div>
+
+        {topRightToolbar}
+        <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       </div>
     );
   }
 
   // ── Desktop ─────────────────────────────────────────────────────────────────
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-zinc-950 text-white">
+    <div className="relative flex h-[100dvh] overflow-hidden bg-zinc-950 text-white">
 
       {/* Unified sidebar — collapsible */}
       <UnifiedSidebar
@@ -376,6 +384,9 @@ function MyWorkShell() {
           <MyWorkAssistant />
         </aside>
       )}
+
+      {topRightToolbar}
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );
 }

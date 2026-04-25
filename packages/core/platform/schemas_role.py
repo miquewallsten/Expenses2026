@@ -7,7 +7,7 @@ class RoleCreate(BaseModel):
     company_id: int
     key: str
     name: str
-    description: str
+    description: str | None = None
 
 
 class RoleRead(BaseModel):
@@ -17,7 +17,7 @@ class RoleRead(BaseModel):
     company_id: int
     key: str
     name: str
-    description: str
+    description: str | None = None
     created_at: datetime
 
 

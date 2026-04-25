@@ -24,9 +24,6 @@ def get_or_create_company_expense_policy(db: Session, company_id: int) -> Compan
             require_proof=False,
             allow_split_allocations=True,
             allocation_dimensions="project_client_cost_center",
-            manager_approval_required=False,
-            accounting_review_required=True,
-            ai_policy_assist_enabled=True,
         )
         db.add(policy)
         db.commit()

@@ -16,6 +16,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from sqlalchemy import update as sa_update
 from sqlalchemy.orm import Session
 
 from ..models import AgentPendingAction
@@ -69,6 +70,36 @@ def get_receipt(db: Session, receipt_id: str, *, company_id: int) -> AgentPendin
         row.status = "expired"
         db.commit()
     return row
+
+
+def claim_receipt(db: Session, receipt_id: str, *, company_id: int) -> AgentPendingAction | None:
+    """Atomically transition status pending → confirming.
+
+    Returns the row if we won the claim, None if someone else already claimed
+    it or the receipt doesn't exist / isn't pending.  The caller must call
+    mark_confirmed / mark_failed after the mutation completes.
+    """
+    result = db.execute(
+        sa_update(AgentPendingAction)
+        .where(
+            AgentPendingAction.receipt_id == receipt_id,
+            AgentPendingAction.company_id == company_id,
+            AgentPendingAction.status == "pending",
+        )
+        .values(status="confirming")
+        .execution_options(synchronize_session="fetch"),
+    )
+    if result.rowcount != 1:
+        return None
+    db.flush()
+    return (
+        db.query(AgentPendingAction)
+        .filter(
+            AgentPendingAction.receipt_id == receipt_id,
+            AgentPendingAction.company_id == company_id,
+        )
+        .one_or_none()
+    )
 
 
 def mark_confirmed(

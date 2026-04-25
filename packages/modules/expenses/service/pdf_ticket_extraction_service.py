@@ -59,7 +59,42 @@ def _detect_amount(text: str) -> str | None:
 
 
 def _detect_vendor(text: str) -> str | None:
-    """Return the first non-empty, non-numeric line as a probable vendor name."""
+    """Return the first non-empty, non-numeric line as a probable vendor name.
+
+    Skips known CFDI / receipt boilerplate labels so we don't end up with a
+    description like "TIPO DE COMPROBANTE: I Ingreso" when the first line of
+    a CFDI PDF happens to be a form label rather than the emisor name.
+    """
+    # Patterns that identify label/boilerplate lines in CFDI PDFs and generic
+    # receipts. Matched case-insensitively against the stripped line.
+    label_patterns = (
+        r"tipo\s+de\s+comprobante",
+        r"folio\s+fiscal",
+        r"uuid\b",
+        r"rfc\b",
+        r"r\.?f\.?c\.?",
+        r"regimen\s+fiscal",
+        r"r[eé]gimen\s+fiscal",
+        r"uso\s+de\s+cfdi",
+        r"uso\s+cfdi",
+        r"m[eé]todo\s+de\s+pago",
+        r"forma\s+de\s+pago",
+        r"lugar\s+de\s+expedici[oó]n",
+        r"certificado\s+sat",
+        r"cadena\s+original",
+        r"sello\s+digital",
+        r"subtotal\b",
+        r"total\b",
+        r"iva\b",
+        r"factura\s+electr[oó]nica",
+        r"comprobante\s+fiscal",
+        r"serie\s*y\s*folio",
+        r"fecha\s+de\s+emisi[oó]n",
+        r"fecha\s+de\s+timbrado",
+        r"no\.?\s*de\s+certificado",
+    )
+    label_re = re.compile("|".join(label_patterns), re.IGNORECASE)
+
     for line in text.splitlines():
         stripped = line.strip()
         # Skip blank lines and lines that are all numbers / punctuation.
@@ -69,6 +104,9 @@ def _detect_vendor(text: str) -> str | None:
             continue
         # Skip very short tokens (likely labels like "RFC", "IVA", etc.)
         if len(stripped) < 4:
+            continue
+        # Skip CFDI / receipt form labels.
+        if label_re.search(stripped):
             continue
         return stripped[:80]  # cap to a reasonable length
     return None

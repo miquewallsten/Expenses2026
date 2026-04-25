@@ -17,6 +17,7 @@ Endpoints (all mounted under /agent):
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import secrets
@@ -187,11 +188,15 @@ def confirm(
     current_user: User = Depends(require_admin),
 ):
     require_same_company(body.company_id, current_user)
-    row = receipts_api.get_receipt(db, body.receipt_id, company_id=body.company_id)
+    # Atomic claim: pending → confirming in a single UPDATE WHERE to prevent
+    # two concurrent confirms from double-applying the same mutation.
+    row = receipts_api.claim_receipt(db, body.receipt_id, company_id=body.company_id)
     if row is None:
-        raise HTTPException(status_code=404, detail="receipt not found")
-    if row.status != "pending":
-        raise HTTPException(status_code=409, detail=f"receipt is {row.status}")
+        # Check whether the receipt exists at all to give a precise error.
+        existing = receipts_api.get_receipt(db, body.receipt_id, company_id=body.company_id)
+        if existing is None:
+            raise HTTPException(status_code=404, detail="receipt not found")
+        raise HTTPException(status_code=409, detail=f"receipt is {existing.status}")
 
     applier = get_applier(row.tool_name)
     if applier is None:
@@ -311,10 +316,14 @@ async def upload(
 
     file_id = secrets.token_urlsafe(24)[:36]
     dir_path = os.path.join(_UPLOAD_ROOT, str(cid))
-    os.makedirs(dir_path, exist_ok=True)
     storage_path = os.path.join(dir_path, f"{file_id}__{os.path.basename(file.filename or 'upload')}")
-    with open(storage_path, "wb") as fh:
-        fh.write(data)
+
+    def _write_file() -> None:
+        os.makedirs(dir_path, exist_ok=True)
+        with open(storage_path, "wb") as fh:
+            fh.write(data)
+
+    await asyncio.to_thread(_write_file)
 
     row = AgentUpload(
         file_id=file_id,

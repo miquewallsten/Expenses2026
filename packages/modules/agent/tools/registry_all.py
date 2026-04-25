@@ -17,9 +17,11 @@ from . import read_tools        # noqa: F401
 from . import search            # noqa: F401
 from . import settings          # noqa: F401
 from . import workflow          # noqa: F401
+from . import accounting_category  # noqa: F401
+from . import ai_policy         # noqa: F401
 
 __all__ = [
     "config_patch", "creative", "diagnostic", "infra", "ingestion",
     "knowledge_tools", "memory", "org", "rbac", "read_tools", "search",
-    "settings", "workflow",
+    "settings", "workflow", "accounting_category", "ai_policy",
 ]

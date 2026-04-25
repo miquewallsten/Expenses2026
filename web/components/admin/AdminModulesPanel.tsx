@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import {
-  CheckCircle2, Settings, Puzzle, Clock, Archive, Bot,
-  ShoppingCart, Users, ChevronRight, AlertTriangle, Loader2,
+  CheckCircle2, Settings, Puzzle, Clock, Archive,
+  ShoppingCart, Users, CreditCard, ChevronRight, AlertTriangle, Loader2,
   ExternalLink, Package, PackageCheck, PackageX,
 } from "lucide-react";
 import { getCurrentCompanyId, getAuthHeaders } from "@/lib/session";
@@ -13,7 +13,7 @@ const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 // ── Module catalogue ──────────────────────────────────────────────────────────
 
-type ModuleStatus = "active" | "inactive" | "coming_soon";
+type ModuleStatus = "active" | "inactive" | "coming_soon" | "premium";
 
 interface ModuleEntry {
   key: string;
@@ -48,15 +48,6 @@ const ADDON_MODULES: ModuleEntry[] = [
     configTarget: { type: "section", key: "Archive Config" },
   },
   {
-    key: "ai_copilot",
-    setupFlag: "ai_copilot_enabled",
-    nameKey: "aiCopilotName",
-    descKey: "aiCopilotDesc",
-    icon: <Bot className="h-3.5 w-3.5" />,
-    status: "inactive",
-    configInline: true,
-  },
-  {
     key: "purchase_requests",
     setupFlag: "purchase_requests_module_enabled",
     nameKey: "purchaseRequestsName",
@@ -66,12 +57,21 @@ const ADDON_MODULES: ModuleEntry[] = [
     configInline: true,
   },
   {
+    key: "amex_reconciliation",
+    setupFlag: "amex_reconciliation_module_enabled",
+    nameKey: "amexReconciliationName",
+    descKey: "amexReconciliationDesc",
+    icon: <CreditCard className="h-3.5 w-3.5" />,
+    status: "inactive",
+    configInline: true,
+  },
+  {
     key: "subcontractor",
     setupFlag: "subcontractor_module_enabled",
     nameKey: "subcontractorName",
     descKey: "subcontractorDesc",
     icon: <Users className="h-3.5 w-3.5" />,
-    status: "coming_soon",
+    status: "premium",
   },
 ];
 
@@ -81,15 +81,6 @@ interface Props {
   companySetup: Record<string, any> | null;
   onSetupChanged: (updated: Record<string, any>) => void;
   onNavigate?: (section: string) => void;
-}
-
-// ── AI status ─────────────────────────────────────────────────────────────────
-
-interface AiStatus {
-  active_model: string;
-  available: boolean;
-  base_url: string;
-  models: string[];
 }
 
 // ── Module row ────────────────────────────────────────────────────────────────
@@ -113,26 +104,15 @@ function ModuleRow({
   const ta = useTranslations("admin.modules.addons");
 
   const [phase, setPhase] = useState<"idle" | "confirmInstall" | "confirmUninstall" | "working" | "showConfig">("idle");
-  const [aiStatus, setAiStatus] = useState<AiStatus | null>(null);
-  const [aiLoading, setAiLoading] = useState(false);
 
-  const isComing = mod.status === "coming_soon";
+  const isComing   = mod.status === "coming_soon";
+  const isPremium  = mod.status === "premium";
+  const locked     = isComing || isPremium;
 
   function handleConfigureClick() {
     if (!mod.configTarget && !mod.configInline) return;
     if (mod.configInline) {
-      if (phase === "showConfig") {
-        setPhase("idle");
-      } else {
-        setPhase("showConfig");
-        if (mod.key === "ai_copilot" && !aiStatus) {
-          setAiLoading(true);
-          fetch(`${API}/ai/status`, { headers: getAuthHeaders() })
-            .then((r) => r.ok ? r.json() : null)
-            .then((d) => setAiStatus(d))
-            .finally(() => setAiLoading(false));
-        }
-      }
+      setPhase(phase === "showConfig" ? "idle" : "showConfig");
       return;
     }
     if (mod.configTarget?.type === "section" && onNavigate) {
@@ -155,14 +135,14 @@ function ModuleRow({
   }
 
   return (
-    <div className={`rounded border ${isComing ? "border-white/[0.05] opacity-50" : "border-white/[0.07]"} bg-white/[0.02]`}>
+    <div className={`rounded border ${locked ? "border-white/[0.05]" : "border-white/[0.07]"} ${isComing ? "opacity-50" : ""} bg-white/[0.02]`}>
       {/* Main row */}
       <div className="flex items-center gap-3 px-4 py-3">
         {/* Icon */}
         <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded border ${
           isInstalled
             ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
-            : isComing
+            : locked
             ? "border-white/[0.06] bg-white/[0.03] text-white/20"
             : "border-white/[0.08] bg-white/[0.03] text-white/30"
         }`}>
@@ -179,7 +159,7 @@ function ModuleRow({
                 {tm("installed")}
               </span>
             )}
-            {!isInstalled && !isComing && (
+            {!isInstalled && !locked && (
               <span className="rounded border border-white/[0.07] bg-white/[0.02] px-1.5 py-0.5 text-[8.5px] font-bold uppercase tracking-widest text-white/22">
                 {tm("notInstalled")}
               </span>
@@ -189,12 +169,27 @@ function ModuleRow({
                 {tm("comingSoon")}
               </span>
             )}
+            {isPremium && (
+              <span className="inline-flex items-center gap-1 rounded border border-amber-500/30 bg-amber-500/[0.08] px-1.5 py-0.5 text-[8.5px] font-bold uppercase tracking-widest text-amber-300/75">
+                {tm("premium")}
+              </span>
+            )}
           </div>
           <p className="mt-0.5 text-[10px] leading-relaxed text-white/30">{ta(mod.descKey)}</p>
         </div>
 
         {/* Actions */}
-        {!isComing && (
+        {isPremium ? (
+          <div className="flex shrink-0 items-center">
+            <a
+              href="mailto:ventas@financial-ops.mx?subject=Contratar%20add-on%20Subcontratistas"
+              className="inline-flex items-center gap-1 rounded border border-amber-500/30 bg-amber-500/[0.08] px-3 py-1 text-[10px] font-semibold text-amber-300/85 transition-colors hover:bg-amber-500/[0.14] hover:text-amber-200"
+            >
+              {tm("contactSales")}
+              <ExternalLink className="h-2.5 w-2.5 opacity-70" />
+            </a>
+          </div>
+        ) : !isComing && (
           <div className="flex shrink-0 items-center gap-1.5">
             {isInstalled ? (
               <>
@@ -292,41 +287,15 @@ function ModuleRow({
       )}
 
       {/* Inline config panel */}
-      {phase === "showConfig" && mod.key === "ai_copilot" && (
-        <div className="border-t border-white/[0.05] bg-black/10 px-4 py-3">
-          {aiLoading ? (
-            <div className="flex items-center gap-2 text-white/30">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              <span className="text-[10px]">{tm("loadingStatus")}</span>
-            </div>
-          ) : aiStatus ? (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className={`h-1.5 w-1.5 rounded-full ${aiStatus.available ? "bg-emerald-400" : "bg-red-400"}`} />
-                <span className="text-[10px] font-semibold text-white/60">
-                  {aiStatus.available ? tm("aiAvailable") : tm("aiUnavailable")}
-                </span>
-              </div>
-              <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
-                <span className="text-[9.5px] text-white/28">{tm("aiModel")}</span>
-                <span className="truncate font-mono text-[9.5px] text-white/55">{aiStatus.active_model}</span>
-                <span className="text-[9.5px] text-white/28">{tm("aiEndpoint")}</span>
-                <span className="truncate font-mono text-[9.5px] text-white/55">{aiStatus.base_url}</span>
-              </div>
-              <p className="text-[9.5px] text-white/22">{tm("aiConfigNote")}</p>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5 text-amber-400/60">
-              <AlertTriangle className="h-3 w-3" />
-              <span className="text-[10px]">{tm("aiStatusError")}</span>
-            </div>
-          )}
-        </div>
-      )}
-
       {phase === "showConfig" && mod.key === "purchase_requests" && (
         <div className="border-t border-white/[0.05] bg-black/10 px-4 py-3">
           <p className="text-[10px] text-white/35">{tm("purchaseRequestsConfigNote")}</p>
+        </div>
+      )}
+
+      {phase === "showConfig" && mod.key === "amex_reconciliation" && (
+        <div className="border-t border-white/[0.05] bg-black/10 px-4 py-3">
+          <p className="text-[10px] text-white/35">{tm("amexReconciliationConfigNote")}</p>
         </div>
       )}
     </div>

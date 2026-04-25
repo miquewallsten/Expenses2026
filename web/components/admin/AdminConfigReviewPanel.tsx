@@ -242,7 +242,7 @@ export default function AdminConfigReviewPanel({
       ["purchase_requests_module_enabled", "Purchase Requests"],
       ["time_allocation_module_enabled", "Time Tracking"],
       ["archive_module_enabled", "Document Archive"],
-      ["ai_copilot_enabled", "AI Copilot"],
+      ["amex_reconciliation_module_enabled", "Amex Reconciliation"],
       ["subcontractor_module_enabled", "Subcontractors"],
     ];
     const enabled = flags.filter(([k]) => !!companySetup[k]).map(([, label]) => label);

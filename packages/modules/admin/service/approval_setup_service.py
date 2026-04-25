@@ -6,16 +6,11 @@ from packages.core.platform.models_approval_setup import ApprovalSetup
 _APPROVAL_SETUP_DEFAULTS = {
     "approval_mode": "none",
     "manager_threshold_amount": None,
-    "accounting_threshold_amount": None,
     "require_manager_for_all_employees": False,
     "require_accounting_for_all_expenses": True,
-    "allow_self_submission_without_manager": True,
     "allow_resubmission_after_rejection": True,
     "escalate_policy_failures_to_accounting": True,
     "escalate_international_to_accounting": True,
-    "escalate_missing_documents_to_manager": False,
-    "ai_approval_assist_enabled": True,
-    "ai_approval_notes": None,
 }
 
 

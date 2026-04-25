@@ -120,11 +120,16 @@ def scan_over_budget_projects(db: Session, company_id: int) -> list[InsightCandi
         .group_by(project_id_col)
         .all()
     )
+    project_ids = [pid for pid, _ in spent if pid is not None]
+    projects_by_id = {
+        p.id: p
+        for p in db.query(Project).filter(Project.id.in_(project_ids)).all()
+    }
     over: list[dict[str, Any]] = []
     for pid, total in spent:
         if pid is None:
             continue
-        proj = db.query(Project).filter(Project.id == pid).one_or_none()
+        proj = projects_by_id.get(pid)
         if proj is None or not proj.budget:
             continue
         if float(total) > float(proj.budget):

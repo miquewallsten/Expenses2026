@@ -13,10 +13,6 @@ _COMPANY_SETUP_DEFAULTS = {
     "industry": None,
     "employee_count_range": None,
     "has_managers": False,
-    "has_accounting_team": True,
-    "has_subcontractors": False,
-    "operates_multi_entity": False,
-    "operates_multi_country": False,
     "allocation_dimensions": "project_client_cost_center",
     "allow_split_allocations": True,
     "expenses_module_enabled": True,
@@ -25,8 +21,8 @@ _COMPANY_SETUP_DEFAULTS = {
     "approvals_module_enabled": True,
     "accounting_module_enabled": True,
     "archive_module_enabled": True,
-    "ai_copilot_enabled": True,
-    "ai_setup_completed": False,
+    "purchase_requests_module_enabled": False,
+    "amex_reconciliation_module_enabled": False,
     "ai_setup_notes": None,
     "ai_setup_last_summary": None,
 }
@@ -58,6 +54,24 @@ def upsert_company_setup(db: Session, company_id: int, payload) -> CompanySetup:
     data = payload.model_dump(exclude_unset=True)
     for field, value in data.items():
         setattr(setup, field, value)
+
+    # Keep the expense policy in sync for fields that the admin Setup Studio
+    # owns but that the portal-config / expense runtime reads from
+    # ``company_expense_policies``. Without this the admin's choice silently
+    # diverges from what employees see.
+    policy_synced_fields = {"allocation_dimensions", "allow_split_allocations"}
+    if policy_synced_fields & data.keys():
+        from packages.core.platform.models_expense_policy import CompanyExpensePolicy
+        policy = (
+            db.query(CompanyExpensePolicy)
+            .filter(CompanyExpensePolicy.company_id == company_id)
+            .first()
+        )
+        if policy is None:
+            policy = CompanyExpensePolicy(company_id=company_id)
+            db.add(policy)
+        for field in policy_synced_fields & data.keys():
+            setattr(policy, field, data[field])
 
     db.commit()
     db.refresh(setup)

@@ -3,12 +3,15 @@
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Save, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
+import { getAuthHeaders } from "@/lib/session";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 interface Props {
   companyId: number;
   setup: any;
+  companySetup?: any;
+  expensePolicy?: any;
   onSaved?: (setup: any) => void;
   draftPatch?: Partial<any>;
 }
@@ -102,22 +105,32 @@ function ToggleRow({
   description,
   checked,
   onChange,
+  disabled = false,
+  disabledHint,
 }: {
   label: string;
   description?: string;
   checked: boolean;
   onChange: (v: boolean) => void;
+  disabled?: boolean;
+  disabledHint?: string;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 px-4 py-2.5">
+    <div className={`flex items-center justify-between gap-4 px-4 py-2.5 ${disabled ? "opacity-50" : ""}`}>
       <div className="min-w-0 flex-1">
         <p className="text-[11px] font-medium text-white/68">{label}</p>
-        {description && <p className="text-[10px] text-white/28">{description}</p>}
+        {disabled && disabledHint
+          ? <p className="text-[10px] text-amber-300/50">{disabledHint}</p>
+          : description && <p className="text-[10px] text-white/28">{description}</p>
+        }
       </div>
       <button
         type="button"
-        onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border transition-colors ${
+        disabled={disabled}
+        onClick={() => !disabled && onChange(!checked)}
+        className={`relative inline-flex h-4 w-7 shrink-0 rounded-full border transition-colors ${
+          disabled ? "cursor-not-allowed" : "cursor-pointer"
+        } ${
           checked
             ? "border-indigo-500/40 bg-indigo-600/30"
             : "border-white/[0.1] bg-white/[0.04]"
@@ -135,7 +148,7 @@ function ToggleRow({
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function AdminAccountingSetupStudio({ companyId, setup, onSaved, draftPatch }: Props) {
+export default function AdminAccountingSetupStudio({ companyId, setup, companySetup, expensePolicy, onSaved, draftPatch }: Props) {
   const t = useTranslations("admin.accountingSetup");
   const tc = useTranslations("common");
 
@@ -175,7 +188,6 @@ export default function AdminAccountingSetupStudio({ companyId, setup, onSaved, 
   const [polizaRequired,                     setPolizaRequired]                    = useState<boolean>(seed("poliza_required", false));
   const [archiveRetentionYears,              setArchiveRetentionYears]             = useState<number | null>(seed("archive_retention_years", 5));
   const [accountCodeRequired,                setAccountCodeRequired]               = useState<boolean>(seed("account_code_required", false));
-  const [subaccountRequired,                 setSubaccountRequired]                = useState<boolean>(seed("subaccount_required", false));
   const [autoAccountSuggestion,              setAutoAccountSuggestion]             = useState<boolean>(seed("auto_account_suggestion_enabled", true));
   const [costCenterRequired,                 setCostCenterRequired]                = useState<boolean>(seed("cost_center_required", false));
   const [projectRequired,                    setProjectRequired]                   = useState<boolean>(seed("project_required", false));
@@ -183,8 +195,6 @@ export default function AdminAccountingSetupStudio({ companyId, setup, onSaved, 
   const [allowAccountingOverride,            setAllowAccountingOverride]           = useState<boolean>(seed("allow_accounting_override", true));
   const [allowSubmitWithWarnings,            setAllowSubmitWithWarnings]           = useState<boolean>(seed("allow_submit_with_warnings", false));
   const [requireFinalReviewBeforeExport,     setRequireFinalReviewBeforeExport]    = useState<boolean>(seed("require_final_accounting_review_before_export", true));
-  const [aiAssistEnabled,                    setAiAssistEnabled]                   = useState<boolean>(seed("ai_accounting_assist_enabled", true));
-  const [aiNotes,                            setAiNotes]                           = useState<string>(seed("ai_accounting_notes", "") ?? "");
 
   const [saving, setSaving] = useState(false);
   const [saved,  setSaved]  = useState(false);
@@ -200,7 +210,6 @@ export default function AdminAccountingSetupStudio({ companyId, setup, onSaved, 
     if ("poliza_required" in draftPatch)                      setPolizaRequired(draftPatch.poliza_required);
     if ("archive_retention_years" in draftPatch)              setArchiveRetentionYears(draftPatch.archive_retention_years);
     if ("account_code_required" in draftPatch)                setAccountCodeRequired(draftPatch.account_code_required);
-    if ("subaccount_required" in draftPatch)                  setSubaccountRequired(draftPatch.subaccount_required);
     if ("auto_account_suggestion_enabled" in draftPatch)      setAutoAccountSuggestion(draftPatch.auto_account_suggestion_enabled);
     if ("cost_center_required" in draftPatch)                 setCostCenterRequired(draftPatch.cost_center_required);
     if ("project_required" in draftPatch)                     setProjectRequired(draftPatch.project_required);
@@ -208,8 +217,6 @@ export default function AdminAccountingSetupStudio({ companyId, setup, onSaved, 
     if ("allow_accounting_override" in draftPatch)            setAllowAccountingOverride(draftPatch.allow_accounting_override);
     if ("allow_submit_with_warnings" in draftPatch)           setAllowSubmitWithWarnings(draftPatch.allow_submit_with_warnings);
     if ("require_final_accounting_review_before_export" in draftPatch) setRequireFinalReviewBeforeExport(draftPatch.require_final_accounting_review_before_export);
-    if ("ai_accounting_assist_enabled" in draftPatch)         setAiAssistEnabled(draftPatch.ai_accounting_assist_enabled);
-    if ("ai_accounting_notes" in draftPatch)                  setAiNotes(draftPatch.ai_accounting_notes ?? "");
   }, [draftPatch]);
 
   // Local warnings
@@ -218,6 +225,27 @@ export default function AdminAccountingSetupStudio({ companyId, setup, onSaved, 
     warnings.push(t("warnPolizaNoReview"));
   if (managerApprovalMode === "threshold_only" && !managerApprovalThreshold)
     warnings.push(t("warnThresholdNoAmount"));
+
+  // Cross-setup dependency warnings
+  // allocation_dimensions lives on expense_policy (not company_setup).
+  const dims: string = expensePolicy?.allocation_dimensions ?? "";
+  const dimsIncludes = (k: string) => dims.includes(k);
+  const projectDimActive     = dims === "" || dimsIncludes("project");
+  const clientDimActive      = dims === "" || dimsIncludes("client");
+  const costCenterDimActive  = dims === "" || dimsIncludes("cost_center");
+
+  // Force-clear required-toggles when the corresponding dimension was disabled
+  // elsewhere. Prevents silent breakage: employees could never satisfy the rule.
+  useEffect(() => {
+    if (!projectDimActive     && projectRequired)     setProjectRequired(false);
+    if (!clientDimActive      && clientRequired)      setClientRequired(false);
+    if (!costCenterDimActive  && costCenterRequired)  setCostCenterRequired(false);
+  }, [projectDimActive, clientDimActive, costCenterDimActive, projectRequired, clientRequired, costCenterRequired]);
+
+  if (managerApprovalMode !== "disabled" && companySetup && !companySetup.has_managers)
+    warnings.push("La aprobación de gerente está activa pero la empresa no tiene gerentes configurados.");
+  if (polizaRequired && expensePolicy && (expensePolicy.xml_required_mode ?? "mxn_only") === "never")
+    warnings.push("“Póliza contable obligatoria” sin CFDI requerido: la mayoría de gastos no generará XML apto.");
 
   const handleSave = async () => {
     setSaving(true); setError(null); setSaved(false);
@@ -230,7 +258,6 @@ export default function AdminAccountingSetupStudio({ companyId, setup, onSaved, 
         poliza_required: polizaRequired,
         archive_retention_years: archiveRetentionYears ?? 5,
         account_code_required: accountCodeRequired,
-        subaccount_required: subaccountRequired,
         auto_account_suggestion_enabled: autoAccountSuggestion,
         cost_center_required: costCenterRequired,
         project_required: projectRequired,
@@ -238,12 +265,10 @@ export default function AdminAccountingSetupStudio({ companyId, setup, onSaved, 
         allow_accounting_override: allowAccountingOverride,
         allow_submit_with_warnings: allowSubmitWithWarnings,
         require_final_accounting_review_before_export: requireFinalReviewBeforeExport,
-        ai_accounting_assist_enabled: aiAssistEnabled,
-        ai_accounting_notes: aiNotes || null,
       };
       const res = await fetch(`${API}/admin/accounting-setup/${companyId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(`${res.status}`);
@@ -284,30 +309,10 @@ export default function AdminAccountingSetupStudio({ companyId, setup, onSaved, 
             options={REVIEW_MODE_OPTIONS}
             onChange={setAccountingReviewMode}
           />
-          <SelectRow
-            label={t("managerPreApproval")}
-            description={t("managerPreApprovalDesc")}
-            value={managerApprovalMode}
-            options={MANAGER_APPROVAL_OPTIONS}
-            onChange={setManagerApprovalMode}
-          />
-          {managerApprovalMode === "threshold_only" && (
-            <NumberRow
-              label={t("managerApprovalThreshold")}
-              description={t("managerApprovalThresholdDesc")}
-              value={managerApprovalThreshold}
-              placeholder={t("managerApprovalThresholdPlaceholder")}
-              onChange={setManagerApprovalThreshold}
-            />
-          )}
-          <NumberRow
-            label={t("archiveRetention")}
-            description={t("archiveRetentionDesc")}
-            value={archiveRetentionYears}
-            placeholder="5"
-            onChange={setArchiveRetentionYears}
-          />
         </Panel>
+        <p className="mt-1 px-1 text-[9.5px] text-white/22 leading-relaxed">
+          La preaprobación de gerente y los umbrales se configuran en <span className="text-white/40">Aprobaciones</span>. La retención de archivo se gestiona en el módulo de Archivo.
+        </p>
       </div>
 
       {/* Compliance & Filing */}
@@ -320,18 +325,6 @@ export default function AdminAccountingSetupStudio({ companyId, setup, onSaved, 
             checked={polizaRequired}
             onChange={setPolizaRequired}
           />
-          <ToggleRow
-            label={t("reimbursementEntityRequired")}
-            description={t("reimbursementEntityDesc")}
-            checked={reimbursementEntityRequired}
-            onChange={setReimbursementEntityRequired}
-          />
-          <ToggleRow
-            label={t("finalReviewBeforeExport")}
-            description={t("finalReviewBeforeExportDesc")}
-            checked={requireFinalReviewBeforeExport}
-            onChange={setRequireFinalReviewBeforeExport}
-          />
         </Panel>
       </div>
 
@@ -340,23 +333,37 @@ export default function AdminAccountingSetupStudio({ companyId, setup, onSaved, 
         <SectionLabel>{t("expenseControlFields")}</SectionLabel>
         <Panel>
           <ToggleRow label={t("accountCodeRequired")} checked={accountCodeRequired} onChange={setAccountCodeRequired} />
-          <ToggleRow label={t("subaccountRequired")}  checked={subaccountRequired}  onChange={setSubaccountRequired} />
-          <ToggleRow label={t("costCenterRequired")}  checked={costCenterRequired}  onChange={setCostCenterRequired} />
-          <ToggleRow label={t("projectRequired")}     checked={projectRequired}     onChange={setProjectRequired} />
-          <ToggleRow label={t("clientRequired")}      checked={clientRequired}      onChange={setClientRequired} />
+          <ToggleRow
+            label={t("costCenterRequired")}
+            checked={costCenterRequired}
+            onChange={setCostCenterRequired}
+            disabled={!costCenterDimActive}
+            disabledHint="Habilita Centro de costo en Política de gastos → Dimensiones de distribución."
+          />
+          <ToggleRow
+            label={t("projectRequired")}
+            checked={projectRequired}
+            onChange={setProjectRequired}
+            disabled={!projectDimActive}
+            disabledHint="Habilita Proyecto en Política de gastos → Dimensiones de distribución."
+          />
+          <ToggleRow
+            label={t("clientRequired")}
+            checked={clientRequired}
+            onChange={setClientRequired}
+            disabled={!clientDimActive}
+            disabledHint="Habilita Cliente en Política de gastos → Dimensiones de distribución."
+          />
         </Panel>
+        <p className="mt-1 px-1 text-[9.5px] text-white/22 leading-relaxed">
+          Cada toggle activado bloquea el envío y la generación de póliza si el campo no está asignado.
+        </p>
       </div>
 
-      {/* Validation & Override */}
+      {/* Validation */}
       <div>
         <SectionLabel>{t("validationOverride")}</SectionLabel>
         <Panel>
-          <ToggleRow
-            label={t("allowAccountingOverride")}
-            description={t("allowAccountingOverrideDesc")}
-            checked={allowAccountingOverride}
-            onChange={setAllowAccountingOverride}
-          />
           <ToggleRow
             label={t("allowSubmitWithWarnings")}
             description={t("allowSubmitWithWarningsDesc")}
@@ -366,55 +373,27 @@ export default function AdminAccountingSetupStudio({ companyId, setup, onSaved, 
         </Panel>
       </div>
 
-      {/* AI Assistance */}
-      <div>
-        <SectionLabel>{t("aiAssistance")}</SectionLabel>
-        <Panel>
-          <ToggleRow
-            label={t("aiAccountingAssist")}
-            description={t("aiAccountingAssistDesc")}
-            checked={aiAssistEnabled}
-            onChange={setAiAssistEnabled}
-          />
-          <ToggleRow
-            label={t("autoAccountCodeSuggestion")}
-            description={t("autoAccountCodeSuggestionDesc")}
-            checked={autoAccountSuggestion}
-            onChange={setAutoAccountSuggestion}
-          />
-          <div className="px-4 py-2.5">
-            <p className="mb-1 text-[11px] font-medium text-white/68">{t("aiNotes")}</p>
-            <p className="mb-1.5 text-[10px] text-white/28">{t("aiNotesDesc")}</p>
-            <textarea
-              value={aiNotes}
-              onChange={(e) => setAiNotes(e.target.value)}
-              rows={3}
-              placeholder={t("aiNotesPlaceholder")}
-              className="w-full resize-none rounded border border-white/[0.07] bg-black/20 px-2.5 py-1.5 text-[11px] text-white/60 placeholder:text-white/20 outline-none focus:border-white/20"
-            />
-          </div>
-        </Panel>
-      </div>
-
-      {/* Save row */}
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={saving}
-          className="inline-flex items-center gap-1.5 rounded border border-white/10 bg-white/[0.05] px-3 py-1.5 text-[10px] font-semibold text-white/60 transition-colors hover:bg-white/[0.09] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {saving
-            ? <><Loader2 className="h-3 w-3 animate-spin" /> {tc("saving")}</>
-            : <><Save className="h-3 w-3" /> {tc("save")}</>
-          }
-        </button>
-        {saved && (
-          <span className="flex items-center gap-1 text-[10px] text-emerald-400/60">
-            <CheckCircle2 className="h-3 w-3" /> {tc("saved")}
-          </span>
-        )}
-        {error && <span className="text-[10px] text-red-400/60">{error}</span>}
+      {/* Sticky Save bar */}
+      <div className="sticky bottom-0 -mx-4 mt-6 border-t border-white/[0.08] bg-zinc-950/95 px-4 py-2.5 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/80">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="inline-flex items-center gap-1.5 rounded border border-indigo-500/30 bg-indigo-500/[0.10] px-3 py-1.5 text-[10px] font-semibold text-indigo-200/80 transition-colors hover:bg-indigo-500/[0.18] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {saving
+              ? <><Loader2 className="h-3 w-3 animate-spin" /> {tc("saving")}</>
+              : <><Save className="h-3 w-3" /> {tc("save")}</>
+            }
+          </button>
+          {saved && (
+            <span className="flex items-center gap-1 text-[10px] text-emerald-400/60">
+              <CheckCircle2 className="h-3 w-3" /> {tc("saved")}
+            </span>
+          )}
+          {error && <span className="text-[10px] text-red-400/60">{error}</span>}
+        </div>
       </div>
     </div>
   );

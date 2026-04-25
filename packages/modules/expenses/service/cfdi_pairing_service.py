@@ -234,8 +234,30 @@ def find_best_xml_match_for_pdf(
     )
 
     # ── Score each candidate; prefer high confidence, then field count ────────
+    # Curveball guard: when multiple XMLs share the same issuer/receiver/total
+    # (e.g. a recurring Jan/Feb/Mar invoice for the same amount), a
+    # non-UUID field match would tie. We also pull the PDF's own text-extracted
+    # identity (date + filename stem) so we can break the tie instead of
+    # picking whichever candidate the DB returned first.
+    from packages.modules.expenses.service.document_identity_service import (
+        extract_pdf_identity,
+    )
+    pdf_text_identity: dict = {}
+    try:
+        pdf_text_identity = extract_pdf_identity(
+            filename=pdf_doc.filename,
+            content_text=pdf_doc.content_text or None,
+        ) or {}
+    except Exception:  # noqa: BLE001
+        pdf_text_identity = {}
+
+    pdf_date_iso = (pdf_text_identity.get("document_date") or "")[:10] or None
+    pdf_stem     = (pdf_text_identity.get("filename_stem") or "").lower()
+
     best_result: dict | None = None
     best_priority = -1   # (2=high uuid, 1=high fields, 0=low partial)
+    best_tiebreak = -1   # higher = stronger disambiguator (date, stem)
+    ambiguous_non_uuid = False   # set when we see >1 high-field candidates
 
     for xml_doc in xml_candidates:
         xml_identity = extract_xml_identity(
@@ -255,8 +277,23 @@ def find_best_xml_match_for_pdf(
         else:
             priority = 0
 
-        if priority > best_priority:
+        # Tiebreak score for same-priority candidates (RFC+total-only matches):
+        # +2 if XML date matches PDF's text-extracted date (YYYY-MM-DD)
+        # +1 if filename stems overlap
+        tiebreak = 0
+        xml_date_iso = (xml_identity.get("document_date") or "")[:10] or None
+        if pdf_date_iso and xml_date_iso and pdf_date_iso == xml_date_iso:
+            tiebreak += 2
+        xml_stem = (xml_identity.get("filename_stem") or "").lower()
+        if pdf_stem and xml_stem and (pdf_stem == xml_stem or pdf_stem in xml_stem or xml_stem in pdf_stem):
+            tiebreak += 1
+
+        if priority > best_priority or (priority == best_priority and tiebreak > best_tiebreak):
+            # Track whether a same-priority high-fields match displaced another
+            if priority == 1 and best_priority == 1:
+                ambiguous_non_uuid = True
             best_priority = priority
+            best_tiebreak = tiebreak
             best_result = {
                 "pdf_document_id": pdf_document_id,
                 "xml_document_id": xml_doc.id,
@@ -268,5 +305,14 @@ def find_best_xml_match_for_pdf(
         # Short-circuit: UUID-level certainty cannot be beaten
         if best_priority == 2:
             break
+
+    # Ambiguity guard: multiple non-UUID matches with no date/stem disambiguator
+    # → downgrade confidence so callers don't auto-pair blindly.
+    if best_result is not None and best_priority == 1 and ambiguous_non_uuid and best_tiebreak == 0:
+        best_result["confidence"]   = "low"
+        best_result["match_reason"] = (
+            f"{best_result['match_reason']} (ambiguous — multiple candidates share the same "
+            f"issuer/receiver/total; no date or filename disambiguator available)"
+        )
 
     return best_result

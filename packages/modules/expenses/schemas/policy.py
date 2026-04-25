@@ -14,9 +14,6 @@ class CompanyExpensePolicyBase(BaseModel):
     require_proof: bool
     allow_split_allocations: bool
     allocation_dimensions: str
-    manager_approval_required: bool
-    accounting_review_required: bool
-    ai_policy_assist_enabled: bool
     allow_document_free_expenses: bool = False
 
 
@@ -33,9 +30,6 @@ class CompanyExpensePolicyUpdate(BaseModel):
     require_proof: Optional[bool] = None
     allow_split_allocations: Optional[bool] = None
     allocation_dimensions: Optional[str] = None
-    manager_approval_required: Optional[bool] = None
-    accounting_review_required: Optional[bool] = None
-    ai_policy_assist_enabled: Optional[bool] = None
     allow_document_free_expenses: Optional[bool] = None
 
 

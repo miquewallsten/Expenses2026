@@ -51,13 +51,6 @@ class CompanyExpensePolicy(Base):
         String(50), default="project_client_cost_center", nullable=False
     )
 
-    # Approval workflow
-    manager_approval_required: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    accounting_review_required: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-
-    # AI features
-    ai_policy_assist_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-
     # Document-free expenses
     # When True, employees may submit an expense with no uploaded documents at all.
     # The admin enables this for petty-cash, per-diem, or any scenario where

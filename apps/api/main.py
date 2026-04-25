@@ -120,7 +120,15 @@ from packages.modules.integrations.models import (  # noqa: F401 — registers i
     IntegrationSyncRun,
     ExpensePaymentStatus,
 )
+from packages.modules.integrations.models_public_api import (  # noqa: F401
+    PlatformApiKey,
+    WebhookSubscription,
+    WebhookDelivery,
+)
 from packages.modules.integrations.router import router as integrations_router
+from packages.modules.integrations.public_api_router import (
+    router as public_api_router,
+)
 
 # Fail-fast: reject known-insecure defaults in production before the app
 # starts serving requests.
@@ -262,6 +270,7 @@ app.include_router(ai_policy_router)
 app.include_router(agent_router)
 app.include_router(amex_router)
 app.include_router(integrations_router)
+app.include_router(public_api_router)
 
 
 # ── Channel notification scheduler (opt-in via env var) ──────────────────────

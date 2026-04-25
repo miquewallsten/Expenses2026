@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  Receipt, CheckSquare, Calculator, Clock, Archive, Download,
+  Receipt, CheckSquare, Calculator, Clock, Archive, Download, CreditCard,
   type LucideIcon,
 } from "lucide-react";
 import { useMyWorkContext } from "@/context/MyWorkContext";
@@ -18,6 +18,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Clock,
   Archive,
   Download,
+  CreditCard,
 };
 
 function resolveIcon(name: string | undefined): LucideIcon | null {

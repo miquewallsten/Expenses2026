@@ -1,0 +1,152 @@
+# Plan Básico — opinionated starter CoA for non-accountants.
+#
+# Structured as the SAT Anexo-24 three-level tree:
+#   Class (1d) → Group (3d, header) → Detail (xxx.xx, postable)
+#
+# Header rows are inserted with `postable: false` so the Cuentas tab can
+# render a real tree. Children are linked via `parent` (parent's code).
+# Every postable account carries its SAT Código Agrupador so SAT mode
+# lights up without any migration.
+
+accounts:
+  # ── 1xx Activo ─────────────────────────────────────────────────────────────
+  - code: "118"
+    name: IVA acreditable pagado
+    sat: "118"
+    class: asset
+    postable: false
+  - code: "118.01"
+    name: IVA acreditable 16%
+    sat: "118.01"
+    class: asset
+    parent: "118"
+
+  # ── 2xx Pasivo ─────────────────────────────────────────────────────────────
+  - code: "208"
+    name: Impuestos trasladados
+    sat: "208"
+    class: liability
+    postable: false
+  - code: "208.01"
+    name: IVA trasladado 16%
+    sat: "208.01"
+    class: liability
+    parent: "208"
+
+  - code: "210"
+    name: Cuentas por pagar a corto plazo
+    sat: "210"
+    class: liability
+    postable: false
+  - code: "210.01"
+    name: Por pagar a empleados
+    sat: "210.01"
+    class: liability
+    parent: "210"
+  - code: "210.02"
+    name: Tarjetas corporativas
+    sat: "210.02"
+    class: liability
+    parent: "210"
+
+  - code: "216"
+    name: Impuestos retenidos
+    sat: "216"
+    class: liability
+    postable: false
+  - code: "216.01"
+    name: ISR retenido honorarios
+    sat: "216.01"
+    class: liability
+    parent: "216"
+  - code: "216.02"
+    name: IVA retenido honorarios
+    sat: "216.02"
+    class: liability
+    parent: "216"
+
+  # ── 6xx Gastos ─────────────────────────────────────────────────────────────
+  - code: "601"
+    name: Gastos generales
+    sat: "601"
+    class: expense
+    postable: false
+  - code: "601.10"
+    name: Viajes
+    sat: "601.10"
+    class: expense
+    parent: "601"
+    split_by: project
+  - code: "601.11"
+    name: Comidas y entretenimiento
+    sat: "601.11"
+    class: expense
+    parent: "601"
+    split_by: cost_center
+  - code: "601.13"
+    name: Combustibles
+    sat: "601.13"
+    class: expense
+    parent: "601"
+  - code: "601.14"
+    name: Telefonía e internet
+    sat: "601.14"
+    class: expense
+    parent: "601"
+  - code: "601.15"
+    name: Papelería y oficina
+    sat: "601.15"
+    class: expense
+    parent: "601"
+  - code: "601.17"
+    name: Publicidad y marketing
+    sat: "601.17"
+    class: expense
+    parent: "601"
+  - code: "601.22"
+    name: Software y suscripciones
+    sat: "601.22"
+    class: expense
+    parent: "601"
+    split_by: cost_center
+  - code: "601.25"
+    name: Honorarios y consultoría
+    sat: "601.25"
+    class: expense
+    parent: "601"
+    split_by: project
+  - code: "601.99"
+    name: Otros gastos generales
+    sat: "601.99"
+    class: expense
+    parent: "601"
+
+tax_rates:
+  - name: IVA 16% Acreditable
+    rate: 0.16
+    behavior: acreditable
+    gl_account: "118.01"
+  - name: IVA 16% Trasladado
+    rate: 0.16
+    behavior: trasladable
+    gl_account: "208.01"
+  - name: Sin IVA / Exento
+    rate: 0.0
+    behavior: exento
+    gl_account: null
+  - name: IVA 16% No acreditable
+    rate: 0.16
+    behavior: no_acreditable
+    gl_account: null
+
+category_bindings:
+  TRAVEL:                { account: "601.10", tax: "IVA 16% Acreditable",  counterparty: "210.01" }
+  MEALS:                 { account: "601.11", tax: "IVA 16% No acreditable", counterparty: "210.01" }
+  SOFTWARE:              { account: "601.22", tax: "IVA 16% Acreditable",  counterparty: "210.02" }
+  OFFICE:                { account: "601.15", tax: "IVA 16% Acreditable",  counterparty: "210.01" }
+  PROFESSIONAL_SERVICES: { account: "601.25", tax: "IVA 16% Acreditable",  counterparty: "210.01" }
+  MARKETING:             { account: "601.17", tax: "IVA 16% Acreditable",  counterparty: "210.02" }
+  TRAINING:              { account: "601.25", tax: "IVA 16% Acreditable",  counterparty: "210.01" }
+  UTILITIES:             { account: "601.14", tax: "IVA 16% Acreditable",  counterparty: "210.01" }
+  MAINTENANCE:           { account: "601.99", tax: "IVA 16% Acreditable",  counterparty: "210.01" }
+  MISCELLANEOUS:         { account: "601.99", tax: "Sin IVA / Exento",    counterparty: "210.01" }

@@ -5,3 +5,8 @@ node_modules
 .env
 .env.*
 !.env.example
+vitest.config.ts
+vitest.setup.ts
+__tests__
+**/*.test.ts
+**/*.test.tsx

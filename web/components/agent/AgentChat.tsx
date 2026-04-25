@@ -30,6 +30,8 @@ interface Props {
   allowUpload?: boolean;
   /** Density — "rail" fits the old 72-wide aside; "page" is full-width. */
   variant?: "rail" | "page";
+  /** Fires each time the user confirms a destructive tool receipt. */
+  onToolConfirmed?: (tool: string) => void;
 }
 
 type TurnKind = "user" | "assistant" | "tool" | "error";
@@ -51,6 +53,7 @@ export default function AgentChat({
   greeting,
   allowUpload = true,
   variant    = "rail",
+  onToolConfirmed,
 }: Props) {
   const t = useTranslations("agent.chat");
   const [turns,     setTurns]     = useState<Turn[]>(() =>
@@ -177,6 +180,7 @@ export default function AgentChat({
             companyId={companyId}
             receipts={receipts}
             onReceiptChanged={updateReceipt}
+            onToolConfirmed={onToolConfirmed}
           />
         ))}
         {loading && (
@@ -244,7 +248,7 @@ export default function AgentChat({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+              if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 runTurn(input);
               }
@@ -270,12 +274,13 @@ export default function AgentChat({
 }
 
 function TurnView({
-  turn, companyId, receipts, onReceiptChanged,
+  turn, companyId, receipts, onReceiptChanged, onToolConfirmed,
 }: {
   turn: Turn;
   companyId: number;
   receipts: Record<string, AgentReceipt>;
   onReceiptChanged: (r: AgentReceipt) => void;
+  onToolConfirmed?: (tool: string) => void;
 }) {
   const t = useTranslations("agent.chat");
 
@@ -341,7 +346,7 @@ function TurnView({
                   </div>
                 );
               }
-              return <ReceiptCard key={rid} companyId={companyId} receipt={r} onChanged={onReceiptChanged} />;
+              return <ReceiptCard key={rid} companyId={companyId} receipt={r} onChanged={onReceiptChanged} onConfirmed={onToolConfirmed} />;
             })}
           </div>
         )}

@@ -2,9 +2,13 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# pgvector Python client needs libpq at runtime; numpy/pillow need build tools
+# pgvector Python client needs libpq at runtime; numpy/pillow need build tools;
+# tesseract-ocr powers image-receipt OCR (spa+eng language packs for MX receipts).
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    tesseract-ocr \
+    tesseract-ocr-spa \
+    tesseract-ocr-eng \
   && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .

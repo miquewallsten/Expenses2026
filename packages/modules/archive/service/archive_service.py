@@ -242,3 +242,62 @@ def store_file(
     db.commit()
     db.refresh(record)
     return record
+
+
+def purge_archive_files_for_expense(
+    db: Session,
+    company_id: int,
+    expense_id: int,
+    filename: str,
+) -> int:
+    """Permanently delete every ArchiveFile row + stored bytes matching the
+    given expense + filename. Returns the number of rows removed.
+
+    Used when a draft expense document is deleted and must leave no trace.
+    """
+    rows = (
+        db.query(ArchiveFile)
+        .filter(
+            ArchiveFile.company_id == company_id,
+            ArchiveFile.expense_id == expense_id,
+            ArchiveFile.file_name  == filename,
+        )
+        .all()
+    )
+    if not rows:
+        return 0
+
+    # Resolve the same storage backend used at write time.
+    db_cfg: dict | None = None
+    try:
+        scfg = (
+            db.query(StorageConfig).filter(StorageConfig.company_id == company_id).first()
+        ) or (
+            db.query(StorageConfig).filter(StorageConfig.company_id == 0).first()
+        )
+        if scfg:
+            db_cfg = {
+                "backend":         scfg.backend,
+                "local_path":      scfg.local_path,
+                "endpoint_url":    scfg.endpoint_url,
+                "bucket":          scfg.bucket,
+                "prefix":          scfg.prefix,
+                "region":          scfg.region,
+                "azure_account":   scfg.azure_account,
+                "azure_container": scfg.azure_container,
+            }
+    except Exception:  # noqa: BLE001
+        pass
+
+    backend = get_storage_backend(db_cfg=db_cfg)
+
+    removed = 0
+    for row in rows:
+        try:
+            backend.delete_bytes(row.storage_key)
+        except Exception:  # noqa: BLE001 — DB row removal still proceeds
+            pass
+        db.delete(row)
+        removed += 1
+    db.commit()
+    return removed

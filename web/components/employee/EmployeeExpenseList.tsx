@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { StatusDot, StatusText } from "@/components/ui/StatusBadge";
-import { Plus } from "lucide-react";
+import { Plus, Upload, Camera, FileText } from "lucide-react";
 
 export interface Expense {
   id: number;
@@ -33,7 +33,16 @@ function formatDate(iso: string): string {
 }
 
 function needsExtraction(e: Expense): boolean {
-  return Number(e.amount) === 0 && !e.detected_category && e.status !== "uploading";
+  // Only show "loading" during an in-flight upload. Once the expense is
+  // persisted (status="draft"), a $0 amount just means extraction couldn't
+  // find one — don't pretend we're still working.
+  return e.status === "uploading";
+}
+
+const _AMOUNT_FMT = new Intl.NumberFormat("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function formatAmount(n: number | string): string {
+  const v = Number(n);
+  return Number.isFinite(v) ? _AMOUNT_FMT.format(v) : "0.00";
 }
 
 const _GARBAGE_PREFIXES = ["<?xml", "<cfdi", "<Comprobante", "%PDF"];
@@ -88,7 +97,8 @@ interface Props {
   onSelect: (e: Expense) => void;
   loading: boolean;
   uploading?: boolean;
-  onNewExpense: () => void;
+  onUploadFile: () => void;
+  onTakePhoto?: () => void;
   onNewSimpleExpense?: () => void;
 }
 
@@ -98,13 +108,32 @@ export default function EmployeeExpenseList({
   onSelect,
   loading,
   uploading = false,
-  onNewExpense,
+  onUploadFile,
+  onTakePhoto,
   onNewSimpleExpense,
 }: Props) {
   const t = useTranslations("employee");
   const tc = useTranslations("common");
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onDocClick(e: MouseEvent) {
+      if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
 
   const filtered = useMemo(() => {
     return expenses.filter((e) => {
@@ -126,23 +155,53 @@ export default function EmployeeExpenseList({
 
       {/* ── Top bar: new + search ─────────────────────────────────────────── */}
       <div className="flex shrink-0 items-center gap-2 border-b border-white/[0.05] px-3 py-2.5">
-        <button
-          onClick={onNewExpense}
-          disabled={uploading}
-          className="shrink-0 flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-indigo-500 active:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <Plus className="h-3 w-3" />
-          {uploading ? t("uploadingDoc") : t("newExpense")}
-        </button>
-        {onNewSimpleExpense && (
+        <div ref={menuRef} className="relative shrink-0">
           <button
-            onClick={onNewSimpleExpense}
+            onClick={() => setMenuOpen((v) => !v)}
             disabled={uploading}
-            className="shrink-0 rounded-md border border-indigo-500/35 px-2.5 py-1.5 text-xs text-indigo-300/80 transition-colors hover:border-indigo-500/60 hover:bg-indigo-500/[0.08] hover:text-indigo-200 disabled:cursor-not-allowed disabled:opacity-50"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            className="flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-indigo-500 active:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {t("quickExpense")}
+            <Plus className="h-3 w-3" />
+            {uploading ? t("uploadingDoc") : t("newExpense")}
           </button>
-        )}
+          {menuOpen && !uploading && (
+            <div
+              role="menu"
+              className="absolute left-0 top-full z-30 mt-1 w-48 overflow-hidden rounded-md border border-white/[0.08] bg-[#0f1016] shadow-xl ring-1 ring-black/40"
+            >
+              <button
+                role="menuitem"
+                onClick={() => { setMenuOpen(false); onUploadFile(); }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-white/80 transition-colors hover:bg-white/[0.06]"
+              >
+                <Upload className="h-3 w-3 text-white/45" />
+                {t("uploadFile")}
+              </button>
+              {onTakePhoto && (
+                <button
+                  role="menuitem"
+                  onClick={() => { setMenuOpen(false); onTakePhoto(); }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-white/80 transition-colors hover:bg-white/[0.06]"
+                >
+                  <Camera className="h-3 w-3 text-white/45" />
+                  {t("takePhoto")}
+                </button>
+              )}
+              {onNewSimpleExpense && (
+                <button
+                  role="menuitem"
+                  onClick={() => { setMenuOpen(false); onNewSimpleExpense(); }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-white/80 transition-colors hover:bg-white/[0.06]"
+                >
+                  <FileText className="h-3 w-3 text-white/45" />
+                  {t("noReceipt")}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
         <input
           type="search"
           value={query}
@@ -213,7 +272,7 @@ export default function EmployeeExpenseList({
                         {sanitizeDescription(exp.description, t("uploadedXml"), t("uploadedPdf"), t("uploadedDoc"))}
                       </span>
                       <span className={`shrink-0 tabular-nums text-[11px] font-semibold ${isSelected ? "text-white" : "text-white/65"}`}>
-                        ${Number(exp.amount).toFixed(2)}
+                        ${formatAmount(exp.amount)}
                       </span>
                     </div>
 

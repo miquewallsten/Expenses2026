@@ -1,0 +1,159 @@
+# SAT Código Agrupador — Anexo 24 (reference catalog, subset).
+#
+# This is the SAT-blessed hierarchy every Mexican company account should roll
+# up to. Shown to admins as a dim overlay under their own account codes; used
+# as a picker when the "SAT mode" toggle is on.
+#
+# Only the expense-heavy subtree (6xx) is expanded fully; the others carry
+# top-level entries for completeness but don't need deep detail right now.
+
+classes:
+  - code: "1"
+    name: Activo
+  - code: "2"
+    name: Pasivo
+  - code: "3"
+    name: Capital
+  - code: "4"
+    name: Ingresos
+  - code: "5"
+    name: Costos
+  - code: "6"
+    name: Gastos
+  - code: "7"
+    name: Resultado integral de financiamiento
+  - code: "8"
+    name: Cuentas de orden
+
+groups:
+  # ── 1 Activo (simplified) ────────────────────────────────────────────────
+  - code: "101"
+    name: Caja
+    class: "1"
+  - code: "102"
+    name: Bancos
+    class: "1"
+  - code: "105"
+    name: Clientes
+    class: "1"
+  - code: "113"
+    name: Deudores diversos
+    class: "1"
+  - code: "118"
+    name: IVA acreditable pagado
+    class: "1"
+    notes: Donde se registra el IVA acreditable recuperable.
+  - code: "119"
+    name: IVA pendiente de acreditar
+    class: "1"
+
+  # ── 2 Pasivo ─────────────────────────────────────────────────────────────
+  - code: "201"
+    name: Proveedores
+    class: "2"
+  - code: "205"
+    name: Acreedores diversos
+    class: "2"
+  - code: "208"
+    name: Impuestos trasladados
+    class: "2"
+  - code: "210"
+    name: Cuentas por pagar a corto plazo
+    class: "2"
+    notes: Aquí van reembolsos a empleados, tarjetas corporativas, etc.
+  - code: "216"
+    name: Impuestos retenidos
+    class: "2"
+
+  # ── 6 Gastos ─────────────────────────────────────────────────────────────
+  - code: "601"
+    name: Gastos generales
+    class: "6"
+    notes: Es donde el 90% de los gastos operativos caen.
+  - code: "602"
+    name: Gastos de venta
+    class: "6"
+  - code: "603"
+    name: Gastos de administración
+    class: "6"
+  - code: "604"
+    name: Gastos financieros
+    class: "6"
+
+# Detail accounts (601.xx) — the only fully expanded subtree.
+accounts:
+  - code: "601.01"
+    name: Sueldos y salarios
+    group: "601"
+  - code: "601.02"
+    name: Compensaciones y gratificaciones
+    group: "601"
+  - code: "601.05"
+    name: Honorarios
+    group: "601"
+    notes: Pagos a personas físicas por servicios independientes (retención de ISR/IVA común).
+  - code: "601.06"
+    name: Arrendamiento
+    group: "601"
+  - code: "601.10"
+    name: Viáticos y gastos de viaje
+    group: "601"
+    notes: Transporte, hospedaje, alimentos en viaje de negocios.
+  - code: "601.11"
+    name: Comidas y entretenimiento
+    group: "601"
+    notes: Limitación fiscal — típicamente el IVA es NO acreditable.
+  - code: "601.13"
+    name: Combustibles y lubricantes
+    group: "601"
+    notes: Solo acreditable si se paga con medios electrónicos.
+  - code: "601.14"
+    name: Telefonía e internet
+    group: "601"
+  - code: "601.15"
+    name: Papelería y útiles de oficina
+    group: "601"
+  - code: "601.17"
+    name: Publicidad y propaganda
+    group: "601"
+  - code: "601.18"
+    name: Mantenimiento y reparaciones
+    group: "601"
+  - code: "601.19"
+    name: Capacitación
+    group: "601"
+  - code: "601.20"
+    name: Seguros y fianzas
+    group: "601"
+  - code: "601.22"
+    name: Software, licencias y suscripciones
+    group: "601"
+  - code: "601.25"
+    name: Servicios profesionales y consultoría
+    group: "601"
+  - code: "601.99"
+    name: Otros gastos generales
+    group: "601"
+
+  # Sub-accounts of 118 / 208 / 216 that real MX CoAs always carry.
+  - code: "118.01"
+    name: IVA acreditable 16%
+    group: "118"
+  - code: "118.02"
+    name: IVA acreditable 8% frontera
+    group: "118"
+  - code: "208.01"
+    name: IVA trasladado 16%
+    group: "208"
+  - code: "210.01"
+    name: Cuentas por pagar a empleados (reembolsos)
+    group: "210"
+  - code: "210.02"
+    name: Tarjetas corporativas por liquidar
+    group: "210"
+  - code: "216.01"
+    name: ISR retenido sobre honorarios
+    group: "216"
+  - code: "216.02"
+    name: IVA retenido sobre honorarios
+    group: "216"

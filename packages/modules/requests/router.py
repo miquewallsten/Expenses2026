@@ -3,6 +3,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from apps.api.deps import get_db
+from packages.core.platform.module_gate import require_module
 from packages.modules.requests.schemas import (
     AddUrlAttachment,
     AIChatRequest,
@@ -36,7 +37,11 @@ from packages.modules.requests.service import (
 )
 from packages.modules.requests import agent as req_agent
 
-router = APIRouter(prefix="/requests", tags=["requests"])
+router = APIRouter(
+    prefix="/requests",
+    tags=["requests"],
+    dependencies=[Depends(require_module("purchase_requests"))],
+)
 
 
 @router.get("/{company_id}/my", response_model=list[PurchaseRequestRead])

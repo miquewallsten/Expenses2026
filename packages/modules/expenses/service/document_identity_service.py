@@ -126,6 +126,11 @@ def extract_xml_identity(filename: str, content_text: str) -> dict:
         issuer_rfc     : str | None   — uppercase
         receiver_rfc   : str | None   — uppercase
         document_date  : str | None   — ISO date or datetime from Fecha attr
+        uso_cfdi       : str | None   — Receptor@UsoCFDI (e.g. 'G03', 'P01')
+        forma_pago     : str | None   — Comprobante@FormaPago (e.g. '01' cash, '04' card)
+        metodo_pago    : str | None   — Comprobante@MetodoPago ('PUE' | 'PPD')
+        tipo_comprobante: str | None  — Comprobante@TipoDeComprobante ('I','E','P','N','T')
+        currency_xml   : str | None   — Comprobante@Moneda ISO code
         filename_stem  : str
     """
     result: dict = {
@@ -135,6 +140,15 @@ def extract_xml_identity(filename: str, content_text: str) -> dict:
         "issuer_rfc": None,
         "receiver_rfc": None,
         "document_date": None,
+        "uso_cfdi": None,
+        "forma_pago": None,
+        "metodo_pago": None,
+        "tipo_comprobante": None,
+        "currency_xml": None,
+        "issuer_zip": None,
+        "receiver_zip": None,
+        "issuer_regimen": None,
+        "receiver_regimen": None,
         "filename_stem": normalize_filename_stem(filename),
     }
 
@@ -142,8 +156,15 @@ def extract_xml_identity(filename: str, content_text: str) -> dict:
         return result
 
     # ── 1. Try structured XML parse ─────────────────────────────────────────
+    # content_text may include extracted key/value metadata appended after
+    # the XML document; slice off anything past the closing </Comprobante>
+    # tag so ET.fromstring doesn't choke on "junk after document element".
+    xml_slice = content_text
+    end_m = re.search(r"</[^<>]*Comprobante\s*>", xml_slice)
+    if end_m:
+        xml_slice = xml_slice[: end_m.end()]
     try:
-        root = ET.fromstring(content_text)
+        root = ET.fromstring(xml_slice)
         _extract_xml_from_tree(root, result)
     except ET.ParseError:
         pass  # fall through to regex path
@@ -176,8 +197,25 @@ def _extract_xml_from_tree(root: ET.Element, result: dict) -> None:
         comprobante.attrib.get("Fecha")
         or comprobante.attrib.get("fecha")
     )
+    # ── Comprobante-level CFDI attributes ──────────────────────────────────────
+    def _ci_attr(el: ET.Element, *names: str) -> str | None:
+        for n in names:
+            v = el.attrib.get(n)
+            if v is not None and str(v).strip():
+                return str(v).strip()
+        return None
 
-    # ── Emisor RFC ───────────────────────────────────────────────────────────
+    result["forma_pago"]       = _ci_attr(comprobante, "FormaPago", "formaDePago", "formapago")
+    result["metodo_pago"]      = _ci_attr(comprobante, "MetodoPago", "metodoDePago", "metodopago")
+    tipo = _ci_attr(comprobante, "TipoDeComprobante", "tipoDeComprobante", "tipodecomprobante")
+    result["tipo_comprobante"] = tipo.upper() if tipo else None
+    moneda = _ci_attr(comprobante, "Moneda", "moneda")
+    result["currency_xml"]     = moneda.upper() if moneda else None
+    # CFDI 4.0: Comprobante@LugarExpedicion is the issuer's postal code.
+    result["issuer_zip"] = _ci_attr(
+        comprobante, "LugarExpedicion", "lugarExpedicion", "lugarexpedicion"
+    )
+    # ── Emisor RFC + RegimenFiscal ─────────────────────────────────────────────
     emisor = _find_any(comprobante, "Emisor")
     if emisor is not None:
         rfc_raw = (
@@ -186,8 +224,11 @@ def _extract_xml_from_tree(root: ET.Element, result: dict) -> None:
             or emisor.attrib.get("rfc")
         )
         result["issuer_rfc"] = _normalise_rfc(rfc_raw)
+        result["issuer_regimen"] = _ci_attr(
+            emisor, "RegimenFiscal", "regimenFiscal", "regimenfiscal"
+        )
 
-    # ── Receptor RFC ─────────────────────────────────────────────────────────
+    # ── Receptor RFC + UsoCFDI + DomicilioFiscal + RegimenFiscalReceptor ──────
     receptor = _find_any(comprobante, "Receptor")
     if receptor is not None:
         rfc_raw = (
@@ -196,6 +237,19 @@ def _extract_xml_from_tree(root: ET.Element, result: dict) -> None:
             or receptor.attrib.get("rfc")
         )
         result["receiver_rfc"] = _normalise_rfc(rfc_raw)
+        uso = (
+            receptor.attrib.get("UsoCFDI")
+            or receptor.attrib.get("usoCFDI")
+            or receptor.attrib.get("usocfdi")
+            or comprobante.attrib.get("UsoCFDI")
+        )
+        result["uso_cfdi"] = uso.strip().upper() if uso and uso.strip() else None
+        result["receiver_zip"] = _ci_attr(
+            receptor, "DomicilioFiscalReceptor", "domicilioFiscalReceptor", "domiciliofiscalreceptor"
+        )
+        result["receiver_regimen"] = _ci_attr(
+            receptor, "RegimenFiscalReceptor", "regimenFiscalReceptor", "regimenfiscalreceptor"
+        )
 
     # ── UUID from TimbreFiscalDigital ─────────────────────────────────────────
     timbre = _find_any(comprobante, "TimbreFiscalDigital")
@@ -241,6 +295,37 @@ def _extract_xml_from_text(text: str, result: dict) -> None:
         m = _XML_DATE_RE.search(text)
         if m:
             result["document_date"] = m.group(1)
+
+    # Receptor / Emisor attributes — regex fallbacks so evaluator fields are
+    # populated even when the structured XML parse failed.
+    def _attr(pattern: str) -> str | None:
+        m = re.search(pattern, text, re.IGNORECASE)
+        return m.group(1).strip() if m else None
+
+    if result["receiver_zip"] is None:
+        result["receiver_zip"] = _attr(r'DomicilioFiscalReceptor\s*=\s*"([^"]+)"')
+    if result["issuer_zip"] is None:
+        result["issuer_zip"] = _attr(r'LugarExpedicion\s*=\s*"([^"]+)"')
+    if result["uso_cfdi"] is None:
+        v = _attr(r'UsoCFDI\s*=\s*"([^"]+)"')
+        result["uso_cfdi"] = v.upper() if v else None
+    if result["tipo_comprobante"] is None:
+        v = _attr(r'TipoDeComprobante\s*=\s*"([^"]+)"')
+        result["tipo_comprobante"] = v.upper() if v else None
+    if result["forma_pago"] is None:
+        result["forma_pago"] = _attr(r'FormaPago\s*=\s*"([^"]+)"')
+    if result["metodo_pago"] is None:
+        result["metodo_pago"] = _attr(r'MetodoPago\s*=\s*"([^"]+)"')
+    if result["currency_xml"] is None:
+        v = _attr(r'Moneda\s*=\s*"([^"]+)"')
+        result["currency_xml"] = v.upper() if v else None
+    if result["receiver_regimen"] is None:
+        result["receiver_regimen"] = _attr(r'RegimenFiscalReceptor\s*=\s*"([^"]+)"')
+    if result["issuer_regimen"] is None:
+        # Emisor RegimenFiscal (not RegimenFiscalReceptor)
+        m = re.search(r'(?<!Receptor)RegimenFiscal\s*=\s*"([^"]+)"', text, re.IGNORECASE)
+        if m:
+            result["issuer_regimen"] = m.group(1).strip()
 
 
 # ---------------------------------------------------------------------------

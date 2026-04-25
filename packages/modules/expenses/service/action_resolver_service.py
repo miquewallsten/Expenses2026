@@ -45,9 +45,6 @@ from packages.modules.expenses.service.review_queue_service import (
 from packages.modules.admin.service.approval_setup_service import (
     get_or_create_approval_setup,
 )
-from packages.modules.admin.service.workflow_setup_service import (
-    get_or_create_workflow_setup,
-)
 
 # ── Status vocabulary ─────────────────────────────────────────────────────────
 
@@ -229,17 +226,10 @@ def resolve_manager_actions(db: Session, expense: Expense) -> dict:
             "reasons":     reasons,
         }
 
-    workflow   = get_or_create_workflow_setup(db, expense.company_id)
-    can_return = bool(workflow.allow_resubmit_after_return)
-    if not can_return:
-        # Return-to-employee creates a correction loop; without the workflow
-        # flag the manager must approve or reject outright.
-        reasons.append("Return-to-employee is not enabled by workflow policy.")
-
     return {
         "can_approve": True,
         "can_reject":  True,
-        "can_return":  can_return,
+        "can_return":  True,
         "reasons":     reasons,
     }
 
@@ -273,14 +263,8 @@ def resolve_accounting_actions(db: Session, expense: Expense) -> dict:
     if not reviewable:
         return {**_base_false, "reasons": reasons}
 
-    workflow = get_or_create_workflow_setup(db, expense.company_id)
-
-    # ── Primary accounting actions ────────────────────────────────────────────
-    can_return = bool(workflow.allow_resubmit_after_return)
-    if not can_return:
-        # Return-to-employee requires the workflow flag; without it the
-        # accountant must approve or reject outright.
-        reasons.append("Return-to-employee is not enabled by workflow policy.")
+    # ── Primary accounting actions ───────────────────────────────────
+    can_return = True
 
     # ── Blocker evaluation ────────────────────────────────────────────────────
     # Delegated entirely to expense_blocker_service; no policy or document

@@ -29,4 +29,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_column("company_setup", "company_profile_narrative")
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    existing = {c["name"] for c in inspector.get_columns("company_setup")}
+    if "company_profile_narrative" in existing:
+        op.drop_column("company_setup", "company_profile_narrative")

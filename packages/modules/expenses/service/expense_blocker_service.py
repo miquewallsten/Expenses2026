@@ -159,10 +159,51 @@ from packages.modules.admin.service.accounting_setup_service import (
 from packages.modules.admin.service.approval_setup_service import (
     get_or_create_approval_setup,
 )
-from packages.modules.admin.service.workflow_setup_service import (
-    get_or_create_workflow_setup,
+from packages.modules.expenses.service.ai_policy_evaluator_service import (
+    evaluate_policies as _evaluate_ai_policies,
 )
 from packages.core.platform.models_accounting_category import AccountingCategory
+from packages.core.platform.models_ai_policy import AIPolicy
+from packages.modules.expenses.models.expense_policy_override import (
+    ExpensePolicyOverride,
+)
+
+
+def _overridden_rule_codes(db: Session, expense_id: int) -> set[str]:
+    return {
+        r[0]
+        for r in db.query(ExpensePolicyOverride.rule_code)
+        .filter(ExpensePolicyOverride.expense_id == expense_id)
+        .all()
+    }
+
+
+def _ai_blockers_and_warnings(db: Session, expense: Expense) -> dict[str, list[str]]:
+    """Evaluate AI policies per-policy so overridden ones can be skipped.
+
+    Returns the same ``{blockers, warnings}`` shape as `evaluate_policies`
+    but drops every policy whose ``AI_POLICY_{id}`` code has an active
+    justification override row.
+    """
+    overridden = _overridden_rule_codes(db, expense.id)
+    policies = (
+        db.query(AIPolicy)
+        .filter(
+            AIPolicy.company_id == expense.company_id,
+            AIPolicy.enabled.is_(True),
+            AIPolicy.scope == "expense_validation",
+        )
+        .all()
+    )
+    blockers: list[str] = []
+    warnings: list[str] = []
+    for p in policies:
+        if f"AI_POLICY_{p.id}" in overridden:
+            continue
+        verdict = _evaluate_ai_policies(db, expense, policies=[p])
+        blockers.extend(verdict["blockers"])
+        warnings.extend(verdict["warnings"])
+    return {"blockers": blockers, "warnings": warnings}
 
 
 # ── Internal data-gathering helpers ───────────────────────────────────────────
@@ -319,19 +360,20 @@ def _check_submit_blockers(
     blockers: list[str] = []
 
     policy   = get_or_create_company_expense_policy(db, expense.company_id)
-    workflow = get_or_create_workflow_setup(db, expense.company_id)
     accounting = get_or_create_accounting_setup(db, expense.company_id)
+
+    overridden = _overridden_rule_codes(db, expense.id)
 
     doc_types = {(d.document_type or "").lower() for d in documents}
 
     # ── XML requirement ────────────────────────────────────────────────────────
     xml_mode = (policy.xml_required_mode or "").lower()
-    if xml_mode == "always":
+    if xml_mode == "always" and "XML_REQUIRED" not in overridden:
         if "cfdi_xml" not in doc_types:
             blockers.append(
                 "A CFDI XML document is required for all expenses but none has been uploaded."
             )
-    elif xml_mode == "mxn_only":
+    elif xml_mode == "mxn_only" and "XML_REQUIRED" not in overridden:
         # Conservative: we cannot verify the currency from the current Expense
         # model, so we check whether any document is present that looks like
         # XML. If none exists we warn but do not hard-block (the expense may be
@@ -345,7 +387,11 @@ def _check_submit_blockers(
             )
 
     # ── PDF pair requirement ───────────────────────────────────────────────────
-    if policy.pdf_pair_required_for_cfdi and "cfdi_xml" in doc_types:
+    if (
+        policy.pdf_pair_required_for_cfdi
+        and "cfdi_xml" in doc_types
+        and "PDF_PAIR_REQUIRED" not in overridden
+    ):
         if not any(dt in {"cfdi_pdf", "pdf_unclassified"} for dt in doc_types):
             blockers.append(
                 "A paired PDF is required alongside the CFDI XML "
@@ -353,7 +399,7 @@ def _check_submit_blockers(
             )
 
     # ── Proof requirement ──────────────────────────────────────────────────────
-    if policy.require_proof:
+    if policy.require_proof and "PROOF_REQUIRED" not in overridden:
         if not _has_attachment_type(db, expense.id, "proof"):
             blockers.append(
                 "A proof attachment is required "
@@ -361,7 +407,7 @@ def _check_submit_blockers(
             )
 
     # ── Justification requirement ──────────────────────────────────────────────
-    if policy.require_justification:
+    if policy.require_justification and "JUSTIFICATION_REQUIRED" not in overridden:
         if not _has_attachment_type(db, expense.id, "justification"):
             blockers.append(
                 "A justification attachment is required "
@@ -370,22 +416,19 @@ def _check_submit_blockers(
 
     # ── Validation failures ────────────────────────────────────────────────────
     if "failed" in validation_statuses:
-        if bool(workflow.block_submit_on_failed_validation):
-            blockers.append(
-                "One or more documents have failed validation. "
-                "Submission is blocked until validation failures are resolved."
-            )
+        blockers.append(
+            "One or more documents have failed validation. "
+            "Submission is blocked until validation failures are resolved."
+        )
 
     # ── Warning-based submission block ────────────────────────────────────────
-    # Blocked when both the workflow AND accounting setup disallow warnings at
-    # submit time (conservative AND: if either allows it, we don't block).
+    # Blocked when accounting setup disallows warnings at submit time.
     if "warning" in validation_statuses:
-        workflow_allows = bool(workflow.allow_submit_with_warnings)
         accounting_allows = bool(accounting.allow_submit_with_warnings)
-        if not workflow_allows and not accounting_allows:
+        if not accounting_allows:
             blockers.append(
-                "Validation warnings are present and neither the workflow nor "
-                "the accounting setup allows submission with warnings."
+                "Validation warnings are present and the accounting setup does not "
+                "allow submission with warnings."
             )
 
     # ── Allocation dimensions ──────────────────────────────────────────────────
@@ -407,6 +450,11 @@ def _check_submit_blockers(
 
     if accounting.client_required and not alloc_presence["has_client"]:
         blockers.append("Client allocation is required.")
+
+    # ── AI policy blockers (per-policy, skipping overridden) ──────────────────
+    # Freeform admin policies (AIPolicy) — only `block` severity matters at submit.
+    ai_verdict = _ai_blockers_and_warnings(db, expense)
+    blockers.extend(ai_verdict["blockers"])
 
     return blockers
 
@@ -483,6 +531,10 @@ def _check_accounting_blockers(
                 "A justification attachment is required "
                 "(expense_policy.require_justification) but none has been uploaded."
             )
+
+    # ── AI policy blockers ─────────────────────────────────────────
+    ai_verdict = _ai_blockers_and_warnings(db, expense)
+    blockers.extend(ai_verdict["blockers"])
 
     return blockers
 
@@ -564,6 +616,11 @@ def get_expense_blockers(db: Session, expense: Expense) -> dict:
     documents           = _get_documents(db, expense.id)
     validation_statuses = _get_validation_statuses(db, expense.id)
     warning_messages    = _get_warning_messages(db, expense.id)
+
+    # AI policy warnings (severity='warn') merged in alongside validator warnings.
+    ai_warnings = _ai_blockers_and_warnings(db, expense)["warnings"]
+    if ai_warnings:
+        warning_messages = warning_messages + ai_warnings
 
     return {
         "submit_blockers": _check_submit_blockers(

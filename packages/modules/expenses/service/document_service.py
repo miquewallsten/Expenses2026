@@ -326,6 +326,25 @@ def create_document(
             db.commit()
             db.refresh(document)
 
+        # Backfill archive row expense_id — the file was archived before the
+        # expense was resolved, so its expense_id is NULL. Linking it now keeps
+        # delete-purge + file-serve lookups working by expense scope.
+        if file_bytes is not None:
+            try:
+                from packages.core.platform.models_archive_file import ArchiveFile
+                (
+                    db.query(ArchiveFile)
+                    .filter(
+                        ArchiveFile.company_id == document.company_id,
+                        ArchiveFile.file_name  == document.filename,
+                        ArchiveFile.expense_id.is_(None),
+                    )
+                    .update({"expense_id": document.expense_id}, synchronize_session=False)
+                )
+                db.commit()
+            except Exception:  # noqa: BLE001 — best-effort backfill
+                db.rollback()
+
     # ── Extract XML fields (once — canonical call) ───────────────────────────
     # Computed here so both the enrichment block and validate_document can use
     # the same result without a second parse of content_text.
@@ -344,14 +363,18 @@ def create_document(
                     expense.amount = parsed_amount
 
                 # Description priority:
-                #   1. extracted.descripcion
-                #   2. extracted.conceptos_summary
-                #   3. extracted.emisor_nombre
+                #   1. extracted.emisor_nombre  (the company that issued the
+                #      invoice — Costco, Telmex, Telcel, etc.  This is what
+                #      users recognise; the concepto is a line item, not a
+                #      vendor.)
+                #   2. extracted.descripcion    (concepto description — line
+                #      item, shown only if emisor is blank)
+                #   3. extracted.conceptos_summary
                 #   4. "CFDI Invoice"
                 new_desc = _good_desc(
+                    extracted.get("emisor_nombre"),
                     extracted.get("descripcion"),
                     extracted.get("conceptos_summary"),
-                    extracted.get("emisor_nombre"),
                     "CFDI Invoice",
                 )
                 if new_desc:

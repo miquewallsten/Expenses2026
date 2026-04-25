@@ -38,8 +38,10 @@ from packages.core.platform.models_legal_entity import LegalEntity  # noqa: F401
 from packages.core.platform.models_accounting_category import AccountingCategory  # noqa: F401
 from packages.core.platform.models_accounting_learning import AccountingLearning  # noqa: F401
 from packages.core.platform.models_accounting_setup import AccountingSetup  # noqa: F401
+from packages.core.platform.models_accounting_account import AccountingAccount  # noqa: F401
+from packages.core.platform.models_tax_rate import TaxRate  # noqa: F401
 from packages.core.platform.models_approval_setup import ApprovalSetup  # noqa: F401
-from packages.core.platform.models_workflow_setup import WorkflowSetup  # noqa: F401
+
 from packages.core.platform.models_archive_file import ArchiveFile  # noqa: F401
 from packages.core.platform.models_archive_config import ArchiveConfig  # noqa: F401
 from packages.core.platform.models_export_bundle_config import ExportBundleConfig  # noqa: F401

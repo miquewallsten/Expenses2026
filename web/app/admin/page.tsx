@@ -8,8 +8,10 @@ import AppShell from "@/components/shell/AppShell";
 import AdminCompanySetupStudio from "@/components/admin/AdminCompanySetupStudio";
 import AdminExpenseModulePanel from "@/components/admin/AdminExpenseModulePanel";
 import AdminApprovalSetupStudio from "@/components/admin/AdminApprovalSetupStudio";
-import AdminWorkflowSetupStudio from "@/components/admin/AdminWorkflowSetupStudio";
+import AdminAIPoliciesStudio from "@/components/admin/AdminAIPoliciesStudio";
 import AdminAccountingSetupStudio from "@/components/admin/AdminAccountingSetupStudio";
+import AdminChartOfAccountsStudio from "@/components/admin/AdminChartOfAccountsStudio";
+import AdminDimensionsStudio from "@/components/admin/AdminDimensionsStudio";
 import AdminAgentChat from "@/components/agent/AdminAgentChat";
 import AdminRolesPanel from "@/components/admin/AdminRolesPanel";
 import AdminPermissionsPanel from "@/components/admin/AdminPermissionsPanel";
@@ -22,7 +24,7 @@ import AdminReportCyclePanel from "@/components/admin/AdminReportCyclePanel";
 import Link from "next/link";
 import {
   Building2, FileText, GitBranch, ShieldCheck, Puzzle, Key, Lock,
-  Calculator, ClipboardCheck, Bot, Save, Loader2, FolderOutput, Archive, Users, Radio, CalendarClock, HardDrive, Sparkles,
+  Calculator, ClipboardCheck, Bot, Save, Loader2, FolderOutput, Archive, Users, Radio, CalendarClock, HardDrive, Sparkles, BookOpen, Layers,
 } from "lucide-react";
 import { getCurrentRole, getCurrentUserId, getCurrentCompanyId, getStoredSession, getAuthHeaders } from "@/lib/session";
 import { buildGlobalNav, GlobalNavItem } from "@/lib/navigation";
@@ -38,8 +40,10 @@ const WORKLIST_ITEMS = [
   "Company Setup",
   "Expense Policy",
   "Accounting Setup",
+  "Chart of Accounts",
+  "Dimensions",
   "Approval Setup",
-  "Workflow Setup",
+  "AI Policies",
   "Report Cycle",
   "Export Config",
   "Archive Config",
@@ -54,9 +58,9 @@ const WORKLIST_ITEMS = [
 type WorklistItem = typeof WORKLIST_ITEMS[number];
 
 const WORKLIST_GROUPS: { label: string; items: WorklistItem[] }[] = [
-  { label: "Setup", items: ["Overview", "Company Setup", "Expense Policy", "Accounting Setup", "Approval Setup", "Workflow Setup", "Report Cycle"] },
+  { label: "Setup", items: ["Overview", "Company Setup", "Expense Policy", "Chart of Accounts", "Approval Setup", "AI Policies", "Report Cycle"] },
   { label: "Integration", items: ["Export Config", "Archive Config", "Storage Config", "Channels"] },
-  { label: "Administration", items: ["Users", "Roles", "Permissions", "Add-Ons", "Authentication"] },
+  { label: "Administration", items: ["Users", "Roles", "Permissions", "Dimensions", "Add-Ons", "Authentication"] },
 ];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -560,8 +564,10 @@ const ITEM_MENU_KEY: Record<WorklistItem, string> = {
   "Company Setup": "companySetup",
   "Expense Policy": "expensePolicy",
   "Accounting Setup": "accountingSetup",
+  "Chart of Accounts": "chartOfAccounts",
+  "Dimensions": "dimensions",
   "Approval Setup": "approvalSetup",
-  "Workflow Setup": "workflowSetup",
+  "AI Policies": "aiPolicies",
   "Report Cycle": "reportCycle",
   "Export Config": "exportConfig",
   "Archive Config": "archiveConfig",
@@ -587,8 +593,10 @@ const WORKLIST_ICONS: Record<WorklistItem, React.ReactNode> = {
   "Company Setup":    <Building2 className="h-3.5 w-3.5" />,
   "Expense Policy":   <FileText className="h-3.5 w-3.5" />,
   "Accounting Setup": <Calculator className="h-3.5 w-3.5" />,
+  "Chart of Accounts":<BookOpen className="h-3.5 w-3.5" />,
+  "Dimensions":       <Layers className="h-3.5 w-3.5" />,
   "Approval Setup":   <ClipboardCheck className="h-3.5 w-3.5" />,
-  "Workflow Setup":   <GitBranch className="h-3.5 w-3.5" />,
+  "AI Policies":      <Sparkles className="h-3.5 w-3.5" />,
   "Report Cycle":     <CalendarClock className="h-3.5 w-3.5" />,
   "Export Config":    <FolderOutput className="h-3.5 w-3.5" />,
   "Archive Config":   <Archive className="h-3.5 w-3.5" />,
@@ -641,7 +649,7 @@ function WorkList({
   const t = useTranslations("admin");
   const tc = useTranslations("common");
   const unconfiguredSetupCount = [
-    hasCompanySetup, hasExpensePolicy, hasAccountingSetup, hasApprovalSetup, hasWorkflowSetup,
+    hasCompanySetup, hasExpensePolicy, hasAccountingSetup, hasApprovalSetup,
   ].filter((v) => !v).length;
 
   const overviewCount: number | string = (() => {
@@ -655,8 +663,10 @@ function WorkList({
     "Company Setup":    hasCompanySetup    ? "✓" : "—",
     "Expense Policy":   hasExpensePolicy   ? "✓" : "—",
     "Accounting Setup": hasAccountingSetup ? "✓" : "—",
+    "Chart of Accounts":"→",
+    "Dimensions":       "→",
     "Approval Setup":   hasApprovalSetup   ? "✓" : "—",
-    "Workflow Setup":   hasWorkflowSetup   ? "✓" : "—",
+    "AI Policies":      "→",
     "Report Cycle":     "→",
     "Export Config":    hasExportConfig    ? "✓" : "—",
     "Archive Config":   hasArchiveConfig   ? "✓" : "—",
@@ -784,9 +794,6 @@ function AdminAIHints({
     ],
     "Expense Policy": expensePolicy ? [
       `XML mode: ${expensePolicy.xml_required_mode}. Tickets ${expensePolicy.tickets_allowed ? "allowed" : "not allowed"}.`,
-      expensePolicy.manager_approval_required
-        ? "Manager approval is required before accounting review."
-        : "Manager approval is disabled. Expenses go directly to accounting.",
       !expensePolicy.require_justification && !expensePolicy.require_proof
         ? "Neither justification nor proof is required. Consider enabling at least one for audit trails."
         : "Justification or proof requirements are active. Employees must attach supporting documents.",
@@ -804,6 +811,13 @@ function AdminAIHints({
     ] : [
       "Accounting setup not loaded.",
     ],
+    "Chart of Accounts": [
+      "Live póliza engine — map categories to GL accounts and IVA rates.",
+    ],
+    "Dimensions": [
+      "Projects, clients and cost centers used for expense allocation.",
+      "Use Excel/CSV import to bulk-load catalogs.",
+    ],
     "Approval Setup": approvalSetup ? [
       `Approval mode: ${(approvalSetup.approval_mode ?? "none").replace(/_/g, " ")}.`,
       approvalSetup.escalate_policy_failures_to_accounting
@@ -820,16 +834,9 @@ function AdminAIHints({
       "Validated expenses sit in a holding state until the cycle fires — then they are bundled per user and submitted for approval.",
       "Use 'Run now' to trigger a cycle immediately. Use the title template tokens: {user}, {month}, {year}.",
     ],
-    "Workflow Setup": workflowSetup ? [
-      `Workflow mode: ${(workflowSetup.default_expense_workflow_mode ?? "standard").replace(/_/g, " ")}.`,
-      workflowSetup.block_submit_on_failed_validation
-        ? "Submission is blocked on failed validation — invalid documents cannot be submitted."
-        : "Failed validation does not block submission — review routing rules for risk.",
-      workflowSetup.route_policy_failures_to && workflowSetup.route_policy_failures_to !== "none"
-        ? `Policy failures route to ${workflowSetup.route_policy_failures_to}.`
-        : "Policy failures are not routed — enable routing to accounting or manager.",
-    ] : [
-      "Workflow setup not loaded. Save the form to initialise defaults.",
+    "AI Policies": [
+      "Escriba en lenguaje natural lo que la IA debe revisar al validar facturas.",
+      "Cada política activa se aplica al envió del gasto y a la revisión contable.",
     ],
     Roles: [
       rolesCount === 0
@@ -929,6 +936,68 @@ function AdminAIHints({
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
+// Merged "Contable" surface — replaces the split between Accounting Setup
+// and Chart of Accounts. Two tabs at the top toggle between policy/required
+// fields ("Configuración") and the Motor de Pólizas studio ("Motor").
+function ContableMerged({
+  initialTab,
+  companyId,
+  accountingSetup,
+  setAccountingSetup,
+  accountingSetupDraftPatch,
+  companySetup,
+  expensePolicy,
+  onRefresh,
+}: {
+  initialTab: "setup" | "motor";
+  companyId: number;
+  accountingSetup: any;
+  setAccountingSetup: (s: any) => void;
+  accountingSetupDraftPatch: Partial<any> | undefined;
+  companySetup: any;
+  expensePolicy: any;
+  onRefresh?: () => void;
+}) {
+  const [tab, setTab] = useState<"setup" | "motor">(initialTab);
+  useEffect(() => { setTab(initialTab); }, [initialTab]);
+
+  return (
+    <div className="space-y-3">
+      <div className="inline-flex rounded border border-white/[0.08] bg-white/[0.02] p-0.5 text-[11px]">
+        {([
+          { k: "setup", label: "Configuración" },
+          { k: "motor", label: "Catálogo & Motor de pólizas" },
+        ] as const).map((opt) => (
+          <button
+            key={opt.k}
+            onClick={() => setTab(opt.k)}
+            className={`rounded px-3 py-1 transition ${
+              tab === opt.k
+                ? "bg-indigo-500/20 text-indigo-100 border border-indigo-500/30"
+                : "text-white/55 hover:text-white/80"
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "setup" ? (
+        <AdminAccountingSetupStudio
+          companyId={companyId}
+          setup={accountingSetup ?? {}}
+          companySetup={companySetup}
+          expensePolicy={expensePolicy}
+          onSaved={(s) => { setAccountingSetup(s); onRefresh?.(); }}
+          draftPatch={accountingSetupDraftPatch}
+        />
+      ) : (
+        <AdminChartOfAccountsStudio companyId={companyId} />
+      )}
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const router = useRouter();
   useEffect(() => {
@@ -989,7 +1058,7 @@ export default function AdminPage() {
   }, []);
 
   // ── Portal config — primary source for setup data + banner ──────────────────
-  const refreshPortalConfig = () => {
+  function refreshPortalConfig() {
     const companyId = getCurrentCompanyId() ?? "1";
     fetch(`${API}/admin/portal-config/${companyId}`, { headers: getAuthHeaders() })
       .then((r) => r.ok ? r.json() : null)
@@ -1005,7 +1074,7 @@ export default function AdminPage() {
         if (cfg.export_config)    setExportConfig(cfg.export_config);
         if (cfg.archive_config)   setArchiveConfig(cfg.archive_config);
       });
-  };
+  }
 
   useEffect(() => {
     const companyId = getCurrentCompanyId() ?? "1";
@@ -1055,7 +1124,7 @@ export default function AdminPage() {
 
   // ── Supplemental data not in portal config ───────────────────────────────────
   // Roles list, permission definitions, workflow graph, company modules, legal entities.
-  useEffect(() => {
+  const refreshSupplemental = () => {
     const h = getAuthHeaders();
     Promise.all([
       fetch(`${API}/roles/`,                                                          { headers: h }).then((r) => r.ok ? r.json() : []),
@@ -1074,6 +1143,11 @@ export default function AdminPage() {
       if (Array.isArray(entities)) setLegalEntities(entities);
       if (Array.isArray(u)) setUsers(u);
     }).catch(() => {});
+  };
+
+  useEffect(() => {
+    refreshSupplemental();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const MODULE_FLAGS = [
@@ -1117,13 +1191,6 @@ export default function AdminPage() {
         setApprovalSetup(await res.json());
         setApprovalSetupDraftPatch(undefined);
       }
-      if (workflowSetupDraftPatch && Object.keys(workflowSetupDraftPatch).length > 0) {
-        const body = { ...(workflowSetup ?? {}), ...workflowSetupDraftPatch };
-        const res = await fetch(`${API}/admin/workflow-setup/${adminCompanyId}`, { method: "PUT", headers, body: JSON.stringify(body) });
-        if (!res.ok) throw new Error(`Workflow Setup: ${res.status}`);
-        setWorkflowSetup(await res.json());
-        setWorkflowSetupDraftPatch(undefined);
-      }
     } catch (e: any) {
       setSaveAllError(e?.message ?? "Save failed");
     } finally {
@@ -1137,7 +1204,6 @@ export default function AdminPage() {
     ...(expensePolicyDraftPatch   && Object.keys(expensePolicyDraftPatch).length   > 0 ? ["Expense Policy"]   : []),
     ...(accountingSetupDraftPatch && Object.keys(accountingSetupDraftPatch).length > 0 ? ["Accounting Setup"] : []),
     ...(approvalSetupDraftPatch   && Object.keys(approvalSetupDraftPatch).length   > 0 ? ["Approval Setup"]   : []),
-    ...(workflowSetupDraftPatch   && Object.keys(workflowSetupDraftPatch).length   > 0 ? ["Workflow Setup"]   : []),
     ...(exportConfigDraftPatch   && Object.keys(exportConfigDraftPatch).length   > 0 ? ["Export Config"]   : []),
     ...(archiveConfigDraftPatch   && Object.keys(archiveConfigDraftPatch).length   > 0 ? ["Archive Config"]   : []),
   ]);
@@ -1197,7 +1263,7 @@ export default function AdminPage() {
                   accountingSetup={accountingSetup}
                   approvalSetup={approvalSetup}
                   workflowSetup={workflowSetup}
-                  onNavigate={setActiveSection}
+                  onNavigate={(s) => setActiveSection(s as WorklistItem)}
                 />
               </>
             )}
@@ -1239,7 +1305,7 @@ export default function AdminPage() {
             companyId={adminCompanyId}
             setup={companySetup ?? {}}
             legalEntities={legalEntities}
-            onSaved={setCompanySetup}
+            onSaved={(s) => { setCompanySetup(s); refreshPortalConfig(); }}
             onLegalEntitiesChanged={setLegalEntities}
             draftPatch={companySetupDraftPatch}
             portalConfig={portalConfig}
@@ -1251,19 +1317,40 @@ export default function AdminPage() {
           <AdminExpenseModulePanel
             companyId={adminCompanyId}
             policy={expensePolicy ?? {}}
-            onSaved={setExpensePolicy}
+            onSaved={(p) => { setExpensePolicy(p); refreshPortalConfig(); }}
           />
         );
 
       case "Accounting Setup":
         return (
-          <AdminAccountingSetupStudio
+          <ContableMerged
+            initialTab="setup"
             companyId={adminCompanyId}
-            setup={accountingSetup ?? {}}
-            onSaved={setAccountingSetup}
-            draftPatch={accountingSetupDraftPatch}
+            accountingSetup={accountingSetup}
+            setAccountingSetup={setAccountingSetup}
+            accountingSetupDraftPatch={accountingSetupDraftPatch}
+            companySetup={companySetup}
+            expensePolicy={expensePolicy}
+            onRefresh={refreshPortalConfig}
           />
         );
+
+      case "Chart of Accounts":
+        return (
+          <ContableMerged
+            initialTab="motor"
+            companyId={adminCompanyId}
+            accountingSetup={accountingSetup}
+            setAccountingSetup={setAccountingSetup}
+            accountingSetupDraftPatch={accountingSetupDraftPatch}
+            companySetup={companySetup}
+            expensePolicy={expensePolicy}
+            onRefresh={refreshPortalConfig}
+          />
+        );
+
+      case "Dimensions":
+        return <AdminDimensionsStudio companyId={adminCompanyId} allocationDimensions={expensePolicy?.allocation_dimensions} />;
 
       case "Approval Setup":
         return (
@@ -1272,24 +1359,13 @@ export default function AdminPage() {
             setup={approvalSetup ?? {}}
             companySetup={companySetup}
             accountingSetup={accountingSetup}
-            onSaved={setApprovalSetup}
+            onSaved={(s) => { setApprovalSetup(s); refreshPortalConfig(); }}
             draftPatch={approvalSetupDraftPatch}
           />
         );
 
-      case "Workflow Setup":
-        return (
-          <AdminWorkflowSetupStudio
-            companyId={adminCompanyId}
-            setup={workflowSetup ?? {}}
-            companySetup={companySetup}
-            expensePolicy={expensePolicy}
-            accountingSetup={accountingSetup}
-            approvalSetup={approvalSetup}
-            onSaved={setWorkflowSetup}
-            draftPatch={workflowSetupDraftPatch}
-          />
-        );
+      case "AI Policies":
+        return <AdminAIPoliciesStudio companyId={adminCompanyId} onSettingApplied={refreshPortalConfig} />;
 
       case "Export Config":
         if (!companySetup?.archive_module_enabled) return <ModuleNotInstalledBlock moduleKey="archive" onGoToAddOns={() => setActiveSection("Add-Ons")} />;
@@ -1330,6 +1406,7 @@ export default function AdminPage() {
             companyId={adminCompanyId}
             users={users}
             onUsersChanged={setUsers}
+            companySetup={companySetup}
           />
         );
 
@@ -1409,7 +1486,15 @@ export default function AdminPage() {
 
     return (
       <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-l border-white/[0.07] bg-zinc-950">
-        <AdminAgentChat companyId={adminCompanyId} section={activeSection} variant="rail" />
+        <AdminAgentChat
+          companyId={adminCompanyId}
+          section={activeSection}
+          variant="rail"
+          onToolConfirmed={() => {
+            refreshPortalConfig();
+            refreshSupplemental();
+          }}
+        />
       </aside>
     );
   })();

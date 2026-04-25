@@ -149,17 +149,20 @@ export const MY_WORK_MODULES: readonly MyWorkModule[] = [
   },
 
   // ── Time Allocation ──────────────────────────────────────────────────────────
-  // Shown when the per-user requires_time_tracking flag is set (admin assigned
-  // this requirement) OR when the company-level time_allocation add-on is on.
+  // Add-on module. The company must install it first; once installed, it
+  // appears for employees/admins who have the "submit_timesheet" permission,
+  // OR for users the admin has explicitly marked as ``requires_time_tracking``.
+  // A per-user flag must NEVER bypass the company-level install — an
+  // uninstalled add-on must remain invisible for everyone.
   {
     id: "time_allocation",
     label: "Time Allocation",
     icon: "Clock",
     isVisible: (ctx) =>
-      (ctx.capabilities?.requires_time_tracking ?? false) ||
-      (hasModule(ctx, "time_allocation") &&
-        (hasRole(ctx, "employee", "admin") ||
-          hasPermission(ctx, "submit_timesheet"))),
+      hasModule(ctx, "time_allocation") &&
+      ((ctx.capabilities?.requires_time_tracking ?? false) ||
+        hasRole(ctx, "employee", "admin") ||
+        hasPermission(ctx, "submit_timesheet")),
     component: React.lazy(() => import("@/modules/my-time/MyTimeModule")),
   },
 
@@ -217,6 +220,20 @@ export const MY_WORK_MODULES: readonly MyWorkModule[] = [
       hasModule(ctx, "purchase_requests") &&
       (hasRole(ctx, "manager", "admin", "executive") || hasPermission(ctx, "approve_expense")),
     component: React.lazy(() => import("@/modules/pr-approvals/PRApprovalsModule")),
+  },
+
+  // ── Amex Reconciliation ──────────────────────────────────────────────────────
+  // Add-on module for a dedicated Amex reconciler. The company must install
+  // the add-on first; the user must be flagged as an Amex reconciler. Admins
+  // see it whenever the add-on is installed so they can configure/inspect.
+  {
+    id: "amex_reconciliation",
+    label: "Conciliación Amex",
+    icon: "CreditCard",
+    isVisible: (ctx) =>
+      hasModule(ctx, "amex_reconciliation") &&
+      ((ctx.capabilities?.is_amex_reconciler ?? false) || hasRole(ctx, "admin")),
+    component: React.lazy(() => import("@/modules/amex/AmexReconciliationModule")),
   },
 ] as const;
 

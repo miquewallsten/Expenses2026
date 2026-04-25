@@ -42,7 +42,16 @@ export default function AdminRolesPanel({ roles, companyId = 1, onRolesChanged }
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
-        throw new Error(d.detail ?? `${res.status}`);
+        const detail = d?.detail;
+        const msg =
+          typeof detail === "string"
+            ? detail
+            : Array.isArray(detail)
+              ? detail.map((x: any) => x?.msg ?? JSON.stringify(x)).join("; ")
+              : detail
+                ? JSON.stringify(detail)
+                : `${res.status}`;
+        throw new Error(msg);
       }
       const created = await res.json();
       onRolesChanged?.([...roles, created]);

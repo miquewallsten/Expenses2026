@@ -40,3 +40,4 @@ npm-debug.log*
 # Uploads / storage (local dev artifacts)
 uploads/
 storage/
+.gstack/

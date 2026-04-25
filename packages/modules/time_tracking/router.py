@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from apps.api.deps import get_db
+from packages.core.platform.module_gate import require_module
 from packages.modules.time_tracking import service as svc
 from packages.modules.time_tracking.schemas import (
     ProjectReport,
@@ -31,7 +32,11 @@ from packages.modules.time_tracking.schemas import (
     WeekView,
 )
 
-router = APIRouter(prefix="/time", tags=["time-tracking"])
+router = APIRouter(
+    prefix="/time",
+    tags=["time-tracking"],
+    dependencies=[Depends(require_module("time_allocation"))],
+)
 
 
 # ── Projects ───────────────────────────────────────────────────────────────────

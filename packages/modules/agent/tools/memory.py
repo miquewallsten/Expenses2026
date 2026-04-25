@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+import json as _json
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from ..core import memory
 from ..core.context import AgentContext
@@ -21,6 +23,13 @@ class RememberInput(BaseModel):
     value: Any
     kind:  str = Field(default="fact", pattern=r"^(fact|preference|decision)$")
     scope: str = Field(default="company", pattern=r"^(company|user)$")
+
+    @field_validator("value")
+    @classmethod
+    def _cap_value_size(cls, v: Any) -> Any:
+        if len(_json.dumps(v, default=str)) > 2000:
+            raise ValueError("memory value must not exceed 2000 characters when serialized")
+        return v
 
 
 def _handle_remember(ctx: AgentContext, args: RememberInput) -> ToolResult:

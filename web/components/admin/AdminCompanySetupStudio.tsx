@@ -437,13 +437,11 @@ export default function AdminCompanySetupStudio({
     if (form.employee_count_range) parts.push(form.employee_count_range);
     if (form.country_code) parts.push(form.country_code);
     if (form.base_currency) parts.push(form.base_currency);
-    if (form.operates_multi_entity) parts.push(t("summaryMultiEntity"));
-    if (form.operates_multi_country) parts.push(t("summaryMultiCountry"));
     const enabledCount = [
       "expenses_module_enabled", "time_allocation_module_enabled",
       "subcontractor_module_enabled",
       "approvals_module_enabled", "accounting_module_enabled",
-      "archive_module_enabled", "ai_copilot_enabled",
+      "archive_module_enabled",
     ].filter((k) => form[k]).length;
     parts.push(t("summaryModulesActive", { count: enabledCount }));
     return parts.join(" · ") || t("summaryNoSetup");
@@ -453,25 +451,11 @@ export default function AdminCompanySetupStudio({
   function buildWarnings(form: Record<string, any>, entities: any[]): string[] {
     const w: string[] = [];
 
-    if (form.operates_multi_entity && entities.length === 0)
-      w.push(t("warningMultiEntityNoEntities"));
-
-    if (form.operates_multi_country) {
-      const countryCodes = new Set<string>();
-      if (form.country_code) countryCodes.add(form.country_code);
-      entities.forEach((e) => { if (e.country_code) countryCodes.add(e.country_code); });
-      if (countryCodes.size < 2)
-        w.push(t("warningMultiCountrySingle"));
-    }
-
     if (!form.has_managers && form.approvals_module_enabled)
       w.push(t("warningApprovalNoManagers"));
 
     if (form.accounting_module_enabled && !form.expenses_module_enabled)
       w.push(t("warningAccountingNoExpenses"));
-
-    if (form.subcontractor_module_enabled && !form.has_subcontractors)
-      w.push(t("warningSubcontractorNoFlag"));
 
     return w;
   }
@@ -756,30 +740,6 @@ export default function AdminCompanySetupStudio({
             checked={!!form.has_managers}
             onChange={(v) => set("has_managers", v)}
           />
-          <ToggleRow
-            label={t("hasAccountingTeam")}
-            description={t("hasAccountingTeamDesc")}
-            checked={!!form.has_accounting_team}
-            onChange={(v) => set("has_accounting_team", v)}
-          />
-          <ToggleRow
-            label={t("hasSubcontractors")}
-            description={t("hasSubcontractorsDesc")}
-            checked={!!form.has_subcontractors}
-            onChange={(v) => set("has_subcontractors", v)}
-          />
-          <ToggleRow
-            label={t("multiEntity")}
-            description={t("multiEntityDesc")}
-            checked={!!form.operates_multi_entity}
-            onChange={(v) => set("operates_multi_entity", v)}
-          />
-          <ToggleRow
-            label={t("multiCountry")}
-            description={t("multiCountryDesc")}
-            checked={!!form.operates_multi_country}
-            onChange={(v) => set("operates_multi_country", v)}
-          />
         </Panel>
       </div>
 
@@ -810,11 +770,9 @@ export default function AdminCompanySetupStudio({
           {[
             { key: "expenses_module_enabled",          label: t("moduleExpenses"),          desc: t("moduleExpensesDesc") },
             { key: "time_allocation_module_enabled",   label: t("moduleTimeAllocation"),    desc: t("moduleTimeAllocationDesc") },
-            { key: "subcontractor_module_enabled",     label: t("moduleSubcontractors"),    desc: t("moduleSubcontractorsDesc") },
             { key: "approvals_module_enabled",         label: t("moduleApprovals"),         desc: t("moduleApprovalsDesc") },
             { key: "accounting_module_enabled",        label: t("moduleAccounting"),        desc: t("moduleAccountingDesc") },
             { key: "archive_module_enabled",           label: t("moduleArchive"),           desc: t("moduleArchiveDesc") },
-            { key: "ai_copilot_enabled",               label: t("moduleAiCopilot"),         desc: t("moduleAiCopilotDesc") },
           ].map(({ key, label, desc }) => (
             <ToggleRow
               key={key}

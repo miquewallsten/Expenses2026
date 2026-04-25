@@ -79,6 +79,7 @@ export default function MyExpensesModule() {
   const [selected, setSelected]     = useState<Expense | null>(null);
   const [loading, setLoading]       = useState(true);
   const [uploading, setUploading]   = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number; name: string } | null>(null);
   const [dragOver, setDragOver]     = useState(false);
   const [draftState, setDraftState] = useState<ExpenseDraftState | null>(null);
 
@@ -94,6 +95,7 @@ export default function MyExpensesModule() {
   // being re-created every time `selected` changes.
   const selectedRef = useRef<Expense | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   // ── Responsive layout ──────────────────────────────────────────────────────────────
   // Breakpoint and pane visibility are centralised via useLayoutMode.
@@ -128,6 +130,8 @@ export default function MyExpensesModule() {
           detected_category: exp.detected_category,
           account_code:      exp.account_code,
           description:       exp.description,
+          amount:            exp.amount,
+          expense_date:      exp.expense_date ?? null,
         },
       }));
     }
@@ -243,6 +247,8 @@ export default function MyExpensesModule() {
           detected_category: expense?.detected_category ?? selectedRef.current?.detected_category ?? null,
           account_code:      expense?.account_code      ?? selectedRef.current?.account_code      ?? null,
           description:       expense?.description ?? selectedRef.current?.description ?? "",
+          amount:            expense?.amount      ?? selectedRef.current?.amount      ?? 0,
+          expense_date:      expense?.expense_date ?? selectedRef.current?.expense_date ?? null,
           has_xml:    hasXml,
           has_pdf:    hasPdf,
           sat_status: satStatus,
@@ -306,31 +312,51 @@ export default function MyExpensesModule() {
 
   // ── File upload ────────────────────────────────────────────────────────────
 
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
   const uploadFiles = useCallback(async (files: FileList) => {
     const cid = companyId ?? 1;
     setUploading(true);
-    const settled = await Promise.allSettled(
-      Array.from(files).map(async (file) => {
-        const content = await file.text().catch(() => "");
-        const res = await fetch(`${API}/expenses/documents`, {
+    setUploadError(null);
+
+    // Upload XMLs first so their expense rows exist before PDFs arrive; the
+    // backend then auto-links PDFs to the XML's expense via CFDI QR identity.
+    const all = Array.from(files);
+    const xmls = all.filter((f) => f.name.toLowerCase().endsWith(".xml"));
+    const rest = all.filter((f) => !f.name.toLowerCase().endsWith(".xml"));
+    const ordered = [...xmls, ...rest];
+
+    const docs: Array<{ expense_id: number; document_type: string | null }> = [];
+    const failures: string[] = [];
+    for (let i = 0; i < ordered.length; i++) {
+      const file = ordered[i];
+      setUploadProgress({ current: i + 1, total: ordered.length, name: file.name });
+      try {
+        const form = new FormData();
+        form.append("company_id", String(cid));
+        form.append("file", file, file.name);
+        const res = await fetch(`${API}/expenses/documents/upload`, {
           method:  "POST",
-          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-          body:    JSON.stringify({ company_id: cid, filename: file.name, content_text: content }),
+          headers: { ...getAuthHeaders() }, // NOTE: no Content-Type — fetch sets the boundary
+          body:    form,
         });
-        if (!res.ok) return null;
-        return res.json() as Promise<{ expense_id: number; document_type: string | null } | null>;
-      }),
-    );
-    const docs = settled
-      .filter(
-        (r): r is PromiseFulfilledResult<{ expense_id: number; document_type: string | null }> =>
-          r.status === "fulfilled" && r.value !== null,
-      )
-      .map((r) => r.value);
+        if (!res.ok) {
+          const msg = await res.text().catch(() => res.statusText);
+          failures.push(`${file.name}: ${msg || res.status}`);
+          continue;
+        }
+        const j = await res.json();
+        if (j) docs.push(j);
+      } catch (e) {
+        failures.push(`${file.name}: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+    if (failures.length) setUploadError(failures.join(" · "));
 
     const xmlDoc      = docs.find((d) => d.document_type === "cfdi_xml");
     const preferredId = (xmlDoc ?? docs[0])?.expense_id ?? null;
     setUploading(false);
+    setUploadProgress(null);
     loadExpenses(preferredId == null, preferredId ?? undefined);
   }, [companyId, userIdStr, loadExpenses]);
 
@@ -364,6 +390,7 @@ export default function MyExpensesModule() {
     : null;
 
   const docFreeAllowed = (effectiveConfig?.derived as { allow_document_free_expenses?: boolean } | null | undefined)?.allow_document_free_expenses ?? false;
+  void docFreeAllowed; // reserved for future policy-enforced submit gating
 
   // ── Simple expense creation (document-free) ────────────────────────────────
   const handleCreateSimple = useCallback(async () => {
@@ -482,11 +509,21 @@ export default function MyExpensesModule() {
           >
             <p className={isMobile ? "text-xs text-white/30" : "text-[10px] text-white/30"}>
               {uploading
-                ? tc("uploading")
+                ? (uploadProgress
+                    ? tc("uploadingProgress", { current: uploadProgress.current, total: uploadProgress.total, name: uploadProgress.name })
+                    : tc("uploading"))
                 : isMobile
                 ? te("tapToUpload")
                 : te("dragDropUpload")}
             </p>
+            {uploading && uploadProgress && (
+              <div className="mt-1.5 h-0.5 w-full overflow-hidden rounded bg-white/[0.06]">
+                <div
+                  className="h-full bg-indigo-500/70 transition-all duration-200"
+                  style={{ width: `${Math.round((uploadProgress.current / Math.max(1, uploadProgress.total)) * 100)}%` }}
+                />
+              </div>
+            )}
           </div>
         )}
 
@@ -494,13 +531,10 @@ export default function MyExpensesModule() {
           <p className="mx-3 mb-1.5 text-[9px] leading-snug text-white/22">{policyHint}</p>
         )}
 
-        {docFreeAllowed && !showSimpleForm && (
-          <button
-            onClick={() => setShowSimpleForm(true)}
-            className="mx-3 mb-1.5 shrink-0 text-left text-[10px] text-indigo-400/70 hover:text-indigo-300/90 transition-colors"
-          >
-            {te("createWithoutDoc")}
-          </button>
+        {uploadError && (
+          <p className="mx-3 mb-1.5 shrink-0 rounded border border-red-500/25 bg-red-500/[0.06] px-2 py-1 text-[10px] leading-snug text-red-300/80">
+            {uploadError}
+          </p>
         )}
 
         <input
@@ -513,6 +547,16 @@ export default function MyExpensesModule() {
             if (e.target.files?.length) { uploadFiles(e.target.files); e.target.value = ""; }
           }}
         />
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={(e) => {
+            if (e.target.files?.length) { uploadFiles(e.target.files); e.target.value = ""; }
+          }}
+        />
 
         <EmployeeExpenseList
           expenses={expenses}
@@ -520,8 +564,9 @@ export default function MyExpensesModule() {
           onSelect={selectExpense}
           loading={loading}
           uploading={uploading}
-          onNewExpense={() => { if (!uploading) fileInputRef.current?.click(); }}
-          onNewSimpleExpense={docFreeAllowed ? () => setShowSimpleForm(true) : undefined}
+          onUploadFile={() => { if (!uploading) fileInputRef.current?.click(); }}
+          onTakePhoto={() => { if (!uploading) cameraInputRef.current?.click(); }}
+          onNewSimpleExpense={() => setShowSimpleForm(true)}
         />
       </div>
 

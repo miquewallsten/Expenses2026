@@ -10,6 +10,8 @@ interface Props {
   companyId: number;
   receipt:   AgentReceipt;
   onChanged?: (updated: AgentReceipt) => void;
+  /** Fires once after a successful confirm — host can refetch affected data. */
+  onConfirmed?: (tool: string) => void;
 }
 
 const INGESTION_TOOLS = new Set([
@@ -22,7 +24,7 @@ const INGESTION_TOOLS = new Set([
  * Single pending-action receipt with confirm/reject controls and a preview
  * (key-value diff or ingestion grid depending on tool family).
  */
-export default function ReceiptCard({ companyId, receipt, onChanged }: Props) {
+export default function ReceiptCard({ companyId, receipt, onChanged, onConfirmed }: Props) {
   const t = useTranslations("agent.receipt");
   const [busy, setBusy] = useState<"" | "confirm" | "reject">("");
   const [err,  setErr]  = useState<string | null>(null);
@@ -38,6 +40,9 @@ export default function ReceiptCard({ companyId, receipt, onChanged }: Props) {
         ? await confirmReceipt(companyId, receipt.receipt_id)
         : await rejectReceipt(companyId, receipt.receipt_id);
       onChanged?.(out.receipt);
+      if (kind === "confirm" && out.receipt.status === "confirmed") {
+        onConfirmed?.(out.receipt.tool_name);
+      }
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
@@ -123,21 +128,39 @@ function StatusBadge({ status }: { status: AgentReceipt["status"] }) {
 
 function DiffBlock({ preview }: { preview: Record<string, unknown> }) {
   const t = useTranslations("agent.receipt");
-  const diff = preview?.diff as Record<string, { from?: unknown; to?: unknown }> | undefined;
+  // Backend emits {before, after}; older code used {from, to}. Support both.
+  const diff = preview?.diff as
+    | Record<string, { from?: unknown; to?: unknown; before?: unknown; after?: unknown }>
+    | undefined;
 
   if (diff && typeof diff === "object" && Object.keys(diff).length > 0) {
     return (
       <dl className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 text-xs">
-        {Object.entries(diff).map(([k, v]) => (
-          <div key={k} className="contents">
-            <dt className="font-mono text-zinc-500">{k}</dt>
-            <dd className="text-zinc-300">
-              <span className="text-zinc-500 line-through">{renderVal(v?.from)}</span>
-              <span className="mx-1 text-zinc-600">→</span>
-              <span className="text-emerald-300">{renderVal(v?.to)}</span>
-            </dd>
-          </div>
-        ))}
+        {Object.entries(diff).map(([k, v]) => {
+          const before = v?.before ?? v?.from;
+          const after  = v?.after  ?? v?.to;
+          const isCreate = before === null || before === undefined || before === "";
+          return (
+            <div key={k} className="contents">
+              <dt className="font-mono text-zinc-500">{k}</dt>
+              <dd className="text-zinc-300">
+                {isCreate ? (
+                  <>
+                    <span className="text-zinc-500 italic">{t("empty")}</span>
+                    <span className="mx-1 text-zinc-600">→</span>
+                    <span className="font-semibold text-emerald-300">{renderVal(after)}</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-zinc-500 line-through">{renderVal(before)}</span>
+                    <span className="mx-1 text-zinc-600">→</span>
+                    <span className="font-semibold text-emerald-300">{renderVal(after)}</span>
+                  </>
+                )}
+              </dd>
+            </div>
+          );
+        })}
       </dl>
     );
   }

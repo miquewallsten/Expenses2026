@@ -19,7 +19,11 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.drop_column("company_setup", "reimbursements_module_enabled")
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    existing = {c["name"] for c in inspector.get_columns("company_setup")}
+    if "reimbursements_module_enabled" in existing:
+        op.drop_column("company_setup", "reimbursements_module_enabled")
 
 
 def downgrade() -> None:

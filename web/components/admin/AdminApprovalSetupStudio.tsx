@@ -214,8 +214,6 @@ export default function AdminApprovalSetupStudio({
     const needsAccounting = ["accounting_only", "manager_then_accounting", "threshold_based"].includes(mode);
     if (needsAccounting && accountingSetup?.accounting_review_mode === "none")
       w.push(t("warnAccountingModeNone"));
-    if (form.require_manager_for_all_employees && form.allow_self_submission_without_manager)
-      w.push(t("warnSelfSubmissionConflict"));
     if (form.escalate_policy_failures_to_accounting && accountingSetup?.accounting_review_mode === "none")
       w.push(t("warnEscalateNoReviewer"));
     return w;
@@ -229,10 +227,7 @@ export default function AdminApprovalSetupStudio({
     if (form.approval_mode === "threshold_based") {
       if (form.manager_threshold_amount != null)
         parts.push(`${form.manager_threshold_amount}`);
-      if (form.accounting_threshold_amount != null)
-        parts.push(`${form.accounting_threshold_amount}`);
     }
-    if (form.ai_approval_assist_enabled) parts.push("AI");
     return parts.join(" · ") || t("noApprovalConfigured");
   }
 
@@ -365,22 +360,13 @@ export default function AdminApprovalSetupStudio({
             onChange={(v) => set("approval_mode", v)}
           />
           {isThreshold && (
-            <>
-              <NumberRow
-                label={t("managerThreshold")}
-                description={t("managerThresholdDesc")}
-                value={form.manager_threshold_amount ?? null}
-                placeholder={t("managerThresholdPlaceholder")}
-                onChange={(v) => set("manager_threshold_amount", v)}
-              />
-              <NumberRow
-                label={t("accountingThreshold")}
-                description={t("accountingThresholdDesc")}
-                value={form.accounting_threshold_amount ?? null}
-                placeholder={t("accountingThresholdPlaceholder")}
-                onChange={(v) => set("accounting_threshold_amount", v)}
-              />
-            </>
+            <NumberRow
+              label={t("managerThreshold")}
+              description={t("managerThresholdDesc")}
+              value={form.manager_threshold_amount ?? null}
+              placeholder={t("managerThresholdPlaceholder")}
+              onChange={(v) => set("manager_threshold_amount", v)}
+            />
           )}
         </Panel>
       </div>
@@ -400,12 +386,6 @@ export default function AdminApprovalSetupStudio({
             description={t("requireAccountingAllDesc")}
             checked={!!form.require_accounting_for_all_expenses}
             onChange={(v) => set("require_accounting_for_all_expenses", v)}
-          />
-          <ToggleRow
-            label={t("allowSelfSubmission")}
-            description={t("allowSelfSubmissionDesc")}
-            checked={!!form.allow_self_submission_without_manager}
-            onChange={(v) => set("allow_self_submission_without_manager", v)}
           />
           <ToggleRow
             label={t("allowResubmission")}
@@ -432,33 +412,10 @@ export default function AdminApprovalSetupStudio({
             checked={!!form.escalate_international_to_accounting}
             onChange={(v) => set("escalate_international_to_accounting", v)}
           />
-          <ToggleRow
-            label={t("escalateMissingDocs")}
-            description={t("escalateMissingDocsDesc")}
-            checked={!!form.escalate_missing_documents_to_manager}
-            onChange={(v) => set("escalate_missing_documents_to_manager", v)}
-          />
         </Panel>
-      </div>
-
-      {/* D — AI Assistance */}
-      <div>
-        <SectionLabel>{t("sectionD")}</SectionLabel>
-        <Panel>
-          <ToggleRow
-            label={t("aiApprovalAssist")}
-            description={t("aiApprovalAssistDesc")}
-            checked={!!form.ai_approval_assist_enabled}
-            onChange={(v) => set("ai_approval_assist_enabled", v)}
-          />
-          <TextareaRow
-            label={t("aiApprovalNotes")}
-            description={t("aiApprovalNotesDesc")}
-            value={form.ai_approval_notes ?? ""}
-            placeholder={t("aiApprovalNotesPlaceholder")}
-            onChange={(v) => set("ai_approval_notes", v || null)}
-          />
-        </Panel>
+        <p className="mt-1 px-1 text-[9.5px] text-white/22 leading-relaxed">
+          Para reglas más específicas (por monto, por proveedor, por categoría), usa <span className="text-white/40">Políticas de IA</span>.
+        </p>
       </div>
 
       {/* Save bar */}

@@ -1,11 +1,13 @@
 """Model routing + usage logging for agent turns.
 
-Hybrid strategy (Phase 8.9):
+Hybrid strategy:
     * Default: use local Ollama model resolved by ``resolve_model()``.
-    * If the caller sets ``hard_mode=True`` or the active tool count exceeds
-      ``HARD_MODE_TOOL_THRESHOLD``, prefer a hosted override model set via the
-      env var ``AGENT_HOSTED_MODEL`` (only active when ``AGENT_HOSTED_ENABLED``
-      is truthy).
+    * If the caller sets ``hard_mode=True``, prefer a hosted override model set
+      via the env var ``AGENT_HOSTED_MODEL`` (only active when
+      ``AGENT_HOSTED_ENABLED`` is truthy).
+
+Note: ``HARD_MODE_TOOL_THRESHOLD`` is set to 999, so threshold-based routing is
+effectively opt-in — only ``hard_mode=True`` routes to the hosted model in practice.
 
 The actual HTTP call stays inside ``apps.api.ai.ollama_client`` — ``chat_with_tools``
 calls ``resolve_model()`` itself. Here we only decide *which* model to prefer
@@ -21,7 +23,7 @@ from contextlib import contextmanager
 from typing import Iterator
 
 
-HARD_MODE_TOOL_THRESHOLD = 12
+HARD_MODE_TOOL_THRESHOLD = 999  # effectively opt-in: only hard_mode=True routes to the hosted model
 
 
 def select_model(*, tool_count: int, hard_mode: bool = False) -> tuple[str, str]:

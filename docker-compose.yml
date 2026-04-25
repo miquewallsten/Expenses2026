@@ -36,8 +36,11 @@ services:
       ENVIRONMENT: ${ENVIRONMENT:-production}
       DEBUG: ${DEBUG:-false}
       SECRET_KEY: ${SECRET_KEY:-dev-only-secret}
+      ARCHIVE_LOCAL_STORAGE_DIR: /app/storage
     ports:
       - "8000:8000"
+    volumes:
+      - archive_storage:/app/storage
     command: ["sh", "-c", "python scripts/docker_entrypoint.py && python -m uvicorn apps.api.main:app --host 0.0.0.0 --port 8000 --log-level info"]
 
   # ── Frontend (Next.js) ────────────────────────────────────────────────────
@@ -58,3 +61,4 @@ services:
 
 volumes:
   postgres_data:
+  archive_storage:
