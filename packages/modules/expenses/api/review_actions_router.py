@@ -192,3 +192,90 @@ def accounting_return(
         idempotency_key=idem,
         comment=body.comment if body else None,
     )
+
+
+# ── Phase 4.4 — Bulk transition ───────────────────────────────────────────────
+
+_BULK_FN_BY_ACTION = {
+    "manager_approve": manager_approve_expense,
+    "manager_reject": manager_reject_expense,
+    "manager_return": manager_return_expense,
+    "accounting_approve": accounting_approve_expense,
+    "accounting_reject": accounting_reject_expense,
+    "accounting_return": accounting_return_expense,
+}
+_BULK_REQUIRES_COMMENT = {"manager_reject", "accounting_reject"}
+_BULK_MAX = 100
+
+
+class BulkTransitionRequest(BaseModel):
+    action: str = Field(..., description="One of _BULK_FN_BY_ACTION keys")
+    expense_ids: list[int] = Field(..., min_length=1, max_length=_BULK_MAX)
+    comment: str | None = Field(default=None, max_length=2000)
+
+
+class BulkItemResult(BaseModel):
+    expense_id: int
+    ok: bool
+    status: str | None = None
+    error: str | None = None
+
+
+class BulkTransitionResponse(BaseModel):
+    succeeded: int
+    failed: int
+    results: list[BulkItemResult]
+
+
+@router.post("/bulk-transition", response_model=BulkTransitionResponse)
+def bulk_transition(
+    body: BulkTransitionRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager_or_accountant),
+) -> BulkTransitionResponse:
+    fn = _BULK_FN_BY_ACTION.get(body.action)
+    if fn is None:
+        raise HTTPException(status_code=400, detail=f"Unknown action {body.action!r}")
+    accepts_comment = body.action in _BULK_REQUIRES_COMMENT or body.action.endswith(
+        "_return"
+    )
+
+    seen: set[int] = set()
+    results: list[BulkItemResult] = []
+    succeeded = 0
+    failed = 0
+
+    for raw_id in body.expense_ids:
+        if raw_id in seen:
+            continue
+        seen.add(raw_id)
+        try:
+            expense = get_expense_for_user(raw_id, db, current_user)
+        except HTTPException as exc:
+            failed += 1
+            results.append(
+                BulkItemResult(expense_id=raw_id, ok=False, error=str(exc.detail))
+            )
+            continue
+        try:
+            if accepts_comment:
+                updated = fn(
+                    db, expense, actor_user_id=current_user.id, comment=body.comment
+                )
+            else:
+                updated = fn(db, expense, actor_user_id=current_user.id)
+        except ValueError as exc:
+            failed += 1
+            db.rollback()
+            results.append(
+                BulkItemResult(expense_id=raw_id, ok=False, error=str(exc))
+            )
+            continue
+        succeeded += 1
+        results.append(
+            BulkItemResult(expense_id=raw_id, ok=True, status=updated.status)
+        )
+
+    return BulkTransitionResponse(
+        succeeded=succeeded, failed=failed, results=results
+    )
