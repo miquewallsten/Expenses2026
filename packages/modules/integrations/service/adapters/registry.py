@@ -6,6 +6,7 @@ from packages.modules.integrations.service.adapters.contpaqi import ContpaqiAdap
 from packages.modules.integrations.service.adapters.generic_csv import (
     GenericCsvJsonAdapter,
 )
+from packages.modules.integrations.service.adapters.hris_csv import HrisCsvAdapter
 from packages.modules.integrations.service.adapters.netsuite import NetSuiteAdapter
 from packages.modules.integrations.service.adapters.oracle_jde import OracleJDEAdapter
 from packages.modules.integrations.service.adapters.protocol import IntegrationAdapter
@@ -22,6 +23,7 @@ ADAPTER_REGISTRY: dict[str, type[IntegrationAdapter]] = {
     "oracle": OracleJDEAdapter,
     "quickbooks": QuickBooksAdapter,
     "xero": XeroAdapter,
+    "hris_csv": HrisCsvAdapter,
     "custom": GenericCsvJsonAdapter,
 }
 

@@ -8,6 +8,7 @@ from packages.modules.integrations.service.adapters.contpaqi import ContpaqiAdap
 from packages.modules.integrations.service.adapters.generic_csv import (
     GenericCsvJsonAdapter,
 )
+from packages.modules.integrations.service.adapters.hris_csv import HrisCsvAdapter
 from packages.modules.integrations.service.adapters.netsuite import NetSuiteAdapter
 from packages.modules.integrations.service.adapters.oracle_jde import OracleJDEAdapter
 from packages.modules.integrations.service.adapters.quickbooks import QuickBooksAdapter
@@ -24,6 +25,7 @@ __all__ = [
     "AspelAdapter",
     "ContpaqiAdapter",
     "GenericCsvJsonAdapter",
+    "HrisCsvAdapter",
     "NetSuiteAdapter",
     "OracleJDEAdapter",
     "QuickBooksAdapter",

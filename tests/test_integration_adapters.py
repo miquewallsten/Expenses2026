@@ -674,3 +674,114 @@ def test_xero_sync_cost_centers_uses_tracking_categories(
     rec = result.payload["TrackingCategories"][0]
     assert rec["Name"] == "Sales"
     assert rec["Option"] == "CC01"
+
+
+# ---------------------------------------------------------------------------
+# Phase 7.6 — HRIS CSV adapter (inbound user sync)
+# ---------------------------------------------------------------------------
+
+from packages.modules.integrations.service.adapters import HrisCsvAdapter  # noqa: E402
+
+
+def test_registry_resolves_hris_csv() -> None:
+    assert isinstance(get_adapter("hris_csv"), HrisCsvAdapter)
+
+
+def test_hris_csv_creates_new_users(db_session: Session, co: Company) -> None:
+    csv_text = (
+        "email,full_name,role,status\n"
+        "alice@a.test,Alice Anderson,manager,active\n"
+        "bob@a.test,Bob Brown,employee,active\n"
+    )
+    integ = Integration(
+        company_id=co.id, kind="hris", vendor="hris_csv", name="HRIS",
+        is_enabled=True, config_json={"csv_content": csv_text},
+    )
+    db_session.add(integ)
+    db_session.commit()
+    result = HrisCsvAdapter().sync_users(db_session, integ)
+    db_session.commit()
+    assert result.items_ok == 2
+    assert result.payload["created"] == 2
+    rows = db_session.query(User).filter(User.company_id == co.id).all()
+    emails = {u.email for u in rows}
+    assert {"alice@a.test", "bob@a.test"} <= emails
+
+
+def test_hris_csv_updates_existing_user_role(
+    db_session: Session, co: Company
+) -> None:
+    db_session.add(User(
+        company_id=co.id, email="carl@a.test", full_name="Carl C", role="employee",
+    ))
+    db_session.commit()
+    csv_text = "email,full_name,role,status\ncarl@a.test,Carl Carlson,manager,active\n"
+    integ = Integration(
+        company_id=co.id, kind="hris", vendor="hris_csv", name="HRIS",
+        is_enabled=True, config_json={"csv_content": csv_text},
+    )
+    db_session.add(integ)
+    db_session.commit()
+    result = HrisCsvAdapter().sync_users(db_session, integ)
+    db_session.commit()
+    assert result.payload["updated"] == 1
+    u = db_session.query(User).filter(User.email == "carl@a.test").one()
+    assert u.role == "manager"
+    assert u.full_name == "Carl Carlson"
+
+
+def test_hris_csv_disables_inactive_users(
+    db_session: Session, co: Company
+) -> None:
+    db_session.add(User(
+        company_id=co.id, email="dora@a.test", full_name="Dora D", role="employee",
+    ))
+    db_session.commit()
+    csv_text = "email,full_name,role,status\ndora@a.test,Dora D,employee,inactive\n"
+    integ = Integration(
+        company_id=co.id, kind="hris", vendor="hris_csv", name="HRIS",
+        is_enabled=True, config_json={"csv_content": csv_text},
+    )
+    db_session.add(integ)
+    db_session.commit()
+    result = HrisCsvAdapter().sync_users(db_session, integ)
+    db_session.commit()
+    assert result.payload["disabled"] == 1
+    u = db_session.query(User).filter(User.email == "dora@a.test").one()
+    assert u.role == "disabled"
+
+
+def test_hris_csv_rows_missing_email_are_failed(
+    db_session: Session, co: Company
+) -> None:
+    csv_text = (
+        "email,full_name,role,status\n"
+        ",No Email,employee,active\n"
+        "ok@a.test,OK User,employee,active\n"
+    )
+    integ = Integration(
+        company_id=co.id, kind="hris", vendor="hris_csv", name="HRIS",
+        is_enabled=True, config_json={"csv_content": csv_text},
+    )
+    db_session.add(integ)
+    db_session.commit()
+    result = HrisCsvAdapter().sync_users(db_session, integ)
+    db_session.commit()
+    assert result.items_failed == 1
+    assert result.items_ok == 1
+    assert "missing email" in (result.error_summary or "")
+
+
+def test_hris_csv_does_not_support_polizas_or_cost_centers(
+    db_session: Session, co: Company
+) -> None:
+    integ = Integration(
+        company_id=co.id, kind="hris", vendor="hris_csv", name="HRIS",
+        is_enabled=True, config_json={"csv_content": "email\nx@a.test\n"},
+    )
+    db_session.add(integ)
+    db_session.commit()
+    p = HrisCsvAdapter().export_polizas(db_session, integ)
+    cc = HrisCsvAdapter().sync_cost_centers(db_session, integ)
+    assert p.items_ok == 0 and "does not support" in (p.error_summary or "")
+    assert cc.items_ok == 0 and "does not support" in (cc.error_summary or "")
