@@ -312,3 +312,91 @@ def test_aspel_sync_cost_centers_filters_active(
     result = AspelAdapter().sync_cost_centers(db_session, integ)
     assert result.items_ok == 1
     assert result.payload["cost_centers"][0]["code"] == "C1"
+
+
+# ---------------------------------------------------------------------------
+# Phase 7.2 — SAP / SAP Business One adapter
+# ---------------------------------------------------------------------------
+
+import json as _json  # noqa: E402
+
+from packages.modules.integrations.service.adapters import SapAdapter  # noqa: E402
+
+
+def test_registry_resolves_sap() -> None:
+    assert isinstance(get_adapter("sap"), SapAdapter)
+
+
+def test_sap_export_polizas_emits_journal_entries_json(
+    db_session: Session, co: Company
+) -> None:
+    integ = Integration(
+        company_id=co.id, kind="erp", vendor="sap", name="SAP B1",
+        is_enabled=True,
+    )
+    db_session.add(integ)
+    db_session.commit()
+    _seed_approved_expenses(db_session, co.id, n=2)
+    result = SapAdapter().export_polizas(db_session, integ, period="2026-04")
+    assert result.items_ok >= 1
+    assert "JournalEntries.json" in result.artifacts
+    payload = _json.loads(result.artifacts["JournalEntries.json"].decode("utf-8"))
+    assert "JournalEntries" in payload
+    assert len(payload["JournalEntries"]) == result.items_ok
+    first = payload["JournalEntries"][0]
+    assert "Memo" in first
+    assert "JournalEntryLines" in first
+    assert isinstance(first["JournalEntryLines"], list)
+
+
+def test_sap_export_polizas_empty_when_no_expenses(
+    db_session: Session, co: Company
+) -> None:
+    integ = Integration(
+        company_id=co.id, kind="erp", vendor="sap", name="SAP",
+        is_enabled=True,
+    )
+    db_session.add(integ)
+    db_session.commit()
+    result = SapAdapter().export_polizas(db_session, integ, period="2026-04")
+    assert result.items_ok == 0
+    assert "JournalEntries.json" not in result.artifacts
+
+
+def test_sap_sync_users_uses_sap_field_names(
+    db_session: Session, co: Company
+) -> None:
+    integ = Integration(
+        company_id=co.id, kind="erp", vendor="sap", name="SAP",
+        is_enabled=True,
+    )
+    db_session.add(integ)
+    db_session.add_all([
+        User(company_id=co.id, email="a@a.test", full_name="A One", role="admin"),
+        User(company_id=999, email="leak@x.test", full_name="X", role="admin"),
+    ])
+    db_session.commit()
+    result = SapAdapter().sync_users(db_session, integ)
+    assert result.items_ok == 1
+    rec = result.payload["users"][0]
+    assert set(rec.keys()) == {"EmployeeID", "Email", "Name", "Role"}
+    assert rec["Email"] == "a@a.test"
+
+
+def test_sap_sync_cost_centers_uses_sap_field_names(
+    db_session: Session, co: Company
+) -> None:
+    integ = Integration(
+        company_id=co.id, kind="erp", vendor="sap", name="SAP",
+        is_enabled=True,
+    )
+    db_session.add(integ)
+    db_session.add_all([
+        CostCenter(company_id=co.id, code="CC1", name="One", status="active"),
+        CostCenter(company_id=co.id, code="CC2", name="Two", status="archived"),
+    ])
+    db_session.commit()
+    result = SapAdapter().sync_cost_centers(db_session, integ)
+    assert result.items_ok == 1
+    rec = result.payload["cost_centers"][0]
+    assert rec == {"CostingCode": "CC1", "CostingCodeName": "One"}
