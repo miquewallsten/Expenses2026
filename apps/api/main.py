@@ -238,6 +238,10 @@ app.include_router(whatsapp_webhook_router)
 app.include_router(email_inbound_router)
 app.include_router(channels_admin_router)
 app.include_router(action_links_router)
+from packages.modules.channels.api.preferences_router import (  # noqa: E402
+    router as preferences_router,
+)
+app.include_router(preferences_router)
 app.include_router(purchase_requests_router)
 app.include_router(time_tracking_router)
 app.include_router(report_cycle_router)

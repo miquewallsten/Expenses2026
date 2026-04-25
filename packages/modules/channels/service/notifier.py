@@ -74,9 +74,21 @@ def send(db: Session, req: NotifyRequest) -> list[NotificationDispatch]:
     Idempotent on (event_type, resource_type, resource_id, user_id, channel).
     Returns the list of NotificationDispatch rows (existing or newly created).
     """
+    # Lazy import — avoid circular reference during module init.
+    from packages.modules.channels.service.preferences import is_channel_enabled
+
     out: list[NotificationDispatch] = []
     for recipient in req.recipients:
         for channel in req.channels:
+            # Honour user opt-outs (defaults to enabled when no row).
+            if not is_channel_enabled(
+                db, recipient.user_id, req.event_type, channel
+            ):
+                log.info(
+                    "Notification suppressed by user pref: user=%s event=%s ch=%s",
+                    recipient.user_id, req.event_type, channel,
+                )
+                continue
             row = _claim_dispatch(db, req, recipient, channel)
             if row is None:
                 continue  # already dispatched

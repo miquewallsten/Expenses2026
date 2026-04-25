@@ -11,6 +11,9 @@ conftest anymore — import this module instead.
 # Core platform
 from packages.core.platform.models import Company  # noqa: F401
 from packages.core.platform.models_user import User, MagicLinkToken  # noqa: F401
+from packages.core.platform.models_user_notification_pref import (  # noqa: F401
+    UserNotificationPreference,
+)
 from packages.core.platform.models_audit import AuditLog  # noqa: F401
 from packages.core.platform.models_module import PlatformModule  # noqa: F401
 from packages.core.platform.models_company_module import CompanyModule  # noqa: F401
