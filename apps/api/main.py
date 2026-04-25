@@ -279,6 +279,10 @@ from packages.modules.expenses.api.duplicate_detection_router import (  # noqa: 
     router as duplicate_detection_router,
 )
 app.include_router(duplicate_detection_router)
+from packages.modules.expenses.api.anomaly_detection_router import (  # noqa: E402
+    router as anomaly_detection_router,
+)
+app.include_router(anomaly_detection_router)
 
 
 # ── Channel notification scheduler (opt-in via env var) ──────────────────────
