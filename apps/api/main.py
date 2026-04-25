@@ -82,6 +82,7 @@ from packages.modules.archive.api.archive_query_router import router as archive_
 from packages.modules.expenses.api.document_triage_router import router as document_triage_router
 from packages.modules.expenses.api.cfdi_pairing_router import router as cfdi_pairing_router
 from packages.modules.ai.models_embedding import DocumentEmbedding  # noqa: F401 — registers document_embeddings table
+from packages.modules.ai.models_categorization_feedback import CategorizationFeedback  # noqa: F401 — registers categorization_feedback table
 from apps.api.routes.auth import router as auth_router
 from packages.core.platform.models_user_project import UserProjectAssignment  # noqa: F401
 from packages.core.platform.models_auth_settings import CompanyAuthSettings  # noqa: F401

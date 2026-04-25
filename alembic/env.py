@@ -63,6 +63,7 @@ from packages.core.platform.models_orchestrator_audit import OrchestratorAuditLo
 
 # Vector / AI models
 from packages.modules.ai.models_embedding import DocumentEmbedding  # noqa: F401
+from packages.modules.ai.models_categorization_feedback import CategorizationFeedback  # noqa: F401
 
 config = context.config
 
