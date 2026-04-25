@@ -271,6 +271,10 @@ app.include_router(agent_router)
 app.include_router(amex_router)
 app.include_router(integrations_router)
 app.include_router(public_api_router)
+from packages.modules.expenses.api.finance_analytics_router import (  # noqa: E402
+    router as finance_analytics_router,
+)
+app.include_router(finance_analytics_router)
 
 
 # ── Channel notification scheduler (opt-in via env var) ──────────────────────
