@@ -1,0 +1,7 @@
+Hi {{ user.full_name }},
+
+We received a request to access your account. Click the button below to sign in. The link expires in {{ ttl_minutes }} minutes.
+
+{{ link }}
+
+If you didn't request this, ignore this email.

@@ -1,0 +1,16 @@
+{% extends "_layout.html" %}
+{% block content %}
+  <h1>Resumen diario: {{ items | length }} gasto(s) por aprobar</h1>
+  <p>Hola {{ approver.full_name }},</p>
+  <p>Tienes los siguientes gastos pendientes de revisión:</p>
+    <ul style="padding-left: 18px; margin: 12px 0;">
+    {% for item in items %}
+      <li style="margin: 6px 0; font-size: 13px;">
+        <strong>${{ item.amount }} {{ item.currency }}</strong> — {{ item.description }} <span class="meta">({{ item.submitter_name }})</span>
+      </li>
+    {% endfor %}
+    </ul>
+    <p style="margin-top: 20px;">
+      <a href="{{ link }}" class="btn">Ir a la bandeja</a>
+    </p>
+{% endblock %}

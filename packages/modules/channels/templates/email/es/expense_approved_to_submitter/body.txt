@@ -1,0 +1,8 @@
+Hola {{ submitter.full_name }},
+
+Tu gasto fue aprobado por {{ approver.full_name }}. Continuará el flujo de pago según las políticas de tu empresa.
+
+  Importe: ${{ expense.amount }} {{ expense.currency }}
+  Concepto: {{ expense.description }}
+
+{{ link }}

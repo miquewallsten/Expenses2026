@@ -1,0 +1,7 @@
+Hola {{ submitter.full_name }},
+
+{{ approver.full_name }} devolvió tu gasto solicitando información adicional. Una vez corregido, vuelve a enviarlo.
+
+  Comentario: {{ comment | default('—') }}
+
+{{ link }}

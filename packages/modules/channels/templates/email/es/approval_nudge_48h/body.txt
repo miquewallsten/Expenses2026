@@ -1,0 +1,8 @@
+Hola {{ approver.full_name }},
+
+Este gasto enviado por {{ submitter.full_name }} lleva más de 48 horas esperando tu aprobación.
+
+  Importe: ${{ expense.amount }} {{ expense.currency }}
+  Enviado: {{ expense.submitted_at }}
+
+{{ link }}

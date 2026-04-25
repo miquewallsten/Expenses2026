@@ -1,0 +1,13 @@
+{% extends "_layout.html" %}
+{% block content %}
+  <h1>Reminder: expense pending for 48 h</h1>
+  <p>Hi {{ approver.full_name }},</p>
+  <p>This expense submitted by {{ submitter.full_name }} has been waiting for your approval for more than 48 hours.</p>
+    <dl class="data">
+      <div class="row"><dt>Amount:</dt> <dd>${{ expense.amount }} {{ expense.currency }}</dd></div>
+      <div class="row"><dt>Submitted:</dt> <dd>{{ expense.submitted_at }}</dd></div>
+    </dl>
+    <p style="margin-top: 20px;">
+      <a href="{{ link }}" class="btn">Review now</a>
+    </p>
+{% endblock %}

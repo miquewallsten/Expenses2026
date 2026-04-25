@@ -1,0 +1,16 @@
+{% extends "_layout.html" %}
+{% block content %}
+  <h1>Daily digest: {{ items | length }} expense(s) to approve</h1>
+  <p>Hi {{ approver.full_name }},</p>
+  <p>You have the following expenses awaiting your review:</p>
+    <ul style="padding-left: 18px; margin: 12px 0;">
+    {% for item in items %}
+      <li style="margin: 6px 0; font-size: 13px;">
+        <strong>${{ item.amount }} {{ item.currency }}</strong> — {{ item.description }} <span class="meta">({{ item.submitter_name }})</span>
+      </li>
+    {% endfor %}
+    </ul>
+    <p style="margin-top: 20px;">
+      <a href="{{ link }}" class="btn">Open queue</a>
+    </p>
+{% endblock %}

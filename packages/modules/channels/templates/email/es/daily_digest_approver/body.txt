@@ -1,0 +1,8 @@
+Hola {{ approver.full_name }},
+
+Tienes los siguientes gastos pendientes de revisión:
+
+{% for item in items %}- ${{ item.amount }} {{ item.currency }} — {{ item.description }} ({{ item.submitter_name }})
+{% endfor %}
+
+{{ link }}

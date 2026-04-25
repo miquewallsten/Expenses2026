@@ -1,0 +1,13 @@
+{% extends "_layout.html" %}
+{% block content %}
+  <h1>Tu gasto fue rechazado</h1>
+  <p>Hola {{ submitter.full_name }},</p>
+  <p>{{ approver.full_name }} rechazó tu gasto. Revisa el motivo y, si corresponde, envíalo nuevamente con los ajustes.</p>
+    <dl class="data">
+      <div class="row"><dt>Motivo:</dt> <dd>{{ reason | default('—') }}</dd></div>
+      <div class="row"><dt>Importe:</dt> <dd>${{ expense.amount }} {{ expense.currency }}</dd></div>
+    </dl>
+    <p style="margin-top: 20px;">
+      <a href="{{ link }}" class="btn">Ver detalle</a>
+    </p>
+{% endblock %}

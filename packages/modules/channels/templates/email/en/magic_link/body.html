@@ -1,0 +1,9 @@
+{% extends "_layout.html" %}
+{% block content %}
+  <h1>Your sign-in link</h1>
+  <p>Hi {{ user.full_name }},</p>
+  <p>We received a request to access your account. Click the button below to sign in. The link expires in {{ ttl_minutes }} minutes.</p>
+    <p style="margin-top: 20px;">
+      <a href="{{ link }}" class="btn">Sign in</a>
+    </p>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends "_layout.html" %}
+{% block content %}
+  <h1>Recordatorio: gasto pendiente desde hace 48 h</h1>
+  <p>Hola {{ approver.full_name }},</p>
+  <p>Este gasto enviado por {{ submitter.full_name }} lleva más de 48 horas esperando tu aprobación.</p>
+    <dl class="data">
+      <div class="row"><dt>Importe:</dt> <dd>${{ expense.amount }} {{ expense.currency }}</dd></div>
+      <div class="row"><dt>Enviado:</dt> <dd>{{ expense.submitted_at }}</dd></div>
+    </dl>
+    <p style="margin-top: 20px;">
+      <a href="{{ link }}" class="btn">Revisar ahora</a>
+    </p>
+{% endblock %}

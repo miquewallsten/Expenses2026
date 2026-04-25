@@ -1,0 +1,7 @@
+Hi {{ submitter.full_name }},
+
+{{ approver.full_name }} returned your expense requesting more information. Once corrected, resubmit it.
+
+  Comment: {{ comment | default('—') }}
+
+{{ link }}

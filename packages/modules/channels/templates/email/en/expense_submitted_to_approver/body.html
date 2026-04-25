@@ -1,0 +1,14 @@
+{% extends "_layout.html" %}
+{% block content %}
+  <h1>New expense awaiting your approval</h1>
+  <p>Hi {{ approver.full_name }},</p>
+  <p>{{ submitter.full_name }} submitted an expense that needs your approval.</p>
+    <dl class="data">
+      <div class="row"><dt>Amount:</dt> <dd>${{ expense.amount }} {{ expense.currency }}</dd></div>
+      <div class="row"><dt>Description:</dt> <dd>{{ expense.description }}</dd></div>
+      <div class="row"><dt>Date:</dt> <dd>{{ expense.expense_date }}</dd></div>
+    </dl>
+    <p style="margin-top: 20px;">
+      <a href="{{ link }}" class="btn">Review expense</a>
+    </p>
+{% endblock %}

@@ -1,0 +1,8 @@
+Hola {{ submitter.full_name }},
+
+Procesamos el reembolso de tu gasto. El depósito puede tardar 1-3 días hábiles en reflejarse según tu banco.
+
+  Importe: ${{ amount }} {{ currency }}
+  Referencia: {{ reference | default('—') }}
+
+{{ link }}

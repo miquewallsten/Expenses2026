@@ -1,0 +1,8 @@
+Hi {{ approver.full_name }},
+
+This expense submitted by {{ submitter.full_name }} has been waiting for your approval for more than 48 hours.
+
+  Amount: ${{ expense.amount }} {{ expense.currency }}
+  Submitted: {{ expense.submitted_at }}
+
+{{ link }}

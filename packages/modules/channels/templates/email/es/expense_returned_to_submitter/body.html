@@ -1,0 +1,12 @@
+{% extends "_layout.html" %}
+{% block content %}
+  <h1>Tu gasto fue devuelto para corregir</h1>
+  <p>Hola {{ submitter.full_name }},</p>
+  <p>{{ approver.full_name }} devolvió tu gasto solicitando información adicional. Una vez corregido, vuelve a enviarlo.</p>
+    <dl class="data">
+      <div class="row"><dt>Comentario:</dt> <dd>{{ comment | default('—') }}</dd></div>
+    </dl>
+    <p style="margin-top: 20px;">
+      <a href="{{ link }}" class="btn">Corregir gasto</a>
+    </p>
+{% endblock %}

@@ -1,0 +1,9 @@
+Hola {{ approver.full_name }},
+
+{{ submitter.full_name }} envió un gasto que requiere tu aprobación.
+
+  Importe: ${{ expense.amount }} {{ expense.currency }}
+  Concepto: {{ expense.description }}
+  Fecha: {{ expense.expense_date }}
+
+{{ link }}

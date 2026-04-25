@@ -1,0 +1,8 @@
+Hi {{ submitter.full_name }},
+
+{{ approver.full_name }} approved your expense. It will continue through the payment flow per your company policy.
+
+  Amount: ${{ expense.amount }} {{ expense.currency }}
+  Description: {{ expense.description }}
+
+{{ link }}

@@ -1,0 +1,7 @@
+Hola {{ user.full_name }},
+
+Recibimos una solicitud para acceder a tu cuenta. Haz clic en el botón a continuación para iniciar sesión. El enlace caduca en {{ ttl_minutes }} minutos.
+
+{{ link }}
+
+Si no solicitaste este enlace, ignora este correo.

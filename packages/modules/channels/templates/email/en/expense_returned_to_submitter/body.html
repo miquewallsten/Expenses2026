@@ -1,0 +1,12 @@
+{% extends "_layout.html" %}
+{% block content %}
+  <h1>Your expense was returned for revision</h1>
+  <p>Hi {{ submitter.full_name }},</p>
+  <p>{{ approver.full_name }} returned your expense requesting more information. Once corrected, resubmit it.</p>
+    <dl class="data">
+      <div class="row"><dt>Comment:</dt> <dd>{{ comment | default('—') }}</dd></div>
+    </dl>
+    <p style="margin-top: 20px;">
+      <a href="{{ link }}" class="btn">Edit expense</a>
+    </p>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends "_layout.html" %}
+{% block content %}
+  <h1>Your reimbursement was processed</h1>
+  <p>Hi {{ submitter.full_name }},</p>
+  <p>We processed the reimbursement for your expense. Deposits may take 1–3 business days to reflect depending on your bank.</p>
+    <dl class="data">
+      <div class="row"><dt>Amount:</dt> <dd>${{ amount }} {{ currency }}</dd></div>
+      <div class="row"><dt>Reference:</dt> <dd>{{ reference | default('—') }}</dd></div>
+    </dl>
+    <p style="margin-top: 20px;">
+      <a href="{{ link }}" class="btn">View details</a>
+    </p>
+{% endblock %}

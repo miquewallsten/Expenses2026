@@ -1,0 +1,14 @@
+{% extends "_layout.html" %}
+{% block content %}
+  <h1>Nuevo gasto pendiente de tu aprobación</h1>
+  <p>Hola {{ approver.full_name }},</p>
+  <p>{{ submitter.full_name }} envió un gasto que requiere tu aprobación.</p>
+    <dl class="data">
+      <div class="row"><dt>Importe:</dt> <dd>${{ expense.amount }} {{ expense.currency }}</dd></div>
+      <div class="row"><dt>Concepto:</dt> <dd>{{ expense.description }}</dd></div>
+      <div class="row"><dt>Fecha:</dt> <dd>{{ expense.expense_date }}</dd></div>
+    </dl>
+    <p style="margin-top: 20px;">
+      <a href="{{ link }}" class="btn">Revisar gasto</a>
+    </p>
+{% endblock %}

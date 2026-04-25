@@ -1,0 +1,9 @@
+Hi {{ approver.full_name }},
+
+{{ submitter.full_name }} submitted an expense that needs your approval.
+
+  Amount: ${{ expense.amount }} {{ expense.currency }}
+  Description: {{ expense.description }}
+  Date: {{ expense.expense_date }}
+
+{{ link }}

@@ -1,0 +1,8 @@
+Hola {{ submitter.full_name }},
+
+{{ approver.full_name }} rechazó tu gasto. Revisa el motivo y, si corresponde, envíalo nuevamente con los ajustes.
+
+  Motivo: {{ reason | default('—') }}
+  Importe: ${{ expense.amount }} {{ expense.currency }}
+
+{{ link }}

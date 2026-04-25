@@ -1,0 +1,8 @@
+Hi {{ approver.full_name }},
+
+You have the following expenses awaiting your review:
+
+{% for item in items %}- ${{ item.amount }} {{ item.currency }} — {{ item.description }} ({{ item.submitter_name }})
+{% endfor %}
+
+{{ link }}

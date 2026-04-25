@@ -1,0 +1,8 @@
+Hi {{ submitter.full_name }},
+
+We processed the reimbursement for your expense. Deposits may take 1–3 business days to reflect depending on your bank.
+
+  Amount: ${{ amount }} {{ currency }}
+  Reference: {{ reference | default('—') }}
+
+{{ link }}
