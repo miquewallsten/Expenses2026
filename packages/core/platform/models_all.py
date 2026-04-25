@@ -69,6 +69,7 @@ from packages.modules.ai.models_embedding import DocumentEmbedding  # noqa: F401
 # Channels
 from packages.modules.channels.models import (  # noqa: F401
     ChannelSettings, ChannelConversation, ChannelMessage, ChannelVerification,
+    NotificationDispatch,
 )
 
 # Agent

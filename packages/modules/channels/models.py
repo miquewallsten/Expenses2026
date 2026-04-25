@@ -132,3 +132,39 @@ class ChannelVerification(Base):
     expires_at   = Column(DateTime(timezone=True), nullable=False)
     used_at      = Column(DateTime(timezone=True), nullable=True)
     created_at   = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class NotificationDispatch(Base):
+    """One row per outbound notification attempt — idempotency + retry + audit.
+
+    Unique key: (event_type, resource_type, resource_id, recipient_user_id, channel)
+    prevents the same event from notifying the same user twice on the same channel.
+    """
+    __tablename__ = "notification_dispatches"
+    __table_args__ = (
+        UniqueConstraint(
+            "event_type",
+            "resource_type",
+            "resource_id",
+            "recipient_user_id",
+            "channel",
+            name="uq_notification_dispatch_idem",
+        ),
+    )
+
+    id                 = Column(Integer, primary_key=True)
+    company_id         = Column(Integer, nullable=False, index=True)
+    event_type         = Column(String(80), nullable=False, index=True)
+    resource_type      = Column(String(50), nullable=False)
+    resource_id        = Column(Integer,    nullable=False)
+    recipient_user_id  = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    recipient_address  = Column(String(255), nullable=True)  # email or phone, denormalised for audit
+    channel            = Column(String(30),  nullable=False)  # "email" | "whatsapp"
+    status             = Column(String(20),  nullable=False, default="pending")
+    # Statuses: pending | sent | failed | suppressed
+    attempts           = Column(Integer, nullable=False, default=0)
+    last_error         = Column(Text, nullable=True)
+    payload_json       = Column(Text, nullable=True)
+    created_at         = Column(DateTime(timezone=True), server_default=func.now())
+    sent_at            = Column(DateTime(timezone=True), nullable=True)
+    updated_at         = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
