@@ -131,6 +131,11 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
+# Phase 2.5 — Request-ID middleware + structured 500/422 responses.
+from apps.api.observability import install as _install_observability  # noqa: E402
+
+_install_observability(app)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -271,3 +276,65 @@ def root():
         "message": "API is running",
         "environment": settings.environment,
     }
+
+
+# ── Phase 2.6 — Health probes ────────────────────────────────────────────────
+
+
+@app.get("/health/ready")
+def health_ready() -> dict:
+    """Readiness probe — checks DB, storage write, optional Ollama.
+
+    Returns 200 with per-subsystem detail if all required checks pass;
+    503 (via FastAPI HTTPException) if any required check fails. Ollama
+    is reported but never blocks readiness — local LLM is best-effort.
+    """
+    from fastapi import HTTPException
+    from sqlalchemy import text as _sql_text
+    import os as _os
+    import tempfile as _tempfile
+
+    from apps.api.db import engine as _engine
+
+    detail: dict = {"db": "unknown", "storage": "unknown", "ollama": "skipped"}
+    failed = False
+
+    # DB ping
+    try:
+        with _engine.connect() as _conn:
+            _conn.execute(_sql_text("SELECT 1"))
+        detail["db"] = "ok"
+    except Exception as exc:
+        detail["db"] = f"error: {type(exc).__name__}"
+        failed = True
+
+    # Storage write — STORAGE_ROOT or ./storage
+    try:
+        storage_root = _os.environ.get("STORAGE_ROOT", "storage")
+        _os.makedirs(storage_root, exist_ok=True)
+        with _tempfile.NamedTemporaryFile(
+            dir=storage_root, prefix=".healthz-", delete=True
+        ) as _t:
+            _t.write(b"ok")
+            _t.flush()
+        detail["storage"] = "ok"
+    except Exception as exc:
+        detail["storage"] = f"error: {type(exc).__name__}"
+        failed = True
+
+    # Ollama — best-effort, non-blocking
+    try:
+        import urllib.request as _ur
+
+        base = _os.environ.get("OLLAMA_BASE_URL", "").rstrip("/")
+        if base:
+            with _ur.urlopen(f"{base}/api/tags", timeout=1.0) as resp:
+                detail["ollama"] = "ok" if resp.status == 200 else f"status_{resp.status}"
+        else:
+            detail["ollama"] = "not_configured"
+    except Exception as exc:
+        detail["ollama"] = f"error: {type(exc).__name__}"
+
+    if failed:
+        raise HTTPException(status_code=503, detail=detail)
+    return {"status": "ok", "detail": detail}
