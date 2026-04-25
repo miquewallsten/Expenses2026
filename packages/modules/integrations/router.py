@@ -23,6 +23,7 @@ from packages.modules.integrations.models import (
     IntegrationEndpoint,
     IntegrationSyncRun,
 )
+from packages.modules.integrations.service.runner import run_endpoint
 
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
@@ -155,3 +156,30 @@ def list_runs(
         .all()
     )
     return [IntegrationSyncRunRead.model_validate(r) for r in rows]
+
+
+class RunRequest(BaseModel):
+    endpoint: Literal["export_polizas", "sync_users", "sync_cost_centers"]
+    period: str | None = None
+
+
+@router.post("/{integration_id}/run", response_model=IntegrationSyncRunRead)
+def trigger_run(
+    integration_id: int,
+    body: RunRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> IntegrationSyncRunRead:
+    integration = _company_integration_or_404(
+        db, integration_id, current_user.company_id
+    )
+    if not integration.is_enabled:
+        raise HTTPException(status_code=409, detail="Integration is disabled")
+    run, _result = run_endpoint(
+        db,
+        integration=integration,
+        endpoint=body.endpoint,
+        period=body.period,
+        triggered_by_user_id=current_user.id,
+    )
+    return IntegrationSyncRunRead.model_validate(run)
