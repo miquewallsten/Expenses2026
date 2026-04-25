@@ -160,3 +160,30 @@ def approval_funnel(
             )
         )
     return ApprovalFunnelResponse(items=items)
+
+
+# ── Approval SLA distribution ─────────────────────────────────────────────────
+
+
+class ApprovalSlaResponse(BaseModel):
+    approved_count: int
+    p50_hours: float
+    p75_hours: float
+    p95_hours: float
+    max_hours: float
+    open_count: int
+    open_p50_hours: float
+    open_p95_hours: float
+    open_max_hours: float
+
+
+@router.get("/approval-sla", response_model=ApprovalSlaResponse)
+def approval_sla(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ApprovalSlaResponse:
+    from packages.modules.expenses.service.approval_sla_analytics_service import (
+        compute_sla_distribution,
+    )
+    data = compute_sla_distribution(db, company_id=current_user.company_id)
+    return ApprovalSlaResponse(**data)
