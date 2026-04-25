@@ -571,3 +571,106 @@ def test_oracle_sync_cost_centers_uses_business_unit_shape(
     assert result.items_ok == 1
     rec = result.payload["business_units"][0]
     assert rec == {"MCU": "MCU01", "DL01": "One"}
+
+
+# ---------------------------------------------------------------------------
+# Phase 7.5 — QuickBooks Online + Xero adapters
+# ---------------------------------------------------------------------------
+
+import json as _json  # noqa: E402
+
+from packages.modules.integrations.service.adapters import (  # noqa: E402
+    QuickBooksAdapter,
+    XeroAdapter,
+)
+
+
+def test_registry_resolves_quickbooks_and_xero() -> None:
+    assert isinstance(get_adapter("quickbooks"), QuickBooksAdapter)
+    assert isinstance(get_adapter("xero"), XeroAdapter)
+
+
+def test_quickbooks_export_emits_journal_entries_json(
+    db_session: Session, co: Company
+) -> None:
+    integ = Integration(
+        company_id=co.id, kind="erp", vendor="quickbooks", name="QBO",
+        is_enabled=True,
+    )
+    db_session.add(integ)
+    db_session.commit()
+    _seed_approved_expenses(db_session, co.id, n=2)
+    result = QuickBooksAdapter().export_polizas(db_session, integ, period="2026-04")
+    assert result.items_ok >= 1
+    assert "journal_entries.json" in result.artifacts
+    payload = _json.loads(result.artifacts["journal_entries.json"].decode("utf-8"))
+    assert "JournalEntries" in payload
+    entry = payload["JournalEntries"][0]
+    assert entry["DocNumber"].startswith("expense-")
+    assert isinstance(entry["Line"], list) and len(entry["Line"]) >= 1
+    line = entry["Line"][0]
+    assert line["DetailType"] == "JournalEntryLineDetail"
+    assert line["JournalEntryLineDetail"]["PostingType"] in {"Debit", "Credit"}
+
+
+def test_quickbooks_sync_users_uses_qbo_shape(
+    db_session: Session, co: Company
+) -> None:
+    integ = Integration(
+        company_id=co.id, kind="erp", vendor="quickbooks", name="QBO",
+        is_enabled=True,
+    )
+    db_session.add(integ)
+    db_session.add_all([
+        User(company_id=co.id, email="a@a.test", full_name="A One", role="admin"),
+        User(company_id=999, email="leak@x.test", full_name="X", role="admin"),
+    ])
+    db_session.commit()
+    result = QuickBooksAdapter().sync_users(db_session, integ)
+    assert result.items_ok == 1
+    rec = result.payload["Employees"][0]
+    assert rec["PrimaryEmailAddr"] == {"Address": "a@a.test"}
+    assert set(rec.keys()) == {"Id", "DisplayName", "PrimaryEmailAddr", "Role"}
+
+
+def test_xero_export_emits_manual_journals_with_signed_amounts(
+    db_session: Session, co: Company
+) -> None:
+    integ = Integration(
+        company_id=co.id, kind="erp", vendor="xero", name="Xero",
+        is_enabled=True,
+    )
+    db_session.add(integ)
+    db_session.commit()
+    _seed_approved_expenses(db_session, co.id, n=2)
+    result = XeroAdapter().export_polizas(db_session, integ, period="2026-04")
+    assert result.items_ok >= 1
+    assert "manual_journals.json" in result.artifacts
+    payload = _json.loads(result.artifacts["manual_journals.json"].decode("utf-8"))
+    assert "ManualJournals" in payload
+    journal = payload["ManualJournals"][0]
+    assert journal["Status"] == "DRAFT"
+    assert isinstance(journal["JournalLines"], list)
+    # Sum of LineAmounts should equal zero (debit positive, credit negative)
+    total = sum(line["LineAmount"] for line in journal["JournalLines"])
+    assert abs(total) < 0.01
+
+
+def test_xero_sync_cost_centers_uses_tracking_categories(
+    db_session: Session, co: Company
+) -> None:
+    integ = Integration(
+        company_id=co.id, kind="erp", vendor="xero", name="Xero",
+        is_enabled=True,
+    )
+    db_session.add(integ)
+    db_session.add_all([
+        CostCenter(company_id=co.id, code="CC01", name="Sales", status="active"),
+        CostCenter(company_id=co.id, code="CC02", name="Old", status="archived"),
+    ])
+    db_session.commit()
+    result = XeroAdapter().sync_cost_centers(db_session, integ)
+    assert result.items_ok == 1
+    rec = result.payload["TrackingCategories"][0]
+    assert rec["Name"] == "Sales"
+    assert rec["Option"] == "CC01"

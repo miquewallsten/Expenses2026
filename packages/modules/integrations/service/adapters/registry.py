@@ -9,7 +9,9 @@ from packages.modules.integrations.service.adapters.generic_csv import (
 from packages.modules.integrations.service.adapters.netsuite import NetSuiteAdapter
 from packages.modules.integrations.service.adapters.oracle_jde import OracleJDEAdapter
 from packages.modules.integrations.service.adapters.protocol import IntegrationAdapter
+from packages.modules.integrations.service.adapters.quickbooks import QuickBooksAdapter
 from packages.modules.integrations.service.adapters.sap import SapAdapter
+from packages.modules.integrations.service.adapters.xero import XeroAdapter
 
 
 ADAPTER_REGISTRY: dict[str, type[IntegrationAdapter]] = {
@@ -18,6 +20,8 @@ ADAPTER_REGISTRY: dict[str, type[IntegrationAdapter]] = {
     "sap": SapAdapter,
     "netsuite": NetSuiteAdapter,
     "oracle": OracleJDEAdapter,
+    "quickbooks": QuickBooksAdapter,
+    "xero": XeroAdapter,
     "custom": GenericCsvJsonAdapter,
 }
 
