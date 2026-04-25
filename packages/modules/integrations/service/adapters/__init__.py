@@ -8,6 +8,7 @@ from packages.modules.integrations.service.adapters.contpaqi import ContpaqiAdap
 from packages.modules.integrations.service.adapters.generic_csv import (
     GenericCsvJsonAdapter,
 )
+from packages.modules.integrations.service.adapters.netsuite import NetSuiteAdapter
 from packages.modules.integrations.service.adapters.sap import SapAdapter
 from packages.modules.integrations.service.adapters.registry import (
     ADAPTER_REGISTRY,
@@ -20,6 +21,7 @@ __all__ = [
     "AspelAdapter",
     "ContpaqiAdapter",
     "GenericCsvJsonAdapter",
+    "NetSuiteAdapter",
     "SapAdapter",
     "ADAPTER_REGISTRY",
     "get_adapter",

@@ -400,3 +400,90 @@ def test_sap_sync_cost_centers_uses_sap_field_names(
     assert result.items_ok == 1
     rec = result.payload["cost_centers"][0]
     assert rec == {"CostingCode": "CC1", "CostingCodeName": "One"}
+
+
+# ---------------------------------------------------------------------------
+# Phase 7.3 — NetSuite adapter
+# ---------------------------------------------------------------------------
+
+from packages.modules.integrations.service.adapters import NetSuiteAdapter  # noqa: E402
+
+
+def test_registry_resolves_netsuite() -> None:
+    assert isinstance(get_adapter("netsuite"), NetSuiteAdapter)
+
+
+def test_netsuite_export_polizas_emits_journal_entry_json(
+    db_session: Session, co: Company
+) -> None:
+    integ = Integration(
+        company_id=co.id, kind="erp", vendor="netsuite", name="NetSuite",
+        is_enabled=True,
+    )
+    db_session.add(integ)
+    db_session.commit()
+    _seed_approved_expenses(db_session, co.id, n=2)
+    result = NetSuiteAdapter().export_polizas(db_session, integ, period="2026-04")
+    assert result.items_ok >= 1
+    assert "journalentry.json" in result.artifacts
+    payload = _json.loads(result.artifacts["journalentry.json"].decode("utf-8"))
+    assert "journalEntries" in payload
+    assert len(payload["journalEntries"]) == result.items_ok
+    first = payload["journalEntries"][0]
+    assert first["externalId"].startswith("expense-")
+    assert "tranDate" in first
+    assert "line" in first and "items" in first["line"]
+
+
+def test_netsuite_export_polizas_empty_when_no_expenses(
+    db_session: Session, co: Company
+) -> None:
+    integ = Integration(
+        company_id=co.id, kind="erp", vendor="netsuite", name="NS",
+        is_enabled=True,
+    )
+    db_session.add(integ)
+    db_session.commit()
+    result = NetSuiteAdapter().export_polizas(db_session, integ, period="2026-04")
+    assert result.items_ok == 0
+    assert "journalentry.json" not in result.artifacts
+
+
+def test_netsuite_sync_users_uses_netsuite_field_names(
+    db_session: Session, co: Company
+) -> None:
+    integ = Integration(
+        company_id=co.id, kind="erp", vendor="netsuite", name="NS",
+        is_enabled=True,
+    )
+    db_session.add(integ)
+    db_session.add_all([
+        User(company_id=co.id, email="a@a.test", full_name="A One", role="admin"),
+        User(company_id=999, email="leak@x.test", full_name="X", role="admin"),
+    ])
+    db_session.commit()
+    result = NetSuiteAdapter().sync_users(db_session, integ)
+    assert result.items_ok == 1
+    rec = result.payload["employees"][0]
+    assert set(rec.keys()) == {"externalId", "email", "entityName", "role"}
+    assert rec["externalId"].startswith("user-")
+
+
+def test_netsuite_sync_cost_centers_uses_department_shape(
+    db_session: Session, co: Company
+) -> None:
+    integ = Integration(
+        company_id=co.id, kind="erp", vendor="netsuite", name="NS",
+        is_enabled=True,
+    )
+    db_session.add(integ)
+    db_session.add_all([
+        CostCenter(company_id=co.id, code="CC1", name="One", status="active"),
+        CostCenter(company_id=co.id, code="CC2", name="Two", status="archived"),
+    ])
+    db_session.commit()
+    result = NetSuiteAdapter().sync_cost_centers(db_session, integ)
+    assert result.items_ok == 1
+    rec = result.payload["departments"][0]
+    assert set(rec.keys()) == {"externalId", "name", "subsidiaryRef"}
+    assert rec["name"] == "One"
