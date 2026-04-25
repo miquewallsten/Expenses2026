@@ -27,6 +27,8 @@ class CompanySetupBase(BaseModel):
     ai_setup_notes: str | None = None
     ai_setup_last_summary: str | None = None
     company_profile_narrative: str | None = None
+    onboarding_step: int = 0
+    onboarding_completed_at: datetime | None = None
 
 
 class CompanySetupCreate(CompanySetupBase):
@@ -56,6 +58,7 @@ class CompanySetupUpdate(BaseModel):
     ai_setup_notes: str | None = None
     ai_setup_last_summary: str | None = None
     company_profile_narrative: str | None = None
+    onboarding_step: int | None = None
 
 
 class CompanySetupRead(CompanySetupBase):

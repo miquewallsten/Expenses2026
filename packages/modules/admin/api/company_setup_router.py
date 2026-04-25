@@ -149,3 +149,48 @@ def delete_legal_entity_route(entity_id: int, db: Session = Depends(get_db)):
     if not deleted:
         raise HTTPException(status_code=404, detail="Legal entity not found")
     return DeleteResponse(success=True)
+
+
+# ── Phase 4.6 — onboarding wizard ──────────────────────────────────────────
+
+class OnboardingStepUpdate(BaseModel):
+    onboarding_step: int
+
+
+class OnboardingChecklistItem(BaseModel):
+    ok: bool
+    label: str
+    detail: str | None = None
+    count: int | None = None
+
+
+class OnboardingChecklistResponse(BaseModel):
+    company_id: int
+    items: dict[str, OnboardingChecklistItem]
+    passed: int
+    total: int
+    go_live_ready: bool
+    onboarding_step: int
+    onboarding_completed_at: str | None = None
+
+
+@router.get(
+    "/{company_id}/checklist",
+    response_model=OnboardingChecklistResponse,
+)
+def get_onboarding_checklist(company_id: int, db: Session = Depends(get_db)):
+    from packages.modules.admin.service.onboarding_service import compute_checklist
+    return compute_checklist(db, company_id)
+
+
+@router.patch("/{company_id}/onboarding-step", response_model=CompanySetupRead)
+def patch_onboarding_step(
+    company_id: int,
+    data: OnboardingStepUpdate,
+    db: Session = Depends(get_db),
+):
+    from packages.modules.admin.service.onboarding_service import set_onboarding_step
+    try:
+        return set_onboarding_step(db, company_id, data.onboarding_step)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc

@@ -44,6 +44,10 @@ class CompanySetup(Base):
     ai_setup_last_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     company_profile_narrative: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Phase 4.6 — onboarding wizard state (0..6, 6 = complete)
+    onboarding_step: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
+    onboarding_completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
     # Audit
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
