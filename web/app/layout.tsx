@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { LocaleProvider } from "@/context/LocaleContext";
 import DevLoginCheat from "@/components/dev/DevLoginCheat";
+import { ErrorBoundary } from "@/components/shell/ErrorBoundary";
+import { ToastProvider } from "@/components/ui/Toast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -58,7 +60,11 @@ export default function RootLayout({
        * the shell, never the browser viewport.
        */}
       <body className="h-full overflow-hidden bg-zinc-950 text-white">
-        <LocaleProvider>{children}</LocaleProvider>
+        <ErrorBoundary>
+          <LocaleProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </LocaleProvider>
+        </ErrorBoundary>
         <DevLoginCheat />
       </body>
     </html>
