@@ -3,6 +3,7 @@ from packages.modules.integrations.service.adapters.protocol import (
     AdapterResult,
     IntegrationAdapter,
 )
+from packages.modules.integrations.service.adapters.aspel import AspelAdapter
 from packages.modules.integrations.service.adapters.contpaqi import ContpaqiAdapter
 from packages.modules.integrations.service.adapters.generic_csv import (
     GenericCsvJsonAdapter,
@@ -15,6 +16,7 @@ from packages.modules.integrations.service.adapters.registry import (
 __all__ = [
     "AdapterResult",
     "IntegrationAdapter",
+    "AspelAdapter",
     "ContpaqiAdapter",
     "GenericCsvJsonAdapter",
     "ADAPTER_REGISTRY",

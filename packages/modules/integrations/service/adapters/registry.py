@@ -1,6 +1,7 @@
 """Vendor → adapter registry."""
 from __future__ import annotations
 
+from packages.modules.integrations.service.adapters.aspel import AspelAdapter
 from packages.modules.integrations.service.adapters.contpaqi import ContpaqiAdapter
 from packages.modules.integrations.service.adapters.generic_csv import (
     GenericCsvJsonAdapter,
@@ -10,6 +11,7 @@ from packages.modules.integrations.service.adapters.protocol import IntegrationA
 
 ADAPTER_REGISTRY: dict[str, type[IntegrationAdapter]] = {
     "contpaqi": ContpaqiAdapter,
+    "aspel": AspelAdapter,
     "custom": GenericCsvJsonAdapter,
 }
 

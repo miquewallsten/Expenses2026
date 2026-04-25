@@ -145,7 +145,7 @@ def test_runner_unknown_vendor_records_failed_run(
     db_session: Session, co: Company
 ) -> None:
     integration = Integration(
-        company_id=co.id, kind="erp", vendor="aspel", name="Aspel"
+        company_id=co.id, kind="erp", vendor="unknownvendor", name="Mystery"
     )
     db_session.add(integration)
     db_session.commit()
@@ -230,3 +230,85 @@ def test_runner_post_endpoint_cross_company_404(
             db=db_session,
         )
     assert excinfo.value.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Phase 7.1 — Aspel (COI) adapter
+# ---------------------------------------------------------------------------
+
+from packages.modules.integrations.service.adapters import AspelAdapter  # noqa: E402
+
+
+def test_registry_resolves_aspel() -> None:
+    assert isinstance(get_adapter("aspel"), AspelAdapter)
+
+
+def test_aspel_export_polizas_emits_csv(
+    db_session: Session, co: Company
+) -> None:
+    integ = Integration(
+        company_id=co.id, kind="erp", vendor="aspel", name="Aspel COI",
+        is_enabled=True,
+    )
+    db_session.add(integ)
+    db_session.commit()
+    _seed_approved_expenses(db_session, co.id, n=2)
+    result = AspelAdapter().export_polizas(db_session, integ, period="2026-04")
+    assert result.items_ok >= 1
+    assert "polizas_aspel.csv" in result.artifacts
+    csv_text = result.artifacts["polizas_aspel.csv"].decode("utf-8")
+    lines = csv_text.splitlines()
+    assert lines[0].startswith("Tipo,Numero,Fecha,Concepto,Cuenta,Debe,Haber")
+    # at least 1 movement line per expense
+    assert len(lines) >= 1 + result.items_ok
+
+
+def test_aspel_export_polizas_empty_when_no_expenses(
+    db_session: Session, co: Company
+) -> None:
+    integ = Integration(
+        company_id=co.id, kind="erp", vendor="aspel", name="Aspel",
+        is_enabled=True,
+    )
+    db_session.add(integ)
+    db_session.commit()
+    result = AspelAdapter().export_polizas(db_session, integ, period="2026-04")
+    assert result.items_ok == 0
+    assert result.items_failed == 0
+    assert "polizas_aspel.csv" not in result.artifacts
+
+
+def test_aspel_sync_users_scopes_to_company(
+    db_session: Session, co: Company
+) -> None:
+    integ = Integration(
+        company_id=co.id, kind="erp", vendor="aspel", name="Aspel",
+        is_enabled=True,
+    )
+    db_session.add(integ)
+    db_session.add_all([
+        User(company_id=co.id, email="a@a.test", full_name="A", role="admin"),
+        User(company_id=999, email="leak@x.test", full_name="X", role="admin"),
+    ])
+    db_session.commit()
+    result = AspelAdapter().sync_users(db_session, integ)
+    assert result.items_ok == 1
+    assert result.payload["users"][0]["email"] == "a@a.test"
+
+
+def test_aspel_sync_cost_centers_filters_active(
+    db_session: Session, co: Company
+) -> None:
+    integ = Integration(
+        company_id=co.id, kind="erp", vendor="aspel", name="Aspel",
+        is_enabled=True,
+    )
+    db_session.add(integ)
+    db_session.add_all([
+        CostCenter(company_id=co.id, code="C1", name="One", status="active"),
+        CostCenter(company_id=co.id, code="C2", name="Two", status="archived"),
+    ])
+    db_session.commit()
+    result = AspelAdapter().sync_cost_centers(db_session, integ)
+    assert result.items_ok == 1
+    assert result.payload["cost_centers"][0]["code"] == "C1"
