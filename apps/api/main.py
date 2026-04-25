@@ -114,6 +114,13 @@ from packages.modules.amex.models import (  # noqa: F401 — registers amex_* ta
     AmexStatement, AmexStatementLine, AmexCfdiDocument,
 )
 from packages.modules.amex.router import router as amex_router
+from packages.modules.integrations.models import (  # noqa: F401 — registers integration tables
+    Integration,
+    IntegrationEndpoint,
+    IntegrationSyncRun,
+    ExpensePaymentStatus,
+)
+from packages.modules.integrations.router import router as integrations_router
 
 # Fail-fast: reject known-insecure defaults in production before the app
 # starts serving requests.
@@ -254,6 +261,7 @@ app.include_router(storage_config_router)
 app.include_router(ai_policy_router)
 app.include_router(agent_router)
 app.include_router(amex_router)
+app.include_router(integrations_router)
 
 
 # ── Channel notification scheduler (opt-in via env var) ──────────────────────

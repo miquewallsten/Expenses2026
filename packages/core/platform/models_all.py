@@ -86,3 +86,8 @@ from packages.modules.agent.models import (  # noqa: F401
 from packages.modules.amex.models import (  # noqa: F401
     AmexStatement, AmexStatementLine, AmexCfdiDocument,
 )
+
+# Integrations / ERP bridge
+from packages.modules.integrations.models import (  # noqa: F401
+    Integration, IntegrationEndpoint, IntegrationSyncRun, ExpensePaymentStatus,
+)
