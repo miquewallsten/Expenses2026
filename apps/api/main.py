@@ -247,6 +247,19 @@ app.include_router(agent_router)
 app.include_router(amex_router)
 
 
+# ── Channel notification scheduler (opt-in via env var) ──────────────────────
+try:
+    from packages.modules.channels.jobs.scheduler import (
+        start_scheduler as _start_channels_scheduler,
+    )
+
+    _start_channels_scheduler()
+except Exception:
+    import logging as _log
+
+    _log.getLogger(__name__).exception("Failed to start channels scheduler")
+
+
 @app.get("/")
 def root():
     return {
