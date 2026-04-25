@@ -4,6 +4,9 @@ from packages.modules.integrations.service.adapters.protocol import (
     IntegrationAdapter,
 )
 from packages.modules.integrations.service.adapters.aspel import AspelAdapter
+from packages.modules.integrations.service.adapters.bank_statement import (
+    BankStatementAdapter,
+)
 from packages.modules.integrations.service.adapters.contpaqi import ContpaqiAdapter
 from packages.modules.integrations.service.adapters.generic_csv import (
     GenericCsvJsonAdapter,
@@ -23,6 +26,7 @@ __all__ = [
     "AdapterResult",
     "IntegrationAdapter",
     "AspelAdapter",
+    "BankStatementAdapter",
     "ContpaqiAdapter",
     "GenericCsvJsonAdapter",
     "HrisCsvAdapter",

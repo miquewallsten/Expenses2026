@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 from packages.modules.integrations.service.adapters.aspel import AspelAdapter
+from packages.modules.integrations.service.adapters.bank_statement import (
+    BankStatementAdapter,
+)
 from packages.modules.integrations.service.adapters.contpaqi import ContpaqiAdapter
 from packages.modules.integrations.service.adapters.generic_csv import (
     GenericCsvJsonAdapter,
@@ -24,6 +27,7 @@ ADAPTER_REGISTRY: dict[str, type[IntegrationAdapter]] = {
     "quickbooks": QuickBooksAdapter,
     "xero": XeroAdapter,
     "hris_csv": HrisCsvAdapter,
+    "bank_statement": BankStatementAdapter,
     "custom": GenericCsvJsonAdapter,
 }
 

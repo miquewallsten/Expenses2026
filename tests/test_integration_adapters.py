@@ -785,3 +785,94 @@ def test_hris_csv_does_not_support_polizas_or_cost_centers(
     cc = HrisCsvAdapter().sync_cost_centers(db_session, integ)
     assert p.items_ok == 0 and "does not support" in (p.error_summary or "")
     assert cc.items_ok == 0 and "does not support" in (cc.error_summary or "")
+
+
+# ---------------------------------------------------------------------------
+# Phase 7.7 — Bank statement ingest adapter (read-only)
+# ---------------------------------------------------------------------------
+
+from packages.modules.integrations.service.adapters import (  # noqa: E402
+    BankStatementAdapter,
+)
+
+
+def test_registry_resolves_bank_statement() -> None:
+    assert isinstance(get_adapter("bank_statement"), BankStatementAdapter)
+
+
+def test_bank_statement_ingest_parses_lines(
+    db_session: Session, co: Company
+) -> None:
+    csv_text = (
+        "Date,Description,Amount\n"
+        "2026-04-01,UBER MEXICO,250.00\n"
+        "2026-04-02,STARBUCKS,85.50\n"
+        "2026-04-03,PAYMENT THANK YOU,-1000.00\n"
+    )
+    integ = Integration(
+        company_id=co.id, kind="bank_statement", vendor="bank_statement",
+        name="BBVA Empresa", is_enabled=True,
+        config_json={"csv_content": csv_text},
+    )
+    db_session.add(integ)
+    db_session.commit()
+    result = BankStatementAdapter().ingest_statement(db_session, integ)
+    assert result.items_ok == 3
+    lines = result.payload["lines"]
+    assert lines[0]["description"].upper().startswith("UBER")
+    # Amounts always positive; credits flagged
+    assert all(float(line["amount"]) >= 0 for line in lines)
+    assert any(line["is_credit"] for line in lines)
+
+
+def test_bank_statement_ingest_missing_content(
+    db_session: Session, co: Company
+) -> None:
+    integ = Integration(
+        company_id=co.id, kind="bank_statement", vendor="bank_statement",
+        name="BBVA", is_enabled=True, config_json={},
+    )
+    db_session.add(integ)
+    db_session.commit()
+    result = BankStatementAdapter().ingest_statement(db_session, integ)
+    assert result.items_ok == 0
+    assert "no csv_content" in (result.error_summary or "")
+
+
+def test_bank_statement_does_not_support_polizas_users_or_cost_centers(
+    db_session: Session, co: Company
+) -> None:
+    integ = Integration(
+        company_id=co.id, kind="bank_statement", vendor="bank_statement",
+        name="BBVA", is_enabled=True,
+        config_json={"csv_content": "Date,Description,Amount\n2026-04-01,X,1.00\n"},
+    )
+    db_session.add(integ)
+    db_session.commit()
+    a = BankStatementAdapter().export_polizas(db_session, integ)
+    b = BankStatementAdapter().sync_users(db_session, integ)
+    c = BankStatementAdapter().sync_cost_centers(db_session, integ)
+    for r in (a, b, c):
+        assert r.items_ok == 0
+        assert "does not support" in (r.error_summary or "")
+
+
+def test_bank_statement_handles_spanish_headers(
+    db_session: Session, co: Company
+) -> None:
+    csv_text = (
+        "Fecha,Descripcion,Importe\n"
+        "2026-04-15,RESTAURANTE EL CARDENAL,450.00\n"
+    )
+    integ = Integration(
+        company_id=co.id, kind="bank_statement", vendor="bank_statement",
+        name="Santander", is_enabled=True,
+        config_json={"csv_content": csv_text},
+    )
+    db_session.add(integ)
+    db_session.commit()
+    result = BankStatementAdapter().ingest_statement(db_session, integ)
+    assert result.items_ok == 1
+    line = result.payload["lines"][0]
+    assert line["amount"] == "450.00"
+    assert "RESTAURANTE" in line["description"].upper()
