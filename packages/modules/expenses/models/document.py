@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import JSON, DateTime, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from apps.api.db import Base
@@ -27,4 +27,6 @@ class ExpenseDocument(Base):
     extraction_status: Mapped[str] = mapped_column(String(50), default="pending")
     document_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
     validation_summary: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    # Phase 8.2 — OCR-derived structured fields (rfc/total/date/merchant).
+    extracted_fields: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

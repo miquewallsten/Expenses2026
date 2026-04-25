@@ -6,6 +6,7 @@ WORKDIR /app
 # tesseract-ocr powers image-receipt OCR (spa+eng language packs for MX receipts).
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    poppler-utils \
     tesseract-ocr \
     tesseract-ocr-spa \
     tesseract-ocr-eng \
