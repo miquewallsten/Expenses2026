@@ -275,6 +275,10 @@ from packages.modules.expenses.api.finance_analytics_router import (  # noqa: E4
     router as finance_analytics_router,
 )
 app.include_router(finance_analytics_router)
+from packages.modules.expenses.api.duplicate_detection_router import (  # noqa: E402
+    router as duplicate_detection_router,
+)
+app.include_router(duplicate_detection_router)
 
 
 # ── Channel notification scheduler (opt-in via env var) ──────────────────────
