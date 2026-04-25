@@ -95,7 +95,7 @@ def chat(
     require_same_company(cid, current_user)
 
     # Admin-only personas.
-    if body.persona in ("admin",) and current_user.role != "admin":
+    if body.persona in ("admin", "finance_manager") and current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin persona requires admin role")
 
     result = run_turn(
@@ -363,7 +363,7 @@ def chat_stream(
     replace the body with a truly streaming loop without changing the client.
     """
     require_same_company(cid, current_user)
-    if body.persona == "admin" and current_user.role != "admin":
+    if body.persona in ("admin", "finance_manager") and current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin persona requires admin role")
 
     def _event(kind: str, payload: dict[str, Any]) -> str:
