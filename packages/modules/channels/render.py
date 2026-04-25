@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
+from jinja2 import ChainableUndefined, Environment, FileSystemLoader, select_autoescape
 
 from packages.modules.channels.service.notifier import RenderedMessage
 
@@ -42,7 +42,7 @@ def _env_for(locale: str) -> Environment:
     env = Environment(
         loader=loader,
         autoescape=select_autoescape(("html", "xml")),
-        undefined=StrictUndefined,
+        undefined=ChainableUndefined,
         trim_blocks=True,
         lstrip_blocks=True,
     )

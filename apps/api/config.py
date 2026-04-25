@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     # Auth — AUTH_SECRET must be explicitly set in production.
     auth_secret: str = _DEV_AUTH_SECRET_SENTINEL
 
+    # Public-facing web URL used in outbound email links.
+    web_base_url: str = "http://localhost:3000"
+
     @property
     def is_production(self) -> bool:
         return self.environment.lower().strip() in _PROD_ENVS

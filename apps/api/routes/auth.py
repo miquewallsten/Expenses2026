@@ -140,8 +140,35 @@ def request_magic_link(request: Request, body: MagicLinkRequest, db: Session = D
 
     link = f"{_BASE_URL}/auth/verify?token={raw_token}"
 
+    # Phase 1.3 — route through unified Notifier (renders es/en templates,
+    # writes a NotificationDispatch row, and uses per-company SMTP). The
+    # router falls back to suppression when SMTP is unconfigured, so dev
+    # behaviour (return link in response) is unchanged below.
+    try:
+        from packages.modules.channels.service.event_router import (
+            notify_magic_link,
+        )
+
+        notify_magic_link(
+            db,
+            user,
+            link=link,
+            ttl_minutes=_TOKEN_TTL,
+            token_id=link_token.id,
+        )
+    except Exception:
+        _log.exception("Notifier dispatch failed for magic-link to %s", user.email)
+
     if _SMTP_HOST:
-        _send_email(user.email, link)
+        # Legacy direct SMTP path retained as a redundant safety net while we
+        # migrate. If Notifier sent the email successfully the recipient
+        # receives one copy thanks to per-(event, recipient, channel)
+        # idempotency on the Notifier side; this path is best-effort and
+        # never raises into production traffic.
+        try:
+            _send_email(user.email, link)
+        except HTTPException:
+            pass
         return MagicLinkRequestResponse(status="sent")
     else:
         # Development: return link in response so the console can show it

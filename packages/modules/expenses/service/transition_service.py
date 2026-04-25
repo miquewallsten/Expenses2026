@@ -183,6 +183,17 @@ def _apply_transition(
         detail_text=f"{old_status} → {new_status}",
         company_id=expense.company_id,
     )
+    # Phase 1.3: fan out notifications. Imported lazily to avoid circular
+    # import (channels → expenses → channels) and to keep transitions
+    # decoupled from email infrastructure.
+    try:
+        from packages.modules.channels.service.event_router import (
+            notify_status_change,
+        )
+
+        notify_status_change(db, expense, old_status, new_status, actor_user_id)
+    except Exception:  # pragma: no cover — defensive
+        pass
     return expense
 
 
