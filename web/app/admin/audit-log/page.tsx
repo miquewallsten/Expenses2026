@@ -49,6 +49,7 @@ function actionTone(action: string): string {
   if (action.endsWith(".denied") || action.includes("rejected") || action.includes("cancelled"))
     return "bg-rose-500/15 text-rose-300";
   if (action.includes("approved") || action.includes("paid")) return "bg-emerald-500/15 text-emerald-300";
+  if (action.startsWith("routing.")) return "bg-indigo-500/15 text-indigo-300";
   if (action.includes("update") || action.includes("transition")) return "bg-sky-500/15 text-sky-300";
   if (action.includes("consumed") || action.includes("login")) return "bg-violet-500/15 text-violet-300";
   return "bg-white/[0.06] text-white/55";
@@ -127,6 +128,53 @@ export default function AuditLogPage() {
     const text = row.detail_text || "";
     const trimmed = text.trim();
     if (!trimmed) return <span className="text-white/30">—</span>;
+    if (row.action === "routing.decision") {
+      try {
+        const p = JSON.parse(trimmed) as {
+          rule_id?: string | null;
+          approver_user_ids?: number[];
+          approver_roles?: string[];
+          sla_hours?: number | null;
+          escalation_role?: string | null;
+        };
+        const roles = p.approver_roles ?? [];
+        const userIds = p.approver_user_ids ?? [];
+        return (
+          <div className="flex flex-wrap items-center gap-1 text-[10.5px]">
+            {p.rule_id && (
+              <span className="rounded border border-emerald-500/30 bg-emerald-500/[0.10] px-1.5 py-[1px] font-mono text-emerald-200">
+                {p.rule_id}
+              </span>
+            )}
+            {roles.map((r) => (
+              <span
+                key={`r-${r}`}
+                className="rounded border border-sky-500/30 bg-sky-500/[0.08] px-1.5 py-[1px] font-mono text-sky-200"
+              >
+                {r}
+              </span>
+            ))}
+            {userIds.length > 0 && (
+              <span className="rounded border border-white/10 bg-white/[0.04] px-1.5 py-[1px] font-mono text-white/70">
+                #{userIds.join(", #")}
+              </span>
+            )}
+            {p.sla_hours != null && (
+              <span className="rounded border border-amber-500/30 bg-amber-500/[0.08] px-1.5 py-[1px] font-mono text-amber-200">
+                SLA {p.sla_hours}h
+              </span>
+            )}
+            {p.escalation_role && (
+              <span className="rounded border border-rose-500/30 bg-rose-500/[0.08] px-1.5 py-[1px] font-mono text-rose-200">
+                → {p.escalation_role}
+              </span>
+            )}
+          </div>
+        );
+      } catch {
+        // fall through to JSON pretty-print
+      }
+    }
     if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
       try {
         return (
