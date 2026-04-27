@@ -557,6 +557,65 @@
   },
   "admin": {
     "title": "Administrador",
+    "onboarding": {
+      "title": "Asistente de inicio",
+      "intro": "Completa los 5 pasos para preparar tu compañía. Vuelve cuando quieras — el progreso se guarda automáticamente.",
+      "subtitle": "Lista de verificación para go-live",
+      "backToAdmin": "Volver al admin",
+      "complete": "Completos",
+      "recheck": "Volver a verificar",
+      "errorLoad": "No se pudo cargar la lista.",
+      "statusComplete": "Listo",
+      "statusPending": "Pendiente",
+      "ready": "Listo",
+      "notReady": "Faltan pasos",
+      "countLabel": "{count} registros",
+      "completedAt": "Completado el {ts}",
+      "nav": {
+        "prev": "Anterior",
+        "next": "Siguiente",
+        "saving": "Guardando…",
+        "stepOf": "Paso {current} de {total}"
+      },
+      "steps": {
+        "company": {
+          "label": "Compañía",
+          "title": "Perfil de la compañía",
+          "body": "Define el nombre legal, el país y la moneda base. Estos campos aparecen en cada exportación contable.",
+          "cta": "Editar perfil"
+        },
+        "legal_entities": {
+          "label": "Entidades",
+          "title": "Entidades legales",
+          "body": "Da de alta cada razón social (RFC y nombre fiscal). Los gastos se asignan a una entidad para emitir pólizas correctas.",
+          "cta": "Configurar entidades"
+        },
+        "chart_of_accounts": {
+          "label": "Catálogo",
+          "title": "Catálogo de cuentas",
+          "body": "Importa o crea el catálogo contable que usa tu ERP. Sin esto, los gastos no pueden categorizarse para exportar.",
+          "cta": "Abrir catálogo"
+        },
+        "approval_policy": {
+          "label": "Aprobaciones",
+          "title": "Política de aprobación",
+          "body": "Define quién aprueba cada gasto. Si activaste el módulo de aprobaciones, necesitas al menos un gerente.",
+          "cta": "Configurar política"
+        },
+        "users": {
+          "label": "Usuarios",
+          "title": "Importar usuarios",
+          "body": "Invita o importa empleados. Los administradores no cuentan — necesitas al menos un colaborador no-admin.",
+          "cta": "Gestionar usuarios"
+        },
+        "go_live": {
+          "label": "Go-live",
+          "title": "Resumen final",
+          "bodyReady": "Todos los pasos están completos. La compañía está lista para que los empleados empiecen a registrar gastos.",
+          "bodyNotReady": "Faltan pasos por completar antes del go-live. Cada elemento pendiente bloquea capacidades del sistema."
+        }
+      }
+    },
     "moduleNotInstalled": {
       "title": "Módulo no instalado",
       "body": "El módulo {module} no está instalado. Instálalo desde Módulos adicionales para acceder a esta configuración.",

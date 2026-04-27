@@ -101,13 +101,16 @@ describe("NewExpenseModal", () => {
 
   it("shows server error message when API returns non-OK", async () => {
     const user = userEvent.setup();
-    // Use `mockResolvedValue` (not `Once`) because the modal also fires a
-    // debounced duplicate-check POST while the user types. Both calls just
-    // resolve to the same 401 — the duplicate check bails on `!r.ok`, so
-    // only the submit path surfaces the error.
-    vi.mocked(fetch).mockResolvedValue(
-      new Response(JSON.stringify({ detail: "Unauthorized" }), { status: 401 })
-    );
+    // Route fetch by URL: duplicate-check returns empty (no banner), submit
+    // returns 401. This is robust to ordering vs. the debounced dup-check
+    // call introduced in Phase 5.3.
+    vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/expenses/duplicates/check")) {
+        return new Response(JSON.stringify({ matches: [], blocking: false }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ detail: "Unauthorized" }), { status: 401 });
+    });
     renderModal();
     await user.type(getDescInput(), "Test expense");
     await user.type(getAmountInput(), "50");

@@ -557,6 +557,65 @@
   },
   "admin": {
     "title": "Admin",
+    "onboarding": {
+      "title": "Onboarding wizard",
+      "intro": "Complete these 5 steps to make your company live. Come back any time — progress is saved automatically.",
+      "subtitle": "Go-live checklist",
+      "backToAdmin": "Back to admin",
+      "complete": "Complete",
+      "recheck": "Re-check",
+      "errorLoad": "Failed to load checklist.",
+      "statusComplete": "Done",
+      "statusPending": "Pending",
+      "ready": "Ready",
+      "notReady": "Steps remaining",
+      "countLabel": "{count} record(s)",
+      "completedAt": "Completed {ts}",
+      "nav": {
+        "prev": "Previous",
+        "next": "Next",
+        "saving": "Saving…",
+        "stepOf": "Step {current} of {total}"
+      },
+      "steps": {
+        "company": {
+          "label": "Company",
+          "title": "Company profile",
+          "body": "Set legal name, country, and base currency. These fields appear on every accounting export.",
+          "cta": "Edit profile"
+        },
+        "legal_entities": {
+          "label": "Entities",
+          "title": "Legal entities",
+          "body": "Register each legal entity (tax ID + fiscal name). Expenses are assigned to an entity to produce correct vouchers.",
+          "cta": "Configure entities"
+        },
+        "chart_of_accounts": {
+          "label": "Chart",
+          "title": "Chart of accounts",
+          "body": "Import or create the accounting catalog used by your ERP. Without it, expenses cannot be categorized for export.",
+          "cta": "Open chart"
+        },
+        "approval_policy": {
+          "label": "Approvals",
+          "title": "Approval policy",
+          "body": "Define who approves each expense. If you enabled the approvals module, at least one manager is required.",
+          "cta": "Configure policy"
+        },
+        "users": {
+          "label": "Users",
+          "title": "Import users",
+          "body": "Invite or import employees. Admins don't count — you need at least one non-admin collaborator.",
+          "cta": "Manage users"
+        },
+        "go_live": {
+          "label": "Go-live",
+          "title": "Final summary",
+          "bodyReady": "Every step is complete. The company is ready for employees to start submitting expenses.",
+          "bodyNotReady": "Some steps remain before go-live. Each pending item blocks platform capabilities."
+        }
+      }
+    },
     "moduleNotInstalled": {
       "title": "Module not installed",
       "body": "The {module} module is not installed. Install it from Add-Ons to access this configuration.",

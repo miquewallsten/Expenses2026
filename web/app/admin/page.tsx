@@ -695,6 +695,20 @@ function WorkList({
         </Link>
       </div>
 
+      {/* Onboarding Wizard CTA (Phase 4.6) */}
+      <div className="px-3 pb-2">
+        <Link
+          href="/admin/onboarding"
+          className="flex w-full items-center gap-2 rounded border border-emerald-500/20 bg-emerald-500/[0.05] px-3 py-2 transition-colors hover:border-emerald-500/35 hover:bg-emerald-500/[0.10]"
+        >
+          <ClipboardCheck className="h-3.5 w-3.5 shrink-0 text-emerald-300/60" />
+          <div className="flex-1 text-left">
+            <div className="text-[10.5px] font-semibold text-emerald-200/70">Onboarding Wizard</div>
+            <div className="text-[9px] text-emerald-300/35">Go-live checklist · 5 steps</div>
+          </div>
+        </Link>
+      </div>
+
       {WORKLIST_GROUPS.map((group) => {
         // Gate nav items by installed add-on modules. If an add-on is not
         // installed, hide all of its admin sections entirely — nothing of it
