@@ -2597,7 +2597,11 @@
       "empty": "Sin eventos registrados.",
       "loading": "Cargando…",
       "end": "Fin del historial",
-      "actor": "Usuario #{id}"
+      "actor": "Usuario #{id}",
+      "routing": {
+        "sla": "SLA {hours}h",
+        "escalates": "Escala a {role}"
+      }
     },
     "anomaly": {
       "alertTitle": "Alerta de anomalía",

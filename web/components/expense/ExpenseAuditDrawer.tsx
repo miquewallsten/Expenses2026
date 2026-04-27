@@ -178,11 +178,13 @@ export default function ExpenseAuditDrawer({ expenseId, variant = "icon" }: Prop
                         {formatTs(row.created_at)}
                       </time>
                     </div>
-                    {row.detail_text && (
+                    {row.action === "routing.decision" && row.detail_text ? (
+                      <RoutingDecision detail={row.detail_text} t={t} />
+                    ) : row.detail_text ? (
                       <pre className="mt-0.5 whitespace-pre-wrap break-words font-mono text-[10.5px] leading-snug text-white/65">
                         {row.detail_text}
                       </pre>
-                    )}
+                    ) : null}
                     {row.actor_user_id != null && (
                       <div className="mt-0.5 text-[10px] text-white/30">
                         {t("actor", { id: row.actor_user_id })}
@@ -219,4 +221,68 @@ function formatTs(iso: string): string {
   } catch {
     return iso;
   }
+}
+
+type RoutingPayload = {
+  rule_id?: string | null;
+  approver_user_ids?: number[];
+  approver_roles?: string[];
+  sla_hours?: number | null;
+  escalation_role?: string | null;
+};
+
+function RoutingDecision({
+  detail,
+  t,
+}: {
+  detail: string;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  let p: RoutingPayload | null = null;
+  try {
+    p = JSON.parse(detail) as RoutingPayload;
+  } catch {
+    p = null;
+  }
+  if (!p || typeof p !== "object") {
+    return (
+      <pre className="mt-0.5 whitespace-pre-wrap break-words font-mono text-[10.5px] leading-snug text-white/65">
+        {detail}
+      </pre>
+    );
+  }
+  const roles = p.approver_roles ?? [];
+  const userIds = p.approver_user_ids ?? [];
+  return (
+    <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[10.5px]">
+      {p.rule_id && (
+        <span className="rounded border border-emerald-500/30 bg-emerald-500/[0.10] px-1.5 py-[1px] font-mono text-emerald-200">
+          {p.rule_id}
+        </span>
+      )}
+      {roles.map((r) => (
+        <span
+          key={`r-${r}`}
+          className="rounded border border-sky-500/30 bg-sky-500/[0.08] px-1.5 py-[1px] font-mono text-sky-200"
+        >
+          {r}
+        </span>
+      ))}
+      {userIds.length > 0 && (
+        <span className="rounded border border-white/10 bg-white/[0.04] px-1.5 py-[1px] font-mono text-white/70">
+          #{userIds.join(", #")}
+        </span>
+      )}
+      {p.sla_hours != null && (
+        <span className="rounded border border-amber-500/30 bg-amber-500/[0.08] px-1.5 py-[1px] font-mono text-amber-200">
+          {t("routing.sla", { hours: p.sla_hours })}
+        </span>
+      )}
+      {p.escalation_role && (
+        <span className="rounded border border-rose-500/30 bg-rose-500/[0.08] px-1.5 py-[1px] font-mono text-rose-200">
+          {t("routing.escalates", { role: p.escalation_role })}
+        </span>
+      )}
+    </div>
+  );
 }
