@@ -814,12 +814,29 @@ export default function AccountingReviewModule() {
   // ---------------------------------------- Actions 
   const handleAction = useCallback(async (endpoint: string, label: string) => {
     if (!selected) return;
+    // Phase 4.5: prompt for a rejection/return comment so the reviewer's
+    // reason is captured. Backend enforces a 10-char minimum on rejection.
+    const isReject = endpoint === "accounting-reject";
+    const isReturn = endpoint === "accounting-return";
+    let comment: string | null = null;
+    if (isReject || isReturn) {
+      const raw = window.prompt(tm(isReject ? "bulk.rejectPrompt" : "bulk.returnPrompt"));
+      if (raw === null) return;
+      comment = raw.trim() || null;
+      if (isReject && !comment) {
+        setActionError(tm("bulk.commentRequired"));
+        return;
+      }
+    }
     setActing(true);
     setActionError(null);
     try {
       const r = await fetch(`${API}/expenses/review-actions/${selected.id}/${endpoint}`, {
         method: "POST",
-        headers: { ...getAuthHeaders() },
+        headers: comment != null
+          ? { ...getAuthHeaders(), "Content-Type": "application/json" }
+          : { ...getAuthHeaders() },
+        body: comment != null ? JSON.stringify({ comment }) : undefined,
       });
       if (r.ok) {
         await postActionRefresh(selected.id);
