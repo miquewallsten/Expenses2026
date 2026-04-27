@@ -6,6 +6,7 @@ import DevLoginCheat from "@/components/dev/DevLoginCheat";
 import { ErrorBoundary } from "@/components/shell/ErrorBoundary";
 import { ToastProvider } from "@/components/ui/Toast";
 import CopilotLauncher from "@/components/agent/CopilotLauncher";
+import PwaBootstrap from "@/components/pwa/PwaBootstrap";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -65,6 +66,7 @@ export default function RootLayout({
           <LocaleProvider>
             <ToastProvider>{children}</ToastProvider>
             <CopilotLauncher />
+            <PwaBootstrap />
           </LocaleProvider>
         </ErrorBoundary>
         <DevLoginCheat />

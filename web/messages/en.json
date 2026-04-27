@@ -2233,5 +2233,12 @@
       "notes": "Notes",
       "notesHint": "Internal compliance justification (admins only)."
     }
+  },
+  "pwa": {
+    "installTitle": "Install OpsFlow",
+    "installSubtitle": "Quick access from your home screen and basic offline support.",
+    "install": "Install",
+    "notNow": "Not now",
+    "close": "Close"
   }
 }

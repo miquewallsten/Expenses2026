@@ -2233,5 +2233,12 @@
       "notes": "Notas",
       "notesHint": "Justificación interna del cumplimiento (visible solo para administradores)."
     }
+  },
+  "pwa": {
+    "installTitle": "Instalar OpsFlow",
+    "installSubtitle": "Acceso rápido desde la pantalla de inicio y soporte sin conexión básico.",
+    "install": "Instalar",
+    "notNow": "Ahora no",
+    "close": "Cerrar"
   }
 }
