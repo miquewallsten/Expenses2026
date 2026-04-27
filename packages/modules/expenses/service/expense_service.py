@@ -79,10 +79,40 @@ def _change_expense_status(db: Session, expense_id: int, new_status: str, actor_
     return expense
 
 
+def _validate_category_code(db: Session, company_id: int, code: str | None) -> None:
+    """Phase 2.4 — reject category_code values that don't map to an active
+    AccountingCategory for this company. Service layer enforcement; the DB
+    has no FK because category_code is also written by the heuristic
+    (already filters to active categories) and the learning loop. None is
+    permitted (callers may legitimately leave it blank for accounting to
+    classify later).
+    """
+    if code is None:
+        return
+    exists = (
+        db.query(AccountingCategory.id)
+        .filter(
+            AccountingCategory.company_id == company_id,
+            AccountingCategory.code == code,
+            AccountingCategory.is_active.is_(True),
+        )
+        .first()
+    )
+    if exists is None:
+        raise ValueError(
+            f"category_code '{code}' is not an active AccountingCategory for company {company_id}"
+        )
+
+
 def create_expense(db: Session, payload: ExpenseCreate) -> Expense:
     company = db.query(Company).filter(Company.id == payload.company_id).first()
     if not company:
         raise ValueError("Company not found")
+    # Phase 2.4 — validate caller-supplied category_code BEFORE any
+    # classification work runs. The heuristic and learning paths self-validate.
+    _validate_category_code(
+        db, payload.company_id, getattr(payload, "category_code", None)
+    )
 
     mapping = get_account_mapping_config(db, payload.company_id)
 
@@ -177,6 +207,8 @@ def update_expense(db: Session, expense_id: int, payload: ExpenseUpdate) -> Expe
 
     category_updated = False
     if payload.category_code is not None:
+        # Phase 2.4 — same validation as create. Don't accept arbitrary codes.
+        _validate_category_code(db, expense.company_id, payload.category_code)
         expense.category_code = payload.category_code
         category_updated = True
 
