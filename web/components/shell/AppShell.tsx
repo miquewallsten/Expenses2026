@@ -369,7 +369,7 @@ export default function AppShell({
                 {workListTitle}
               </span>
             </div>
-            <div className={navSidebar ? "min-h-0 flex-1 overflow-hidden" : "min-h-0 flex-1 overflow-y-auto"}>
+            <div className={navSidebar ? "min-h-0 flex-1 overflow-y-auto" : "min-h-0 flex-1 overflow-y-auto"}>
               {resolveWL(noop)}
             </div>
           </div>
@@ -484,7 +484,7 @@ export default function AppShell({
                   {workListTitle}
                 </span>
               </div>
-              <div className={navSidebar ? "min-h-0 flex-1 overflow-hidden" : "min-h-0 flex-1 overflow-y-auto"}>
+              <div className={navSidebar ? "min-h-0 flex-1 overflow-y-auto" : "min-h-0 flex-1 overflow-y-auto"}>
                 {resolveWL(noop)}
               </div>
             </div>
