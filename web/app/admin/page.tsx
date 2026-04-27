@@ -24,7 +24,7 @@ import AdminReportCyclePanel from "@/components/admin/AdminReportCyclePanel";
 import Link from "next/link";
 import {
   Building2, FileText, GitBranch, ShieldCheck, Puzzle, Key, Lock,
-  Calculator, ClipboardCheck, Bot, Save, Loader2, FolderOutput, Archive, Users, Radio, CalendarClock, HardDrive, Sparkles, BookOpen, Layers, Activity, Lightbulb, XOctagon, Brain,
+  Calculator, ClipboardCheck, Bot, Save, Loader2, FolderOutput, Archive, Users, Radio, CalendarClock, HardDrive, Sparkles, BookOpen, Layers, Activity, Lightbulb, XOctagon, Brain, KeyRound,
 } from "lucide-react";
 import { getCurrentRole, getCurrentUserId, getCurrentCompanyId, getStoredSession, getAuthHeaders } from "@/lib/session";
 import { buildGlobalNav, GlobalNavItem } from "@/lib/navigation";
@@ -775,6 +775,20 @@ function WorkList({
           <div className="flex-1 text-left">
             <div className="text-[10.5px] font-semibold text-violet-200/70">Category Memory</div>
             <div className="text-[9px] text-violet-300/35">kNN feedback corpus · inspector</div>
+          </div>
+        </Link>
+      </div>
+
+      {/* Platform API CTA (Phase 4.2) */}
+      <div className="px-3 pb-2">
+        <Link
+          href="/admin/platform-api"
+          className="flex w-full items-center gap-2 rounded border border-cyan-500/20 bg-cyan-500/[0.05] px-3 py-2 transition-colors hover:border-cyan-500/35 hover:bg-cyan-500/[0.10]"
+        >
+          <KeyRound className="h-3.5 w-3.5 shrink-0 text-cyan-300/60" />
+          <div className="flex-1 text-left">
+            <div className="text-[10.5px] font-semibold text-cyan-200/70">Platform API</div>
+            <div className="text-[9px] text-cyan-300/35">API keys · outbound webhooks</div>
           </div>
         </Link>
       </div>

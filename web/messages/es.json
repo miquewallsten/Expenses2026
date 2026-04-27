@@ -605,6 +605,57 @@
         "votes": "{count, plural, one {# voto} other {# votos}}"
       }
     },
+    "platformApi": {
+      "title": "API de plataforma",
+      "subtitle": "Llaves API · webhooks de salida",
+      "back": "Volver al admin",
+      "refresh": "Refrescar",
+      "loading": "Cargando…",
+      "noCompany": "Selecciona una empresa para administrar la API.",
+      "copy": "Copiar",
+      "copied": "Copiado",
+      "keys": {
+        "title": "Llaves API",
+        "name": "Nombre",
+        "scopes": "Alcances",
+        "create": "Crear llave",
+        "empty": "Sin llaves activas. Crea una para integrar tu ERP.",
+        "revealHeader": "Tu nueva llave",
+        "revealBody": "Cópiala ahora — no se mostrará de nuevo.",
+        "confirmRevoke": "¿Revocar esta llave? Las llamadas con ella serán rechazadas inmediatamente.",
+        "statusActive": "Activa",
+        "statusRevoked": "Revocada",
+        "th": {
+          "name": "Nombre",
+          "prefix": "Prefijo",
+          "scopes": "Alcances",
+          "lastUsed": "Último uso",
+          "status": "Estado"
+        }
+      },
+      "webhooks": {
+        "title": "Suscripciones de webhook",
+        "event": "Evento",
+        "targetUrl": "URL destino",
+        "description": "Descripción",
+        "create": "Crear suscripción",
+        "empty": "Sin suscripciones de webhook.",
+        "revealHeader": "Secreto del nuevo webhook",
+        "revealBody": "Úsalo para verificar la firma HMAC. No se mostrará de nuevo.",
+        "confirmDelete": "¿Eliminar este webhook? Dejará de recibir eventos.",
+        "statusEnabled": "Activo",
+        "statusDisabled": "Pausado",
+        "enable": "Activar",
+        "disable": "Pausar",
+        "delete": "Eliminar",
+        "th": {
+          "event": "Evento",
+          "target": "URL",
+          "secret": "Secreto",
+          "status": "Estado"
+        }
+      }
+    },
     "cfdiWatcher": {
       "title": "Watcher SAT — CFDI cancelados",
       "subtitle": "Gastos con CFDI marcado Cancelado por el SAT",

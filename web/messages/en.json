@@ -605,6 +605,57 @@
         "votes": "{count, plural, one {# vote} other {# votes}}"
       }
     },
+    "platformApi": {
+      "title": "Platform API",
+      "subtitle": "API keys · outbound webhooks",
+      "back": "Back to admin",
+      "refresh": "Refresh",
+      "loading": "Loading…",
+      "noCompany": "Select a company to manage the API.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "keys": {
+        "title": "API keys",
+        "name": "Name",
+        "scopes": "Scopes",
+        "create": "Create key",
+        "empty": "No active keys. Create one to integrate your ERP.",
+        "revealHeader": "Your new key",
+        "revealBody": "Copy it now — it won't be shown again.",
+        "confirmRevoke": "Revoke this key? Calls using it will be rejected immediately.",
+        "statusActive": "Active",
+        "statusRevoked": "Revoked",
+        "th": {
+          "name": "Name",
+          "prefix": "Prefix",
+          "scopes": "Scopes",
+          "lastUsed": "Last used",
+          "status": "Status"
+        }
+      },
+      "webhooks": {
+        "title": "Webhook subscriptions",
+        "event": "Event",
+        "targetUrl": "Target URL",
+        "description": "Description",
+        "create": "Create subscription",
+        "empty": "No webhook subscriptions.",
+        "revealHeader": "New webhook secret",
+        "revealBody": "Use it to verify the HMAC signature. It won't be shown again.",
+        "confirmDelete": "Delete this webhook? It will stop receiving events.",
+        "statusEnabled": "Active",
+        "statusDisabled": "Paused",
+        "enable": "Enable",
+        "disable": "Pause",
+        "delete": "Delete",
+        "th": {
+          "event": "Event",
+          "target": "URL",
+          "secret": "Secret",
+          "status": "Status"
+        }
+      }
+    },
     "cfdiWatcher": {
       "title": "SAT watcher — cancelled CFDIs",
       "subtitle": "Expenses whose CFDI has been marked Cancelled by SAT",
