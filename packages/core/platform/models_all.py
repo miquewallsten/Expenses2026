@@ -69,6 +69,17 @@ from packages.modules.expenses.models.validation_result import ValidationResult 
 
 # AI / embeddings
 from packages.modules.ai.models_embedding import DocumentEmbedding  # noqa: F401
+from packages.modules.ai.models_categorization_feedback import (  # noqa: F401
+    CategorizationFeedback,
+)
+from packages.core.platform.models_ai_governance import (  # noqa: F401
+    CompanyAiGovernancePolicy,
+)
+
+# Approval routing rules
+from packages.modules.expenses.models_routing import (  # noqa: F401
+    ApprovalRoutingRule,
+)
 
 # Channels
 from packages.modules.channels.models import (  # noqa: F401
