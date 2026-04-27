@@ -114,3 +114,51 @@ def test_create_document_skips_ocr_for_cfdi_xml(db_session, test_company):
     doc = create_document(db_session, payload)
     assert doc.document_type == "cfdi_xml"
     assert doc.extracted_fields is None
+
+
+def test_create_document_prefills_draft_expense_from_ocr(db_session, test_company):
+    """Phase 8.2 follow-up — auto-created draft Expense inherits OCR amount + date."""
+    from datetime import date
+    from decimal import Decimal
+
+    from packages.modules.expenses.service.document_service import create_document
+    from packages.modules.expenses.schemas.document import ExpenseDocumentCreate
+    from packages.modules.expenses.models.expense import Expense
+
+    payload = ExpenseDocumentCreate(
+        company_id=test_company.id,
+        filename="ocr-prefill-uniq-83729.txt",
+        content_text=(
+            "STARBUCKS POLANCO\n"
+            "Total: 87.40\n"
+            "Fecha: 2026-04-22\n"
+        ),
+    )
+    doc = create_document(db_session, payload)
+    assert doc.expense_id is not None
+
+    exp = db_session.query(Expense).filter(Expense.id == doc.expense_id).first()
+    assert exp is not None
+    assert exp.amount == Decimal("87.40")
+    assert exp.expense_date == date(2026, 4, 22)
+    assert exp.status == "draft"
+
+
+def test_create_document_draft_falls_back_when_ocr_empty(db_session, test_company):
+    """No OCR signal → draft Expense still gets created with amount=0, date=None."""
+    from decimal import Decimal
+
+    from packages.modules.expenses.service.document_service import create_document
+    from packages.modules.expenses.schemas.document import ExpenseDocumentCreate
+    from packages.modules.expenses.models.expense import Expense
+
+    payload = ExpenseDocumentCreate(
+        company_id=test_company.id,
+        filename="ocr-empty-blob-uniq-83730.txt",
+        content_text="",
+    )
+    doc = create_document(db_session, payload)
+    assert doc.expense_id is not None
+    exp = db_session.query(Expense).filter(Expense.id == doc.expense_id).first()
+    assert exp.amount == Decimal("0")
+    assert exp.expense_date is None

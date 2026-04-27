@@ -328,11 +328,29 @@ def create_document(
             db.commit()
             db.refresh(document)
         else:
+            # Phase 8.2 follow-up — prefill draft Expense from OCR fields when
+            # available. Saves the employee a re-keying step on the new draft.
+            ef = document.extracted_fields or {}
+            draft_amount = Decimal("0")
+            draft_date = None
+            if ef.get("total"):
+                try:
+                    draft_amount = Decimal(str(ef["total"]))
+                except (InvalidOperation, ValueError):
+                    draft_amount = Decimal("0")
+            if ef.get("date"):
+                try:
+                    from datetime import date as _date
+                    draft_date = _date.fromisoformat(str(ef["date"]))
+                except ValueError:
+                    draft_date = None
+
             new_expense = Expense(
                 company_id=payload.company_id,
                 description=payload.filename,
-                amount=Decimal("0"),
+                amount=draft_amount,
                 status="draft",
+                expense_date=draft_date,
             )
             db.add(new_expense)
             db.commit()
@@ -435,7 +453,12 @@ def create_document(
                 if expense is not None:
                     raw_amount = signals.get("amount")
                     parsed_amount = _parse_amount(raw_amount)
-                    if parsed_amount is not None:
+                    # Phase 8.2 follow-up — only overwrite amount if the draft
+                    # was never prefilled. The legacy "largest number anywhere"
+                    # heuristic in extract_ticket_signals will happily pick up
+                    # date fragments (e.g. 2026-04-22 → "202") and stomp the
+                    # label-aware OCR prefill (Total: 87.40 → "87.40").
+                    if parsed_amount is not None and (expense.amount is None or expense.amount == Decimal("0")):
                         expense.amount = parsed_amount
 
                     vendor_name = signals.get("vendor_name")
