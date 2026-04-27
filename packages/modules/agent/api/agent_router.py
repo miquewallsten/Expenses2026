@@ -404,6 +404,38 @@ def chat_stream(
 
 # ── Insights ────────────────────────────────────────────────────────────────
 
+@router.post("/insights/run")
+def trigger_insight_run(
+    send_digest: bool = False,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    """Phase 8.5 — manual trigger: rescan every company the caller can see.
+
+    Admins are scoped to their own company; super-admins (no company_id)
+    rescan globally. When ``send_digest=true`` the daily digest job runs
+    after the rescan (also scoped to the caller's tenancy).
+    """
+    from ..insights import run_for_all_companies as _run_all
+
+    if getattr(current_user, "company_id", None):
+        rows = run_scanners(db, current_user.company_id)
+        out = {current_user.company_id: len(rows)}
+    else:
+        out = _run_all(db)
+
+    digest_count = 0
+    if send_digest:
+        from ..jobs.insight_digest import run_daily_insight_digest
+
+        try:
+            digest_count = run_daily_insight_digest(db, rescan=False)
+        except Exception as exc:  # noqa: BLE001
+            return {"ok": False, "scanned": out, "error": str(exc)[:500]}
+
+    return {"ok": True, "scanned": out, "digest_dispatched": digest_count}
+
+
 @router.get("/insights/{cid}")
 def list_insights(
     cid: int,

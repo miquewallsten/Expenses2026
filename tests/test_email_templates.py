@@ -54,6 +54,7 @@ def test_list_available_templates_returns_all_eight() -> None:
         "approval_nudge_48h",
         "daily_digest_approver",
         "payment_sent_to_employee",
+        "daily_insight_digest_email",
     }
     assert set(names) == expected
 

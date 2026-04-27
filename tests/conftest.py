@@ -9,6 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 # In-memory engine for test isolation — no production DB touched.
 TEST_DATABASE_URL = "sqlite:///:memory:"
@@ -32,6 +33,7 @@ def test_engine():
     engine = create_engine(
         TEST_DATABASE_URL,
         connect_args={"check_same_thread": False},  # required for SQLite in-memory test engine
+        poolclass=StaticPool,  # share one connection so :memory: state is visible across threads
     )
     # Create all tables fresh for each test
     Base.metadata.create_all(bind=engine)

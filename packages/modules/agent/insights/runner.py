@@ -32,6 +32,9 @@ def _scanners() -> list[Scanner]:
         scan_over_budget_projects,
         scan_duplicate_expenses,
         scan_policy_drift,
+        scan_unmatched_amex_aging,
+        scan_pending_approval_aging,
+        scan_cfdi_cancelled_unhandled,
     )
     return [
         scan_stale_drafts,
@@ -40,6 +43,9 @@ def _scanners() -> list[Scanner]:
         scan_over_budget_projects,
         scan_duplicate_expenses,
         scan_policy_drift,
+        scan_unmatched_amex_aging,
+        scan_pending_approval_aging,
+        scan_cfdi_cancelled_unhandled,
     ]
 
 
@@ -96,3 +102,21 @@ def _candidate_to_row(company_id: int, c: InsightCandidate) -> AgentInsight:
         suggested_prompt=c.get("suggested_prompt"),
         status="open",
     )
+
+
+def run_for_all_companies(db: Session) -> dict[int, int]:
+    """Run every scanner for every company. Returns ``{company_id: open_count}``.
+
+    Failures on one company do not block the rest.
+    """
+    from packages.core.platform.models import Company
+
+    out: dict[int, int] = {}
+    for (cid,) in db.query(Company.id).all():
+        try:
+            rows = run_scanners(db, cid)
+            out[cid] = len(rows)
+        except Exception:  # noqa: BLE001
+            db.rollback()
+            out[cid] = -1
+    return out

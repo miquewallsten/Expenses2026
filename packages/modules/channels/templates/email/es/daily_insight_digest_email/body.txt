@@ -1,0 +1,8 @@
+Hola {{ recipient.full_name or recipient.email }},
+
+Tienes {{ insights | length }} señal(es) abiertas en el operador financiero hoy:
+
+{% for ins in insights %}- [{{ ins.severity | upper }}] {{ ins.title }}
+{% endfor %}
+
+Ir al panel: {{ link }}

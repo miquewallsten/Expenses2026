@@ -6,6 +6,6 @@ Each scanner returns a list of ``InsightCandidate`` dicts:
 
 from __future__ import annotations
 
-from .runner import InsightCandidate, run_scanners
+from .runner import InsightCandidate, run_scanners, run_for_all_companies
 
-__all__ = ["InsightCandidate", "run_scanners"]
+__all__ = ["InsightCandidate", "run_scanners", "run_for_all_companies"]

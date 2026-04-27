@@ -205,3 +205,90 @@ def scan_policy_drift(db: Session, company_id: int) -> list[InsightCandidate]:
             "suggested_prompt": "Configura una política de gastos básica para esta empresa.",
         })
     return out
+
+
+# ── 7. Unmatched Amex line aging (>14d unmatched) ──────────────────────────
+
+def scan_unmatched_amex_aging(db: Session, company_id: int) -> list[InsightCandidate]:
+    try:
+        from packages.modules.amex.models import AmexStatementLine
+    except Exception:
+        return []
+    cutoff = datetime.now(timezone.utc) - timedelta(days=14)
+    rows = (
+        db.query(AmexStatementLine)
+        .filter(
+            AmexStatementLine.company_id == company_id,
+            AmexStatementLine.status == "unmatched",
+            AmexStatementLine.created_at < cutoff,
+        )
+        .limit(200)
+        .all()
+    )
+    if not rows:
+        return []
+    return [{
+        "kind": "unmatched_amex_aging",
+        "severity": "warn",
+        "title": f"{len(rows)} líneas Amex sin emparejar > 14 días",
+        "body": "Cargos de Amex que llevan más de dos semanas sin CFDI emparejado.",
+        "data_json": {
+            "line_ids": [r.id for r in rows][:50],
+            "total": len(rows),
+        },
+        "suggested_prompt": "Lista las líneas Amex sin emparejar más antiguas y propón próximos pasos.",
+    }]
+
+
+# ── 8. Pending approval aging (>10d in submitted/manager_approved) ─────────
+
+def scan_pending_approval_aging(db: Session, company_id: int) -> list[InsightCandidate]:
+    cutoff = datetime.now(timezone.utc) - timedelta(days=10)
+    rows = (
+        db.query(Expense)
+        .filter(
+            Expense.company_id == company_id,
+            Expense.status.in_(("submitted", "manager_approved")),
+            Expense.created_at < cutoff,
+        )
+        .limit(200)
+        .all()
+    )
+    if not rows:
+        return []
+    return [{
+        "kind": "pending_approval_aging",
+        "severity": "critical",
+        "title": f"{len(rows)} gastos atascados en aprobación > 10 días",
+        "body": "Gastos detenidos en alguna etapa de aprobación; revisa SLA por aprobador.",
+        "data_json": {"expense_ids": [r.id for r in rows][:50], "total": len(rows)},
+        "suggested_prompt": "Resume el SLA de aprobación por aprobador en los últimos 30 días.",
+    }]
+
+
+# ── 9. CFDIs cancelled but expense still active ────────────────────────────
+
+def scan_cfdi_cancelled_unhandled(db: Session, company_id: int) -> list[InsightCandidate]:
+    cfdi_status_col = getattr(Expense, "cfdi_status", None)
+    if cfdi_status_col is None:
+        return []
+    rows = (
+        db.query(Expense)
+        .filter(
+            Expense.company_id == company_id,
+            cfdi_status_col == "Cancelado",
+            Expense.status.in_(("submitted", "manager_approved", "approved")),
+        )
+        .limit(200)
+        .all()
+    )
+    if not rows:
+        return []
+    return [{
+        "kind": "cfdi_cancelled_unhandled",
+        "severity": "critical",
+        "title": f"{len(rows)} gastos con CFDI cancelado sin reemplazar",
+        "body": "El SAT marcó estos CFDIs como Cancelado pero los gastos siguen vivos.",
+        "data_json": {"expense_ids": [r.id for r in rows][:50], "total": len(rows)},
+        "suggested_prompt": "Lista los gastos con CFDI cancelado y sugiere reposición.",
+    }]

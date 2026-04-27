@@ -299,6 +299,19 @@ except Exception:
     _log.getLogger(__name__).exception("Failed to start channels scheduler")
 
 
+# ── Phase 8.5 — Agent insight scheduler (opt-in via AGENT_SCHEDULER_ENABLED) ──
+try:
+    from packages.modules.agent.jobs.scheduler import (
+        start_scheduler as _start_agent_scheduler,
+    )
+
+    _start_agent_scheduler()
+except Exception:
+    import logging as _log
+
+    _log.getLogger(__name__).exception("Failed to start agent scheduler")
+
+
 @app.get("/")
 def root():
     return {

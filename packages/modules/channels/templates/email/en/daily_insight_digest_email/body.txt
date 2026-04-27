@@ -1,0 +1,8 @@
+Hi {{ recipient.full_name or recipient.email }},
+
+You have {{ insights | length }} open signal(s) from the financial copilot today:
+
+{% for ins in insights %}- [{{ ins.severity | upper }}] {{ ins.title }}
+{% endfor %}
+
+Open the panel: {{ link }}
