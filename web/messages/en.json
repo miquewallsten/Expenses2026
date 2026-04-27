@@ -61,7 +61,10 @@
     "expandNav": "Expand navigation",
     "collapseNav": "Collapse navigation",
     "expandSidebar": "Expand sidebar",
-    "collapseSidebar": "Collapse sidebar"
+    "collapseSidebar": "Collapse sidebar",
+    "offline": "Offline",
+    "queuedShort": "queued",
+    "queuedUploads": "{count, plural, one {# upload queued offline} other {# uploads queued offline}}"
   },
   "nav": {
     "employee": "Employee",

@@ -6,6 +6,7 @@ import { Bot, LogOut, Menu, Search, Settings } from "lucide-react";
 import { clearSession, getCurrentRole } from "@/lib/session";
 import { useTranslations } from "next-intl";
 import SettingsModal from "./SettingsModal";
+import ConnectivityChip from "./ConnectivityChip";
 
 interface TopBarProps {
   title: string;
@@ -104,6 +105,10 @@ export default function TopBar({ title, portal, onMenuOpen, onAiOpen }: TopBarPr
       <div className="flex-1 md:hidden" />
 
       <div className="flex items-stretch border-l border-white/[0.05]">
+
+        <div className="hidden items-center pr-2 md:flex">
+          <ConnectivityChip />
+        </div>
 
         {onAiOpen && (
           <button

@@ -68,4 +68,16 @@ describe("offline upload queue", () => {
     expect(result.remaining).toBe(1);
     Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
   });
+
+  it("dispatches opsflow:queue-changed on enqueue and remove", async () => {
+    let count = 0;
+    const handler = () => {
+      count += 1;
+    };
+    window.addEventListener("opsflow:queue-changed", handler);
+    const id = await enqueueUpload({ companyId: 1, filename: "evt.xml", blob: new Blob(["q"]) });
+    await removeQueuedUpload(id);
+    window.removeEventListener("opsflow:queue-changed", handler);
+    expect(count).toBe(2);
+  });
 });

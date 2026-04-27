@@ -61,7 +61,10 @@
     "expandNav": "Expandir navegación",
     "collapseNav": "Colapsar navegación",
     "expandSidebar": "Expandir panel lateral",
-    "collapseSidebar": "Colapsar panel lateral"
+    "collapseSidebar": "Colapsar panel lateral",
+    "offline": "Sin conexión",
+    "queuedShort": "en cola",
+    "queuedUploads": "{count, plural, one {# carga en cola sin conexión} other {# cargas en cola sin conexión}}"
   },
   "nav": {
     "employee": "Empleado",

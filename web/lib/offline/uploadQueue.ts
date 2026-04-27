@@ -26,6 +26,16 @@ function idbAvailable(): boolean {
   return typeof window !== "undefined" && "indexedDB" in window;
 }
 
+function emitQueueChanged() {
+  if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
+    try {
+      window.dispatchEvent(new Event("opsflow:queue-changed"));
+    } catch {
+      // ignore in environments without Event constructor
+    }
+  }
+}
+
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
@@ -59,6 +69,7 @@ export async function enqueueUpload(input: QueuedUploadInput): Promise<number> {
   if (!idbAvailable()) throw new Error("IndexedDB unavailable");
   const row = { ...input, queuedAt: Date.now() };
   const key = await tx<IDBValidKey>("readwrite", (s) => s.add(row));
+  emitQueueChanged();
   return Number(key);
 }
 
@@ -70,6 +81,7 @@ export async function listQueuedUploads(): Promise<QueuedUpload[]> {
 export async function removeQueuedUpload(id: number): Promise<void> {
   if (!idbAvailable()) return;
   await tx<undefined>("readwrite", (s) => s.delete(id) as IDBRequest<undefined>);
+  emitQueueChanged();
 }
 
 export async function countQueuedUploads(): Promise<number> {
