@@ -42,53 +42,95 @@ ACTION_LINK_RATE = "5/minute"
 # ── HTML helpers ─────────────────────────────────────────────────────────────
 
 _PAGE = """<!doctype html>
-<html lang=\"es\">
+<html lang=\"{lang}\">
 <head>
   <meta charset=\"utf-8\">
+  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\">
+  <meta name=\"theme-color\" content=\"#09090b\">
+  <meta name=\"robots\" content=\"noindex,nofollow\">
   <title>{title}</title>
   <style>
-    body{{margin:0;background:#18181b;color:#e4e4e7;font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh}}
-    .card{{background:#27272a;border:1px solid #3f3f46;border-radius:8px;padding:32px;max-width:480px;width:90%}}
-    h1{{font-size:18px;margin:0 0 16px;color:#fafafa}}
-    p{{font-size:14px;color:#d4d4d8;margin:0 0 12px}}
-    .meta{{font-size:12px;color:#a1a1aa}}
-    button{{background:#4f46e5;color:#fff;border:none;padding:10px 18px;border-radius:6px;font-weight:600;font-size:14px;cursor:pointer}}
+    *{{box-sizing:border-box}}
+    html,body{{margin:0;background:#09090b;color:#e4e4e7;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,sans-serif;-webkit-font-smoothing:antialiased}}
+    body{{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:max(16px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom))}}
+    .card{{background:#18181b;border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:24px;max-width:440px;width:100%}}
+    h1{{font-size:18px;line-height:1.3;margin:0 0 12px;font-weight:600;letter-spacing:-0.01em;color:#fafafa}}
+    p{{font-size:14px;line-height:1.55;color:rgba(255,255,255,0.78);margin:0 0 12px}}
+    .meta{{font-size:12px;color:rgba(255,255,255,0.55);font-family:ui-monospace,SFMono-Regular,Menlo,monospace}}
+    button{{appearance:none;width:100%;min-height:44px;background:#4f46e5;color:#fff;border:0;padding:12px 18px;border-radius:8px;font-weight:600;font-size:15px;cursor:pointer;margin-top:8px}}
+    button:hover{{background:#4338ca}}
+    button:active{{background:#3730a3}}
     .err{{color:#fca5a5}}
   </style>
 </head>
 <body><div class=\"card\">{body}</div></body>
 </html>"""
 
+_STR = {
+    "es": {
+        "approve": "Aprobar", "reject": "Rechazar", "return": "Devolver",
+        "confirm_title": "Confirmar acción: {label}",
+        "confirm_body": "Esta acción es definitiva y queda registrada en la bitácora.",
+        "done_title": "Listo",
+        "done_msg": {
+            "approve": "Gasto aprobado.",
+            "reject": "Gasto rechazado.",
+            "return": "Gasto devuelto al solicitante.",
+            "_default": "Acción registrada.",
+        },
+        "err_title": "No se pudo procesar",
+        "err_page_title": "Error",
+    },
+    "en": {
+        "approve": "Approve", "reject": "Reject", "return": "Return",
+        "confirm_title": "Confirm action: {label}",
+        "confirm_body": "This action is final and is recorded in the audit log.",
+        "done_title": "Done",
+        "done_msg": {
+            "approve": "Expense approved.",
+            "reject": "Expense rejected.",
+            "return": "Expense returned to the submitter.",
+            "_default": "Action recorded.",
+        },
+        "err_title": "Could not process",
+        "err_page_title": "Error",
+    },
+}
 
-def _render_confirm(action: str, resource: str, token: str) -> str:
-    label = {
-        "approve": "Aprobar",
-        "reject": "Rechazar",
-        "return": "Devolver",
-    }.get(action, action.title())
+
+def _pick_lang(request: Request) -> str:
+    al = (request.headers.get("accept-language") or "").lower()
+    # Default to Spanish (primary locale); switch to English only when EN is
+    # clearly preferred and ES isn't in the list.
+    if al.startswith("en") and "es" not in al:
+        return "en"
+    return "es"
+
+
+def _render_confirm(lang: str, action: str, resource: str, token: str) -> str:
+    s = _STR.get(lang, _STR["es"])
+    label = s.get(action, action.title())
     body = (
-        f"<h1>Confirmar acción: {label}</h1>"
+        f"<h1>{s['confirm_title'].format(label=label)}</h1>"
         f"<p class=\"meta\">{resource}</p>"
-        f"<p>Esta acción es definitiva y queda registrada en la bitácora.</p>"
+        f"<p>{s['confirm_body']}</p>"
         f"<form method=\"post\" action=\"/channels/action/{token}\">"
         f"<button type=\"submit\">{label}</button></form>"
     )
-    return _PAGE.format(title=label, body=body)
+    return _PAGE.format(lang=lang, title=label, body=body)
 
 
-def _render_done(action: str) -> str:
-    msg = {
-        "approve": "Gasto aprobado.",
-        "reject": "Gasto rechazado.",
-        "return": "Gasto devuelto al solicitante.",
-    }.get(action, "Acción registrada.")
-    body = f"<h1>Listo</h1><p>{msg}</p>"
-    return _PAGE.format(title="Listo", body=body)
+def _render_done(lang: str, action: str) -> str:
+    s = _STR.get(lang, _STR["es"])
+    msg = s["done_msg"].get(action, s["done_msg"]["_default"])
+    body = f"<h1>{s['done_title']}</h1><p>{msg}</p>"
+    return _PAGE.format(lang=lang, title=s["done_title"], body=body)
 
 
-def _render_error(detail: str) -> str:
-    body = f"<h1 class=\"err\">No se pudo procesar</h1><p>{detail}</p>"
-    return _PAGE.format(title="Error", body=body)
+def _render_error(lang: str, detail: str) -> str:
+    s = _STR.get(lang, _STR["es"])
+    body = f"<h1 class=\"err\">{s['err_title']}</h1><p>{detail}</p>"
+    return _PAGE.format(lang=lang, title=s["err_page_title"], body=body)
 
 
 # ── Endpoints ────────────────────────────────────────────────────────────────
@@ -99,15 +141,16 @@ def _render_error(detail: str) -> str:
     key_func=lambda request: request.client.host if request.client else "anon",
 )
 def show_action(request: Request, token: str, db: Session = Depends(get_db)):
+    lang = _pick_lang(request)
     try:
         claims, row = inspect_token(db, token)
     except ActionLinkError as exc:
-        return HTMLResponse(_render_error(exc.detail), status_code=400)
+        return HTMLResponse(_render_error(lang, exc.detail), status_code=400)
 
     resource_summary = (
         f"{claims.resource_type} #{claims.resource_id}"
     )
-    return HTMLResponse(_render_confirm(claims.action, resource_summary, token))
+    return HTMLResponse(_render_confirm(lang, claims.action, resource_summary, token))
 
 
 @router.post("/{token}", response_class=HTMLResponse)
@@ -116,11 +159,12 @@ def show_action(request: Request, token: str, db: Session = Depends(get_db)):
     key_func=lambda request: request.client.host if request.client else "anon",
 )
 def perform_action(request: Request, token: str, db: Session = Depends(get_db)):
+    lang = _pick_lang(request)
     ip = request.client.host if request.client else None
     try:
         claims, _row = consume_token(db, token, ip=ip)
     except ActionLinkError as exc:
-        return HTMLResponse(_render_error(exc.detail), status_code=400)
+        return HTMLResponse(_render_error(lang, exc.detail), status_code=400)
 
     try:
         _execute_action(db, claims)
@@ -146,7 +190,7 @@ def perform_action(request: Request, token: str, db: Session = Depends(get_db)):
         detail_text=f"action={claims.action} ip={ip or 'unknown'}",
         company_id=claims.company_id,
     )
-    return HTMLResponse(_render_done(claims.action))
+    return HTMLResponse(_render_done(lang, claims.action))
 
 
 # ── Action dispatch ──────────────────────────────────────────────────────────

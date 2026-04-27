@@ -229,3 +229,65 @@ def test_post_endpoint_consumes_and_transitions(
 def test_post_endpoint_rejects_invalid_token(client: TestClient) -> None:
     r = client.post("/channels/action/not-a-real-token")
     assert r.status_code == 400
+
+
+def test_get_endpoint_is_mobile_friendly(
+    client: TestClient, db_session: Session, setup_actor: dict
+) -> None:
+    """Phase 6.3 — action page must render with mobile viewport + safe-area padding."""
+    token, _ = create_action_token(
+        db_session,
+        user_id=setup_actor["approver"].id,
+        company_id=setup_actor["company"].id,
+        action="approve",
+        resource_type="expense",
+        resource_id=setup_actor["expense"].id,
+    )
+    r = client.get(f"/channels/action/{token}")
+    assert r.status_code == 200
+    assert 'name="viewport"' in r.text
+    assert "viewport-fit=cover" in r.text
+    assert "env(safe-area-inset-bottom)" in r.text
+    assert "min-height:44px" in r.text  # ≥ Apple HIG tap target
+    assert 'name="robots"' in r.text  # noindex tokenised pages
+
+
+def test_get_endpoint_renders_english_when_accept_language_en(
+    client: TestClient, db_session: Session, setup_actor: dict
+) -> None:
+    token, _ = create_action_token(
+        db_session,
+        user_id=setup_actor["approver"].id,
+        company_id=setup_actor["company"].id,
+        action="approve",
+        resource_type="expense",
+        resource_id=setup_actor["expense"].id,
+    )
+    r = client.get(
+        f"/channels/action/{token}",
+        headers={"Accept-Language": "en-US,en;q=0.9"},
+    )
+    assert r.status_code == 200
+    assert 'lang="en"' in r.text
+    assert "Approve" in r.text
+    assert "Aprobar" not in r.text
+
+
+def test_get_endpoint_defaults_to_spanish_when_es_present(
+    client: TestClient, db_session: Session, setup_actor: dict
+) -> None:
+    token, _ = create_action_token(
+        db_session,
+        user_id=setup_actor["approver"].id,
+        company_id=setup_actor["company"].id,
+        action="approve",
+        resource_type="expense",
+        resource_id=setup_actor["expense"].id,
+    )
+    r = client.get(
+        f"/channels/action/{token}",
+        headers={"Accept-Language": "es-MX,es;q=0.9,en;q=0.5"},
+    )
+    assert r.status_code == 200
+    assert 'lang="es"' in r.text
+    assert "Aprobar" in r.text
