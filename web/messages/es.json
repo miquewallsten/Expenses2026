@@ -353,6 +353,14 @@
         "prefilledBadge": "Borrador prellenado desde el recibo",
         "prefilledHint": "Verifica monto, fecha y descripción antes de enviar."
       },
+      "classifier": {
+        "receipt": "Ticket",
+        "invoice": "Factura",
+        "cfdi_xml": "CFDI",
+        "statement": "Estado de cuenta",
+        "other": "Otro",
+        "tooltip": "Clasificación {method} · {conf}% confianza"
+      },
       "ruleLabel": {
         "XML_FORMAT": "Formato XML válido",
         "UUID_PRESENT": "UUID presente",

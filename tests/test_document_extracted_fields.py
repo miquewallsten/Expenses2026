@@ -113,7 +113,11 @@ def test_create_document_skips_ocr_for_cfdi_xml(db_session, test_company):
     )
     doc = create_document(db_session, payload)
     assert doc.document_type == "cfdi_xml"
-    assert doc.extracted_fields is None
+    # OCR heuristic skipped for cfdi_xml — only classifier may be present.
+    ef = doc.extracted_fields or {}
+    assert "total" not in ef
+    assert "merchant" not in ef
+    assert "rfc" not in ef
 
 
 def test_create_document_prefills_draft_expense_from_ocr(db_session, test_company):
@@ -162,3 +166,45 @@ def test_create_document_draft_falls_back_when_ocr_empty(db_session, test_compan
     exp = db_session.query(Expense).filter(Expense.id == doc.expense_id).first()
     assert exp.amount == Decimal("0")
     assert exp.expense_date is None
+
+
+def test_create_document_stamps_classifier_on_extracted_fields(db_session, test_company):
+    """Phase 8.11 follow-up — classifier label/confidence/method stored under extracted_fields['classifier']."""
+    from packages.modules.expenses.service.document_service import create_document
+    from packages.modules.expenses.schemas.document import ExpenseDocumentCreate
+
+    payload = ExpenseDocumentCreate(
+        company_id=test_company.id,
+        filename="ticket-classifier-uniq-1.txt",
+        content_text="OXXO TIENDA #99\nGracias por su compra\nTotal: 42.50\n",
+    )
+    doc = create_document(db_session, payload)
+    assert doc.extracted_fields is not None
+    cls = doc.extracted_fields.get("classifier")
+    assert cls is not None
+    assert cls.get("label") in {"receipt", "invoice", "cfdi_xml", "statement", "other"}
+    assert isinstance(cls.get("confidence"), float)
+    assert cls.get("method") in {"rule", "knn", "default"}
+
+
+def test_create_document_classifier_recognises_ticket(db_session, test_company):
+    """Strong receipt rule signal should classify as 'receipt' with rule method."""
+    from packages.modules.expenses.service.document_service import create_document
+    from packages.modules.expenses.schemas.document import ExpenseDocumentCreate
+
+    payload = ExpenseDocumentCreate(
+        company_id=test_company.id,
+        filename="ticket-rule-uniq-2.txt",
+        content_text=(
+            "7-ELEVEN MEXICO\n"
+            "Ticket de venta\n"
+            "Gracias por su compra\n"
+            "Total: 58.00\n"
+        ),
+    )
+    doc = create_document(db_session, payload)
+    cls = (doc.extracted_fields or {}).get("classifier")
+    assert cls is not None
+    assert cls["label"] == "receipt"
+    assert cls["method"] == "rule"
+    assert cls["confidence"] >= 0.5

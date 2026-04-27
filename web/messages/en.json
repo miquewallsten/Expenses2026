@@ -354,6 +354,14 @@
         "prefilledBadge": "Draft prefilled from receipt",
         "prefilledHint": "Verify amount, date, and description before submitting."
       },
+      "classifier": {
+        "receipt": "Receipt",
+        "invoice": "Invoice",
+        "cfdi_xml": "CFDI",
+        "statement": "Statement",
+        "other": "Other",
+        "tooltip": "Classified by {method} · {conf}% confidence"
+      },
       "ruleLabel": {
         "XML_FORMAT": "XML format valid",
         "UUID_PRESENT": "UUID present",

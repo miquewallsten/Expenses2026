@@ -19,6 +19,11 @@ export interface ExpenseDocument {
     date?: string | null;
     merchant?: string | null;
     payment_method?: string | null;
+    classifier?: {
+      label?: string | null;
+      confidence?: number | null;
+      method?: string | null;
+    } | null;
   } | null;
 }
 

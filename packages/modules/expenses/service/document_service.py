@@ -267,6 +267,35 @@ def create_document(
         except Exception:  # noqa: BLE001
             db.rollback()
 
+    # ── Phase 8.11 — coarse triage classifier (rule + kNN over embeddings) ───
+    # Stash {label, confidence, method} into extracted_fields["classifier"]
+    # so the UI can render a tone-coded label pill. Best-effort, never blocks.
+    if document.content_text:
+        try:
+            from packages.modules.expenses.service.document_classifier_service import (
+                classify_document as triage_classify_document,
+            )
+
+            triage = triage_classify_document(
+                db,
+                company_id=document.company_id,
+                content_text=document.content_text,
+                filename=document.filename,
+            )
+            label = triage.get("label")
+            if label:
+                ef = dict(document.extracted_fields or {})
+                ef["classifier"] = {
+                    "label": label,
+                    "confidence": float(triage.get("confidence") or 0.0),
+                    "method": triage.get("method") or "default",
+                }
+                document.extracted_fields = ef
+                db.commit()
+                db.refresh(document)
+        except Exception:  # noqa: BLE001
+            db.rollback()
+
     # ── Archive original bytes (only when real file bytes are available) ──────
     if file_bytes is not None:
         try:

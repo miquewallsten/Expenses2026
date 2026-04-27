@@ -1280,7 +1280,30 @@ export default function EmployeeExpenseDetail({
                             <FileText className={`h-3 w-3 ${docTypeCls(doc.document_type)}`} />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-[11px] text-white/65">{doc.filename}</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="truncate text-[11px] text-white/65">{doc.filename}</p>
+                              {(() => {
+                                const cls = doc.extracted_fields?.classifier;
+                                const label = cls?.label;
+                                if (!label) return null;
+                                const tone: Record<string, string> = {
+                                  receipt:   "border-emerald-500/25 bg-emerald-500/10 text-emerald-200/85",
+                                  invoice:   "border-sky-500/25 bg-sky-500/10 text-sky-200/85",
+                                  cfdi_xml:  "border-violet-500/25 bg-violet-500/10 text-violet-200/85",
+                                  statement: "border-amber-500/25 bg-amber-500/10 text-amber-200/85",
+                                  other:     "border-white/10 bg-white/[0.04] text-white/55",
+                                };
+                                const conf = typeof cls?.confidence === "number" ? Math.round(cls.confidence * 100) : null;
+                                return (
+                                  <span
+                                    className={`inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${tone[label] ?? tone.other}`}
+                                    title={td("classifier.tooltip", { method: cls?.method ?? "default", conf: conf ?? 0 })}
+                                  >
+                                    {td(`classifier.${label}`)}
+                                  </span>
+                                );
+                              })()}
+                            </div>
                             <p className="text-[9px] text-white/28">
                               {docTypeLabel(doc.document_type, { receipt: td("docType.receipt"), justification: td("docType.justification"), proof: td("docType.proof"), file: td("docType.file") })} · {new Date(doc.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                             </p>
