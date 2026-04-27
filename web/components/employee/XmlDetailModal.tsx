@@ -15,78 +15,78 @@ interface Props {
 // ── Section definitions ───────────────────────────────────────────────────────
 
 interface FieldDef {
-  label: string;
+  i18nKey: string;
   key: string;
   mono?: boolean;
   full?: boolean; // col-span-2
 }
 
 interface SectionDef {
-  title: string;
+  i18nKey: string;
   fields: FieldDef[];
 }
 
 const SECTIONS: SectionDef[] = [
   {
-    title: "Comprobante",
+    i18nKey: "sectionComprobante",
     fields: [
-      { label: "Versión",        key: "version" },
-      { label: "Fecha",          key: "fecha" },
-      { label: "Tipo",           key: "tipo_comprobante" },
-      { label: "Moneda",         key: "moneda" },
-      { label: "Tipo cambio",    key: "tipo_cambio",       mono: true },
-      { label: "Forma pago",     key: "forma_pago" },
-      { label: "Método pago",    key: "metodo_pago" },
-      { label: "Cond. de pago",  key: "condiciones_pago",  full: true },
-      { label: "Serie",          key: "serie" },
-      { label: "Folio",          key: "folio" },
-      { label: "Lugar exp.",     key: "lugar_expedicion" },
-      { label: "Exportación",    key: "exportacion" },
-      { label: "Descuento",      key: "descuento",         mono: true },
+      { i18nKey: "fieldVersion",          key: "version" },
+      { i18nKey: "fieldFecha",            key: "fecha" },
+      { i18nKey: "fieldTipo",             key: "tipo_comprobante" },
+      { i18nKey: "fieldMoneda",           key: "moneda" },
+      { i18nKey: "fieldTipoCambio",       key: "tipo_cambio",       mono: true },
+      { i18nKey: "fieldFormaPago",        key: "forma_pago" },
+      { i18nKey: "fieldMetodoPago",       key: "metodo_pago" },
+      { i18nKey: "fieldCondicionesPago",  key: "condiciones_pago",  full: true },
+      { i18nKey: "fieldSerie",            key: "serie" },
+      { i18nKey: "fieldFolio",            key: "folio" },
+      { i18nKey: "fieldLugarExp",         key: "lugar_expedicion" },
+      { i18nKey: "fieldExportacion",      key: "exportacion" },
+      { i18nKey: "fieldDescuento",        key: "descuento",         mono: true },
     ],
   },
   {
-    title: "Emisor",
+    i18nKey: "sectionEmisor",
     fields: [
-      { label: "Nombre",        key: "emisor_nombre",         full: true },
-      { label: "RFC",           key: "emisor_rfc",            mono: true },
-      { label: "Régimen",       key: "emisor_regimen_fiscal" },
+      { i18nKey: "fieldNombre",  key: "emisor_nombre",         full: true },
+      { i18nKey: "fieldRfc",     key: "emisor_rfc",            mono: true },
+      { i18nKey: "fieldRegimen", key: "emisor_regimen_fiscal" },
     ],
   },
   {
-    title: "Receptor",
+    i18nKey: "sectionReceptor",
     fields: [
-      { label: "Nombre",        key: "receptor_nombre",            full: true },
-      { label: "RFC",           key: "receptor_rfc",               mono: true },
-      { label: "Dom. fiscal",   key: "receptor_domicilio_fiscal",  mono: true },
-      { label: "Régimen",       key: "receptor_regimen_fiscal" },
-      { label: "Uso CFDI",      key: "uso_cfdi" },
+      { i18nKey: "fieldNombre",     key: "receptor_nombre",            full: true },
+      { i18nKey: "fieldRfc",        key: "receptor_rfc",               mono: true },
+      { i18nKey: "fieldDomFiscal",  key: "receptor_domicilio_fiscal",  mono: true },
+      { i18nKey: "fieldRegimen",    key: "receptor_regimen_fiscal" },
+      { i18nKey: "fieldUsoCfdi",    key: "uso_cfdi" },
     ],
   },
   {
-    title: "Importes",
+    i18nKey: "sectionImportes",
     fields: [
-      { label: "Subtotal",         key: "subtotal",                    mono: true },
-      { label: "Descuento",        key: "descuento",                   mono: true },
-      { label: "Total",            key: "total",                       mono: true },
-      { label: "IVA trasladado",   key: "total_impuestos_trasladados", mono: true },
-      { label: "IVA retenido",     key: "total_impuestos_retenidos",   mono: true },
-      { label: "Impuesto",         key: "impuesto" },
-      { label: "Tipo factor",      key: "tipo_factor" },
-      { label: "Tasa / cuota",     key: "tasa_o_cuota",                mono: true },
-      { label: "Ret. impuesto",    key: "retencion_impuesto" },
-      { label: "Ret. importe",     key: "retencion_importe",           mono: true },
+      { i18nKey: "fieldSubtotal",            key: "subtotal",                    mono: true },
+      { i18nKey: "fieldDescuento",           key: "descuento",                   mono: true },
+      { i18nKey: "fieldTotal",               key: "total",                       mono: true },
+      { i18nKey: "fieldIvaTrasladado",       key: "total_impuestos_trasladados", mono: true },
+      { i18nKey: "fieldIvaRetenido",         key: "total_impuestos_retenidos",   mono: true },
+      { i18nKey: "fieldImpuesto",            key: "impuesto" },
+      { i18nKey: "fieldTipoFactor",          key: "tipo_factor" },
+      { i18nKey: "fieldTasaCuota",           key: "tasa_o_cuota",                mono: true },
+      { i18nKey: "fieldRetencionImpuesto",   key: "retencion_impuesto" },
+      { i18nKey: "fieldRetencionImporte",    key: "retencion_importe",           mono: true },
     ],
   },
   {
-    title: "Timbre fiscal digital",
+    i18nKey: "sectionTimbre",
     fields: [
-      { label: "UUID",             key: "uuid",               mono: true, full: true },
-      { label: "Fecha timbrado",   key: "fecha_timbrado" },
-      { label: "Versión timbre",   key: "version_timbre" },
-      { label: "RFC PAC",          key: "rfc_prov_certif",    mono: true },
-      { label: "No. cert. SAT",    key: "no_certificado_sat", mono: true },
-      { label: "No. certificado",  key: "no_certificado",     mono: true },
+      { i18nKey: "fieldUuid",           key: "uuid",               mono: true, full: true },
+      { i18nKey: "fieldFechaTimbrado",  key: "fecha_timbrado" },
+      { i18nKey: "fieldVersionTimbre",  key: "version_timbre" },
+      { i18nKey: "fieldRfcPac",         key: "rfc_prov_certif",    mono: true },
+      { i18nKey: "fieldNoCertSat",      key: "no_certificado_sat", mono: true },
+      { i18nKey: "fieldNoCertificado",  key: "no_certificado",     mono: true },
     ],
   },
 ];
@@ -113,13 +113,6 @@ export default function XmlDetailModal({ open, onClose, extractedData, satStatus
   const t = useTranslations("employee.xmlDetail");
   const tc = useTranslations("common");
 
-  const sectionTitleMap: Record<string, string> = {
-    "Comprobante":            t("sectionComprobante"),
-    "Emisor":                 t("sectionEmisor"),
-    "Receptor":               t("sectionReceptor"),
-    "Importes":               t("sectionImportes"),
-    "Timbre fiscal digital":  t("sectionTimbre"),
-  };
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -191,12 +184,12 @@ export default function XmlDetailModal({ open, onClose, extractedData, satStatus
                   const hasAny = section.fields.some(({ key }) => val(extractedData, key) !== null);
                   if (!hasAny) return null;
                   return (
-                    <div key={section.title}>
+                    <div key={section.i18nKey}>
                       <p className="mb-1 text-[8px] font-bold uppercase tracking-widest text-white/22">
-                        {sectionTitleMap[section.title] ?? section.title}
+                        {t(section.i18nKey)}
                       </p>
                       <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-white/[0.07] bg-white/[0.04]">
-                        {section.fields.map(({ label, key, mono, full }) => {
+                        {section.fields.map(({ i18nKey: fieldKey, key, mono, full }) => {
                           const v = val(extractedData, key);
                           if (!v) return null;
                           return (
@@ -204,7 +197,7 @@ export default function XmlDetailModal({ open, onClose, extractedData, satStatus
                               key={key}
                               className={`bg-zinc-900/90 px-2.5 py-1.5 ${full ? "col-span-2" : ""}`}
                             >
-                              <p className="text-[8px] font-semibold uppercase tracking-wider text-white/25">{label}</p>
+                              <p className="text-[8px] font-semibold uppercase tracking-wider text-white/25">{t(fieldKey)}</p>
                               <p className={`mt-0.5 break-all text-[10px] text-white/60 ${mono ? "font-mono" : ""}`}>
                                 {v}
                               </p>
