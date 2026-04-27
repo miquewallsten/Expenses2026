@@ -292,6 +292,10 @@ from packages.modules.admin.api.platform_api_router import (  # noqa: E402
     router as platform_api_router,
 )
 app.include_router(platform_api_router)
+from packages.modules.admin.api.audit_log_router import (  # noqa: E402
+    router as audit_log_router,
+)
+app.include_router(audit_log_router)
 app.include_router(agent_router)
 app.include_router(amex_router)
 app.include_router(integrations_router)

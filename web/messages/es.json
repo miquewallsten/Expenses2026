@@ -656,6 +656,25 @@
         }
       }
     },
+    "auditLog": {
+      "title": "Registro de auditoría",
+      "back": "Volver al admin",
+      "refresh": "Refrescar",
+      "loading": "Cargando…",
+      "noCompany": "Selecciona una empresa para ver el registro.",
+      "filter": "Filtro",
+      "all": "Todos",
+      "empty": "Sin eventos.",
+      "loadMore": "Cargar más",
+      "system": "sistema",
+      "th": {
+        "when": "Cuándo",
+        "action": "Acción",
+        "entity": "Entidad",
+        "actor": "Actor",
+        "detail": "Detalle"
+      }
+    },
     "cfdiWatcher": {
       "title": "Watcher SAT — CFDI cancelados",
       "subtitle": "Gastos con CFDI marcado Cancelado por el SAT",

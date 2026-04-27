@@ -656,6 +656,25 @@
         }
       }
     },
+    "auditLog": {
+      "title": "Audit log",
+      "back": "Back to admin",
+      "refresh": "Refresh",
+      "loading": "Loading…",
+      "noCompany": "Select a company to view the audit log.",
+      "filter": "Filter",
+      "all": "All",
+      "empty": "No events.",
+      "loadMore": "Load more",
+      "system": "system",
+      "th": {
+        "when": "When",
+        "action": "Action",
+        "entity": "Entity",
+        "actor": "Actor",
+        "detail": "Detail"
+      }
+    },
     "cfdiWatcher": {
       "title": "SAT watcher — cancelled CFDIs",
       "subtitle": "Expenses whose CFDI has been marked Cancelled by SAT",
