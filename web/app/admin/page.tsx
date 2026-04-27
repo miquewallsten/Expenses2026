@@ -7,7 +7,7 @@ import AdminCompanySetupStudio from "@/components/admin/AdminCompanySetupStudio"
 import AdminCompanySetupCopilot from "@/components/admin/AdminCompanySetupCopilot";
 import AdminPoliciesPanel from "@/components/admin/AdminPoliciesPanel";
 import AdminWorkflowMapPanel from "@/components/admin/AdminWorkflowMapPanel";
-import AdminAccountingSetupStudio from "@/components/admin/AdminAccountingSetupStudio";
+import AdminAccountingTabsPanel from "@/components/admin/AdminAccountingTabsPanel";
 import AdminAccountingCopilot from "@/components/admin/AdminAccountingCopilot";
 import AdminSetupOrchestratorPanel from "@/components/admin/AdminSetupOrchestratorPanel";
 import AdminRolesPanel from "@/components/admin/AdminRolesPanel";
@@ -1245,9 +1245,11 @@ export default function AdminPage() {
 
       case "Accounting Setup":
         return (
-          <AdminAccountingSetupStudio
+          <AdminAccountingTabsPanel
             companyId={adminCompanyId}
-            setup={accountingSetup ?? {}}
+            accountingSetup={accountingSetup ?? {}}
+            companySetup={companySetup}
+            expensePolicy={expensePolicy}
             onSaved={setAccountingSetup}
             draftPatch={accountingSetupDraftPatch}
           />
