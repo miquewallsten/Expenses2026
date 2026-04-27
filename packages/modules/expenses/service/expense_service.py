@@ -7,6 +7,7 @@ from packages.modules.expenses.schemas.expense import ExpenseCreate
 from packages.modules.expenses.schemas.expense_update import ExpenseUpdate
 from packages.modules.expenses.service.config_reader import get_account_mapping_config
 from packages.modules.expenses.service.accounting_learning_service import find_learning_match, store_learning
+from packages.modules.ai.service import categorization_feedback_service as _cat_feedback
 from packages.core.platform.service_audit import log_event
 
 
@@ -130,7 +131,26 @@ def create_expense(db: Session, payload: ExpenseCreate) -> Expense:
             category_code = kw_code
             account_code = None
         else:
-            category_code = getattr(payload, "category_code", None)
+            # Phase 8.3 hookup — kNN over CategorizationFeedback as last resort
+            # before falling back to caller-supplied category_code.
+            knn = None
+            try:
+                knn = _cat_feedback.suggest_category(
+                    db,
+                    company_id=payload.company_id,
+                    description_text=payload.description or "",
+                )
+            except Exception:
+                knn = None
+            if knn and knn.get("category"):
+                # Validate suggestion against active categories; fall through if stale.
+                try:
+                    _validate_category_code(db, payload.company_id, knn["category"])
+                    category_code = knn["category"]
+                except ValueError:
+                    category_code = getattr(payload, "category_code", None)
+            else:
+                category_code = getattr(payload, "category_code", None)
             account_code = None
 
     expense = Expense(
@@ -206,11 +226,16 @@ def update_expense(db: Session, expense_id: int, payload: ExpenseUpdate) -> Expe
         expense.status = payload.status
 
     category_updated = False
+    prior_category: str | None = None
     if payload.category_code is not None:
         # Phase 2.4 — same validation as create. Don't accept arbitrary codes.
         _validate_category_code(db, expense.company_id, payload.category_code)
-        expense.category_code = payload.category_code
-        category_updated = True
+        prior_category = expense.category_code
+        if prior_category != payload.category_code:
+            expense.category_code = payload.category_code
+            category_updated = True
+        else:
+            expense.category_code = payload.category_code
 
     db.commit()
     db.refresh(expense)
@@ -224,6 +249,21 @@ def update_expense(db: Session, expense_id: int, payload: ExpenseUpdate) -> Expe
             account_code=expense.account_code,
             expense_status=expense.status,
         )
+        # Phase 8.3 hookup — also record the override into CategorizationFeedback
+        # so kNN suggestion improves over time. Best-effort; never block update.
+        if expense.description:
+            try:
+                _cat_feedback.record_feedback(
+                    db,
+                    company_id=expense.company_id,
+                    description_text=expense.description,
+                    corrected_category=expense.category_code,
+                    original_category=prior_category,
+                    expense_id=expense.id,
+                )
+                db.commit()
+            except Exception:
+                db.rollback()
 
     return expense
 
