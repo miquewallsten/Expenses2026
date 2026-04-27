@@ -127,3 +127,59 @@ def test_recheck_route_404_for_other_company(client, db_session, co):
         f"/expenses/cfdi/recheck/{e.id}", headers={"X-User-Id": str(admin.id)}
     )
     assert r.status_code == 404
+
+
+def test_recheck_pending_route_forbidden_for_non_admin(client, db_session, co):
+    emp = _emp(db_session, co)
+    r = client.post(
+        "/expenses/cfdi/recheck-pending", headers={"X-User-Id": str(emp.id)}
+    )
+    assert r.status_code == 403
+
+
+def test_recheck_pending_route_returns_company_scoped_rollup(client, db_session, co):
+    from datetime import timedelta
+    admin = _admin(db_session, co)
+    other = Company(name="P48oR", slug="p48or")
+    db_session.add(other)
+    db_session.commit()
+    db_session.refresh(other)
+
+    stale = datetime.utcnow() - timedelta(days=30)
+    _make(db_session, co.id, uuid="UMY-1", status="Vigente", last=stale)
+    _make(db_session, co.id, uuid="UMY-2", status="Cancelado", last=stale)
+    _make(db_session, other.id, uuid="UOTH", status="Vigente", last=stale)
+
+    fake = {"sat_status": "Vigente"}
+    with patch(
+        "packages.modules.expenses.service.cfdi_lifecycle_service.check_cfdi_with_sat",
+        return_value=fake,
+    ):
+        r = client.post(
+            "/expenses/cfdi/recheck-pending",
+            headers={"X-User-Id": str(admin.id)},
+        )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["ok"] is True
+    assert body["company_id"] == co.id
+    assert body["checked"] == 1  # only UMY-1; UMY-2 cancelled, UOTH other co
+    assert body["flipped"] == 0
+    assert body["skipped"] >= 1
+
+
+def test_recheck_pending_clamps_pathological_args(client, db_session, co):
+    admin = _admin(db_session, co)
+    fake = {"sat_status": "Vigente"}
+    with patch(
+        "packages.modules.expenses.service.cfdi_lifecycle_service.check_cfdi_with_sat",
+        return_value=fake,
+    ):
+        r = client.post(
+            "/expenses/cfdi/recheck-pending?stale_after_days=99999&batch_size=99999",
+            headers={"X-User-Id": str(admin.id)},
+        )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["stale_after_days"] == 365
+    assert body["batch_size"] == 1000

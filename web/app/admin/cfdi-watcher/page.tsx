@@ -21,6 +21,7 @@ import {
   RefreshCw,
   ExternalLink,
   Coins,
+  PlayCircle,
 } from "lucide-react";
 import { getAuthHeaders } from "@/lib/session";
 
@@ -44,6 +45,12 @@ export default function CfdiWatcherPage() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [batchRunning, setBatchRunning] = useState(false);
+  const [batchSummary, setBatchSummary] = useState<{
+    checked: number;
+    flipped: number;
+    skipped: number;
+  } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -106,6 +113,38 @@ export default function CfdiWatcherPage() {
     [],
   );
 
+  const runBatch = useCallback(async () => {
+    setBatchRunning(true);
+    setBatchSummary(null);
+    setError(null);
+    try {
+      const res = await fetch(`${API}/expenses/cfdi/recheck-pending`, {
+        method: "POST",
+        headers: { ...getAuthHeaders() },
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `${res.status}`);
+      }
+      const body = (await res.json()) as {
+        checked: number;
+        flipped: number;
+        skipped: number;
+      };
+      setBatchSummary({
+        checked: body.checked,
+        flipped: body.flipped,
+        skipped: body.skipped,
+      });
+      // Refresh listing in case anything flipped back to Vigente.
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error");
+    } finally {
+      setBatchRunning(false);
+    }
+  }, [load]);
+
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="mx-auto max-w-5xl px-6 py-6">
@@ -127,6 +166,20 @@ export default function CfdiWatcherPage() {
               <p className="text-[10.5px] text-zinc-500">{t("subtitle")}</p>
             </div>
           </div>
+          <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={batchRunning || loading}
+            onClick={() => void runBatch()}
+            className="flex items-center gap-1.5 rounded border border-sky-500/30 bg-sky-500/[0.10] px-2.5 py-1 text-[11px] text-sky-100 transition hover:border-sky-400/50 hover:bg-sky-500/[0.18] disabled:opacity-50"
+          >
+            {batchRunning ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <PlayCircle className="h-3.5 w-3.5" />
+            )}
+            {t("runBatch")}
+          </button>
           <button
             type="button"
             disabled={loading}
@@ -140,7 +193,19 @@ export default function CfdiWatcherPage() {
             )}
             {t("refresh")}
           </button>
+          </div>
         </div>
+
+        {batchSummary && (
+          <div className="mb-3 flex items-center gap-3 rounded border border-sky-500/30 bg-sky-500/[0.06] p-2.5 text-[11px] text-sky-100">
+            <PlayCircle className="h-3.5 w-3.5 shrink-0 text-sky-300" />
+            <span className="font-mono tabular-nums">
+              {t("batchChecked", { count: batchSummary.checked })} ·{" "}
+              {t("batchFlipped", { count: batchSummary.flipped })} ·{" "}
+              {t("batchSkipped", { count: batchSummary.skipped })}
+            </span>
+          </div>
+        )}
 
         {error && (
           <div className="mb-3 flex items-start gap-2 rounded border border-rose-500/30 bg-rose-500/[0.08] p-2.5 text-[11px] text-rose-200">

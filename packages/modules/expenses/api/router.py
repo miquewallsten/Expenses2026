@@ -998,6 +998,36 @@ def recheck_cfdi_route(
     }
 
 
+@router.post("/cfdi/recheck-pending")
+def recheck_pending_route(
+    stale_after_days: int = 7,
+    batch_size: int = 100,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Manually trigger the company-scoped CFDI recheck batch (mirror of the
+    daily 03:00 UTC cron). Useful for ops + dry-run testing."""
+    from packages.core.platform.service_permissions import has_permission as _hp
+    from packages.modules.expenses.service.cfdi_lifecycle_service import recheck_pending
+    if not _hp(db, current_user, "cfdi:recheck"):
+        raise HTTPException(status_code=403, detail="Admin permission required")
+    stale = max(0, min(int(stale_after_days), 365))
+    batch = max(1, min(int(batch_size), 1000))
+    totals = recheck_pending(
+        db,
+        company_id=current_user.company_id,
+        stale_after_days=stale,
+        batch_size=batch,
+    )
+    return {
+        "ok": True,
+        "company_id": current_user.company_id,
+        "stale_after_days": stale,
+        "batch_size": batch,
+        **totals,
+    }
+
+
 # ── Expense-level validation results (all docs for this expense) ─────────────
 
 @router.get("/{expense_id}/validations", response_model=list[ValidationResultRead])
