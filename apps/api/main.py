@@ -6,6 +6,7 @@ import os
 from apps.api.config import settings
 from apps.api.db import Base, engine
 from apps.api.routes import health
+from apps.api.routes.me import router as me_router
 
 from packages.core.platform.api.router import router as platform_router
 from packages.core.platform.api.audit import router as audit_router
@@ -230,6 +231,7 @@ def _run_backfill() -> None:
 _run_backfill()
 
 app.include_router(health.router)
+app.include_router(me_router)
 app.include_router(platform_router)
 app.include_router(audit_router)
 app.include_router(modules_router)
