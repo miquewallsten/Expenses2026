@@ -9,7 +9,7 @@ Four tables:
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from apps.api.db import Base
@@ -24,10 +24,14 @@ class AgentSession(Base):
     """
 
     __tablename__ = "agent_sessions"
+    __table_args__ = (
+        UniqueConstraint("session_id", name="uq_agent_sessions_session_id"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     company_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
-    session_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True, unique=True)
+    # Uniqueness enforced via UniqueConstraint above; keep non-unique index for lookups.
+    session_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     persona: Mapped[str] = mapped_column(String(32), nullable=False)
     user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     turns: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -68,9 +72,13 @@ class AgentPendingAction(Base):
     """
 
     __tablename__ = "agent_pending_actions"
+    __table_args__ = (
+        UniqueConstraint("receipt_id", name="uq_agent_pending_actions_receipt_id"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    receipt_id: Mapped[str] = mapped_column(String(36), nullable=False, unique=True, index=True)
+    # Uniqueness enforced via UniqueConstraint above; keep non-unique index for lookups.
+    receipt_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     company_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     session_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
     tool_name: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -90,9 +98,13 @@ class AgentUpload(Base):
     """File uploaded by the admin for an ingestion tool to parse."""
 
     __tablename__ = "agent_uploads"
+    __table_args__ = (
+        UniqueConstraint("file_id", name="uq_agent_uploads_file_id"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    file_id: Mapped[str] = mapped_column(String(36), nullable=False, unique=True, index=True)
+    # Uniqueness enforced via UniqueConstraint above; keep non-unique index for lookups.
+    file_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     company_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     filename: Mapped[str] = mapped_column(String(512), nullable=False)
     content_type: Mapped[str] = mapped_column(String(128), nullable=False)

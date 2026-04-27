@@ -1,9 +1,14 @@
 from datetime import datetime
 
 from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from apps.api.db import Base
+
+# JSONB on Postgres (matches DB schema created by alembic 6c2a8d3e1b94),
+# falls back to JSON on SQLite for tests.
+_EXTRACTED_FIELDS_TYPE = JSONB().with_variant(JSON(), "sqlite")
 
 
 class ExpenseDocument(Base):
@@ -38,5 +43,5 @@ class ExpenseDocument(Base):
     document_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
     validation_summary: Mapped[str | None] = mapped_column(String(2000), nullable=True)
     # Phase 8.2 — OCR-derived structured fields (rfc/total/date/merchant).
-    extracted_fields: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    extracted_fields: Mapped[dict | None] = mapped_column(_EXTRACTED_FIELDS_TYPE, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
