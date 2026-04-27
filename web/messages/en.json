@@ -557,6 +557,30 @@
   },
   "admin": {
     "title": "Admin",
+    "agentUsage": {
+      "title": "Agent usage",
+      "subtitle": "Cost, latency and tool mix",
+      "back": "Back to admin",
+      "refresh": "Refresh",
+      "range": "Range:",
+      "daysShort": "{days}d",
+      "loading": "Loading usage…",
+      "noCompany": "Select a company to view agent usage.",
+      "since": "Data since {date}",
+      "kpis": {
+        "totalCalls": "Calls",
+        "toolCalls": "Tool calls",
+        "iterations": "Iterations",
+        "okRate": "Success rate",
+        "latency": "Latency"
+      },
+      "breakdown": {
+        "byModel": "By model",
+        "byPersona": "By persona",
+        "tools": "Top 20 tools",
+        "empty": "No activity in this range."
+      }
+    },
     "integrations": {
       "title": "Integrations",
       "subtitle": "ERP & external systems",

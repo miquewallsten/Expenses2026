@@ -557,6 +557,30 @@
   },
   "admin": {
     "title": "Administrador",
+    "agentUsage": {
+      "title": "Uso del agente",
+      "subtitle": "Costo, latencia y mezcla de herramientas",
+      "back": "Volver al admin",
+      "refresh": "Refrescar",
+      "range": "Rango:",
+      "daysShort": "{days}d",
+      "loading": "Cargando uso…",
+      "noCompany": "Selecciona una empresa para ver el uso del agente.",
+      "since": "Datos desde {date}",
+      "kpis": {
+        "totalCalls": "Llamadas",
+        "toolCalls": "Herramientas",
+        "iterations": "Iteraciones",
+        "okRate": "Tasa de éxito",
+        "latency": "Latencia"
+      },
+      "breakdown": {
+        "byModel": "Por modelo",
+        "byPersona": "Por persona",
+        "tools": "Top 20 herramientas",
+        "empty": "Sin actividad en el rango."
+      }
+    },
     "integrations": {
       "title": "Integraciones",
       "subtitle": "ERP y sistemas externos",
