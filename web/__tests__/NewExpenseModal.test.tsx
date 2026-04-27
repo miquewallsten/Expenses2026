@@ -100,10 +100,10 @@ describe("NewExpenseModal", () => {
   });
 
   it("shows server error message when API returns non-OK", async () => {
-    const user = userEvent.setup();
     // Route fetch by URL: duplicate-check returns empty (no banner), submit
-    // returns 401. This is robust to ordering vs. the debounced dup-check
-    // call introduced in Phase 5.3.
+    // returns 401. Use fireEvent.change (sync) instead of userEvent.type to
+    // avoid keystroke races with the Phase 5.3 debounced duplicate-check
+    // effect, which otherwise causes ~40% flake on this assertion.
     vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes("/expenses/duplicates/check")) {
@@ -112,8 +112,8 @@ describe("NewExpenseModal", () => {
       return new Response(JSON.stringify({ detail: "Unauthorized" }), { status: 401 });
     });
     renderModal();
-    await user.type(getDescInput(), "Test expense");
-    await user.type(getAmountInput(), "50");
+    fireEvent.change(getDescInput(), { target: { value: "Test expense" } });
+    fireEvent.change(getAmountInput(), { target: { value: "50" } });
     fireEvent.submit(screen.getByRole("dialog").querySelector("form")!);
     await waitFor(() => {
       expect(screen.getByText("Unauthorized")).toBeInTheDocument();

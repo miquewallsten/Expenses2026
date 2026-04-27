@@ -709,6 +709,20 @@ function WorkList({
         </Link>
       </div>
 
+      {/* Integrations CTA (Phase 4.3) */}
+      <div className="px-3 pb-2">
+        <Link
+          href="/admin/integrations"
+          className="flex w-full items-center gap-2 rounded border border-sky-500/20 bg-sky-500/[0.05] px-3 py-2 transition-colors hover:border-sky-500/35 hover:bg-sky-500/[0.10]"
+        >
+          <Radio className="h-3.5 w-3.5 shrink-0 text-sky-300/60" />
+          <div className="flex-1 text-left">
+            <div className="text-[10.5px] font-semibold text-sky-200/70">Integrations</div>
+            <div className="text-[9px] text-sky-300/35">ERP & external system sync</div>
+          </div>
+        </Link>
+      </div>
+
       {WORKLIST_GROUPS.map((group) => {
         // Gate nav items by installed add-on modules. If an add-on is not
         // installed, hide all of its admin sections entirely — nothing of it

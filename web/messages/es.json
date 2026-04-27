@@ -557,6 +557,44 @@
   },
   "admin": {
     "title": "Administrador",
+    "integrations": {
+      "title": "Integraciones",
+      "subtitle": "ERP y sistemas externos",
+      "intro": "Monitorea integraciones registradas, dispara sincronizaciones y revisa el historial de ejecuciones.",
+      "backToAdmin": "Volver al admin",
+      "refresh": "Refrescar",
+      "listLabel": "Integraciones registradas",
+      "selectPrompt": "Selecciona una integración para ver detalles.",
+      "emptyTitle": "Sin integraciones",
+      "emptyBody": "No hay integraciones registradas para esta compañía. Pide a soporte que conecte tu ERP.",
+      "enabled": "activo",
+      "disabled": "inactivo",
+      "runNow": "Ejecutar manualmente",
+      "enableToRun": "Habilita la integración para ejecutar.",
+      "endpointsLabel": "Endpoints configurados",
+      "noEndpoints": "Esta integración no tiene endpoints configurados.",
+      "noSchedule": "sin schedule",
+      "runsLabel": "Historial reciente",
+      "noRuns": "Aún no se ha ejecutado.",
+      "kind": {
+        "erp": "ERP",
+        "bank_statement": "Estado de cuenta",
+        "hris": "HRIS",
+        "generic_webhook": "Webhook"
+      },
+      "endpoint": {
+        "export_polizas": "Exportar pólizas",
+        "sync_users": "Sincronizar usuarios",
+        "sync_cost_centers": "Sincronizar centros de costo"
+      },
+      "status": {
+        "pending": "Pendiente",
+        "running": "En curso",
+        "succeeded": "Completo",
+        "failed": "Falló",
+        "partial": "Parcial"
+      }
+    },
     "onboarding": {
       "title": "Asistente de inicio",
       "intro": "Completa los 5 pasos para preparar tu compañía. Vuelve cuando quieras — el progreso se guarda automáticamente.",

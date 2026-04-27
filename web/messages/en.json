@@ -557,6 +557,44 @@
   },
   "admin": {
     "title": "Admin",
+    "integrations": {
+      "title": "Integrations",
+      "subtitle": "ERP & external systems",
+      "intro": "Monitor registered integrations, trigger syncs, and review execution history.",
+      "backToAdmin": "Back to admin",
+      "refresh": "Refresh",
+      "listLabel": "Registered integrations",
+      "selectPrompt": "Select an integration to see details.",
+      "emptyTitle": "No integrations",
+      "emptyBody": "No integrations are registered for this company. Ask support to wire up your ERP.",
+      "enabled": "enabled",
+      "disabled": "disabled",
+      "runNow": "Run manually",
+      "enableToRun": "Enable the integration to run it.",
+      "endpointsLabel": "Configured endpoints",
+      "noEndpoints": "This integration has no configured endpoints.",
+      "noSchedule": "no schedule",
+      "runsLabel": "Recent runs",
+      "noRuns": "No runs yet.",
+      "kind": {
+        "erp": "ERP",
+        "bank_statement": "Bank statement",
+        "hris": "HRIS",
+        "generic_webhook": "Webhook"
+      },
+      "endpoint": {
+        "export_polizas": "Export polizas",
+        "sync_users": "Sync users",
+        "sync_cost_centers": "Sync cost centers"
+      },
+      "status": {
+        "pending": "Pending",
+        "running": "Running",
+        "succeeded": "Succeeded",
+        "failed": "Failed",
+        "partial": "Partial"
+      }
+    },
     "onboarding": {
       "title": "Onboarding wizard",
       "intro": "Complete these 5 steps to make your company live. Come back any time — progress is saved automatically.",
