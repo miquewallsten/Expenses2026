@@ -807,6 +807,20 @@ function WorkList({
         </Link>
       </div>
 
+      {/* Routing Rules CTA (Phase 5.5) */}
+      <div className="px-3 pb-2">
+        <Link
+          href="/admin/routing-rules"
+          className="flex w-full items-center gap-2 rounded border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2 transition-colors hover:border-amber-500/35 hover:bg-amber-500/[0.10]"
+        >
+          <GitBranch className="h-3.5 w-3.5 shrink-0 text-amber-300/60" />
+          <div className="flex-1 text-left">
+            <div className="text-[10.5px] font-semibold text-amber-200/70">Routing Rules</div>
+            <div className="text-[9px] text-amber-300/35">Approval routing · SLA escalation</div>
+          </div>
+        </Link>
+      </div>
+
       {WORKLIST_GROUPS.map((group) => {
         // Gate nav items by installed add-on modules. If an add-on is not
         // installed, hide all of its admin sections entirely — nothing of it

@@ -675,6 +675,24 @@
         "detail": "Detail"
       }
     },
+    "routingRules": {
+      "title": "Approval routing rules",
+      "back": "Back to admin",
+      "refresh": "Refresh",
+      "newRule": "New rule",
+      "rules": "Rules",
+      "loading": "Loading…",
+      "empty": "No rules configured.",
+      "noCompany": "Select a company to configure rules.",
+      "selectPrompt": "Select a rule or create a new one.",
+      "createTitle": "New rule",
+      "editorHint": "JSON · fields: rule_key, name, priority, when_json, approvers_json, sla_hours, escalation_role, is_enabled",
+      "save": "Save",
+      "delete": "Delete",
+      "confirmDelete": "Delete this rule?",
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
     "cfdiWatcher": {
       "title": "SAT watcher — cancelled CFDIs",
       "subtitle": "Expenses whose CFDI has been marked Cancelled by SAT",

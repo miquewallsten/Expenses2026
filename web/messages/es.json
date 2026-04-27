@@ -675,6 +675,24 @@
         "detail": "Detalle"
       }
     },
+    "routingRules": {
+      "title": "Reglas de aprobación",
+      "back": "Volver al admin",
+      "refresh": "Refrescar",
+      "newRule": "Nueva regla",
+      "rules": "Reglas",
+      "loading": "Cargando…",
+      "empty": "Sin reglas configuradas.",
+      "noCompany": "Selecciona una empresa para configurar reglas.",
+      "selectPrompt": "Selecciona una regla o crea una nueva.",
+      "createTitle": "Nueva regla",
+      "editorHint": "JSON · campos: rule_key, name, priority, when_json, approvers_json, sla_hours, escalation_role, is_enabled",
+      "save": "Guardar",
+      "delete": "Eliminar",
+      "confirmDelete": "¿Eliminar esta regla?",
+      "enabled": "Activa",
+      "disabled": "Inactiva"
+    },
     "cfdiWatcher": {
       "title": "Watcher SAT — CFDI cancelados",
       "subtitle": "Gastos con CFDI marcado Cancelado por el SAT",
