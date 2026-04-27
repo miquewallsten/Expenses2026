@@ -24,7 +24,7 @@ import AdminReportCyclePanel from "@/components/admin/AdminReportCyclePanel";
 import Link from "next/link";
 import {
   Building2, FileText, GitBranch, ShieldCheck, Puzzle, Key, Lock,
-  Calculator, ClipboardCheck, Bot, Save, Loader2, FolderOutput, Archive, Users, Radio, CalendarClock, HardDrive, Sparkles, BookOpen, Layers, Activity, Lightbulb, XOctagon,
+  Calculator, ClipboardCheck, Bot, Save, Loader2, FolderOutput, Archive, Users, Radio, CalendarClock, HardDrive, Sparkles, BookOpen, Layers, Activity, Lightbulb, XOctagon, Brain,
 } from "lucide-react";
 import { getCurrentRole, getCurrentUserId, getCurrentCompanyId, getStoredSession, getAuthHeaders } from "@/lib/session";
 import { buildGlobalNav, GlobalNavItem } from "@/lib/navigation";
@@ -761,6 +761,20 @@ function WorkList({
           <div className="flex-1 text-left">
             <div className="text-[10.5px] font-semibold text-rose-200/70">CFDI Watcher</div>
             <div className="text-[9px] text-rose-300/35">SAT cancellations · reversal</div>
+          </div>
+        </Link>
+      </div>
+
+      {/* Category Memory CTA (Phase 8.3) */}
+      <div className="px-3 pb-2">
+        <Link
+          href="/admin/category-memory"
+          className="flex w-full items-center gap-2 rounded border border-violet-500/20 bg-violet-500/[0.05] px-3 py-2 transition-colors hover:border-violet-500/35 hover:bg-violet-500/[0.10]"
+        >
+          <Brain className="h-3.5 w-3.5 shrink-0 text-violet-300/60" />
+          <div className="flex-1 text-left">
+            <div className="text-[10.5px] font-semibold text-violet-200/70">Category Memory</div>
+            <div className="text-[9px] text-violet-300/35">kNN feedback corpus · inspector</div>
           </div>
         </Link>
       </div>

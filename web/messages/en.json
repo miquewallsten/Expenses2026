@@ -557,6 +557,35 @@
   },
   "admin": {
     "title": "Admin",
+    "categoryMemory": {
+      "title": "Category memory",
+      "subtitle": "Learned corrections used to suggest categories",
+      "back": "Back to admin",
+      "refresh": "Refresh",
+      "loading": "Loading…",
+      "noCompany": "Select a company to view memory.",
+      "rowCount": "{count, plural, =0 {No entries} one {# entry} other {# entries}}",
+      "emptyTitle": "No memory yet",
+      "emptyBody": "When accountants correct categories on expenses, entries appear here.",
+      "delete": "Delete",
+      "confirmDelete": "Delete this memory entry? The suggester will stop using it.",
+      "th": {
+        "description": "Description",
+        "original": "Detected",
+        "corrected": "Corrected",
+        "created": "Created",
+        "action": "Action"
+      },
+      "probe": {
+        "title": "Test suggestion",
+        "placeholder": "Type a description and press Enter…",
+        "run": "Suggest",
+        "noMatch": "No neighbours above threshold.",
+        "predicted": "Prediction",
+        "confidence": "{pct}%",
+        "votes": "{count, plural, one {# vote} other {# votes}}"
+      }
+    },
     "cfdiWatcher": {
       "title": "SAT watcher — cancelled CFDIs",
       "subtitle": "Expenses whose CFDI has been marked Cancelled by SAT",

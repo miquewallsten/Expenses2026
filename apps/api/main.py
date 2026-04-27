@@ -284,6 +284,10 @@ app.include_router(report_cycle_router)
 app.include_router(storage_config_router)
 app.include_router(ai_policy_router)
 app.include_router(ai_governance_router)
+from packages.modules.admin.api.category_memory_router import (  # noqa: E402
+    router as category_memory_router,
+)
+app.include_router(category_memory_router)
 app.include_router(agent_router)
 app.include_router(amex_router)
 app.include_router(integrations_router)

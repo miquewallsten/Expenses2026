@@ -557,6 +557,35 @@
   },
   "admin": {
     "title": "Administrador",
+    "categoryMemory": {
+      "title": "Memoria de categorización",
+      "subtitle": "Correcciones aprendidas para sugerir categorías",
+      "back": "Volver al admin",
+      "refresh": "Refrescar",
+      "loading": "Cargando…",
+      "noCompany": "Selecciona una empresa para ver la memoria.",
+      "rowCount": "{count, plural, =0 {Sin entradas} one {# entrada} other {# entradas}}",
+      "emptyTitle": "Sin memoria aún",
+      "emptyBody": "Cuando los contadores corrijan categorías en gastos, aparecerán aquí.",
+      "delete": "Borrar",
+      "confirmDelete": "¿Borrar esta entrada de memoria? El sugeridor dejará de usarla.",
+      "th": {
+        "description": "Descripción",
+        "original": "Detectado",
+        "corrected": "Corregido",
+        "created": "Creado",
+        "action": "Acción"
+      },
+      "probe": {
+        "title": "Probar sugerencia",
+        "placeholder": "Escribe una descripción y presiona Enter…",
+        "run": "Sugerir",
+        "noMatch": "Sin vecinos por encima del umbral.",
+        "predicted": "Predicción",
+        "confidence": "{pct}%",
+        "votes": "{count, plural, one {# voto} other {# votos}}"
+      }
+    },
     "cfdiWatcher": {
       "title": "Watcher SAT — CFDI cancelados",
       "subtitle": "Gastos con CFDI marcado Cancelado por el SAT",
