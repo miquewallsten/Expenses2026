@@ -2191,7 +2191,27 @@
       "loadingReceipt": "Loading receipt…",
       "toolOnlyReply": "Tools ran; no additional text.",
       "emptyReply": "(empty reply)",
-      "ranOk": "ran successfully"
+      "ranOk": "ran successfully",
+      "slash": {
+        "ariaLabel": "Quick commands",
+        "empty": "No matching commands.",
+        "missingReceipts": {
+          "label": "Missing receipts",
+          "description": "List approved expenses without an attached receipt."
+        },
+        "matchCfdis": {
+          "label": "Reconcile CFDIs",
+          "description": "Match orphan CFDIs to unpaired expenses by UUID."
+        },
+        "polizaPreview": {
+          "label": "Poliza preview",
+          "description": "Simulate the accounting voucher for a specific expense."
+        },
+        "monthEnd": {
+          "label": "Month-end close",
+          "description": "Executive close summary: gaps, reconciliation, vouchers."
+        }
+      }
     },
     "receipt": {
       "confirm": "Confirm",

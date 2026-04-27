@@ -14,6 +14,8 @@ import {
 } from "@/lib/agent/client";
 import { agentStream, type StreamFinalPayload } from "@/lib/agent/stream";
 import ReceiptCard from "./ReceiptCard";
+import SlashCommandPalette from "./SlashCommandPalette";
+import { filterSlashCommands, type SlashCommand } from "./slashCommands";
 
 interface Preset {
   label: string;
@@ -70,8 +72,41 @@ export default function AgentChat({
   const [receipts,  setReceipts]  = useState<Record<string, AgentReceipt>>({});
   const [uploads,   setUploads]   = useState<{ file_id: string; filename: string }[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [slashIndex, setSlashIndex] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+
+  // Slash-command palette is only shown when the input begins with "/".
+  const slashOpen = input.startsWith("/");
+  const slashMatches: SlashCommand[] = slashOpen
+    ? filterSlashCommands(input.slice(1), persona)
+    : [];
+
+  // Keep the active option in range when matches change.
+  useEffect(() => {
+    if (slashIndex >= slashMatches.length) setSlashIndex(0);
+  }, [slashMatches.length, slashIndex]);
+
+  const applySlash = useCallback((cmd: SlashCommand) => {
+    if (cmd.needsArg) {
+      // Insert prompt and wait for user to fill the trailing argument.
+      setInput(cmd.prompt);
+      setTimeout(() => {
+        const el = inputRef.current;
+        if (el) {
+          el.focus();
+          const len = cmd.prompt.length;
+          el.setSelectionRange(len, len);
+        }
+      }, 0);
+      return;
+    }
+    setInput("");
+    runTurnRef.current(cmd.prompt);
+  }, []);
+  // Forward ref to break the dependency cycle (runTurn is declared below).
+  const runTurnRef = useRef<(text: string) => void>(() => undefined);
 
   const scrollToBottom = useCallback(() => {
     const el = listRef.current;
@@ -190,6 +225,10 @@ export default function AgentChat({
     }
   }, [companyId, persona, sessionId, uploads, loading, t, fetchReceipts, streaming]);
 
+  // Expose the latest runTurn through a ref so applySlash (declared above)
+  // can dispatch without ordering issues.
+  useEffect(() => { runTurnRef.current = runTurn; }, [runTurn]);
+
   const handleFile = useCallback(async (file: File) => {
     setUploading(true);
     setError(null);
@@ -278,7 +317,15 @@ export default function AgentChat({
       )}
 
       {/* composer */}
-      <div className="shrink-0 border-t border-white/[0.07] px-2.5 py-2.5">
+      <div className="relative shrink-0 border-t border-white/[0.07] px-2.5 py-2.5">
+        {slashOpen && (
+          <SlashCommandPalette
+            commands={slashMatches}
+            activeIndex={slashIndex}
+            onHover={setSlashIndex}
+            onSelect={applySlash}
+          />
+        )}
         {allowUpload && (
           <input
             ref={fileRef}
@@ -301,9 +348,32 @@ export default function AgentChat({
             </button>
           )}
           <textarea
+            ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
+              if (slashOpen && slashMatches.length > 0) {
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setSlashIndex((i) => (i + 1) % slashMatches.length);
+                  return;
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setSlashIndex((i) => (i - 1 + slashMatches.length) % slashMatches.length);
+                  return;
+                }
+                if (e.key === "Tab" || (e.key === "Enter" && !e.shiftKey)) {
+                  e.preventDefault();
+                  applySlash(slashMatches[slashIndex]);
+                  return;
+                }
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  setInput("");
+                  return;
+                }
+              }
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 runTurn(input);

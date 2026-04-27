@@ -2191,7 +2191,27 @@
       "loadingReceipt": "Cargando recibo…",
       "toolOnlyReply": "Herramientas ejecutadas; ningún texto adicional.",
       "emptyReply": "(respuesta vacía)",
-      "ranOk": "ejecutada correctamente"
+      "ranOk": "ejecutada correctamente",
+      "slash": {
+        "ariaLabel": "Comandos rápidos",
+        "empty": "Sin comandos coincidentes.",
+        "missingReceipts": {
+          "label": "Recibos faltantes",
+          "description": "Lista gastos aprobados sin recibo adjunto."
+        },
+        "matchCfdis": {
+          "label": "Conciliar CFDIs",
+          "description": "Empareja CFDIs huérfanos con gastos pendientes por UUID."
+        },
+        "polizaPreview": {
+          "label": "Vista previa de póliza",
+          "description": "Simula la póliza contable para un gasto específico."
+        },
+        "monthEnd": {
+          "label": "Cierre mensual",
+          "description": "Resumen ejecutivo de cierre: faltantes, conciliación y pólizas."
+        }
+      }
     },
     "receipt": {
       "confirm": "Confirmar",
