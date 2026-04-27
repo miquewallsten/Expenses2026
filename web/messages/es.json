@@ -2275,5 +2275,46 @@
       "warnTitle": "Posible anomalía",
       "dismiss": "Ocultar"
     }
+  },
+  "financeAnalytics": {
+    "title": "Analítica financiera",
+    "subtitle": "Vista agregada de gastos, aprobaciones y SLA — datos por compañía.",
+    "loading": "Cargando…",
+    "empty": "Sin datos suficientes.",
+    "errorLoad": "No se pudieron cargar las analíticas.",
+    "uncategorized": "Sin categoría",
+    "tiles": {
+      "approvedTotal": "Aprobado total",
+      "approvedCount": "{count} gastos",
+      "pending": "Pendientes",
+      "pendingSub": "En revisión",
+      "rejected": "Rechazados",
+      "rejectedSub": "Histórico",
+      "slaP95": "SLA p95",
+      "slaP50": "p50: {hours}"
+    },
+    "charts": {
+      "byMonth": "Gasto por mes",
+      "byCategory": "Gasto por categoría",
+      "funnel": "Embudo de aprobación",
+      "sla": "Distribución SLA"
+    },
+    "funnelStatus": {
+      "draft": "Borrador",
+      "submitted": "Enviado",
+      "manager_approved": "Aprob. gerente",
+      "approved": "Aprobado",
+      "rejected": "Rechazado"
+    },
+    "sla": {
+      "p50": "p50 aprobación",
+      "p75": "p75 aprobación",
+      "p95": "p95 aprobación",
+      "max": "Máx. aprobación",
+      "openCount": "En cola",
+      "openP50": "p50 en cola",
+      "openP95": "p95 en cola",
+      "openMax": "Máx. en cola"
+    }
   }
 }

@@ -235,6 +235,20 @@ export const MY_WORK_MODULES: readonly MyWorkModule[] = [
       ((ctx.capabilities?.is_amex_reconciler ?? false) || hasRole(ctx, "admin")),
     component: React.lazy(() => import("@/modules/amex/AmexReconciliationModule")),
   },
+
+  // ── Finance Analytics ────────────────────────────────────────────────────────
+  // Read-only finance dashboard (Phase 4.7 + 5.7). Visible to admins,
+  // accounting, and executives. Server-aggregated — never returns raw expenses.
+  {
+    id: "finance_analytics",
+    label: "Finance Analytics",
+    icon: "BarChart2",
+    isVisible: (ctx) =>
+      hasModule(ctx, "expenses") &&
+      (hasRole(ctx, "admin", "accounting", "executive") ||
+        hasPermission(ctx, "analytics:view")),
+    component: React.lazy(() => import("@/modules/finance-analytics/FinanceAnalyticsModule")),
+  },
 ] as const;
 
 // ── Public helpers ─────────────────────────────────────────────────────────────

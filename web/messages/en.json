@@ -2275,5 +2275,46 @@
       "warnTitle": "Possible anomaly",
       "dismiss": "Dismiss"
     }
+  },
+  "financeAnalytics": {
+    "title": "Finance analytics",
+    "subtitle": "Aggregate view of spend, approvals and SLA — company-scoped.",
+    "loading": "Loading…",
+    "empty": "Not enough data.",
+    "errorLoad": "Failed to load analytics.",
+    "uncategorized": "Uncategorized",
+    "tiles": {
+      "approvedTotal": "Approved total",
+      "approvedCount": "{count} expenses",
+      "pending": "Pending",
+      "pendingSub": "In review",
+      "rejected": "Rejected",
+      "rejectedSub": "All-time",
+      "slaP95": "SLA p95",
+      "slaP50": "p50: {hours}"
+    },
+    "charts": {
+      "byMonth": "Spend by month",
+      "byCategory": "Spend by category",
+      "funnel": "Approval funnel",
+      "sla": "SLA distribution"
+    },
+    "funnelStatus": {
+      "draft": "Draft",
+      "submitted": "Submitted",
+      "manager_approved": "Mgr approved",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "sla": {
+      "p50": "p50 approval",
+      "p75": "p75 approval",
+      "p95": "p95 approval",
+      "max": "Max approval",
+      "openCount": "Open queue",
+      "openP50": "p50 in queue",
+      "openP95": "p95 in queue",
+      "openMax": "Max in queue"
+    }
   }
 }

@@ -101,7 +101,11 @@ describe("NewExpenseModal", () => {
 
   it("shows server error message when API returns non-OK", async () => {
     const user = userEvent.setup();
-    vi.mocked(fetch).mockResolvedValueOnce(
+    // Use `mockResolvedValue` (not `Once`) because the modal also fires a
+    // debounced duplicate-check POST while the user types. Both calls just
+    // resolve to the same 401 — the duplicate check bails on `!r.ok`, so
+    // only the submit path surfaces the error.
+    vi.mocked(fetch).mockResolvedValue(
       new Response(JSON.stringify({ detail: "Unauthorized" }), { status: 401 })
     );
     renderModal();
