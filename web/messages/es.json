@@ -46,7 +46,8 @@
     "dismiss": "Cerrar",
     "refresh": "Actualizar",
     "itemCount": "{count, plural, one {# elemento} other {# elementos}}",
-    "flaggedCount": "{count, plural, one {# marcado} other {# marcados}}"
+    "flaggedCount": "{count, plural, one {# marcado} other {# marcados}}",
+    "delete": "Eliminar"
   },
   "shell": {
     "openNavigation": "Abrir navegación",
@@ -147,13 +148,27 @@
         "digestOnly": "Solo resumen"
       },
       "events": {
-        "expense.submitted": { "label": "Gasto enviado a aprobación" },
-        "expense.approved": { "label": "Gasto aprobado" },
-        "expense.rejected": { "label": "Gasto rechazado" },
-        "expense.returned": { "label": "Gasto devuelto" },
-        "expense.daily_digest": { "label": "Resumen diario de aprobaciones" },
-        "expense.approval_nudge_48h": { "label": "Recordatorio de aprobación 48h" },
-        "auth.magic_link": { "label": "Enlace de inicio de sesión" }
+        "expense.submitted": {
+          "label": "Gasto enviado a aprobación"
+        },
+        "expense.approved": {
+          "label": "Gasto aprobado"
+        },
+        "expense.rejected": {
+          "label": "Gasto rechazado"
+        },
+        "expense.returned": {
+          "label": "Gasto devuelto"
+        },
+        "expense.daily_digest": {
+          "label": "Resumen diario de aprobaciones"
+        },
+        "expense.approval_nudge_48h": {
+          "label": "Recordatorio de aprobación 48h"
+        },
+        "auth.magic_link": {
+          "label": "Enlace de inicio de sesión"
+        }
       }
     },
     "aiPanelDefault": "Panel IA abierto por defecto",
@@ -930,7 +945,8 @@
       "roles": "Roles",
       "permissions": "Permisos",
       "addOns": "Módulos adicionales",
-      "authentication": "Autenticación"
+      "authentication": "Autenticación",
+      "policies": "Políticas"
     },
     "groups": {
       "setup": "Configuración",
@@ -2149,6 +2165,29 @@
       "edit": "Editar",
       "noConfigLoaded": "No hay configuración cargada.",
       "noConfigHint": "Usa el Motor de Configuración IA para configurar tu empresa, o completa las secciones del estudio manualmente."
+    },
+    "policies": {
+      "rulesLabel": "Reglas IA",
+      "newRule": "Nueva regla",
+      "noRules": "No hay reglas configuradas.",
+      "expenseSettings": "Configuración de gastos",
+      "ticketsOn": "Tickets activos",
+      "ticketsOff": "Sin tickets",
+      "tabCreate": "Nueva regla",
+      "tabRule": "Detalle de regla",
+      "tabSettings": "Configuración",
+      "promptLabel": "Describe una regla en lenguaje natural",
+      "promptPlaceholder": "Ej. Avisar cuando gastos internacionales superen $5,000 USD…",
+      "generateBtn": "Generar",
+      "generating": "Generando…",
+      "previewSummary": "Vista previa",
+      "saveRule": "Guardar regla",
+      "applyAsSetting": "Aplicar como ajuste",
+      "sourceText": "Texto fuente",
+      "ruleJson": "JSON de regla",
+      "disableRule": "Desactivar",
+      "enableRule": "Activar",
+      "reExtract": "Re-extraer"
     }
   },
   "review": {

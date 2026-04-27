@@ -46,7 +46,8 @@
     "dismiss": "Dismiss",
     "refresh": "Refresh",
     "itemCount": "{count, plural, one {# item} other {# items}}",
-    "flaggedCount": "{count, plural, one {# flagged} other {# flagged}}"
+    "flaggedCount": "{count, plural, one {# flagged} other {# flagged}}",
+    "delete": "Delete"
   },
   "shell": {
     "openNavigation": "Open navigation",
@@ -147,13 +148,27 @@
         "digestOnly": "Digest only"
       },
       "events": {
-        "expense.submitted": { "label": "Expense submitted for approval" },
-        "expense.approved": { "label": "Expense approved" },
-        "expense.rejected": { "label": "Expense rejected" },
-        "expense.returned": { "label": "Expense returned" },
-        "expense.daily_digest": { "label": "Daily approval digest" },
-        "expense.approval_nudge_48h": { "label": "48h approval nudge" },
-        "auth.magic_link": { "label": "Sign-in magic link" }
+        "expense.submitted": {
+          "label": "Expense submitted for approval"
+        },
+        "expense.approved": {
+          "label": "Expense approved"
+        },
+        "expense.rejected": {
+          "label": "Expense rejected"
+        },
+        "expense.returned": {
+          "label": "Expense returned"
+        },
+        "expense.daily_digest": {
+          "label": "Daily approval digest"
+        },
+        "expense.approval_nudge_48h": {
+          "label": "48h approval nudge"
+        },
+        "auth.magic_link": {
+          "label": "Sign-in magic link"
+        }
       }
     },
     "aiPanelDefault": "AI Panel Open by Default",
@@ -930,7 +945,8 @@
       "roles": "Roles",
       "permissions": "Permissions",
       "addOns": "Add-Ons",
-      "authentication": "Authentication"
+      "authentication": "Authentication",
+      "policies": "Policies"
     },
     "groups": {
       "setup": "Setup",
@@ -2149,6 +2165,29 @@
       "edit": "Edit",
       "noConfigLoaded": "No configuration loaded yet.",
       "noConfigHint": "Use the AI Setup Engine to configure your company, or fill in the studio sections manually."
+    },
+    "policies": {
+      "rulesLabel": "AI Rules",
+      "newRule": "New rule",
+      "noRules": "No rules configured yet.",
+      "expenseSettings": "Expense Settings",
+      "ticketsOn": "Tickets on",
+      "ticketsOff": "Tickets off",
+      "tabCreate": "Create Rule",
+      "tabRule": "Rule Detail",
+      "tabSettings": "Settings",
+      "promptLabel": "Describe a policy rule in plain language",
+      "promptPlaceholder": "e.g. Warn when international expenses exceed $5,000 USD…",
+      "generateBtn": "Generate",
+      "generating": "Generating…",
+      "previewSummary": "Preview",
+      "saveRule": "Save rule",
+      "applyAsSetting": "Apply as setting",
+      "sourceText": "Source text",
+      "ruleJson": "Rule JSON",
+      "disableRule": "Disable",
+      "enableRule": "Enable",
+      "reExtract": "Re-extract"
     }
   },
   "review": {
