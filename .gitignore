@@ -41,3 +41,7 @@ npm-debug.log*
 uploads/
 storage/
 .gstack/
+
+# Claude local config (contains secrets — never commit)
+.claude/settings.json
+.claude/settings.local.json
