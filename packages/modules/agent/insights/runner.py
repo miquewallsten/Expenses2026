@@ -35,6 +35,7 @@ def _scanners() -> list[Scanner]:
         scan_unmatched_amex_aging,
         scan_pending_approval_aging,
         scan_cfdi_cancelled_unhandled,
+        scan_routing_sla_overdue,
     )
     return [
         scan_stale_drafts,
@@ -46,6 +47,7 @@ def _scanners() -> list[Scanner]:
         scan_unmatched_amex_aging,
         scan_pending_approval_aging,
         scan_cfdi_cancelled_unhandled,
+        scan_routing_sla_overdue,
     ]
 
 

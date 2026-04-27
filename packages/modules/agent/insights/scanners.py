@@ -292,3 +292,62 @@ def scan_cfdi_cancelled_unhandled(db: Session, company_id: int) -> list[InsightC
         "data_json": {"expense_ids": [r.id for r in rows][:50], "total": len(rows)},
         "suggested_prompt": "Lista los gastos con CFDI cancelado y sugiere reposición.",
     }]
+
+
+# ── 10. Routing SLA breach (Phase 5.5 escalation) ──────────────────────────
+
+def scan_routing_sla_overdue(db: Session, company_id: int) -> list[InsightCandidate]:
+    """Surfaces submitted/manager_approved expenses past their routing rule's
+    ``sla_hours`` window. Reuses approval_routing_service.find_overdue.
+    Best-effort — empty list on any error so the scanner never blocks the
+    insight runner."""
+    try:
+        from packages.modules.expenses.service.approval_routing_service import (
+            build_context_for_expense,
+            find_overdue,
+            list_rules_for_company,
+        )
+    except Exception:  # pragma: no cover — defensive
+        return []
+    rules = list_rules_for_company(db, company_id=company_id, enabled_only=True)
+    if not rules:
+        return []
+    rows = (
+        db.query(Expense)
+        .filter(
+            Expense.company_id == company_id,
+            Expense.status.in_(("submitted", "manager_approved")),
+        )
+        .limit(500)
+        .all()
+    )
+    if not rows:
+        return []
+    triples = [
+        (r.id, r.status, r.created_at, build_context_for_expense(r))
+        for r in rows
+        if r.created_at is not None
+    ]
+    overdue = find_overdue(db, expenses_with_ctx=triples, rules=rules)
+    if not overdue:
+        return []
+    return [{
+        "kind": "routing_sla_overdue",
+        "severity": "critical",
+        "title": f"{len(overdue)} gastos rebasaron SLA de aprobación",
+        "body": "Reglas de routing marcaron estos gastos como atrasados; revisa escalación.",
+        "data_json": {
+            "items": [
+                {
+                    "expense_id": o.expense_id,
+                    "rule_id": o.rule_id,
+                    "age_hours": o.age_hours,
+                    "sla_hours": o.sla_hours,
+                    "escalation_role": o.escalation_role,
+                }
+                for o in overdue[:50]
+            ],
+            "total": len(overdue),
+        },
+        "suggested_prompt": "Lista los gastos vencidos por SLA y sugiere a quién escalar.",
+    }]
