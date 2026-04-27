@@ -24,7 +24,7 @@ import AdminReportCyclePanel from "@/components/admin/AdminReportCyclePanel";
 import Link from "next/link";
 import {
   Building2, FileText, GitBranch, ShieldCheck, Puzzle, Key, Lock,
-  Calculator, ClipboardCheck, Bot, Save, Loader2, FolderOutput, Archive, Users, Radio, CalendarClock, HardDrive, Sparkles, BookOpen, Layers, Activity,
+  Calculator, ClipboardCheck, Bot, Save, Loader2, FolderOutput, Archive, Users, Radio, CalendarClock, HardDrive, Sparkles, BookOpen, Layers, Activity, Lightbulb,
 } from "lucide-react";
 import { getCurrentRole, getCurrentUserId, getCurrentCompanyId, getStoredSession, getAuthHeaders } from "@/lib/session";
 import { buildGlobalNav, GlobalNavItem } from "@/lib/navigation";
@@ -733,6 +733,20 @@ function WorkList({
           <div className="flex-1 text-left">
             <div className="text-[10.5px] font-semibold text-amber-200/70">Agent Usage</div>
             <div className="text-[9px] text-amber-300/35">Cost, latency & tool mix</div>
+          </div>
+        </Link>
+      </div>
+
+      {/* Agent Insights CTA (Phase 8.5) */}
+      <div className="px-3 pb-2">
+        <Link
+          href="/admin/insights"
+          className="flex w-full items-center gap-2 rounded border border-yellow-500/20 bg-yellow-500/[0.05] px-3 py-2 transition-colors hover:border-yellow-500/35 hover:bg-yellow-500/[0.10]"
+        >
+          <Lightbulb className="h-3.5 w-3.5 shrink-0 text-yellow-300/60" />
+          <div className="flex-1 text-left">
+            <div className="text-[10.5px] font-semibold text-yellow-200/70">Agent Insights</div>
+            <div className="text-[9px] text-yellow-300/35">Daily digest triage</div>
           </div>
         </Link>
       </div>

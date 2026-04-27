@@ -557,6 +557,23 @@
   },
   "admin": {
     "title": "Administrador",
+    "insights": {
+      "title": "Insights del agente",
+      "subtitle": "Triage del digest diario",
+      "back": "Volver al admin",
+      "rescan": "Rescanear",
+      "sendDigest": "Enviar digest",
+      "loading": "Cargando insights…",
+      "noCompany": "Selecciona una empresa para ver los insights.",
+      "openCount": "{count, plural, =0 {Sin insights abiertos} one {# insight abierto} other {# insights abiertos}}",
+      "emptyTitle": "Todo en orden",
+      "emptyBody": "No hay insights abiertos en este momento.",
+      "actions": {
+        "ack": "Reconocer",
+        "resolve": "Resolver",
+        "dismiss": "Descartar"
+      }
+    },
     "agentUsage": {
       "title": "Uso del agente",
       "subtitle": "Costo, latencia y mezcla de herramientas",

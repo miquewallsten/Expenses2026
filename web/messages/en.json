@@ -557,6 +557,23 @@
   },
   "admin": {
     "title": "Admin",
+    "insights": {
+      "title": "Agent insights",
+      "subtitle": "Daily digest triage",
+      "back": "Back to admin",
+      "rescan": "Rescan",
+      "sendDigest": "Send digest",
+      "loading": "Loading insights…",
+      "noCompany": "Select a company to view insights.",
+      "openCount": "{count, plural, =0 {No open insights} one {# open insight} other {# open insights}}",
+      "emptyTitle": "All clear",
+      "emptyBody": "No open insights at this time.",
+      "actions": {
+        "ack": "Acknowledge",
+        "resolve": "Resolve",
+        "dismiss": "Dismiss"
+      }
+    },
     "agentUsage": {
       "title": "Agent usage",
       "subtitle": "Cost, latency and tool mix",
