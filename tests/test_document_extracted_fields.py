@@ -71,3 +71,46 @@ def test_get_document_extracted_fields_null_when_absent(db_session, client, test
     )
     assert r.status_code == 200, r.text
     assert r.json()["extracted_fields"] is None
+
+
+def test_create_document_runs_ocr_extraction(db_session, test_company):
+    """Phase 8.2 hookup — create_document should run extract_fields and persist."""
+    from packages.modules.expenses.service.document_service import create_document
+    from packages.modules.expenses.schemas.document import ExpenseDocumentCreate
+
+    payload = ExpenseDocumentCreate(
+        company_id=test_company.id,
+        filename="receipt.txt",
+        content_text=(
+            "OXXO TIENDA #45\n"
+            "Total: 99.50\n"
+            "Fecha: 2026-04-15\n"
+            "RFC: ABC010101AAA\n"
+        ),
+    )
+    doc = create_document(db_session, payload)
+    assert doc.extracted_fields is not None
+    assert doc.extracted_fields.get("total") == "99.50"
+    assert doc.extracted_fields.get("date") == "2026-04-15"
+    assert doc.extracted_fields.get("rfc") == "ABC010101AAA"
+    assert doc.extraction_status == "completed"
+
+
+def test_create_document_skips_ocr_for_cfdi_xml(db_session, test_company):
+    """CFDI XML has its own canonical parser — heuristic OCR must skip."""
+    from packages.modules.expenses.service.document_service import create_document
+    from packages.modules.expenses.schemas.document import ExpenseDocumentCreate
+
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<cfdi:Comprobante xmlns:cfdi="http://www.sat.gob.mx/cfd/4" Total="500.00">'
+        '</cfdi:Comprobante>'
+    )
+    payload = ExpenseDocumentCreate(
+        company_id=test_company.id,
+        filename="cfdi.xml",
+        content_text=xml,
+    )
+    doc = create_document(db_session, payload)
+    assert doc.document_type == "cfdi_xml"
+    assert doc.extracted_fields is None

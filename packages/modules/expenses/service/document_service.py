@@ -14,6 +14,7 @@ from packages.modules.expenses.models.document import ExpenseDocument
 from packages.modules.expenses.schemas.document import ExpenseDocumentCreate
 from packages.modules.expenses.schemas.document_update import ExpenseDocumentUpdate
 from packages.modules.expenses.service.document_classifier import classify_document
+from packages.modules.ai.service.ocr_service import extract_fields as ocr_extract_fields
 from packages.modules.expenses.service.pdf_intake_service import analyze_pdf_intake
 from packages.modules.expenses.service.xml_extraction_service import extract_xml_fields
 from packages.modules.expenses.service.pdf_ticket_extraction_service import extract_ticket_signals
@@ -250,6 +251,21 @@ def create_document(
         if existing:
             return existing
         raise
+
+    # ── Heuristic field extraction (Phase 8.2) ────────────────────────────────
+    # Best-effort regex-based scrape of merchant/total/date/rfc from the
+    # document text. Skipped for cfdi_xml (canonical CFDI parser owns those
+    # fields). Failure must never block document creation.
+    if document.document_type != "cfdi_xml" and document.content_text:
+        try:
+            fields = ocr_extract_fields(document.content_text)
+            if fields:
+                document.extracted_fields = fields
+                document.extraction_status = "completed"
+                db.commit()
+                db.refresh(document)
+        except Exception:  # noqa: BLE001
+            db.rollback()
 
     # ── Archive original bytes (only when real file bytes are available) ──────
     if file_bytes is not None:
