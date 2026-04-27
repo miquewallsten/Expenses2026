@@ -110,6 +110,139 @@ def chat(
     return ChatResponse(**result)
 
 
+# ── GET /agent/stream/{cid} ────────────────────────────────────────────────
+#
+# Phase 8.9 — Server-Sent Events streaming wrapper around `run_turn`. The
+# engine is synchronous, so we run it in a threadpool and chunk the final
+# content into ``text_delta`` events (≥2 deltas guaranteed). Tool calls
+# recorded during the turn are surfaced as discrete events afterward, in
+# order. The client may cancel by closing the EventSource — the request is
+# polled for disconnect between yields and the generator returns within
+# ~150ms.
+#
+# Event shapes (all framed as `event: <name>\ndata: <json>\n\n`):
+#   text_delta       {"delta": "..."}
+#   tool_call_start  {"tool": "...", "args_summary": "..."}
+#   tool_call_done   {"tool": "...", "status": "...", "summary": "...", "duration_ms": int}
+#   final            {"ok": bool, "session_id": "...", "content": "...", "tool_calls": [...], "pending": [...], "error": str|None}
+#   cancelled        {"reason": "client_disconnected"}
+
+from fastapi import Request as _FastApiRequest
+
+
+def _sse_pack(event: str, payload: dict) -> bytes:
+    return f"event: {event}\ndata: {json.dumps(payload, default=str)}\n\n".encode()
+
+
+def _chunk_text(text: str, size: int = 60) -> list[str]:
+    """Split text into ≥2 deltas where possible; preserves all bytes."""
+    if not text:
+        return [""]
+    chunks = [text[i:i + size] for i in range(0, len(text), size)]
+    if len(chunks) == 1 and len(text) > 1:
+        # Force ≥2 deltas so consumers can verify streaming behaviour.
+        mid = max(1, len(text) // 2)
+        return [text[:mid], text[mid:]]
+    return chunks
+
+
+@router.get("/stream/{cid}")
+async def stream_turn(
+    cid: int,
+    request: _FastApiRequest,
+    prompt: str,
+    persona: Persona = "admin",
+    session_id: str | None = None,
+    hard_mode: bool = False,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """SSE streaming variant of /agent/chat — emits incremental events."""
+    require_same_company(cid, current_user)
+    if persona in ("admin", "finance_manager") and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin persona requires admin role")
+
+    async def event_gen():
+        # Run the synchronous engine off the event loop so we can monitor
+        # the request for client disconnects in parallel.
+        from starlette.concurrency import run_in_threadpool
+
+        turn_task = asyncio.create_task(
+            run_in_threadpool(
+                run_turn,
+                db=db,
+                user=current_user,
+                company_id=cid,
+                persona=persona,
+                user_message=prompt,
+                session_id=session_id,
+                hard_mode=hard_mode,
+            )
+        )
+
+        # Heartbeat-style poll: wait for the turn while watching for disconnect.
+        while not turn_task.done():
+            if await request.is_disconnected():
+                turn_task.cancel()
+                yield _sse_pack("cancelled", {"reason": "client_disconnected"})
+                return
+            try:
+                await asyncio.wait_for(asyncio.shield(turn_task), timeout=0.1)
+            except asyncio.TimeoutError:
+                continue
+            except asyncio.CancelledError:
+                yield _sse_pack("cancelled", {"reason": "client_disconnected"})
+                return
+
+        try:
+            result = turn_task.result()
+        except Exception as exc:  # pragma: no cover - defensive
+            yield _sse_pack("final", {"ok": False, "error": str(exc), "content": "", "tool_calls": [], "pending": []})
+            return
+
+        # Replay tool calls in order as discrete events.
+        for call in result.get("tool_calls") or []:
+            if await request.is_disconnected():
+                yield _sse_pack("cancelled", {"reason": "client_disconnected"})
+                return
+            yield _sse_pack("tool_call_start", {
+                "tool": call.get("tool"),
+                "args_summary": call.get("summary", "")[:120],
+            })
+            yield _sse_pack("tool_call_done", {
+                "tool":        call.get("tool"),
+                "status":      call.get("status"),
+                "summary":     call.get("summary"),
+                "duration_ms": call.get("duration_ms"),
+            })
+
+        # Stream the final content as text deltas.
+        for delta in _chunk_text(result.get("content") or ""):
+            if await request.is_disconnected():
+                yield _sse_pack("cancelled", {"reason": "client_disconnected"})
+                return
+            yield _sse_pack("text_delta", {"delta": delta})
+
+        yield _sse_pack("final", {
+            "ok":         result.get("ok", False),
+            "error":      result.get("error"),
+            "session_id": result.get("session_id"),
+            "content":    result.get("content", ""),
+            "tool_calls": result.get("tool_calls") or [],
+            "pending":    result.get("pending") or [],
+        })
+
+    return StreamingResponse(
+        event_gen(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
+
+
 # ── GET /agent/sessions/{cid} ───────────────────────────────────────────────
 
 @router.get("/sessions/{cid}")
