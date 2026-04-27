@@ -946,7 +946,8 @@
       "permissions": "Permisos",
       "addOns": "Módulos adicionales",
       "authentication": "Autenticación",
-      "policies": "Políticas"
+      "policies": "Políticas",
+      "workflow": "Flujo de trabajo"
     },
     "groups": {
       "setup": "Configuración",
@@ -2188,6 +2189,22 @@
       "disableRule": "Desactivar",
       "enableRule": "Activar",
       "reExtract": "Re-extraer"
+    },
+    "workflowMap": {
+      "canvasTitle": "Mapa de Flujo",
+      "stagesUnit": "etapas",
+      "transitionsUnit": "transiciones",
+      "refresh": "Actualizar",
+      "noStages": "Sin etapas definidas. Elige un ajuste preestablecido.",
+      "tabApproval": "Aprobación",
+      "tabWorkflow": "Config. de flujo",
+      "inspStage": "Etapa",
+      "inspTransition": "Transición",
+      "orderLabel": "Orden",
+      "terminal": "Terminal",
+      "notTerminal": "No terminal",
+      "actionLabel": "Acción",
+      "permLabel": "Permiso"
     }
   },
   "review": {

@@ -946,7 +946,8 @@
       "permissions": "Permissions",
       "addOns": "Add-Ons",
       "authentication": "Authentication",
-      "policies": "Policies"
+      "policies": "Policies",
+      "workflow": "Workflow"
     },
     "groups": {
       "setup": "Setup",
@@ -2188,6 +2189,22 @@
       "disableRule": "Disable",
       "enableRule": "Enable",
       "reExtract": "Re-extract"
+    },
+    "workflowMap": {
+      "canvasTitle": "Workflow Map",
+      "stagesUnit": "stages",
+      "transitionsUnit": "transitions",
+      "refresh": "Refresh",
+      "noStages": "No stages defined. Choose a preset to get started.",
+      "tabApproval": "Approval",
+      "tabWorkflow": "Workflow Settings",
+      "inspStage": "Stage",
+      "inspTransition": "Transition",
+      "orderLabel": "Order",
+      "terminal": "Terminal",
+      "notTerminal": "Non-terminal",
+      "actionLabel": "Action",
+      "permLabel": "Permission"
     }
   },
   "review": {
