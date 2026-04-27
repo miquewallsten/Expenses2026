@@ -21,7 +21,7 @@ type SetupSection =
   | "Company Setup"
   | "Expense Policy"
   | "Accounting Setup"
-  | "Approval Setup";
+  | "Workflow";
 
 type CardStatus = "ok" | "warn" | "unconfigured";
 
@@ -44,7 +44,7 @@ const SECTION_CONFLICT_CODES: Record<SetupSection, string[]> = {
     "CLIENT_REQUIRED_NOT_IN_DIMS",
     "COST_CENTER_REQUIRED_NOT_IN_DIMS",
   ],
-  "Approval Setup": [
+  "Workflow": [
     "MANAGER_FLOW_NO_MANAGERS",
     "REQUIRE_MANAGER_ALL_NO_MANAGERS",
     "EXPENSE_POLICY_MANAGER_APPROVAL_NO_MANAGERS",
@@ -152,7 +152,7 @@ interface Props {
   onNavigate: (
     section:
       | "Company Setup"
-      | "Approval Setup"
+      | "Workflow"
       | "Accounting Setup"
       | "Expense Policy"
       | "Add-Ons"
@@ -193,8 +193,8 @@ export default function AdminOverviewPanel({
   const companyStatus  = cardStatus(cs, companyMarker,  conflictCodes, SECTION_CONFLICT_CODES["Company Setup"]);
   const expenseStatus  = cardStatus(ep, expenseMarker,  conflictCodes, SECTION_CONFLICT_CODES["Expense Policy"]);
   const accountStatus  = cardStatus(ac, accountMarker,  conflictCodes, SECTION_CONFLICT_CODES["Accounting Setup"]);
-  const approvalStatus = cardStatus(ap, approvalMarker, conflictCodes, SECTION_CONFLICT_CODES["Approval Setup"]);
-  const workflowStatus = cardStatus(wf, workflowMarker, conflictCodes, SECTION_CONFLICT_CODES["Approval Setup"]);
+  const approvalStatus = cardStatus(ap, approvalMarker, conflictCodes, SECTION_CONFLICT_CODES["Workflow"]);
+  const workflowStatus = cardStatus(wf, workflowMarker, conflictCodes, SECTION_CONFLICT_CODES["Workflow"]);
 
   // Count sections with no saved marker — distinct from conflicts.
   const unconfiguredCount = [
@@ -205,7 +205,7 @@ export default function AdminOverviewPanel({
   const fixTarget: SetupSection | null = (() => {
     const order: SetupSection[] = [
       "Company Setup",
-      "Approval Setup",
+      "Workflow",
       "Expense Policy",
       "Accounting Setup",
     ];
@@ -289,10 +289,10 @@ export default function AdminOverviewPanel({
       summary: accountSummary,
     },
     {
-      section: "Approval Setup",
-      sectionLabel: to("sectionApprovalSetup"),
+      section: "Workflow",
+      sectionLabel: to("sectionWorkflow"),
       icon: <GitBranch className="h-3.5 w-3.5" />,
-      status: approvalStatus,
+      status: approvalStatus === "warn" || workflowStatus === "warn" ? "warn" : (approvalStatus === "unconfigured" || workflowStatus === "unconfigured" ? "unconfigured" : "ok"),
       rows: [
         [to("fieldApprovalMode"),         s(ap.approval_mode)],
         [to("fieldRequireManager"),       b(ap.require_manager_for_all_employees)],

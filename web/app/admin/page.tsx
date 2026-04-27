@@ -6,10 +6,7 @@ import AppShell from "@/components/shell/AppShell";
 import AdminCompanySetupStudio from "@/components/admin/AdminCompanySetupStudio";
 import AdminCompanySetupCopilot from "@/components/admin/AdminCompanySetupCopilot";
 import AdminExpenseModulePanel from "@/components/admin/AdminExpenseModulePanel";
-import AdminApprovalSetupStudio from "@/components/admin/AdminApprovalSetupStudio";
-import AdminApprovalCopilot from "@/components/admin/AdminApprovalCopilot";
-import AdminWorkflowSetupStudio from "@/components/admin/AdminWorkflowSetupStudio";
-import AdminWorkflowCopilot from "@/components/admin/AdminWorkflowCopilot";
+import AdminWorkflowMapPanel from "@/components/admin/AdminWorkflowMapPanel";
 import AdminAccountingSetupStudio from "@/components/admin/AdminAccountingSetupStudio";
 import AdminAccountingCopilot from "@/components/admin/AdminAccountingCopilot";
 import AdminSetupOrchestratorPanel from "@/components/admin/AdminSetupOrchestratorPanel";
@@ -23,7 +20,7 @@ import AdminChannelsPanel from "@/components/admin/AdminChannelsPanel";
 import AdminReportCyclePanel from "@/components/admin/AdminReportCyclePanel";
 import {
   Building2, FileText, GitBranch, ShieldCheck, Puzzle, Key, Lock,
-  AlertTriangle, Calculator, ClipboardCheck, Bot, Save, Loader2, FolderOutput, Archive, Users, Radio, CalendarClock, HardDrive,
+  AlertTriangle, Calculator, Bot, Save, Loader2, FolderOutput, Archive, Users, Radio, CalendarClock, HardDrive,
 } from "lucide-react";
 import { getCurrentRole, getCurrentUserId, getCurrentCompanyId, getStoredSession, getAuthHeaders } from "@/lib/session";
 import { buildGlobalNav, GlobalNavItem } from "@/lib/navigation";
@@ -37,8 +34,7 @@ const WORKLIST_ITEMS = [
   "Company Setup",
   "Expense Policy",
   "Accounting Setup",
-  "Approval Setup",
-  "Workflow Setup",
+  "Workflow",
   "Report Cycle",
   "Export Config",
   "Archive Config",
@@ -53,7 +49,7 @@ const WORKLIST_ITEMS = [
 type WorklistItem = typeof WORKLIST_ITEMS[number];
 
 const WORKLIST_GROUPS: { label: string; items: WorklistItem[] }[] = [
-  { label: "Setup", items: ["Overview", "Company Setup", "Expense Policy", "Accounting Setup", "Approval Setup", "Workflow Setup", "Report Cycle"] },
+  { label: "Setup", items: ["Overview", "Company Setup", "Expense Policy", "Accounting Setup", "Workflow", "Report Cycle"] },
   { label: "Intake & Notifications", items: ["Channels"] },
   { label: "Data Out", items: ["Export Config", "Archive Config", "Storage Config"] },
   { label: "Administration", items: ["Users", "Roles", "Permissions", "Add-Ons", "Authentication"] },
@@ -551,8 +547,7 @@ const ITEM_MENU_KEY: Record<WorklistItem, string> = {
   "Company Setup": "companySetup",
   "Expense Policy": "expensePolicy",
   "Accounting Setup": "accountingSetup",
-  "Approval Setup": "approvalSetup",
-  "Workflow Setup": "workflowSetup",
+  "Workflow": "workflow",
   "Report Cycle": "reportCycle",
   "Export Config": "exportConfig",
   "Archive Config": "archiveConfig",
@@ -579,8 +574,7 @@ const WORKLIST_ICONS: Record<WorklistItem, React.ReactNode> = {
   "Company Setup":    <Building2 className="h-3.5 w-3.5" />,
   "Expense Policy":   <FileText className="h-3.5 w-3.5" />,
   "Accounting Setup": <Calculator className="h-3.5 w-3.5" />,
-  "Approval Setup":   <ClipboardCheck className="h-3.5 w-3.5" />,
-  "Workflow Setup":   <GitBranch className="h-3.5 w-3.5" />,
+  "Workflow":         <GitBranch className="h-3.5 w-3.5" />,
   "Report Cycle":     <CalendarClock className="h-3.5 w-3.5" />,
   "Export Config":    <FolderOutput className="h-3.5 w-3.5" />,
   "Archive Config":   <Archive className="h-3.5 w-3.5" />,
@@ -639,8 +633,7 @@ function WorkList({
     "Company Setup":    hasCompanySetup    ? "✓" : "—",
     "Expense Policy":   hasExpensePolicy   ? "✓" : "—",
     "Accounting Setup": hasAccountingSetup ? "✓" : "—",
-    "Approval Setup":   hasApprovalSetup   ? "✓" : "—",
-    "Workflow Setup":   hasWorkflowSetup   ? "✓" : "—",
+    "Workflow":         (hasApprovalSetup && hasWorkflowSetup) ? "✓" : "—",
     "Report Cycle":     "→",
     "Export Config":    hasExportConfig    ? "✓" : "—",
     "Archive Config":   hasArchiveConfig   ? "✓" : "—",
@@ -763,32 +756,24 @@ function AdminAIHints({
     ] : [
       "Accounting setup not loaded.",
     ],
-    "Approval Setup": approvalSetup ? [
-      `Approval mode: ${(approvalSetup.approval_mode ?? "none").replace(/_/g, " ")}.`,
-      approvalSetup.escalate_policy_failures_to_accounting
-        ? "Policy failures escalate to accounting automatically."
-        : "Policy failures do not escalate — review manually or enable escalation.",
-      approvalSetup.allow_resubmission_after_rejection
-        ? "Employees can resubmit after rejection."
-        : "Resubmission after rejection is disabled — employees must contact an admin.",
-    ] : [
-      "Approval setup not loaded. Save the form to initialise defaults.",
+    "Workflow": [
+      ...(approvalSetup ? [
+        `Approval mode: ${(approvalSetup.approval_mode ?? "none").replace(/_/g, " ")}.`,
+        approvalSetup.escalate_policy_failures_to_accounting
+          ? "Policy failures escalate to accounting automatically."
+          : "Policy failures do not escalate — review manually or enable escalation.",
+      ] : ["Approval setup not loaded."]),
+      ...(workflowSetup ? [
+        `Workflow mode: ${(workflowSetup.default_expense_workflow_mode ?? "standard").replace(/_/g, " ")}.`,
+        workflowSetup.block_submit_on_failed_validation
+          ? "Submission is blocked on failed validation."
+          : "Failed validation does not block submission — review routing rules.",
+      ] : ["Workflow setup not loaded."]),
     ],
     "Report Cycle": [
       "Configure when expense reports are automatically created for each user.",
       "Validated expenses sit in a holding state until the cycle fires — then they are bundled per user and submitted for approval.",
       "Use 'Run now' to trigger a cycle immediately. Use the title template tokens: {user}, {month}, {year}.",
-    ],
-    "Workflow Setup": workflowSetup ? [
-      `Workflow mode: ${(workflowSetup.default_expense_workflow_mode ?? "standard").replace(/_/g, " ")}.`,
-      workflowSetup.block_submit_on_failed_validation
-        ? "Submission is blocked on failed validation — invalid documents cannot be submitted."
-        : "Failed validation does not block submission — review routing rules for risk.",
-      workflowSetup.route_policy_failures_to && workflowSetup.route_policy_failures_to !== "none"
-        ? `Policy failures route to ${workflowSetup.route_policy_failures_to}.`
-        : "Policy failures are not routed — enable routing to accounting or manager.",
-    ] : [
-      "Workflow setup not loaded. Save the form to initialise defaults.",
     ],
     Roles: [
       rolesCount === 0
@@ -1198,8 +1183,8 @@ export default function AdminPage() {
     ...(companySetupDraftPatch    && Object.keys(companySetupDraftPatch).length    > 0 ? ["Company Setup"]    : []),
     ...(expensePolicyDraftPatch   && Object.keys(expensePolicyDraftPatch).length   > 0 ? ["Expense Policy"]   : []),
     ...(accountingSetupDraftPatch && Object.keys(accountingSetupDraftPatch).length > 0 ? ["Accounting Setup"] : []),
-    ...(approvalSetupDraftPatch   && Object.keys(approvalSetupDraftPatch).length   > 0 ? ["Approval Setup"]   : []),
-    ...(workflowSetupDraftPatch   && Object.keys(workflowSetupDraftPatch).length   > 0 ? ["Workflow Setup"]   : []),
+    ...((approvalSetupDraftPatch   && Object.keys(approvalSetupDraftPatch).length   > 0) ||
+        (workflowSetupDraftPatch   && Object.keys(workflowSetupDraftPatch).length   > 0) ? ["Workflow"] : []),
     ...(exportConfigDraftPatch   && Object.keys(exportConfigDraftPatch).length   > 0 ? ["Export Config"]   : []),
     ...(archiveConfigDraftPatch   && Object.keys(archiveConfigDraftPatch).length   > 0 ? ["Archive Config"]   : []),
   ]);
@@ -1267,29 +1252,19 @@ export default function AdminPage() {
           />
         );
 
-      case "Approval Setup":
+      case "Workflow":
         return (
-          <AdminApprovalSetupStudio
+          <AdminWorkflowMapPanel
             companyId={adminCompanyId}
-            setup={approvalSetup ?? {}}
-            companySetup={companySetup}
-            accountingSetup={accountingSetup}
-            onSaved={setApprovalSetup}
-            draftPatch={approvalSetupDraftPatch}
-          />
-        );
-
-      case "Workflow Setup":
-        return (
-          <AdminWorkflowSetupStudio
-            companyId={adminCompanyId}
-            setup={workflowSetup ?? {}}
+            approvalSetup={approvalSetup ?? {}}
+            workflowSetup={workflowSetup ?? {}}
             companySetup={companySetup}
             expensePolicy={expensePolicy}
             accountingSetup={accountingSetup}
-            approvalSetup={approvalSetup}
-            onSaved={setWorkflowSetup}
-            draftPatch={workflowSetupDraftPatch}
+            onApprovalSaved={setApprovalSetup}
+            onWorkflowSaved={setWorkflowSetup}
+            approvalDraftPatch={approvalSetupDraftPatch}
+            workflowDraftPatch={workflowSetupDraftPatch}
           />
         );
 
@@ -1373,39 +1348,6 @@ export default function AdminPage() {
             legalEntities={legalEntities}
             portalConfig={portalConfig}
             onApplySetupDraft={(patch) => setCompanySetupDraftPatch({ ...patch })}
-          />
-        </aside>
-      );
-    }
-
-    if (activeSection === "Approval Setup") {
-      return (
-        <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-l border-white/[0.07] bg-zinc-950 p-3">
-          <AdminApprovalCopilot
-            companyId={adminCompanyId}
-            companySetup={companySetup ?? {}}
-            expensePolicy={expensePolicy ?? {}}
-            accountingSetup={accountingSetup ?? {}}
-            approvalSetup={approvalSetup ?? {}}
-            portalConfig={portalConfig}
-            onApplyDraft={(patch) => setApprovalSetupDraftPatch({ ...patch })}
-          />
-        </aside>
-      );
-    }
-
-    if (activeSection === "Workflow Setup") {
-      return (
-        <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-l border-white/[0.07] bg-zinc-950 p-3">
-          <AdminWorkflowCopilot
-            companyId={adminCompanyId}
-            companySetup={companySetup ?? {}}
-            expensePolicy={expensePolicy ?? {}}
-            accountingSetup={accountingSetup ?? {}}
-            approvalSetup={approvalSetup ?? {}}
-            workflowSetup={workflowSetup ?? {}}
-            portalConfig={portalConfig}
-            onApplyDraft={(patch) => setWorkflowSetupDraftPatch({ ...patch })}
           />
         </aside>
       );
