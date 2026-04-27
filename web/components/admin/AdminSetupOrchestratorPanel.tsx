@@ -755,16 +755,14 @@ export default function AdminSetupOrchestratorPanel({
                   </div>
                 )}
                 {st?.status === "error" && <p className="text-[9px] text-red-400/60">{st.error}</p>}
-                {st?.status !== "done" && (
-                  <button
-                    type="button"
-                    disabled={st?.status === "running" || (!isBulk && (!draft.email?.trim() || !draft.full_name?.trim()))}
-                    onClick={() => executeAction(msg.id, action, draft)}
-                    className="w-full rounded border border-emerald-500/25 bg-emerald-500/[0.07] py-1 text-[9px] font-semibold text-emerald-300/70 transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/[0.13] hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-30"
-                  >
-                    {st?.status === "running" ? "Creating…" : isBulk ? `Invite ${userRows.length} user${userRows.length !== 1 ? "s" : ""}` : "Create user"}
-                  </button>
-                )}
+                <button
+                  type="button"
+                  disabled={st?.status === "running" || (!isBulk && (!draft.email?.trim() || !draft.full_name?.trim()))}
+                  onClick={() => executeAction(msg.id, action, draft)}
+                  className="w-full rounded border border-emerald-500/25 bg-emerald-500/[0.07] py-1 text-[9px] font-semibold text-emerald-300/70 transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/[0.13] hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  {st?.status === "running" ? "Creating…" : isBulk ? `Invite ${userRows.length} user${userRows.length !== 1 ? "s" : ""}` : "Create user"}
+                </button>
               </div>
             );
           }
@@ -806,12 +804,10 @@ export default function AdminSetupOrchestratorPanel({
                   </div>
                 )}
                 {st?.status === "error" && <p className="text-[9px] text-red-400/60">{st.error}</p>}
-                {st?.status !== "done" && (
-                  <button type="button" disabled={st?.status === "running"} onClick={() => executeAction(msg.id, action, draft)}
-                    className="w-full rounded border border-emerald-500/25 bg-emerald-500/[0.07] py-1 text-[9px] font-semibold text-emerald-300/70 transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/[0.13] hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-30">
-                    {st?.status === "running" ? "Creating…" : isBulk ? `Create ${cats.length} categories` : "Create category"}
-                  </button>
-                )}
+                <button type="button" disabled={st?.status === "running"} onClick={() => executeAction(msg.id, action, draft)}
+                  className="w-full rounded border border-emerald-500/25 bg-emerald-500/[0.07] py-1 text-[9px] font-semibold text-emerald-300/70 transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/[0.13] hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-30">
+                  {st?.status === "running" ? "Creating…" : isBulk ? `Create ${cats.length} categories` : "Create category"}
+                </button>
               </div>
             );
           }
@@ -821,12 +817,10 @@ export default function AdminSetupOrchestratorPanel({
             <div key={action.action_id} className="rounded border border-white/[0.08] bg-white/[0.02] px-3 py-2.5 space-y-2">
               <p className="text-[10px] text-white/55">{action.label}</p>
               {st?.status === "error" && <p className="text-[9px] text-red-400/60">{st.error}</p>}
-              {st?.status !== "done" && (
-                <button type="button" disabled={st?.status === "running"} onClick={() => executeAction(msg.id, action, draft)}
-                  className="w-full rounded border border-emerald-500/25 bg-emerald-500/[0.07] py-1 text-[9px] font-semibold text-emerald-300/70 transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/[0.13] hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-30">
-                  {st?.status === "running" ? "Running…" : "Execute"}
-                </button>
-              )}
+              <button type="button" disabled={st?.status === "running"} onClick={() => executeAction(msg.id, action, draft)}
+                className="w-full rounded border border-emerald-500/25 bg-emerald-500/[0.07] py-1 text-[9px] font-semibold text-emerald-300/70 transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/[0.13] hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-30">
+                {st?.status === "running" ? "Running…" : "Execute"}
+              </button>
             </div>
           );
         })}
@@ -1038,7 +1032,7 @@ export default function AdminSetupOrchestratorPanel({
           )}
 
           {/* Approval gate */}
-          {totalPatches > 0 && result.action_state !== "no_changes" && (
+          {totalPatches > 0 && (
             <div className="space-y-1.5 border-t border-white/[0.06] pt-3">
               <SectionLabel>Action</SectionLabel>
               {approvalState === "pending" && (
@@ -1063,7 +1057,7 @@ export default function AdminSetupOrchestratorPanel({
             </div>
           )}
 
-          {(result.action_state === "no_changes" || totalPatches === 0) && result.engine_mode === "DIAGNOSE" && (
+          {totalPatches === 0 && result.engine_mode === "DIAGNOSE" && (
             <div className="flex items-center gap-2 border-t border-white/[0.06] pt-3 px-0.5">
               <CheckCircle2 className="h-3 w-3 text-white/25" />
               <span className="text-[10px] text-white/30">Diagnosis complete — no changes proposed</span>

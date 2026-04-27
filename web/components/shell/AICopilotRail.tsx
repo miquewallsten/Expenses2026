@@ -101,6 +101,7 @@ export default function AICopilotRail({
   selectedExpense,
   selectedDocument,
   validationResults,
+  expenseContext,
 }: Props) {
   const [messages, setMessages]                   = useState<Message[]>([]);
   const [input, setInput]                         = useState("");
