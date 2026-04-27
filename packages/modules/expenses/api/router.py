@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from apps.api.auth import get_current_user, require_manager_or_accountant, require_same_company
 from apps.api.deps import get_db
 from packages.core.platform.models_user import User
+from packages.core.platform.service_permissions import has_permission
 from packages.modules.expenses.schemas.expense import ExpenseCreate, ExpenseRead
 from packages.modules.expenses.schemas.expense_update import ExpenseUpdate
 from packages.modules.expenses.service.expense_service import create_expense, delete_expense, get_expense, get_expense_summary, list_expenses, update_expense
@@ -54,14 +55,14 @@ def create_expense_route(payload: ExpenseCreate, db: Session = Depends(get_db), 
 @router.get("/", response_model=list[ExpenseRead])
 def list_expenses_route(company_id: int | None = None, status: str | None = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     # Non-admin users are scoped to their own company. Admins may pass an explicit company_id.
-    if current_user.role != "admin":
+    if not has_permission(db, current_user, "expense:read:any"):
         company_id = current_user.company_id
     return list_expenses(db, company_id, status)
 
 
 @router.get("/summary")
 def get_expense_summary_route(company_id: int | None = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.role != "admin":
+    if not has_permission(db, current_user, "expense:read:any"):
         company_id = current_user.company_id
     return get_expense_summary(db, company_id)
 
@@ -316,7 +317,7 @@ async def upload_document_route(
 
 @router.get("/documents", response_model=list[ExpenseDocumentRead])
 def list_documents_route(company_id: int | None = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.role != "admin":
+    if not has_permission(db, current_user, "document:read:any"):
         company_id = current_user.company_id
     return list_documents(db, company_id)
 
@@ -328,7 +329,7 @@ def get_document_route(document_id: int, db: Session = Depends(get_db), current_
     if document is None:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    if current_user.role != "admin" and document.company_id != current_user.company_id:
+    if document.company_id != current_user.company_id and not has_permission(db, current_user, "document:read:any"):
         raise HTTPException(status_code=403, detail="Cross-company access is not allowed")
 
     return document
@@ -353,7 +354,7 @@ def get_document_file_route(
     document = get_document(db, document_id)
     if document is None:
         raise HTTPException(status_code=404, detail="Document not found")
-    if current_user.role != "admin" and document.company_id != current_user.company_id:
+    if document.company_id != current_user.company_id and not has_permission(db, current_user, "document:read:any"):
         raise HTTPException(status_code=403, detail="Cross-company access is not allowed")
 
     # Find the archive row. Prefer one bound to this expense_id, but fall
@@ -435,7 +436,7 @@ def delete_document_route(document_id: int, db: Session = Depends(get_db), curre
     document = get_document(db, document_id)
     if document is None:
         raise HTTPException(status_code=404, detail="Document not found")
-    if current_user.role != "admin" and document.company_id != current_user.company_id:
+    if document.company_id != current_user.company_id and not has_permission(db, current_user, "document:delete"):
         raise HTTPException(status_code=403, detail="Cross-company access is not allowed")
 
     # Block deletion once the expense has left draft OR has been bundled into
@@ -490,7 +491,7 @@ def update_document_route(document_id: int, payload: ExpenseDocumentUpdate, db: 
         document = get_document(db, document_id)
         if document is None:
             raise HTTPException(status_code=404, detail="Document not found")
-        if current_user.role != "admin" and document.company_id != current_user.company_id:
+        if document.company_id != current_user.company_id and not has_permission(db, current_user, "document:read:any"):
             raise HTTPException(status_code=403, detail="Cross-company access is not allowed")
         document = update_document(db, document_id, payload)
         return document
@@ -536,14 +537,14 @@ def create_report_route(payload: ExpenseReportCreate, db: Session = Depends(get_
 
 @router.get("/reports", response_model=list[ExpenseReportRead])
 def list_reports_route(company_id: int | None = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.role != "admin":
+    if not has_permission(db, current_user, "expense:read:any"):
         company_id = current_user.company_id
     return list_reports(db, company_id)
 
 
 @router.get("/reports/summary")
 def get_report_summary_route(company_id: int | None = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.role != "admin":
+    if not has_permission(db, current_user, "expense:read:any"):
         company_id = current_user.company_id
     return get_report_summary(db, company_id)
 
@@ -632,14 +633,14 @@ def generate_poliza_route(report_id: int, db: Session = Depends(get_db), _user: 
 
 @router.get("/polizas", response_model=list[PolizaRead])
 def list_polizas_route(company_id: int | None = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.role != "admin":
+    if not has_permission(db, current_user, "accounting:work"):
         company_id = current_user.company_id
     return list_polizas(db, company_id)
 
 
 @router.get("/polizas/summary")
 def get_poliza_summary_route(company_id: int | None = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.role != "admin":
+    if not has_permission(db, current_user, "accounting:work"):
         company_id = current_user.company_id
     return get_poliza_summary(db, company_id)
 
@@ -763,7 +764,7 @@ def create_project_route(payload: ProjectCreate, db: Session = Depends(get_db), 
 
 @router.get("/projects", response_model=list[ProjectRead])
 def list_projects_route(company_id: int | None = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.role != "admin":
+    if not has_permission(db, current_user, "expense:read:any"):
         company_id = current_user.company_id
     return list_projects(db, company_id)
 
@@ -777,7 +778,7 @@ def create_client_route(payload: ClientCreate, db: Session = Depends(get_db), _u
 
 @router.get("/clients", response_model=list[ClientRead])
 def list_clients_route(company_id: int | None = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.role != "admin":
+    if not has_permission(db, current_user, "expense:read:any"):
         company_id = current_user.company_id
     return list_clients(db, company_id)
 
@@ -791,7 +792,7 @@ def create_cost_center_route(payload: CostCenterCreate, db: Session = Depends(ge
 
 @router.get("/cost-centers", response_model=list[CostCenterRead])
 def list_cost_centers_route(company_id: int | None = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.role != "admin":
+    if not has_permission(db, current_user, "expense:read:any"):
         company_id = current_user.company_id
     return list_cost_centers(db, company_id)
 
@@ -890,7 +891,7 @@ def update_expense_route(expense_id: int, payload: ExpenseUpdate, db: Session = 
         existing = get_expense(db, expense_id)
         if existing is None:
             raise HTTPException(status_code=404, detail="Expense not found")
-        if current_user.role != "admin" and existing.company_id != current_user.company_id:
+        if existing.company_id != current_user.company_id and not has_permission(db, current_user, "expense:update:any"):
             raise HTTPException(status_code=403, detail="Cross-company access is not allowed")
         expense = update_expense(db, expense_id, payload)
         return expense

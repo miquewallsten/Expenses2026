@@ -31,6 +31,7 @@ from sqlalchemy.orm import Session
 from apps.api.auth import get_current_user, require_admin, require_same_company
 from apps.api.deps import get_db
 from packages.core.platform.models_user import User
+from packages.core.platform.service_permissions import has_permission
 
 from ..core import memory as memory_api
 from ..core import receipts as receipts_api
@@ -95,7 +96,7 @@ def chat(
     require_same_company(cid, current_user)
 
     # Admin-only personas.
-    if body.persona in ("admin", "finance_manager") and current_user.role != "admin":
+    if body.persona in ("admin", "finance_manager") and not has_permission(db, current_user, f"agent:chat:{body.persona}"):
         raise HTTPException(status_code=403, detail="Admin persona requires admin role")
 
     result = run_turn(
@@ -159,7 +160,7 @@ async def stream_turn(
 ):
     """SSE streaming variant of /agent/chat — emits incremental events."""
     require_same_company(cid, current_user)
-    if persona in ("admin", "finance_manager") and current_user.role != "admin":
+    if persona in ("admin", "finance_manager") and not has_permission(db, current_user, f"agent:chat:{persona}"):
         raise HTTPException(status_code=403, detail="Admin persona requires admin role")
 
     async def event_gen():
@@ -496,7 +497,7 @@ def chat_stream(
     replace the body with a truly streaming loop without changing the client.
     """
     require_same_company(cid, current_user)
-    if body.persona in ("admin", "finance_manager") and current_user.role != "admin":
+    if body.persona in ("admin", "finance_manager") and not has_permission(db, current_user, f"agent:chat:{body.persona}"):
         raise HTTPException(status_code=403, detail="Admin persona requires admin role")
 
     def _event(kind: str, payload: dict[str, Any]) -> str:
