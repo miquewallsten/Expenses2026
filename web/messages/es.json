@@ -1798,7 +1798,11 @@
       "inviteCreateUser": "Crear usuario",
       "update": "Actualizar",
       "entityNone": "— Ninguna —",
-      "entityNotAssigned": "— Sin asignar —"
+      "entityNotAssigned": "— Sin asignar —",
+      "saveFailed": "Error al guardar",
+      "roleSecretaryLabel": "Asistente ejecutivo",
+      "invitePlaceholderDepartment": "p. ej. Finanzas",
+      "invitePlaceholderPhone": "+52 55 1234 5678"
     },
     "channels": {
       "title": "Canales",

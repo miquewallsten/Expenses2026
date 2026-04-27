@@ -14,10 +14,8 @@ const ROLES = ["employee", "manager", "accounting", "admin", "executive", "secre
 type RoleOption = (typeof ROLES)[number];
 
 // Display labels for roles that differ from the stored key
-const ROLE_LABELS: Record<string, string> = {
-  secretary: "Executive Assistant",
-};
-const roleLabel = (r: string) => ROLE_LABELS[r] ?? (r.charAt(0).toUpperCase() + r.slice(1));
+const roleLabel = (r: string, tFn: (k: string) => string) =>
+  r === "secretary" ? tFn("roleSecretaryLabel") : (r.charAt(0).toUpperCase() + r.slice(1));
 
 interface UserFull {
   id: number;
@@ -77,10 +75,11 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 function RoleBadge({ role }: { role: string }) {
+  const tu = useTranslations("admin.users");
   const cls = ROLE_COLORS[role] ?? ROLE_COLORS.employee;
   return (
     <span className={`rounded border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${cls}`}>
-      {roleLabel(role)}
+      {roleLabel(role, tu)}
     </span>
   );
 }
@@ -186,7 +185,7 @@ function UserDetailPanel({
       const updated = await res.json();
       onSaved(updated);
     } catch (e: any) {
-      setError(e?.message ?? "Save failed");
+      setError(e?.message ?? tu("saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -232,9 +231,9 @@ function UserDetailPanel({
           <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.12em] text-white/18">{tu("sectionIdentity")}</p>
           <div className="grid grid-cols-2 gap-2">
             <div>{fieldLabel(tu("fieldFullName"))}{inp(fullName, setFullName, tu("invitePlaceholderName"))}</div>
-            <div>{fieldLabel(tu("fieldJobTitle"))}{inp(jobTitle, setJobTitle, "e.g. Finance Manager")}</div>
-            <div>{fieldLabel(tu("fieldDepartment"))}{inp(department, setDepartment, "e.g. Finance")}</div>
-            <div>{fieldLabel(tu("fieldPhone"))}{inp(phone, setPhone, "+52 55 1234 5678")}</div>
+            <div>{fieldLabel(tu("fieldJobTitle"))}{inp(jobTitle, setJobTitle, tu("invitePlaceholderJobTitle"))}</div>
+            <div>{fieldLabel(tu("fieldDepartment"))}{inp(department, setDepartment, tu("invitePlaceholderDepartment"))}</div>
+            <div>{fieldLabel(tu("fieldPhone"))}{inp(phone, setPhone, tu("invitePlaceholderPhone"))}</div>
           </div>
         </div>
 
@@ -246,7 +245,7 @@ function UserDetailPanel({
               {fieldLabel(tu("fieldRole"))}
               <select value={role} onChange={(e) => setRole(e.target.value as RoleOption)}
                 className="w-full rounded border border-white/[0.08] bg-zinc-900 px-2.5 py-1.5 text-[11px] text-white/70 outline-none focus:border-indigo-500/40">
-                {ROLES.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}
+                {ROLES.map((r) => <option key={r} value={r}>{roleLabel(r, tu)}</option>)}
               </select>
             </div>
             <div>
@@ -406,7 +405,7 @@ function InviteForm({
       if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail ?? `${res.status}`); }
       onCreated(await res.json());
     } catch (e: any) {
-      setError(e?.message ?? "Create failed");
+      setError(e?.message ?? tu("inviteErrorCreate"));
     } finally { setSaving(false); }
   };
 
@@ -427,7 +426,7 @@ function InviteForm({
             className="rounded border border-white/[0.08] bg-zinc-900 px-2 py-1.5 text-[11px] text-white/70 placeholder:text-white/20 outline-none focus:border-indigo-500/40" />
           <select value={role} onChange={(e) => setRole(e.target.value as RoleOption)}
             className="rounded border border-white/[0.08] bg-zinc-900 px-2 py-1.5 text-[10px] text-white/55 outline-none focus:border-indigo-500/40">
-            {ROLES.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}
+            {ROLES.map((r) => <option key={r} value={r}>{roleLabel(r, tu)}</option>)}
           </select>
           {legalEntities.length > 0 && (
             <select value={entityId} onChange={(e) => setEntityId(e.target.value)}
