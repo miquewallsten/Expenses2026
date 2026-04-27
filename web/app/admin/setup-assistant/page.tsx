@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 
-// Legacy route — the standalone Setup Assistant was replaced by the unified
-// AI agent in Phase 7.5. Redirect any lingering links to /admin/agent.
+// Legacy route — redirects to unified onboarding wizard.
 export default function SetupAssistantPage() {
-  redirect("/admin/agent");
+  redirect("/admin/onboarding");
 }

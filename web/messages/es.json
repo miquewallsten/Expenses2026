@@ -913,7 +913,8 @@
           "bodyReady": "Todos los pasos están completos. La compañía está lista para que los empleados empiecen a registrar gastos.",
           "bodyNotReady": "Faltan pasos por completar antes del go-live. Cada elemento pendiente bloquea capacidades del sistema."
         }
-      }
+      },
+      "aiToggle": "AI Asistente"
     },
     "moduleNotInstalled": {
       "title": "Módulo no instalado",

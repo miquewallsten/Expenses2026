@@ -24,8 +24,11 @@ import {
   Loader2,
   ArrowUpRight,
   Sparkles,
+  Bot,
+  X,
 } from "lucide-react";
 import { getAuthHeaders, getCurrentCompanyId } from "@/lib/session";
+import AdminSetupOrchestratorPanel from "@/components/admin/AdminSetupOrchestratorPanel";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -76,11 +79,21 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [portalConfig, setPortalConfig] = useState<any>(null);
+  const [showAIRail, setShowAIRail] = useState(false);
 
   useEffect(() => {
     const cid = getCurrentCompanyId();
     setCompanyId(cid ? Number(cid) : null);
   }, []);
+
+  useEffect(() => {
+    if (companyId == null) return;
+    fetch(`${API}/admin/portal-config/${companyId}`, { headers: getAuthHeaders() })
+      .then((r) => r.ok ? r.json() : null)
+      .catch(() => null)
+      .then((cfg: any) => { if (cfg) setPortalConfig(cfg); });
+  }, [companyId]);
 
   const load = useCallback(async () => {
     if (companyId == null) return;
@@ -161,7 +174,7 @@ export default function OnboardingPage() {
   const progressPct = (data.passed / data.total) * 100;
 
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="flex h-screen flex-col bg-zinc-950">
       {/* ── Header ───────────────────────────────────────────────────────────── */}
       <header className="border-b border-white/[0.06] bg-zinc-950/90 px-6 py-3">
         <div className="mx-auto flex max-w-5xl items-center justify-between">
@@ -172,14 +185,31 @@ export default function OnboardingPage() {
             <ChevronBack className="h-3.5 w-3.5" />
             {t("backToAdmin")}
           </Link>
-          <div className="flex items-center gap-1.5 text-[10.5px] text-white/45">
-            <Sparkles className="h-3 w-3" />
-            {t("subtitle")}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 text-[10.5px] text-white/45">
+              <Sparkles className="h-3 w-3" />
+              {t("subtitle")}
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowAIRail((v) => !v)}
+              className={`flex items-center gap-1.5 rounded border px-2 py-1 text-[10.5px] transition-colors ${
+                showAIRail
+                  ? "border-indigo-500/50 bg-indigo-500/[0.10] text-indigo-200/85"
+                  : "border-white/[0.08] text-white/40 hover:border-white/[0.14] hover:text-white/65"
+              }`}
+            >
+              {showAIRail ? <X className="h-3 w-3" /> : <Bot className="h-3 w-3" />}
+              {t("aiToggle")}
+            </button>
           </div>
         </div>
       </header>
 
-      <div className="mx-auto max-w-5xl px-6 py-6">
+      <div className="flex flex-1 overflow-hidden">
+        {/* ── Main wizard ─────────────────────────────────────────────────── */}
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+        <div className="mx-auto max-w-3xl">
         {/* Title + progress */}
         <div className="flex items-end justify-between">
           <div>
@@ -319,6 +349,17 @@ export default function OnboardingPage() {
             {t("recheck")}
           </button>
         </div>
+        </div>
+        </div>
+        {/* ── AI copilot right rail ──────────────────────────────────────── */}
+        {showAIRail && companyId != null && (
+          <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-l border-white/[0.07] bg-zinc-950 p-3">
+            <AdminSetupOrchestratorPanel
+              companyId={companyId}
+              portalConfig={portalConfig ?? {}}
+            />
+          </aside>
+        )}
       </div>
     </div>
   );

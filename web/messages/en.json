@@ -913,7 +913,8 @@
           "bodyReady": "Every step is complete. The company is ready for employees to start submitting expenses.",
           "bodyNotReady": "Some steps remain before go-live. Each pending item blocks platform capabilities."
         }
-      }
+      },
+      "aiToggle": "AI Assist"
     },
     "moduleNotInstalled": {
       "title": "Module not installed",
