@@ -242,6 +242,7 @@
     "newExpense": "Nuevo",
     "uploadFile": "Subir archivo",
     "queuedOffline": "{count, plural, one {# archivo en cola sin conexión} other {# archivos en cola sin conexión}} — se enviarán al reconectar.",
+    "takePhoto": "Tomar foto",
     "noReceipt": "Sin comprobante",
     "quickExpense": "Rápido",
     "uploadingDoc": "Subiendo…",

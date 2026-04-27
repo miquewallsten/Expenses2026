@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "i18n:check": "node scripts/i18n-check.mjs"
+    "i18n:check": "node scripts/i18n-check.mjs",
+    "i18n:check:parity": "node scripts/i18n-check.mjs --parity-only"
   },
   "dependencies": {
     "lucide-react": "^1.8.0",

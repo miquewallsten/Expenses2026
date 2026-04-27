@@ -19,6 +19,10 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci
       - run: npm test
+      - name: i18n key-set parity (es ↔ en)
+        run: npm run i18n:check:parity
+      - name: i18n orphan t() references (informational)
+        run: npm run i18n:check || true
 
   backend:
     runs-on: ubuntu-latest
@@ -29,3 +33,12 @@ jobs:
           python-version: "3.11"
       - run: pip install -r requirements.txt
       - run: pytest tests/
+      - name: prod-preflight (Settings under ENVIRONMENT=production)
+        env:
+          ENVIRONMENT: production
+          AUTH_SECRET: ci-preflight-smoke-secret-must-be-32-or-more-chars-yes
+          DEBUG: "false"
+          DATABASE_URL: postgresql://prod-db.internal:5432/foplat
+          CORS_ORIGINS: '["https://app.foplat.com"]'
+          WEB_BASE_URL: https://app.foplat.com
+        run: python3 scripts/prod_preflight.py

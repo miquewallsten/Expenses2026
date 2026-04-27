@@ -10,10 +10,17 @@
  * Strategy: we look for `const <var> = useTranslations("ns")` /
  * `getTranslations("ns")` / `getTranslations({ namespace: "ns" })` and only
  * validate `<var>(...)` calls. Dynamic namespaces and dynamic keys are skipped.
+ *
+ * Flags:
+ *   --parity-only   Only run check 1 (key-set parity). Exits non-zero only on
+ *                   drift between es.json/en.json. Used as a strict CI gate
+ *                   while orphan t()-references are being mopped up.
  */
 
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
+
+const PARITY_ONLY = process.argv.includes("--parity-only");
 
 const ROOT = resolve(new URL(".", import.meta.url).pathname, "..");
 const MESSAGES_DIR = join(ROOT, "messages");
@@ -89,7 +96,8 @@ const BINDING_RE =
 const missing = [];
 let validated = 0;
 
-for (const dir of SCAN_DIRS) {
+if (!PARITY_ONLY) {
+  for (const dir of SCAN_DIRS) {
   for (const file of walk(dir)) {
     const src = readFileSync(file, "utf8");
     const bindings = new Map();
@@ -114,6 +122,7 @@ for (const dir of SCAN_DIRS) {
     }
   }
 }
+}
 
 if (missing.length) {
   failed = true;
@@ -135,5 +144,7 @@ if (missing.length) {
 if (failed) process.exit(1);
 
 console.log(
-  `OK — i18n parity (${esKeys.size} keys), ${validated} t() references validated across ${SCAN_DIRS.length} dirs.`,
+  PARITY_ONLY
+    ? `OK — i18n parity (${esKeys.size} keys) [parity-only].`
+    : `OK — i18n parity (${esKeys.size} keys), ${validated} t() references validated across ${SCAN_DIRS.length} dirs.`,
 );
