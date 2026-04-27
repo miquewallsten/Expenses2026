@@ -2240,5 +2240,18 @@
     "install": "Install",
     "notNow": "Not now",
     "close": "Close"
+  },
+  "expense": {
+    "audit": {
+      "openTitle": "View audit history",
+      "openLabel": "History",
+      "title": "Audit history",
+      "subtitle": "Expense #{id}",
+      "close": "Close",
+      "empty": "No events recorded.",
+      "loading": "Loading…",
+      "end": "End of history",
+      "actor": "User #{id}"
+    }
   }
 }

@@ -2240,5 +2240,18 @@
     "install": "Instalar",
     "notNow": "Ahora no",
     "close": "Cerrar"
+  },
+  "expense": {
+    "audit": {
+      "openTitle": "Ver historial de auditoría",
+      "openLabel": "Historial",
+      "title": "Historial de auditoría",
+      "subtitle": "Gasto #{id}",
+      "close": "Cerrar",
+      "empty": "Sin eventos registrados.",
+      "loading": "Cargando…",
+      "end": "Fin del historial",
+      "actor": "Usuario #{id}"
+    }
   }
 }

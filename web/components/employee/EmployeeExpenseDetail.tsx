@@ -12,6 +12,7 @@ import {
 } from "@/lib/expenses/xmlExtract";
 import { useTranslations } from "next-intl";
 import XmlDetailModal from "@/components/employee/XmlDetailModal";
+import ExpenseAuditDrawer from "@/components/expense/ExpenseAuditDrawer";
 import { getAuthHeaders } from "@/lib/session";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -864,6 +865,7 @@ export default function EmployeeExpenseDetail({
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5 pt-0.5">
+                  <ExpenseAuditDrawer expenseId={expense.id} variant="icon" />
                   {employeeActions?.can_delete && (
                     <button type="button" onClick={deleteDraft} disabled={deletingDraft}
                       className="rounded p-0.5 text-white/18 hover:text-red-400/60 disabled:opacity-40">
