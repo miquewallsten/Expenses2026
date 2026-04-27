@@ -2623,7 +2623,8 @@
     "placeholderRejectionReason": "Rejection reason…",
     "actionApprove": "Approve",
     "actionFulfill": "Mark Fulfilled",
-    "actionReject": "Reject"
+    "actionReject": "Reject",
+    "attachment": "Attachment"
   },
   "timesheets": {
     "pageTitle": "Timesheets",

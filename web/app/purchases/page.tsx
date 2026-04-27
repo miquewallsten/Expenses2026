@@ -106,7 +106,7 @@ function AttachmentsSection({ requestId, companyId }: { requestId: number; compa
                   : <FileText className="h-3 w-3" />}
             </span>
             <span className="min-w-0 flex-1 truncate text-[10px] text-white/55">
-              {att.label ?? att.original_name ?? att.url ?? "Attachment"}
+              {att.label ?? att.original_name ?? att.url ?? tp("attachment")}
             </span>
             {att.file_size && (
               <span className="shrink-0 text-[9px] text-white/22">{fmtBytes(att.file_size)}</span>

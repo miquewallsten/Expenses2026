@@ -2623,7 +2623,8 @@
     "placeholderRejectionReason": "Motivo de rechazo…",
     "actionApprove": "Aprobar",
     "actionFulfill": "Marcar como completada",
-    "actionReject": "Rechazar"
+    "actionReject": "Rechazar",
+    "attachment": "Adjunto"
   },
   "timesheets": {
     "pageTitle": "Hojas de tiempo",
