@@ -336,7 +336,9 @@
         "total": "Total",
         "date": "Fecha",
         "rfc": "RFC",
-        "tooltip": "Datos extraídos automáticamente del documento"
+        "tooltip": "Datos extraídos automáticamente del documento",
+        "prefilledBadge": "Borrador prellenado desde el recibo",
+        "prefilledHint": "Verifica monto, fecha y descripción antes de enviar."
       },
       "ruleLabel": {
         "XML_FORMAT": "Formato XML válido",

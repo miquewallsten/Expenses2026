@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import {
   FileText, Upload, CheckCircle2, XCircle,
-  Send, Trash2, ChevronLeft, AlertTriangle, X, Tag, Plus,
+  Send, Trash2, ChevronLeft, AlertTriangle, X, Tag, Plus, Sparkles,
 } from "lucide-react";
 import {
   type ExtractedData,
@@ -952,6 +952,24 @@ export default function EmployeeExpenseDetail({
             {/* ══════════════════════════════════════════════════════ */}
             {activeTab === "overview" && (
               <div className="space-y-2 pb-20">
+
+                {/* ── OCR prefill banner — surfaces when draft was seeded from receipt ── */}
+                {expense.status === "draft" && (() => {
+                  const hasPrefill = linkedDocs.some((d) => {
+                    const ef = d.extracted_fields;
+                    return ef && (ef.total || ef.date || ef.merchant);
+                  });
+                  if (!hasPrefill) return null;
+                  return (
+                    <div className="flex items-start gap-2 rounded-lg border border-violet-500/20 bg-violet-500/[0.04] px-3 py-2">
+                      <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-violet-300/80" />
+                      <div className="min-w-0 leading-tight">
+                        <div className="text-[11px] font-medium text-violet-200/85">{td("ocr.prefilledBadge")}</div>
+                        <div className="text-[10px] text-violet-200/55">{td("ocr.prefilledHint")}</div>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* ── Allocation (3/4) + Expense type (1/4) on same row ── */}
                 <div className="rounded-lg border border-white/[0.07] bg-white/[0.02] px-4 py-3">

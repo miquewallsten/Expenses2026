@@ -337,7 +337,9 @@
         "total": "Total",
         "date": "Date",
         "rfc": "RFC",
-        "tooltip": "Auto-extracted from the document"
+        "tooltip": "Auto-extracted from the document",
+        "prefilledBadge": "Draft prefilled from receipt",
+        "prefilledHint": "Verify amount, date, and description before submitting."
       },
       "ruleLabel": {
         "XML_FORMAT": "XML format valid",
