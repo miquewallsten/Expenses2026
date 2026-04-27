@@ -1114,7 +1114,8 @@
       "allAmounts": "todos los montos",
       "saving": "Guardando…",
       "savePolicies": "Guardar políticas",
-      "savedAcrossDomains": "Guardado en todos los dominios"
+      "savedAcrossDomains": "Guardado en todos los dominios",
+      "saveFailed": "Error al guardar"
     },
     "overview": {
       "issueCount": "{count, plural, one {# problema requiere atención} other {# problemas requieren atención}}",

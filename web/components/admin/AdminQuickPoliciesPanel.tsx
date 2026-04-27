@@ -254,7 +254,7 @@ export default function AdminQuickPoliciesPanel({
       onSaved("workflow",   wfData);
       setSaved(true);
     } catch (e: any) {
-      setError(e?.message ?? "Save failed");
+      setError(e?.message ?? t("saveFailed"));
     } finally {
       setSaving(false);
     }

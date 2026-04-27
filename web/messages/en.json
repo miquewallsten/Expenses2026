@@ -1114,7 +1114,8 @@
       "allAmounts": "all amounts",
       "saving": "Saving…",
       "savePolicies": "Save policies",
-      "savedAcrossDomains": "Saved across all domains"
+      "savedAcrossDomains": "Saved across all domains",
+      "saveFailed": "Save failed"
     },
     "overview": {
       "issueCount": "{count, plural, one {# issue needs attention} other {# issues need attention}}",
