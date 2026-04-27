@@ -34,6 +34,7 @@ from packages.core.platform.models_workflow_stage import WorkflowStage  # noqa: 
 from packages.core.platform.models_workflow_transition import WorkflowTransition  # noqa: F401
 from packages.core.platform.models_expense_policy import CompanyExpensePolicy  # noqa: F401
 from packages.core.platform.models_company_setup import CompanySetup  # noqa: F401
+from packages.core.platform.models_ai_governance import CompanyAiGovernancePolicy  # noqa: F401
 from packages.core.platform.models_legal_entity import LegalEntity  # noqa: F401
 from packages.core.platform.models_accounting_category import AccountingCategory  # noqa: F401
 from packages.core.platform.models_accounting_learning import AccountingLearning  # noqa: F401

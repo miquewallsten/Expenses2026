@@ -54,7 +54,9 @@ from packages.modules.admin.api.accounting_setup_router import router as account
 from packages.modules.admin.api.approval_setup_router import router as approval_setup_router
 from packages.modules.admin.api.dimensions_router import router as dimensions_router
 from packages.core.platform.models_ai_policy import AIPolicy  # noqa: F401 — registers ai_policies table
+from packages.core.platform.models_ai_governance import CompanyAiGovernancePolicy  # noqa: F401
 from packages.modules.admin.api.ai_policy_router import router as ai_policy_router
+from packages.modules.admin.api.ai_governance_router import router as ai_governance_router
 from packages.modules.admin.api.portal_config_router import router as portal_config_router
 from packages.modules.admin.api.accounting_category_router import router as accounting_category_router
 from packages.modules.admin.api.accounting_category_apply_router import router as accounting_category_apply_router
@@ -268,6 +270,7 @@ app.include_router(time_tracking_router)
 app.include_router(report_cycle_router)
 app.include_router(storage_config_router)
 app.include_router(ai_policy_router)
+app.include_router(ai_governance_router)
 app.include_router(agent_router)
 app.include_router(amex_router)
 app.include_router(integrations_router)
