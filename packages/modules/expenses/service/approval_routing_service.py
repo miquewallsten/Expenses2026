@@ -198,3 +198,36 @@ def find_overdue(
                 rule_id=rule.get("id"),
             ))
     return out
+
+
+# ── Persistence helpers (Phase 5.5 follow-up) ─────────────────────────────
+
+
+def list_rules_for_company(
+    db: Session, *, company_id: int, enabled_only: bool = True
+) -> list[dict[str, Any]]:
+    """Load ``ApprovalRoutingRule`` rows for a company and return rule dicts
+    in the shape ``match_rule`` expects. Rows are deterministically ordered
+    by priority desc then rule_key asc."""
+    from packages.modules.expenses.models_routing import ApprovalRoutingRule
+
+    stmt = select(ApprovalRoutingRule).where(
+        ApprovalRoutingRule.company_id == company_id
+    )
+    if enabled_only:
+        stmt = stmt.where(ApprovalRoutingRule.is_enabled.is_(True))
+    stmt = stmt.order_by(
+        ApprovalRoutingRule.priority.desc(), ApprovalRoutingRule.rule_key.asc()
+    )
+    rows = list(db.execute(stmt).scalars())
+    return [
+        {
+            "id": r.rule_key,
+            "priority": int(r.priority or 0),
+            "when": r.when_json or {},
+            "approvers": r.approvers_json or [],
+            "sla_hours": r.sla_hours,
+            "escalation_role": r.escalation_role,
+        }
+        for r in rows
+    ]
