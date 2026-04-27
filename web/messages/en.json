@@ -134,6 +134,25 @@
     },
     "enableNotifications": "Enable Notifications",
     "notificationsDesc": "Receive in-app alerts for approvals and submissions.",
+    "notificationPrefs": {
+      "loading": "Loading preferences…",
+      "footnote": "Changes save instantly. Missing rows default to enabled.",
+      "th": {
+        "event": "Event",
+        "email": "Email",
+        "whatsapp": "WhatsApp",
+        "digestOnly": "Digest only"
+      },
+      "events": {
+        "expense.submitted": { "label": "Expense submitted for approval" },
+        "expense.approved": { "label": "Expense approved" },
+        "expense.rejected": { "label": "Expense rejected" },
+        "expense.returned": { "label": "Expense returned" },
+        "expense.daily_digest": { "label": "Daily approval digest" },
+        "expense.approval_nudge_48h": { "label": "48h approval nudge" },
+        "auth.magic_link": { "label": "Sign-in magic link" }
+      }
+    },
     "aiPanelDefault": "AI Panel Open by Default",
     "aiPanelDesc": "Automatically expand the Copilot panel on page load.",
     "saveChanges": "Save Changes",

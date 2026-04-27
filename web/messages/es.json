@@ -134,6 +134,25 @@
     },
     "enableNotifications": "Activar notificaciones",
     "notificationsDesc": "Recibe alertas en la app para aprobaciones y envíos.",
+    "notificationPrefs": {
+      "loading": "Cargando preferencias…",
+      "footnote": "Los nuevos valores se guardan al instante. Vacío = predeterminado activado.",
+      "th": {
+        "event": "Evento",
+        "email": "Correo",
+        "whatsapp": "WhatsApp",
+        "digestOnly": "Solo resumen"
+      },
+      "events": {
+        "expense.submitted": { "label": "Gasto enviado a aprobación" },
+        "expense.approved": { "label": "Gasto aprobado" },
+        "expense.rejected": { "label": "Gasto rechazado" },
+        "expense.returned": { "label": "Gasto devuelto" },
+        "expense.daily_digest": { "label": "Resumen diario de aprobaciones" },
+        "expense.approval_nudge_48h": { "label": "Recordatorio de aprobación 48h" },
+        "auth.magic_link": { "label": "Enlace de inicio de sesión" }
+      }
+    },
     "aiPanelDefault": "Panel IA abierto por defecto",
     "aiPanelDesc": "Expandir automáticamente el panel Copilot al cargar la página.",
     "saveChanges": "Guardar cambios",

@@ -1,9 +1,181 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Loader2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useLocale, type Locale } from "@/context/LocaleContext";
+import { getAuthHeaders } from "@/lib/session";
+
+const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+const NOTIFICATION_EVENT_TYPES = [
+  "expense.submitted",
+  "expense.approved",
+  "expense.rejected",
+  "expense.returned",
+  "expense.daily_digest",
+  "expense.approval_nudge_48h",
+  "auth.magic_link",
+] as const;
+
+type NotificationEventType = (typeof NOTIFICATION_EVENT_TYPES)[number];
+
+interface NotificationPreference {
+  event_type: string;
+  email_enabled: boolean;
+  whatsapp_enabled: boolean;
+  digest_only: boolean;
+}
+
+function NotificationPreferences() {
+  const t = useTranslations("settings.notificationPrefs");
+  const [rows, setRows] = useState<Record<string, NotificationPreference>>({});
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(`${API}/me/notification-preferences`, {
+          headers: { ...getAuthHeaders() },
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const data = (await res.json()) as NotificationPreference[];
+        if (cancelled) return;
+        const map: Record<string, NotificationPreference> = {};
+        for (const r of data) map[r.event_type] = r;
+        setRows(map);
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : "Error");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const toggle = useCallback(
+    async (
+      event_type: NotificationEventType,
+      field: "email_enabled" | "whatsapp_enabled" | "digest_only",
+    ) => {
+      const current = rows[event_type] ?? {
+        event_type,
+        email_enabled: true,
+        whatsapp_enabled: true,
+        digest_only: false,
+      };
+      const next = { ...current, [field]: !current[field] };
+      setBusy(`${event_type}:${field}`);
+      setError(null);
+      try {
+        const res = await fetch(`${API}/me/notification-preferences`, {
+          method: "PATCH",
+          headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+          body: JSON.stringify({ event_type, [field]: next[field] }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const saved = (await res.json()) as NotificationPreference;
+        setRows((prev) => ({ ...prev, [event_type]: saved }));
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Error");
+      } finally {
+        setBusy(null);
+      }
+    },
+    [rows],
+  );
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 text-[11px] text-white/45">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        {t("loading")}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2.5">
+      {error && (
+        <div className="rounded border border-rose-500/30 bg-rose-500/[0.08] p-2 text-[10.5px] text-rose-200 break-all">
+          {error}
+        </div>
+      )}
+      <div className="overflow-hidden rounded border border-white/[0.07]">
+        <table className="w-full text-[11px]">
+          <thead>
+            <tr className="border-b border-white/[0.07] bg-white/[0.02] text-left text-[9.5px] uppercase tracking-wide text-white/35">
+              <th className="px-2.5 py-2 font-medium">{t("th.event")}</th>
+              <th className="px-2 py-2 text-center font-medium">{t("th.email")}</th>
+              <th className="px-2 py-2 text-center font-medium">
+                {t("th.whatsapp")}
+              </th>
+              <th className="px-2 py-2 text-center font-medium">
+                {t("th.digestOnly")}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {NOTIFICATION_EVENT_TYPES.map((evt) => {
+              const r = rows[evt] ?? {
+                event_type: evt,
+                email_enabled: true,
+                whatsapp_enabled: true,
+                digest_only: false,
+              };
+              return (
+                <tr
+                  key={evt}
+                  className="border-b border-white/[0.04] last:border-b-0"
+                >
+                  <td className="px-2.5 py-1.5">
+                    <div className="text-[11px] text-white/80">
+                      {t(`events.${evt}.label` as Parameters<typeof t>[0])}
+                    </div>
+                    <div className="font-mono text-[9.5px] text-white/30">
+                      {evt}
+                    </div>
+                  </td>
+                  {(
+                    [
+                      "email_enabled",
+                      "whatsapp_enabled",
+                      "digest_only",
+                    ] as const
+                  ).map((field) => (
+                    <td key={field} className="px-2 py-1.5 text-center">
+                      <button
+                        type="button"
+                        disabled={busy === `${evt}:${field}`}
+                        onClick={() => void toggle(evt, field)}
+                        className={`relative inline-block h-4 w-7 rounded-full transition-colors disabled:opacity-50 ${
+                          r[field] ? "bg-emerald-500/70" : "bg-white/10"
+                        }`}
+                        aria-label={`${t(`events.${evt}.label` as Parameters<typeof t>[0])} · ${t(`th.${field === "email_enabled" ? "email" : field === "whatsapp_enabled" ? "whatsapp" : "digestOnly"}`)}`}
+                      >
+                        <span
+                          className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform ${
+                            r[field] ? "translate-x-3.5" : "translate-x-0.5"
+                          }`}
+                        />
+                      </button>
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-[10px] text-white/30">{t("footnote")}</p>
+    </div>
+  );
+}
 
 type SectionKey = "profile" | "languageRegion" | "notifications" | "appearance" | "aiPreferences";
 const SECTION_KEYS: SectionKey[] = ["profile", "languageRegion", "notifications", "appearance", "aiPreferences"];
@@ -24,21 +196,18 @@ function SettingsDetail({ sectionKey }: { sectionKey: SectionKey }) {
   const { locale, setLocale } = useLocale();
   const [timezone, setTimezone]           = useState("America/Mexico_City");
   const [theme, setTheme]                 = useState("dark");
-  const [notifications, setNotifications] = useState(true);
   const [aiOpen, setAiOpen]               = useState(false);
   const [saved, setSaved]                 = useState(false);
 
   useEffect(() => {
     setTimezone(localStorage.getItem("pref_timezone") ?? "America/Mexico_City");
     setTheme(localStorage.getItem("pref_theme") ?? "dark");
-    setNotifications(localStorage.getItem("pref_notifications") !== "false");
     setAiOpen(localStorage.getItem("pref_ai_panel") === "true");
   }, []);
 
   const handleSave = () => {
     localStorage.setItem("pref_timezone", timezone);
     localStorage.setItem("pref_theme", theme);
-    localStorage.setItem("pref_notifications", String(notifications));
     localStorage.setItem("pref_ai_panel", String(aiOpen));
     const root = document.documentElement;
     root.classList.remove("light", "dark");
@@ -50,7 +219,6 @@ function SettingsDetail({ sectionKey }: { sectionKey: SectionKey }) {
   const handleReset = () => {
     setTimezone("America/Mexico_City");
     setTheme("dark");
-    setNotifications(true);
     setAiOpen(false);
   };
 
@@ -100,20 +268,7 @@ function SettingsDetail({ sectionKey }: { sectionKey: SectionKey }) {
           </div>
         )}
 
-        {sectionKey === "notifications" && (
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-xs text-white/75 font-medium">{t("enableNotifications")}</div>
-              <div className="text-[11px] text-white/35 mt-0.5">{t("notificationsDesc")}</div>
-            </div>
-            <button
-              onClick={() => setNotifications((v) => !v)}
-              className={`relative h-5 w-9 rounded-full transition-colors ${notifications ? "bg-emerald-500/70" : "bg-white/10"}`}
-            >
-              <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${notifications ? "translate-x-4" : "translate-x-0.5"}`} />
-            </button>
-          </div>
-        )}
+        {sectionKey === "notifications" && <NotificationPreferences />}
 
         {sectionKey === "aiPreferences" && (
           <div className="flex items-center justify-between">
