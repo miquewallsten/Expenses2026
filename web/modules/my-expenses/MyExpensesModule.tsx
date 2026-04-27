@@ -24,6 +24,7 @@ import { useMyWorkContext } from "@/context/MyWorkContext";
 import { useUserContext } from "@/context/UserContext";
 import { getAuthHeaders } from "@/lib/session";
 import { enqueueUpload } from "@/lib/offline/uploadQueue";
+import { compressImageFile } from "@/lib/imageCompress";
 import { MODULE_IDS, deriveExpenseDecision } from "@/lib/my-work/expenseDecision";
 import {
   type ExtractedData,
@@ -331,7 +332,11 @@ export default function MyExpensesModule() {
     const failures: string[] = [];
     let queued = 0;
     for (let i = 0; i < ordered.length; i++) {
-      const file = ordered[i];
+      const original = ordered[i];
+      // Re-encode large camera JPEGs/PNGs to ≤2048px JPEG q=0.85 before
+      // upload. compressImageFile is best-effort: returns the original
+      // file on any failure or for non-images / small images / PDFs / XMLs.
+      const file = await compressImageFile(original);
       setUploadProgress({ current: i + 1, total: ordered.length, name: file.name });
       try {
         const form = new FormData();
