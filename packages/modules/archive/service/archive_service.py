@@ -247,6 +247,21 @@ def store_file(
     if content_text and content_text.strip():
         try:
             from packages.modules.ai.service.embedding_service import index_document
+            from packages.modules.expenses.service.document_classifier_service import (
+                classify_document,
+            )
+
+            # Phase 8.11 — coarse classification stamped onto the embedding
+            # rows so future kNN votes have ground-truth labels to learn from.
+            try:
+                triage = classify_document(
+                    db,
+                    company_id=company_id,
+                    content_text=content_text,
+                    filename=result["original_filename"],
+                )
+            except Exception:
+                triage = {"label": "other", "confidence": 0.0, "method": "default"}
 
             index_document(
                 db,
@@ -257,6 +272,9 @@ def store_file(
                     "archive_file_id": record.id,
                     "source_type": source_type,
                     "filename": result["original_filename"],
+                    "label": triage.get("label"),
+                    "label_confidence": triage.get("confidence"),
+                    "label_method": triage.get("method"),
                 },
             )
             db.commit()
