@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Bot, Zap, Loader2, CheckCircle2,
   AlertTriangle, AlertCircle, HelpCircle, ChevronDown, ChevronRight, UserPlus,
@@ -127,12 +127,12 @@ interface Message {
 
 // ── Patch section labels ──────────────────────────────────────────────────────
 
-const PATCH_SECTIONS: { key: keyof SuggestedPatches; label: string }[] = [
-  { key: "company_setup",    label: "Company setup" },
-  { key: "expense_policy",   label: "Expense policy" },
-  { key: "accounting_setup", label: "Accounting setup" },
-  { key: "approval_setup",   label: "Approval setup" },
-  { key: "workflow_setup",   label: "Workflow setup" },
+const PATCH_SECTIONS: { key: keyof SuggestedPatches; i18nKey: string }[] = [
+  { key: "company_setup",    i18nKey: "patchCompanySetup" },
+  { key: "expense_policy",   i18nKey: "patchExpensePolicy" },
+  { key: "accounting_setup", i18nKey: "patchAccountingSetup" },
+  { key: "approval_setup",   i18nKey: "patchApprovalSetup" },
+  { key: "workflow_setup",   i18nKey: "patchWorkflowSetup" },
 ];
 
 // Mirror of backend _ALLOWED_PATCH_FIELDS — strips invented keys before rendering.
@@ -179,8 +179,8 @@ const ALLOWED_PATCH_KEYS: Record<keyof SuggestedPatches, Set<string>> = {
   ]),
 };
 
-function patchValueLabel(v: any): string {
-  if (typeof v === "boolean") return v ? "On" : "Off";
+function patchValueLabel(v: any, tFn: (k: string) => string): string {
+  if (typeof v === "boolean") return v ? tFn("valueOn") : tFn("valueOff");
   if (v === null || v === undefined) return "—";
   if (typeof v === "number") return String(v);
   return String(v).replace(/_/g, " ");
@@ -243,6 +243,7 @@ const CONFLICT_RELEVANT_FIELDS: Record<string, { section: keyof SuggestedPatches
 function getFixHint(
   conflict: DetectedConflict,
   patches: SuggestedPatches,
+  tFn: (k: string) => string,
 ): string | null {
   const relevant = CONFLICT_RELEVANT_FIELDS[conflict.code];
   if (!relevant) return null;
@@ -250,7 +251,7 @@ function getFixHint(
   for (const { section, field } of relevant) {
     const val = (patches[section] as Record<string, any>)?.[field];
     if (val !== undefined) {
-      parts.push(`${field.replace(/_/g, " ")} → ${patchValueLabel(val)}`);
+      parts.push(`${field.replace(/_/g, " ")} → ${patchValueLabel(val, tFn)}`);
     }
   }
   return parts.length > 0 ? parts.join(", ") : null;
@@ -272,6 +273,7 @@ type ImpactItem = { text: string; kind: "ok" | "warn" | "inactive" | "info" };
 function deriveOperationalImpact(
   portalConfig: any,
   conflicts: DetectedConflict[],
+  tFn: (k: string, vars?: Record<string, any>) => string,
 ): ImpactItem[] {
   const items: ImpactItem[] = [];
   if (!portalConfig) return items;
@@ -287,68 +289,68 @@ function deriveOperationalImpact(
 
   // Submission routing — always emit one item so the routing intent is explicit.
   if (approvalMode === "accounting_only") {
-    items.push({ text: "Employees submit directly to accounting", kind: "info" });
+    items.push({ text: tFn("impactAccountingOnly"), kind: "info" });
   } else if (approvalMode === "manager_only") {
-    items.push({ text: "All expenses require manager approval", kind: "info" });
+    items.push({ text: tFn("impactManagerOnly"), kind: "info" });
   } else if (approvalMode === "manager_then_accounting") {
-    items.push({ text: "Expenses route through manager approval then accounting", kind: "info" });
+    items.push({ text: tFn("impactManagerThenAccounting"), kind: "info" });
   } else if (approvalMode === "threshold_based") {
-    const t = approval.manager_threshold_amount;
+    const amt = approval.manager_threshold_amount;
     items.push({
-      text: t
-        ? `Expenses above ${t} route to managers; others proceed directly`
-        : "Threshold-based routing is configured but no threshold amount is set",
-      kind: t ? "info" : "warn",
+      text: amt
+        ? tFn("impactThresholdWithAmount", { amount: amt })
+        : tFn("impactThresholdNoAmount"),
+      kind: amt ? "info" : "warn",
     });
   } else {
-    items.push({ text: "No approval routing is configured", kind: "warn" });
+    items.push({ text: tFn("impactNoApproval"), kind: "warn" });
   }
 
   // Manager queue — only note when inactive (active is implied by routing above).
   if (!managerEnabled) {
-    items.push({ text: "Manager queue will remain inactive", kind: "inactive" });
+    items.push({ text: tFn("impactManagerQueueInactive"), kind: "inactive" });
   }
 
   // Accounting queue.
   if (!accountingEnabled) {
-    items.push({ text: "Accounting queue will remain inactive", kind: "inactive" });
+    items.push({ text: tFn("impactAccountingQueueInactive"), kind: "inactive" });
   } else {
     const acctMode = accounting.accounting_review_mode ?? "";
     if (acctMode === "exception_based") {
-      items.push({ text: "Accounting queue will receive exception items only", kind: "info" });
+      items.push({ text: tFn("impactAccountingExceptionsOnly"), kind: "info" });
     } else if (acctMode === "all_expenses") {
-      items.push({ text: "All approved expenses enter the accounting queue", kind: "info" });
+      items.push({ text: tFn("impactAccountingAllExpenses"), kind: "info" });
     }
   }
 
   // Document validation gate.
   if (workflow.block_submit_on_failed_validation) {
-    items.push({ text: "Submission blocked when documents fail validation", kind: "info" });
+    items.push({ text: tFn("impactValidationBlocked"), kind: "info" });
   }
 
   // Resubmission after rejection.
   if (approval.allow_resubmission_after_rejection) {
-    items.push({ text: "Employees can resubmit after rejection", kind: "ok" });
+    items.push({ text: tFn("impactResubmissionAllowed"), kind: "ok" });
   } else {
-    items.push({ text: "Rejected expenses cannot be resubmitted", kind: "inactive" });
+    items.push({ text: tFn("impactNoResubmission"), kind: "inactive" });
   }
 
   // Escalations — only when explicitly enabled.
   if (approval.escalate_policy_failures_to_accounting) {
-    items.push({ text: "Policy violations escalate to accounting", kind: "info" });
+    items.push({ text: tFn("impactPolicyEscalated"), kind: "info" });
   }
   if (approval.escalate_international_to_accounting) {
-    items.push({ text: "International expenses escalate to accounting", kind: "info" });
+    items.push({ text: tFn("impactIntlEscalated"), kind: "info" });
   }
 
   // Póliza.
   if (accounting.poliza_required) {
-    items.push({ text: "Póliza generation required for approved expenses", kind: "info" });
+    items.push({ text: tFn("impactPolizaRequired"), kind: "info" });
   }
 
   // Surface critical conflicts as an operational risk item.
   if (conflicts.some((c) => c.severity === "critical")) {
-    items.push({ text: "Critical conflicts detected — routing may not behave as expected", kind: "warn" });
+    items.push({ text: tFn("impactCriticalConflicts"), kind: "warn" });
   }
 
   return items;
@@ -419,6 +421,7 @@ export default function AdminSetupOrchestratorPanel({
   const [accountingQueueCount, setAccountingQueueCount] = useState<number | null>(null);
   const [legalEntities, setLegalEntities] = useState<{ id: number; entity_name: string; rfc?: string | null }[]>([]);
   const locale       = useLocale();
+  const t            = useTranslations("admin.setupOrchestrator");
   const threadEndRef = useRef<HTMLDivElement>(null);
 
   // Scroll thread to bottom when new messages arrive
@@ -622,7 +625,7 @@ export default function AdminSetupOrchestratorPanel({
     const hasDiscardedKeys = PATCH_SECTIONS.some(({ key }) =>
       Object.keys(result.suggested_patches[key] ?? {}).some((k) => !ALLOWED_PATCH_KEYS[key].has(k)),
     );
-    const impactItems = deriveOperationalImpact(portalConfig, result.detected_conflicts ?? []);
+    const impactItems = deriveOperationalImpact(portalConfig, result.detected_conflicts ?? [], t);
     // Only show analysis sections when there's something substantive to show
     // Show analysis only when the AI is actually doing something — not for pure Q&A
     const hasAnalysis = result.action_state !== "no_changes" && (
@@ -700,11 +703,11 @@ export default function AdminSetupOrchestratorPanel({
                 {!isBulk && (
                   <div className="grid grid-cols-2 gap-x-3 gap-y-2">
                     {([
-                      { key: "full_name",  label: "Full name",  type: "text",  required: true  },
-                      { key: "email",      label: "Email",      type: "email", required: true  },
-                      { key: "department", label: "Department", type: "text",  required: false },
-                      { key: "job_title",  label: "Job title",  type: "text",  required: false },
-                    ] as const).map(({ key, label, type, required }) => (
+                      { key: "full_name",  label: t("userFormFullName"),  type: "text",  required: true  },
+                      { key: "email",      label: t("userFormEmail"),      type: "email", required: true  },
+                      { key: "department", label: t("userFormDepartment"), type: "text",  required: false },
+                      { key: "job_title",  label: t("userFormJobTitle"),   type: "text",  required: false },
+                    ] as { key: string; label: string; type: string; required: boolean }[]).map(({ key, label, type, required }) => (
                       <label key={key} className="flex flex-col gap-0.5">
                         <span className="text-[8.5px] font-semibold uppercase tracking-wider text-white/25">{label}{required ? " *" : ""}</span>
                         <input
@@ -712,12 +715,12 @@ export default function AdminSetupOrchestratorPanel({
                           value={String(draft[key] ?? "")}
                           onChange={(e) => setDraftField(msg.id, action.action_id, key, e.target.value)}
                           className="rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1 text-[10px] text-white/70 outline-none placeholder:text-white/20 focus:border-white/20"
-                          placeholder={required ? "required" : "optional"}
+                          placeholder={required ? t("fieldRequired") : t("fieldOptional")}
                         />
                       </label>
                     ))}
                     <label className="flex flex-col gap-0.5">
-                      <span className="text-[8.5px] font-semibold uppercase tracking-wider text-white/25">Role *</span>
+                      <span className="text-[8.5px] font-semibold uppercase tracking-wider text-white/25">{t("userFormRole")} *</span>
                       <select
                         value={String(draft.role ?? "employee")}
                         onChange={(e) => setDraftField(msg.id, action.action_id, "role", e.target.value)}
@@ -730,13 +733,13 @@ export default function AdminSetupOrchestratorPanel({
                     </label>
                     {legalEntities.length > 0 && (
                       <label className="flex flex-col gap-0.5">
-                        <span className="text-[8.5px] font-semibold uppercase tracking-wider text-white/25">Company</span>
+                        <span className="text-[8.5px] font-semibold uppercase tracking-wider text-white/25">{t("userFormCompany")}</span>
                         <select
                           value={String(draft.legal_entity_id ?? "")}
                           onChange={(e) => setDraftField(msg.id, action.action_id, "legal_entity_id", e.target.value ? Number(e.target.value) : null)}
                           className="rounded border border-white/[0.08] bg-[#1a1a1f] px-2 py-1 text-[10px] text-white/70 outline-none focus:border-white/20"
                         >
-                          <option value="">— none —</option>
+                          <option value="">{t("entityNone")}</option>
                           {legalEntities.map((le) => (
                             <option key={le.id} value={le.id}>{le.entity_name}{le.rfc ? ` (${le.rfc})` : ""}</option>
                           ))}
@@ -750,7 +753,7 @@ export default function AdminSetupOrchestratorPanel({
                         onChange={(e) => setDraftField(msg.id, action.action_id, "send_invite", e.target.checked)}
                         className="h-3 w-3 accent-violet-500"
                       />
-                      <span className="text-[9px] text-white/35">Send invite email</span>
+                      <span className="text-[9px] text-white/35">{t("userFormSendInvite")}</span>
                     </label>
                   </div>
                 )}
@@ -761,7 +764,7 @@ export default function AdminSetupOrchestratorPanel({
                   onClick={() => executeAction(msg.id, action, draft)}
                   className="w-full rounded border border-emerald-500/25 bg-emerald-500/[0.07] py-1 text-[9px] font-semibold text-emerald-300/70 transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/[0.13] hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-30"
                 >
-                  {st?.status === "running" ? "Creating…" : isBulk ? `Invite ${userRows.length} user${userRows.length !== 1 ? "s" : ""}` : "Create user"}
+                  {st?.status === "running" ? t("creatingBtn") : isBulk ? t("inviteUsersBtn", { count: userRows.length }) : t("createUserBtn")}
                 </button>
               </div>
             );
@@ -773,32 +776,32 @@ export default function AdminSetupOrchestratorPanel({
             return (
               <div key={action.action_id} className="rounded border border-white/[0.08] bg-white/[0.02] px-3 py-2.5 space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-white/30">Category</span>
+                  <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-white/30">{t("categoryLabel")}</span>
                   <p className="flex-1 text-[10px] text-white/55">{action.label}</p>
                   {st?.status === "running" && <Loader2 className="h-3 w-3 shrink-0 animate-spin text-white/30" />}
                 </div>
                 {isBulk ? (
-                  <p className="text-[9px] text-white/30">{cats.length} categor{cats.length !== 1 ? "ies" : "y"} ready to create</p>
+                  <p className="text-[9px] text-white/30">{t("categoriesReadyCount", { count: cats.length })}</p>
                 ) : (
                   <div className="grid grid-cols-2 gap-x-3 gap-y-2">
-                    {([{key:"code",label:"Code",required:true},{key:"name",label:"Name",required:true},{key:"expense_account_code",label:"Account code",required:false}] as const).map(({key,label,required}) => (
+                    {([{key:"code",label:t("catFormCode"),required:true},{key:"name",label:t("catFormName"),required:true},{key:"expense_account_code",label:t("catFormAccountCode"),required:false}] as {key:string;label:string;required:boolean}[]).map(({key,label,required}) => (
                       <label key={key} className="flex flex-col gap-0.5">
                         <span className="text-[8.5px] font-semibold uppercase tracking-wider text-white/25">{label}{required ? " *" : ""}</span>
                         <input
                           type="text" value={String(draft[key] ?? "")}
                           onChange={(e) => setDraftField(msg.id, action.action_id, key, e.target.value)}
                           className="rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1 text-[10px] text-white/70 outline-none placeholder:text-white/20 focus:border-white/20"
-                          placeholder={required ? "required" : "optional"}
+                          placeholder={required ? t("fieldRequired") : t("fieldOptional")}
                         />
                       </label>
                     ))}
                     <label className="flex flex-col gap-0.5">
-                      <span className="text-[8.5px] font-semibold uppercase tracking-wider text-white/25">Tax behavior</span>
+                      <span className="text-[8.5px] font-semibold uppercase tracking-wider text-white/25">{t("catFormTaxBehavior")}</span>
                       <select value={String(draft.tax_behavior ?? "none")} onChange={(e) => setDraftField(msg.id, action.action_id, "tax_behavior", e.target.value)}
                         className="rounded border border-white/[0.08] bg-[#1a1a1f] px-2 py-1 text-[10px] text-white/70 outline-none focus:border-white/20">
-                        <option value="none">None</option>
-                        <option value="creditable">Creditable</option>
-                        <option value="non_creditable">Non-creditable</option>
+                        <option value="none">{t("taxBehaviorNone")}</option>
+                        <option value="creditable">{t("taxBehaviorCreditable")}</option>
+                        <option value="non_creditable">{t("taxBehaviorNonCreditable")}</option>
                       </select>
                     </label>
                   </div>
@@ -806,7 +809,7 @@ export default function AdminSetupOrchestratorPanel({
                 {st?.status === "error" && <p className="text-[9px] text-red-400/60">{st.error}</p>}
                 <button type="button" disabled={st?.status === "running"} onClick={() => executeAction(msg.id, action, draft)}
                   className="w-full rounded border border-emerald-500/25 bg-emerald-500/[0.07] py-1 text-[9px] font-semibold text-emerald-300/70 transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/[0.13] hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-30">
-                  {st?.status === "running" ? "Creating…" : isBulk ? `Create ${cats.length} categories` : "Create category"}
+                  {st?.status === "running" ? t("creatingBtn") : isBulk ? t("createCategoriesBtn", { count: cats.length }) : t("createCategoryBtn")}
                 </button>
               </div>
             );
@@ -819,7 +822,7 @@ export default function AdminSetupOrchestratorPanel({
               {st?.status === "error" && <p className="text-[9px] text-red-400/60">{st.error}</p>}
               <button type="button" disabled={st?.status === "running"} onClick={() => executeAction(msg.id, action, draft)}
                 className="w-full rounded border border-emerald-500/25 bg-emerald-500/[0.07] py-1 text-[9px] font-semibold text-emerald-300/70 transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/[0.13] hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-30">
-                {st?.status === "running" ? "Running…" : "Execute"}
+                {st?.status === "running" ? t("runningBtn") : t("executeBtn")}
               </button>
             </div>
           );
@@ -830,7 +833,7 @@ export default function AdminSetupOrchestratorPanel({
         {/* Next steps */}
         {(result.next_steps?.length ?? 0) > 0 && (
           <div className="space-y-1">
-            <p className="text-[8.5px] font-bold uppercase tracking-widest text-white/18">What to do next</p>
+            <p className="text-[8.5px] font-bold uppercase tracking-widest text-white/18">{t("whatToDoNext")}</p>
             <div className="flex flex-col gap-1">
               {result.next_steps!.map((step, i) => (
                 <button key={i} type="button"
@@ -847,7 +850,7 @@ export default function AdminSetupOrchestratorPanel({
         {/* Current state assessment */}
         {result.current_state_assessment && (
           <div className="space-y-1">
-            <SectionLabel>Current state</SectionLabel>
+            <SectionLabel>{t("currentState")}</SectionLabel>
             <p className="px-0.5 text-[10px] leading-relaxed text-white/38">{result.current_state_assessment}</p>
           </div>
         )}
@@ -855,7 +858,7 @@ export default function AdminSetupOrchestratorPanel({
         {result.action_state === "no_changes" && totalPatches === 0 && (
           <div className="flex items-center gap-2 px-0.5">
             <CheckCircle2 className="h-3 w-3 text-white/25" />
-            <span className="text-[10px] text-white/30">No configuration changes needed</span>
+            <span className="text-[10px] text-white/30">{t("noChangesNeeded")}</span>
           </div>
         )}
 
@@ -864,7 +867,7 @@ export default function AdminSetupOrchestratorPanel({
           {/* Impact */}
           {(result.impact?.length ?? 0) > 0 ? (
             <div>
-              <SectionLabel>Impact</SectionLabel>
+              <SectionLabel>{t("impact")}</SectionLabel>
               <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2 space-y-1">
                 {result.impact!.map((item, i) => (
                   <div key={i} className="flex items-start gap-2">
@@ -876,7 +879,7 @@ export default function AdminSetupOrchestratorPanel({
             </div>
           ) : impactItems.length > 0 && (
             <div>
-              <SectionLabel>Operational impact</SectionLabel>
+              <SectionLabel>{t("operationalImpact")}</SectionLabel>
               <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2 space-y-1">
                 {impactItems.map((item, i) => (
                   <div key={i} className="flex items-start gap-2">
@@ -897,9 +900,9 @@ export default function AdminSetupOrchestratorPanel({
           )}
 
           {/* Detected conflicts */}
-          <CollapsibleSection label="Detected conflicts" count={result.detected_conflicts?.length ?? 0} defaultOpen>
+          <CollapsibleSection label={t("detectedConflicts")} count={result.detected_conflicts?.length ?? 0} defaultOpen>
             {(result.detected_conflicts ?? []).map((c, i) => {
-              const fixHint = getFixHint(c, result.suggested_patches);
+              const fixHint = getFixHint(c, result.suggested_patches, t);
               return (
                 <div key={i} className={`flex items-start gap-2 rounded border px-3 py-2 ${
                   c.severity === "critical" ? "border-red-500/25 bg-red-500/[0.07]" : "border-amber-500/[0.10] bg-amber-500/[0.025]"
@@ -911,7 +914,7 @@ export default function AdminSetupOrchestratorPanel({
                   <div className="min-w-0 space-y-0.5">
                     <p className="text-[9px] font-mono text-white/22">{c.code}</p>
                     <p className={`text-[10px] leading-snug ${c.severity === "critical" ? "font-medium text-red-300/75" : "text-amber-300/50"}`}>{c.message}</p>
-                    {fixHint && <p className="text-[9px] italic text-white/28">Fix direction: {fixHint}</p>}
+                    {fixHint && <p className="text-[9px] italic text-white/28">{t("fixDirection", { hint: fixHint })}</p>}
                   </div>
                 </div>
               );
@@ -919,7 +922,7 @@ export default function AdminSetupOrchestratorPanel({
           </CollapsibleSection>
 
           {/* Missing decisions */}
-          <CollapsibleSection label="Missing decisions" count={result.missing_decisions?.length ?? 0} defaultOpen>
+          <CollapsibleSection label={t("missingDecisions")} count={result.missing_decisions?.length ?? 0} defaultOpen>
             {(result.missing_decisions ?? []).map((d, i) => (
               <div key={i} className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2.5 space-y-1.5">
                 <div className="flex items-start gap-2">
@@ -946,7 +949,7 @@ export default function AdminSetupOrchestratorPanel({
           {/* Risks & gaps */}
           {(result.risks_gaps?.length ?? 0) > 0 && (
             <div>
-              <SectionLabel>Risks &amp; gaps</SectionLabel>
+              <SectionLabel>{t("risksGaps")}</SectionLabel>
               <div className="rounded border border-amber-500/[0.08] bg-amber-500/[0.02] px-3 py-2 space-y-1.5">
                 {result.risks_gaps!.map((item, i) => (
                   <div key={i} className="flex items-start gap-2">
@@ -961,14 +964,14 @@ export default function AdminSetupOrchestratorPanel({
           {/* Generated categories */}
           {(result.generated_categories?.length ?? 0) > 0 && (
             <div className="space-y-1.5">
-              <SectionLabel>Generated accounting categories</SectionLabel>
+              <SectionLabel>{t("generatedCategories")}</SectionLabel>
               <div className="overflow-hidden rounded border border-white/[0.07] bg-white/[0.02]">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-white/[0.05]">
-                      <th className="px-3 py-1.5 text-left text-[9px] font-bold uppercase tracking-widest text-white/20">Code</th>
-                      <th className="px-3 py-1.5 text-left text-[9px] font-bold uppercase tracking-widest text-white/20">Account</th>
-                      <th className="px-3 py-1.5 text-left text-[9px] font-bold uppercase tracking-widest text-white/20">Proj req.</th>
+                      <th className="px-3 py-1.5 text-left text-[9px] font-bold uppercase tracking-widest text-white/20">{t("colCode")}</th>
+                      <th className="px-3 py-1.5 text-left text-[9px] font-bold uppercase tracking-widest text-white/20">{t("colAccount")}</th>
+                      <th className="px-3 py-1.5 text-left text-[9px] font-bold uppercase tracking-widest text-white/20">{t("colProjReq")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -976,7 +979,7 @@ export default function AdminSetupOrchestratorPanel({
                       <tr key={i} className="border-b border-white/[0.04] last:border-0">
                         <td className="px-3 py-1.5 font-mono text-[10px] text-white/55">{cat.code}</td>
                         <td className="px-3 py-1.5 text-[10px] text-white/38">{cat.expense_account_code ?? <span className="text-white/18">—</span>}</td>
-                        <td className="px-3 py-1.5 text-[10px] text-white/38">{cat.requires_project ? "Yes" : "No"}</td>
+                        <td className="px-3 py-1.5 text-[10px] text-white/38">{cat.requires_project ? t("colYes") : t("colNo")}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -985,9 +988,9 @@ export default function AdminSetupOrchestratorPanel({
               <button type="button" onClick={() => handleApplyCategories(msg.id, result.generated_categories!)}
                 disabled={categoriesApplying || categoriesApplied}
                 className="inline-flex w-full items-center justify-center gap-1.5 rounded border border-white/[0.1] bg-white/[0.04] px-3 py-1.5 text-[10px] font-semibold text-white/55 transition-colors hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-50">
-                {categoriesApplying ? <><Loader2 className="h-3 w-3 animate-spin" /> Applying…</>
-                  : categoriesApplied ? <><CheckCircle2 className="h-3 w-3 text-emerald-400/60" /> Categories applied</>
-                  : "Apply categories"}
+                {categoriesApplying ? <><Loader2 className="h-3 w-3 animate-spin" /> {t("applying")}</>
+                  : categoriesApplied ? <><CheckCircle2 className="h-3 w-3 text-emerald-400/60" /> {t("categoriesApplied")}</>
+                  : t("applyCategories")}
               </button>
               {categoriesError && <p className="text-[10px] text-red-400/60">{categoriesError}</p>}
             </div>
@@ -995,12 +998,12 @@ export default function AdminSetupOrchestratorPanel({
 
           {/* Suggested patches */}
           {hasDiscardedKeys && (
-            <p className="text-[9px] text-white/22 italic">Some AI suggestions were ignored (unknown schema keys).</p>
+            <p className="text-[9px] text-white/22 italic">{t("discardedKeysNote")}</p>
           )}
           {totalPatches > 0 && (
             <div className="space-y-1.5">
-              <SectionLabel>Proposed configuration</SectionLabel>
-              {PATCH_SECTIONS.map(({ key, label }) => {
+              <SectionLabel>{t("proposedConfig")}</SectionLabel>
+              {PATCH_SECTIONS.map(({ key, i18nKey }) => {
                 const allowed  = ALLOWED_PATCH_KEYS[key];
                 const entries  = Object.entries(result.suggested_patches[key] ?? {}).filter(([f]) => allowed.has(f));
                 if (entries.length === 0) return null;
@@ -1008,11 +1011,11 @@ export default function AdminSetupOrchestratorPanel({
                 return (
                   <div key={key} className="overflow-hidden rounded border border-white/[0.07] bg-white/[0.02]">
                     <div className="flex items-center justify-between border-b border-white/[0.05] px-3 py-1.5">
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-white/22">{label}</p>
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-white/22">{t(i18nKey)}</p>
                       <button type="button" onClick={() => handleApplySection(msg.id, key, result.suggested_patches)}
                         disabled={sectionApplied}
                         className="text-[9px] font-medium text-violet-300/55 transition-colors hover:text-violet-300/80 disabled:cursor-not-allowed disabled:opacity-40">
-                        {sectionApplied ? "Applied" : "Apply this patch"}
+                        {sectionApplied ? t("applied") : t("applyThisPatch")}
                       </button>
                     </div>
                     <table className="w-full">
@@ -1020,7 +1023,7 @@ export default function AdminSetupOrchestratorPanel({
                         {entries.map(([field, value]) => (
                           <tr key={field} className="border-b border-white/[0.04] last:border-0">
                             <td className="px-3 py-1.5 text-[10px] text-white/32">{field.replace(/_/g, " ")}</td>
-                            <td className="px-3 py-1.5 text-right text-[10px] font-medium text-white/55">{patchValueLabel(value)}</td>
+                            <td className="px-3 py-1.5 text-right text-[10px] font-medium text-white/55">{patchValueLabel(value, t)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1034,12 +1037,12 @@ export default function AdminSetupOrchestratorPanel({
           {/* Approval gate */}
           {totalPatches > 0 && (
             <div className="space-y-1.5 border-t border-white/[0.06] pt-3">
-              <SectionLabel>Action</SectionLabel>
+              <SectionLabel>{t("actionSection")}</SectionLabel>
               {approvalState === "pending" && (
                 <div className="flex items-center justify-between rounded border border-amber-500/[0.15] bg-amber-500/[0.04] px-3 py-2">
-                  <span className="text-[10px] text-amber-300/55">Awaiting approval</span>
+                  <span className="text-[10px] text-amber-300/55">{t("awaitingApproval")}</span>
                   <button type="button" onClick={() => handleApprove(msg.id)}
-                    className="text-[10px] font-semibold text-violet-300/65 transition-colors hover:text-violet-300/90">Approve →</button>
+                    className="text-[10px] font-semibold text-violet-300/65 transition-colors hover:text-violet-300/90">{t("approveBtn")}</button>
                 </div>
               )}
               {approvalState === "approved" && (
@@ -1051,7 +1054,7 @@ export default function AdminSetupOrchestratorPanel({
               {approvalState === "applied" && (
                 <div className="flex items-center gap-2 px-1 py-1">
                   <CheckCircle2 className="h-3 w-3 text-emerald-400/60" />
-                  <span className="text-[10px] text-emerald-300/60">Changes applied</span>
+                  <span className="text-[10px] text-emerald-300/60">{t("changesApplied")}</span>
                 </div>
               )}
             </div>
@@ -1060,7 +1063,7 @@ export default function AdminSetupOrchestratorPanel({
           {totalPatches === 0 && result.engine_mode === "DIAGNOSE" && (
             <div className="flex items-center gap-2 border-t border-white/[0.06] pt-3 px-0.5">
               <CheckCircle2 className="h-3 w-3 text-white/25" />
-              <span className="text-[10px] text-white/30">Diagnosis complete — no changes proposed</span>
+              <span className="text-[10px] text-white/30">{t("diagnosisComplete")}</span>
             </div>
           )}
 
@@ -1071,19 +1074,19 @@ export default function AdminSetupOrchestratorPanel({
         {/* Save summary — only when there's substantive analysis */}
         {hasAnalysis && result.summary && (
           <div className="space-y-1.5 border-t border-white/[0.06] pt-3">
-            <SectionLabel>Save to company setup</SectionLabel>
+            <SectionLabel>{t("saveToCompanySetup")}</SectionLabel>
             <textarea rows={2} value={msg.notes}
               onChange={(e) => updateMsg(msg.id, (m) => ({ ...m, notes: e.target.value, saved: false }))}
-              placeholder="Optional notes for this session…"
+              placeholder={t("notesPlaceholder")}
               className="w-full resize-none rounded border border-white/[0.08] bg-white/[0.03] px-2.5 py-2 text-[10px] text-white/55 placeholder-white/18 outline-none focus:border-violet-500/35"
             />
             <div className="flex items-center gap-2">
               <button type="button" onClick={() => handleSaveSummary(msg.id, result.summary!, msg.notes)}
                 disabled={msg.saving || msg.saved}
                 className="inline-flex items-center gap-1.5 rounded border border-white/[0.1] bg-white/[0.04] px-3 py-1.5 text-[10px] font-semibold text-white/55 transition-colors hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-50">
-                {msg.saving ? <><Loader2 className="h-3 w-3 animate-spin" /> Saving…</>
-                  : msg.saved ? <><CheckCircle2 className="h-3 w-3 text-emerald-400/60" /> Saved</>
-                  : "Save summary + notes"}
+                {msg.saving ? <><Loader2 className="h-3 w-3 animate-spin" /> {t("saving")}</>
+                  : msg.saved ? <><CheckCircle2 className="h-3 w-3 text-emerald-400/60" /> {t("saved")}</>
+                  : t("saveSummaryNotes")}
               </button>
               {msg.saveError && <p className="text-[10px] text-red-400/60">{msg.saveError}</p>}
             </div>
@@ -1104,18 +1107,18 @@ export default function AdminSetupOrchestratorPanel({
       {/* Header */}
       <div className="flex shrink-0 items-center gap-2 px-1 py-2">
         <Bot className="h-4 w-4 shrink-0 text-violet-400/55" />
-        <span className="text-[11px] font-semibold text-white/45">Configuration Engine</span>
+        <span className="text-[11px] font-semibold text-white/45">{t("title")}</span>
         {sessionId && (
-          <span className="rounded border border-emerald-500/15 bg-emerald-500/[0.04] px-1.5 py-0.5 text-[8px] text-emerald-300/35">session active</span>
+          <span className="rounded border border-emerald-500/15 bg-emerald-500/[0.04] px-1.5 py-0.5 text-[8px] text-emerald-300/35">{t("sessionActive")}</span>
         )}
         <span className="ml-auto flex items-center gap-1.5">
           {managerQueueCount !== null && (
-            <span className="rounded border border-white/[0.07] bg-white/[0.02] px-1.5 py-0.5 text-[8px] text-white/28">Mgr queue: {managerQueueCount}</span>
+            <span className="rounded border border-white/[0.07] bg-white/[0.02] px-1.5 py-0.5 text-[8px] text-white/28">{t("mgrQueue", { count: managerQueueCount })}</span>
           )}
           {accountingQueueCount !== null && (
-            <span className="rounded border border-white/[0.07] bg-white/[0.02] px-1.5 py-0.5 text-[8px] text-white/28">Acct queue: {accountingQueueCount}</span>
+            <span className="rounded border border-white/[0.07] bg-white/[0.02] px-1.5 py-0.5 text-[8px] text-white/28">{t("acctQueue", { count: accountingQueueCount })}</span>
           )}
-          <span className="rounded border border-violet-500/15 bg-violet-500/[0.06] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-violet-300/40">AI</span>
+          <span className="rounded border border-violet-500/15 bg-violet-500/[0.06] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-violet-300/40">{t("ai")}</span>
         </span>
       </div>
 
@@ -1126,7 +1129,7 @@ export default function AdminSetupOrchestratorPanel({
         {messages.length === 0 && preflightConflicts.length > 0 && (
           <div className="space-y-1">
             <p className="text-[8.5px] font-bold uppercase tracking-[0.12em] text-white/20">
-              Current config issues <span className="text-white/30">({preflightConflicts.length})</span>
+              {t("currentConfigIssues")} <span className="text-white/30">({preflightConflicts.length})</span>
             </p>
             {preflightConflicts.map((c, i) => (
               <div key={i} className={`group rounded border ${c.severity === "critical" ? "border-red-500/20 bg-red-500/[0.06]" : "border-white/[0.06] bg-white/[0.01]"}`}>
@@ -1144,13 +1147,13 @@ export default function AdminSetupOrchestratorPanel({
                     {onNavigate && (
                       <button type="button" onClick={() => onNavigate(c.section)}
                         className="rounded px-1.5 py-0.5 text-[8px] font-medium text-white/25 transition-colors hover:bg-white/[0.05] hover:text-white/50">
-                        Go to section →
+                        {t("goToSection")}
                       </button>
                     )}
                     <button type="button"
                       onClick={() => handleSubmit(`Fix this configuration issue: ${c.message}`)}
                       className="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[8px] font-medium text-violet-300/35 transition-colors hover:bg-violet-500/[0.08] hover:text-violet-300/60">
-                      <Zap className="h-2 w-2" /> Ask AI
+                      <Zap className="h-2 w-2" /> {t("askAi")}
                     </button>
                   </div>
                 </div>
@@ -1179,7 +1182,7 @@ export default function AdminSetupOrchestratorPanel({
         {loading && (
           <div className="flex items-center gap-2 px-1 py-2">
             <Loader2 className="h-3 w-3 animate-spin text-violet-400/50" />
-            <span className="text-[10px] text-white/30">Thinking…</span>
+            <span className="text-[10px] text-white/30">{t("thinking")}</span>
           </div>
         )}
 
@@ -1199,12 +1202,12 @@ export default function AdminSetupOrchestratorPanel({
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
-          placeholder={messages.length === 0 ? "Describe your company, ask for a diagnosis, or tell me what to configure…" : "Continue the conversation…"}
+          placeholder={messages.length === 0 ? t("promptPlaceholderNew") : t("promptPlaceholderContinue")}
           className="w-full resize-none rounded border border-white/[0.08] bg-white/[0.03] px-2.5 py-2 text-[10px] text-white/55 placeholder-white/18 outline-none focus:border-violet-500/35"
         />
         <button type="button" onClick={() => handleSubmit()} disabled={loading || !prompt.trim()}
           className="inline-flex w-full items-center justify-center gap-1.5 rounded border border-violet-500/25 bg-violet-600/15 px-3 py-1.5 text-[10px] font-semibold text-violet-300/70 transition-colors hover:bg-violet-600/25 disabled:cursor-not-allowed disabled:opacity-40">
-          {loading ? <><Loader2 className="h-3 w-3 animate-spin" /> Thinking…</> : <><Zap className="h-3 w-3" /> Send</>}
+          {loading ? <><Loader2 className="h-3 w-3 animate-spin" /> {t("thinking")}</> : <><Zap className="h-3 w-3" /> {t("sendBtn")}</>}
         </button>
       </div>
 

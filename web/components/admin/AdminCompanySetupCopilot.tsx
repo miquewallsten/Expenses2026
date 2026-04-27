@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Bot, Zap, Loader2, AlertTriangle, AlertCircle, CheckCircle2 } from "lucide-react";
 import { getAuthHeaders } from "@/lib/session";
 import {
@@ -19,19 +19,19 @@ const COMPANY_SETUP_CODES = new Set([
   "MULTI_COUNTRY_INTL_DISABLED",
 ]);
 
-function buildLocalWarnings(setup: any, entities: any[]): string[] {
+function buildLocalWarnings(setup: any, entities: any[], tFn: (k: string) => string): string[] {
   const w: string[] = [];
   if (setup?.operates_multi_entity && entities.length === 0)
-    w.push("Multi-entity enabled but no legal entities configured.");
+    w.push(tFn("warningMultiEntityNoEntitiesLocal"));
   if (setup?.operates_multi_country) {
     const codes = new Set<string>();
     if (setup.country_code) codes.add(setup.country_code);
     entities.forEach((e) => { if (e.country_code) codes.add(e.country_code); });
     if (codes.size < 2)
-      w.push("Multi-country enabled but only one country represented.");
+      w.push(tFn("warningMultiCountrySingleLocal"));
   }
   if (!setup?.has_managers && setup?.approvals_module_enabled)
-    w.push("Approvals module active but no managers configured.");
+    w.push(tFn("warningApprovalNoManagersLocal"));
   return w;
 }
 
@@ -181,8 +181,8 @@ const SETUP_PATCH_LABELS: Record<string, string> = {
   ai_copilot_enabled:              "AI Copilot",
 };
 
-function patchValueLabel(v: any): string {
-  if (typeof v === "boolean") return v ? "On" : "Off";
+function patchValueLabel(v: any, tOn: string, tOff: string): string {
+  if (typeof v === "boolean") return v ? tOn : tOff;
   return String(v).replace(/_/g, " ");
 }
 
@@ -292,6 +292,7 @@ export default function AdminCompanySetupCopilot({
   const [parseError, setParseError] = useState(false);
   const [applied, setApplied]     = useState(false);
   const locale = useLocale();
+  const t = useTranslations("admin.companySetup");
 
   const runQuery = async (text: string) => {
     if (!text.trim()) return;
@@ -410,7 +411,7 @@ export default function AdminCompanySetupCopilot({
   const configConflicts: PortalConfigConflict[] = portalConfig
     ? getPortalConfigConflicts(portalConfig).filter((c) => COMPANY_SETUP_CODES.has(c.code))
     : [];
-  const localWarnings = buildLocalWarnings(setup, legalEntities);
+  const localWarnings = buildLocalWarnings(setup, legalEntities, t);
   const allIssues = [
     ...configConflicts.map((c) => ({ text: c.message, level: c.severity })),
     ...localWarnings.map((w) => ({ text: w, level: "warning" as const })),
@@ -422,9 +423,9 @@ export default function AdminCompanySetupCopilot({
       {/* Header */}
       <div className="flex items-center gap-2">
         <Bot className="h-4 w-4 shrink-0 text-indigo-400/55" />
-        <span className="text-[11px] font-semibold text-white/45">Setup Copilot</span>
+        <span className="text-[11px] font-semibold text-white/45">{t("copilotTitle")}</span>
         <span className="ml-auto rounded border border-indigo-500/15 bg-indigo-500/[0.06] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-indigo-300/40">
-          AI
+          {t("copilotAi")}
         </span>
       </div>
 
@@ -459,7 +460,7 @@ export default function AdminCompanySetupCopilot({
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
-          placeholder="Describe your company, legal entities, employee model, approvals, and how you want expenses to work…"
+          placeholder={t("promptPlaceholder")}
           className="w-full resize-none rounded border border-white/[0.08] bg-white/[0.03] px-2.5 py-2 text-[10px] text-white/55 placeholder-white/18 outline-none focus:border-indigo-500/35"
         />
         <button
@@ -469,13 +470,13 @@ export default function AdminCompanySetupCopilot({
           className="inline-flex w-full items-center justify-center gap-1.5 rounded border border-indigo-500/25 bg-indigo-600/15 px-3 py-1.5 text-[10px] font-semibold text-indigo-300/70 transition-colors hover:bg-indigo-600/25 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
-          {loading ? "Analysing…" : "Analyse"}
+          {loading ? t("analysing") : t("analyse")}
         </button>
       </div>
 
       {/* B — Quick prompts */}
       <div>
-        <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/20">Quick prompts</p>
+        <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/20">{t("quickPrompts")}</p>
         <div className="flex flex-wrap gap-1">
           {QUICK_PROMPTS.map(({ label, text }) => (
             <button
@@ -495,7 +496,7 @@ export default function AdminCompanySetupCopilot({
       {offline && (
         <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
           <p className="text-[10px] text-white/30">
-            AI setup copilot is offline. Structured setup remains available.
+            {t("offlineMsg")}
           </p>
         </div>
       )}
@@ -503,7 +504,7 @@ export default function AdminCompanySetupCopilot({
       {/* Parse error */}
       {parseError && (
         <div className="rounded border border-amber-500/15 bg-amber-500/[0.04] px-3 py-2">
-          <p className="text-[10px] text-amber-300/50">AI returned an unexpected format. Try rephrasing.</p>
+          <p className="text-[10px] text-amber-300/50">{t("parseErrorMsg")}</p>
         </div>
       )}
 
@@ -513,7 +514,7 @@ export default function AdminCompanySetupCopilot({
 
           {/* Summary */}
           <div className="rounded border border-indigo-500/[0.12] bg-indigo-500/[0.04] px-3 py-2.5">
-            <p className="mb-0.5 text-[9px] font-bold uppercase tracking-widest text-indigo-300/40">Summary</p>
+            <p className="mb-0.5 text-[9px] font-bold uppercase tracking-widest text-indigo-300/40">{t("resultSummary")}</p>
             <p className="text-[10px] leading-snug text-white/40">{result.summary}</p>
           </div>
 
@@ -521,12 +522,12 @@ export default function AdminCompanySetupCopilot({
           {(result.company_profile.company_type || result.company_profile.operating_notes.length > 0) && (
             <div className="overflow-hidden rounded border border-white/[0.07]">
               <div className="border-b border-white/[0.05] bg-black/15 px-3 py-1.5">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-white/22">Company profile</p>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-white/22">{t("companyProfileLabel")}</p>
               </div>
               <div className="px-3 py-2.5 space-y-1">
                 {result.company_profile.company_type && (
                   <p className="text-[10px] text-white/50">
-                    <span className="text-white/25">Type: </span>{result.company_profile.company_type}
+                    <span className="text-white/25">{t("profileTypeLabel")} </span>{result.company_profile.company_type}
                   </p>
                 )}
                 {result.company_profile.operating_notes.map((note, i) => (
@@ -541,13 +542,13 @@ export default function AdminCompanySetupCopilot({
             <div className="overflow-hidden rounded border border-white/[0.07]">
               <div className="border-b border-white/[0.05] bg-black/15 px-3 py-1.5">
                 <p className="text-[9px] font-bold uppercase tracking-widest text-white/22">
-                  Suggested setup changes
+                  {t("suggestedChanges")}
                 </p>
               </div>
               {setupPatchEntries.map(([k, v]) => (
                 <div key={k} className="flex items-center justify-between gap-3 border-b border-white/[0.04] px-3 py-2 last:border-0">
                   <span className="text-[10px] text-white/38">{SETUP_PATCH_LABELS[k] ?? k}</span>
-                  <span className="font-mono text-[10px] text-indigo-300/70">{patchValueLabel(v)}</span>
+                  <span className="font-mono text-[10px] text-indigo-300/70">{patchValueLabel(v, t("valueOn"), t("valueOff"))}</span>
                 </div>
               ))}
             </div>
@@ -558,7 +559,7 @@ export default function AdminCompanySetupCopilot({
             <div className="overflow-hidden rounded border border-sky-500/[0.10] bg-sky-500/[0.03]">
               <div className="border-b border-sky-500/[0.08] bg-black/10 px-3 py-1.5">
                 <p className="text-[9px] font-bold uppercase tracking-widest text-sky-300/40">
-                  Also suggested for Expense Policy
+                  {t("alsoForPolicy")}
                 </p>
               </div>
               <div className="px-3 py-2 space-y-1">
@@ -579,7 +580,7 @@ export default function AdminCompanySetupCopilot({
             <div className="overflow-hidden rounded border border-white/[0.07]">
               <div className="border-b border-white/[0.05] bg-black/15 px-3 py-1.5">
                 <p className="text-[9px] font-bold uppercase tracking-widest text-white/22">
-                  Recommended legal entities
+                  {t("recommendedEntities")}
                 </p>
               </div>
               {result.legal_entity_suggestions.map((e, i) => (
@@ -590,8 +591,8 @@ export default function AdminCompanySetupCopilot({
                       e.country_code,
                       e.base_currency,
                       e.rfc ? `RFC: ${e.rfc}` : null,
-                      e.is_reimbursement_entity ? "Reimbursement" : null,
-                      e.is_invoice_receiver_entity ? "Invoice receiver" : null,
+                      e.is_reimbursement_entity ? t("entityReimb") : null,
+                      e.is_invoice_receiver_entity ? t("entityInvoice") : null,
                     ].filter(Boolean).join(" · ")}
                   </p>
                 </div>
@@ -602,7 +603,7 @@ export default function AdminCompanySetupCopilot({
           {/* Risks */}
           {result.risks.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-white/20">Risk notes</p>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-white/20">{t("riskNotes")}</p>
               {result.risks.map((r, i) => (
                 <div key={i} className="flex items-start gap-2 rounded border border-amber-500/[0.10] bg-amber-500/[0.03] px-3 py-2">
                   <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-amber-400/45" />
@@ -621,8 +622,8 @@ export default function AdminCompanySetupCopilot({
               className="inline-flex w-full items-center justify-center gap-1.5 rounded border border-indigo-500/30 bg-indigo-600/20 px-3 py-1.5 text-[10px] font-semibold text-indigo-300/80 transition-colors hover:bg-indigo-600/30 disabled:opacity-40"
             >
               {applied
-                ? <><CheckCircle2 className="h-3 w-3" /> Draft applied</>
-                : "Apply Setup Draft"
+                ? <><CheckCircle2 className="h-3 w-3" /> {t("draftApplied")}</>
+                : t("applySetupDraft")
               }
             </button>
           )}
