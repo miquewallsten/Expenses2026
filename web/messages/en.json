@@ -2205,6 +2205,11 @@
       "notTerminal": "Non-terminal",
       "actionLabel": "Action",
       "permLabel": "Permission"
+    },
+    "accountingTabs": {
+      "setup": "Setup",
+      "chart": "Chart of Accounts",
+      "dimensions": "Dimensions"
     }
   },
   "review": {
