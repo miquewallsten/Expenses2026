@@ -270,7 +270,42 @@ def submit_expense(db: Session, expense: Expense, actor_user_id: int | None = No
     # The single supported entry-point status for both manager and accounting
     # queues is "submitted" — routing to the correct queue is handled by the
     # queue services at read time, not at write time.
-    return _apply_transition(db, expense, _STATUS_SUBMITTED, actor_user_id=actor_user_id)
+    result = _apply_transition(db, expense, _STATUS_SUBMITTED, actor_user_id=actor_user_id)
+    # Phase 5.5 hookup: evaluate routing rules and write a sidecar audit
+    # entry capturing the decision. Best-effort — never blocks submission.
+    try:
+        from packages.modules.expenses.service.approval_routing_service import (
+            evaluate_for_expense,
+        )
+        import json as _json
+
+        decision = evaluate_for_expense(db, result)
+        if decision.rule_id is not None:
+            log_event(
+                db=db,
+                entity_type="expense",
+                entity_id=result.id,
+                action="routing.decision",
+                actor_user_id=actor_user_id,
+                detail_text=_json.dumps(
+                    {
+                        "rule_id": decision.rule_id,
+                        "approver_user_ids": decision.approver_user_ids,
+                        "approver_roles": decision.approver_roles,
+                        "sla_hours": decision.sla_hours,
+                        "escalation_role": decision.escalation_role,
+                    },
+                    separators=(",", ":"),
+                    sort_keys=True,
+                ),
+                company_id=result.company_id,
+            )
+    except Exception:  # pragma: no cover — defensive
+        try:
+            db.rollback()
+        except Exception:
+            pass
+    return result
 
 
 def manager_approve_expense(db: Session, expense: Expense, actor_user_id: int | None = None) -> Expense:

@@ -200,6 +200,41 @@ def find_overdue(
     return out
 
 
+# ── Expense context + decision ────────────────────────────────────────────
+
+
+def build_context_for_expense(expense: Any) -> dict[str, Any]:
+    """Project an ``Expense`` into the flat context dict the rule engine
+    matches against. Centralised so submit_expense and the admin preview
+    probe stay in sync.
+    """
+    amount = expense.amount
+    try:
+        amount = float(amount) if amount is not None else None
+    except (TypeError, ValueError):
+        amount = None
+    return {
+        "amount": amount,
+        "category_code": getattr(expense, "category_code", None),
+        "expense_type": getattr(expense, "expense_type", None),
+        "settlement_type": getattr(expense, "settlement_type", None),
+        "user_id": getattr(expense, "user_id", None),
+        "company_id": getattr(expense, "company_id", None),
+    }
+
+
+def evaluate_for_expense(
+    db: Session, expense: Any
+) -> ResolvedApprovers:
+    """One-shot helper: load enabled rules for the expense's company,
+    build context, return resolved approvers (rule_id may be ``None``)."""
+    rules = list_rules_for_company(
+        db, company_id=int(expense.company_id), enabled_only=True
+    )
+    ctx = build_context_for_expense(expense)
+    return resolve_approvers(db, context=ctx, rules=rules)
+
+
 # ── Persistence helpers (Phase 5.5 follow-up) ─────────────────────────────
 
 
