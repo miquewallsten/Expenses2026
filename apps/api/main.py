@@ -168,10 +168,16 @@ os.makedirs(os.path.join(_uploads_dir, "logos"), exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=_uploads_dir), name="uploads")
 
 # ── Schema migrations ─────────────────────────────────────────────────────────
-# Alembic is now the canonical migration tool. Run `alembic upgrade head` to
-# apply all pending migrations. create_all is kept as a safety net for tables
-# that don't yet have an Alembic migration (e.g. brand-new tables added during
-# development before a migration is written).
+# Alembic is the canonical migration tool. In production we hard-fail on
+# alembic errors so a broken migration is visible immediately instead of
+# being silently masked by create_all (the bug Phase 8.13 surfaced — a
+# failed migration left alembic_version stamped at a stale rev while
+# create_all recreated downstream tables out-of-band, causing every
+# subsequent boot to retry the same migration against tables that
+# already existed).
+#
+# create_all remains the last-resort fallback only in dev/test, where
+# fast iteration on brand-new models without a migration is convenient.
 def _run_migrations() -> None:
     import logging
     _mig_log = logging.getLogger(__name__)
@@ -190,9 +196,14 @@ def _run_migrations() -> None:
         command.upgrade(alembic_cfg, "head")
         _mig_log.info("Alembic upgrade head completed.")
     except Exception:
-        _mig_log.exception("Alembic upgrade failed — falling back to create_all")
-    # create_all covers any tables that exist in the models but not yet in
-    # an Alembic migration (safe: only creates, never drops or alters).
+        _mig_log.exception("Alembic upgrade failed")
+        if os.environ.get("ENVIRONMENT", "development").lower() == "production":
+            # Re-raise so the container exits and orchestrator surfaces
+            # the failure instead of silently masking it.
+            raise
+        _mig_log.warning("Falling back to create_all (non-production only)")
+    # create_all covers tables introduced in models but not yet captured
+    # by a migration. Safe: only creates, never drops or alters.
     Base.metadata.create_all(bind=engine)
 
 _run_migrations()

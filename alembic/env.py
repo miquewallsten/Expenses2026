@@ -92,6 +92,13 @@ def run_migrations_online() -> None:
             connection=connection,
             target_metadata=target_metadata,
             compare_type=True,
+            # One transaction per migration. Without this a failure in
+            # migration N rolls back every migration 1..N-1 that ran in
+            # the same chain — and the create_all fallback in
+            # apps/api/main.py:_run_migrations then recreates tables
+            # out-of-band, leaving alembic_version stamped at a stale
+            # revision (the drift we hit during Phase 8.13 deploy).
+            transaction_per_migration=True,
         )
         with context.begin_transaction():
             context.run_migrations()
