@@ -181,7 +181,7 @@ function AdminExportConfigPanel({
       onSaved({ bundle_name_pattern: data.bundle_name_pattern, export_format: data.export_format });
       setSaved(true);
     } catch (e: any) {
-      setError(e?.message ?? "Save failed");
+      setError(e?.message ?? t("saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -292,7 +292,7 @@ function AdminArchiveConfigPanel({
       onSaved({ file_pattern: data.file_pattern, folder_pattern: data.folder_pattern });
       setSaved(true);
     } catch (e: any) {
-      setError(e?.message ?? "Save failed");
+      setError(e?.message ?? ta("saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -421,7 +421,7 @@ function AdminStorageConfigPanel({
       onSaved(data);
       setSaved(true);
     } catch (e: any) {
-      setError(e?.message ?? "Save failed");
+      setError(e?.message ?? ta("saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -725,102 +725,43 @@ function AdminAIHints({
   approvalSetup?: any;
   workflowSetup?: any;
 }) {
-  const hints: Record<WorklistItem, string[]> = {
-    "Overview": [
-      "Use the AI panel on the right to analyse your full configuration and get recommended fixes.",
-    ],
-    "Company Setup": [
-      "Company identity is read from the platform database.",
-      "Extended configuration (expense rules, module activation) is managed under Expense Policy and Add-Ons.",
-    ],
-    "Policies": expensePolicy ? [
-      `XML mode: ${expensePolicy.xml_required_mode}. Tickets ${expensePolicy.tickets_allowed ? "allowed" : "not allowed"}.`,
-      expensePolicy.manager_approval_required
-        ? "Manager approval is required before accounting review."
-        : "Manager approval is disabled. Expenses go directly to accounting.",
-      !expensePolicy.require_justification && !expensePolicy.require_proof
-        ? "Neither justification nor proof is required. Consider enabling at least one for audit trails."
-        : "Justification or proof requirements are active. Employees must attach supporting documents.",
-    ] : [
-      "No expense policy loaded yet. Save the form to initialise defaults.",
-    ],
-    "Accounting Setup": accountingSetup ? [
-      `Accounting review mode: ${accountingSetup.accounting_review_mode ?? "—"}.`,
-      accountingSetup.poliza_required
-        ? "Poliza XML is required. Ensure all expenses have CFDI documents before export."
-        : "Poliza is not required. Accounting export will proceed without XML validation.",
-      accountingSetup.project_required || accountingSetup.cost_center_required
-        ? "Project or cost center is required on expenses — employees must allocate correctly."
-        : "No allocation dimensions are required. Consider enabling for audit trails.",
-    ] : [
-      "Accounting setup not loaded.",
-    ],
-    "Workflow": approvalSetup ? [
-      `Approval mode: ${(approvalSetup.approval_mode ?? "none").replace(/_/g, " ")}.`,
-      workflowSetup?.default_expense_workflow_mode
-        ? `Workflow mode: ${workflowSetup.default_expense_workflow_mode.replace(/_/g, " ")}.`
-        : "Workflow mode not configured.",
-      approvalSetup.allow_resubmission_after_rejection
-        ? "Employees can resubmit after rejection."
-        : "Resubmission after rejection is disabled.",
-    ] : [
-      "Workflow not configured. Apply a preset or configure below.",
-    ],
-    "Report Cycle": [
-      "Configure when expense reports are automatically created for each user.",
-      "Validated expenses sit in a holding state until the cycle fires — then they are bundled per user and submitted for approval.",
-      "Use 'Run now' to trigger a cycle immediately. Use the title template tokens: {user}, {month}, {year}.",
-    ],
-    Roles: [
-      rolesCount === 0
-        ? "No roles created. Define at least an Employee and Manager role to enable approval workflows."
-        : `${rolesCount} role${rolesCount !== 1 ? "s" : ""} configured.`,
-      "Assign permissions to roles to enforce least-privilege access across expense and approval workflows.",
-    ],
-    Permissions: [
-      permissionsCount === 0
-        ? "No permissions defined. Create permission keys like submit_expense and approve_expense first."
-        : `${permissionsCount} permission${permissionsCount !== 1 ? "s" : ""} defined.`,
-      "Use snake_case keys that mirror the action name for easy readability in audit logs.",
-    ],
-    Users: [
-      "Create users here so they can log in via magic link.",
-      "Each user must have an email address and a role — employee, manager, accounting, or admin.",
-      "Changing a role takes effect immediately. The user's existing session will reflect the new role on next login.",
-    ],
-    "Export Config": [
-      "Controls how export bundle names are generated per company.",
-      "Use {company_id}, {date}, {year}, {month} as tokens in the bundle name pattern.",
-      "export_format determines serialisation — json (default) or csv.",
-    ],
-    "Archive Config": [
-      "Controls how archived file names and storage paths are structured per company.",
-      "Use {company}, {date}, {expense_id}, {year}, {month}, {filename} as tokens.",
-      "Changes apply to all new uploads — existing archived files are not renamed.",
-    ],
-    "Storage Config": [
-      "Controls where archived files are physically stored — local disk, NAS, S3, or Azure Blob.",
-      "Switching backends only affects new uploads. Existing files stay where they were originally written.",
-      "Test the connection after saving to confirm credentials and bucket/container access.",
-    ],
-    "Channels": [
-      "WhatsApp and email channels share the same AI agent — expenses, approvals, and queries work identically via both.",
-      "WhatsApp identity is anchored to the employee's email address via a one-time OTP challenge.",
-      "The webhook verify token and URL are generated automatically on first save — copy them into the Meta App Dashboard.",
-    ],
-    "Add-Ons": [
-      `${enabledModulesCount} module${enabledModulesCount !== 1 ? "s" : ""} currently active for this company.`,
-      "Enable Expenses before Accounting — poliza export depends on expense records.",
-      "Inactive modules are hidden from employees. No data is deleted when a module is disabled.",
-    ],
-    Authentication: [
-      "Configure SSO, magic-link, and session expiry settings for your company.",
-      "Changes to authentication settings take effect immediately for all new sessions.",
-    ],
-  };
-
   const t = useTranslations("admin");
-  const items = hints[section] ?? [];
+
+  const items: string[] = {
+    "Overview":        [t("hintOverview0")],
+    "Company Setup":   [t("hintCompanySetup0"), t("hintCompanySetup1")],
+    "Policies":        expensePolicy ? [
+      t("hintPoliciesXml", { mode: expensePolicy.xml_required_mode, tickets: expensePolicy.tickets_allowed ? t("hintPoliciesTicketsAllowed") : t("hintPoliciesTicketsBlocked") }),
+      expensePolicy.manager_approval_required ? t("hintPoliciesMgrRequired") : t("hintPoliciesMgrDisabled"),
+      (!expensePolicy.require_justification && !expensePolicy.require_proof) ? t("hintPoliciesJustificationNone") : t("hintPoliciesJustificationActive"),
+    ] : [t("hintPoliciesNoData")],
+    "Accounting Setup": accountingSetup ? [
+      t("hintAccountingMode", { mode: accountingSetup.accounting_review_mode ?? "—" }),
+      accountingSetup.poliza_required ? t("hintAccountingPolizaRequired") : t("hintAccountingPolizaOptional"),
+      (accountingSetup.project_required || accountingSetup.cost_center_required) ? t("hintAccountingDimensionsRequired") : t("hintAccountingDimensionsNone"),
+    ] : [t("hintAccountingNoData")],
+    "Workflow":         approvalSetup ? [
+      t("hintWorkflowApprovalMode", { mode: (approvalSetup.approval_mode ?? "none").replace(/_/g, " ") }),
+      workflowSetup?.default_expense_workflow_mode ? t("hintWorkflowModeConfigured", { mode: workflowSetup.default_expense_workflow_mode.replace(/_/g, " ") }) : t("hintWorkflowModeNotConfigured"),
+      approvalSetup.allow_resubmission_after_rejection ? t("hintWorkflowResubmitAllowed") : t("hintWorkflowResubmitDisabled"),
+    ] : [t("hintWorkflowNoData")],
+    "Report Cycle":    [t("hintReportCycle0"), t("hintReportCycle1"), t("hintReportCycle2")],
+    Roles:             [
+      rolesCount === 0 ? t("hintRolesNone") : t("hintRolesCount", { count: rolesCount }),
+      t("hintRolesAdvice"),
+    ],
+    Permissions:       [
+      permissionsCount === 0 ? t("hintPermissionsNone") : t("hintPermissionsCount", { count: permissionsCount }),
+      t("hintPermissionsAdvice"),
+    ],
+    Users:             [t("hintUsers0"), t("hintUsers1"), t("hintUsers2")],
+    "Export Config":   [t("hintExportConfig0"), t("hintExportConfig1"), t("hintExportConfig2")],
+    "Archive Config":  [t("hintArchiveConfig0"), t("hintArchiveConfig1"), t("hintArchiveConfig2")],
+    "Storage Config":  [t("hintStorageConfig0"), t("hintStorageConfig1"), t("hintStorageConfig2")],
+    "Channels":        [t("hintChannels0"), t("hintChannels1"), t("hintChannels2")],
+    "Add-Ons":         [t("hintAddOnsCount", { count: enabledModulesCount }), t("hintAddOnsExpenses"), t("hintAddOnsInactive")],
+    Authentication:    [t("hintAuth0"), t("hintAuth1")],
+  }[section] ?? [];
 
   return (
     <div className="space-y-3">
@@ -878,8 +819,8 @@ const PATCH_SECTION_DEFS: { key: keyof OrchestratorPatches; menuKey: string }[] 
   { key: "workflow_setup",   menuKey: "workflowSetup" },
 ];
 
-function patchVal(v: any): string {
-  if (typeof v === "boolean") return v ? "On" : "Off";
+function patchVal(v: any, tFn: (k: string) => string): string {
+  if (typeof v === "boolean") return v ? tFn("patchOn") : tFn("patchOff");
   if (v === null || v === undefined) return "—";
   return String(v).replace(/_/g, " ");
 }
@@ -932,7 +873,7 @@ function OrchestratorPatchSummary({
                   className="flex items-center justify-between border-b border-white/[0.04] px-3 py-2 last:border-0"
                 >
                   <span className="text-[10px] text-white/35">{field.replace(/_/g, " ")}</span>
-                  <span className="text-[10px] font-medium text-violet-300/70">{patchVal(value)}</span>
+                  <span className="text-[10px] font-medium text-violet-300/70">{patchVal(value, t)}</span>
                 </div>
               ))}
             </div>
@@ -1168,7 +1109,7 @@ export default function AdminPage() {
         setWorkflowSetupDraftPatch(undefined);
       }
     } catch (e: any) {
-      setSaveAllError(e?.message ?? "Save failed");
+      setSaveAllError(e?.message ?? tAdmin("saveFailed"));
     } finally {
       setSavingAllDrafts(false);
     }
