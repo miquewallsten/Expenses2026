@@ -100,23 +100,42 @@ if (!PARITY_ONLY) {
   for (const dir of SCAN_DIRS) {
   for (const file of walk(dir)) {
     const src = readFileSync(file, "utf8");
-    const bindings = new Map();
+    // Track ALL bindings per variable name (a file may shadow `t` in
+    // multiple scopes/components). For each call, we accept the key if it
+    // resolves under ANY of the file's bindings for that variable —
+    // ambiguous but conservatively avoids false positives.
+    const bindings = new Map(); // varName -> Set<namespace>
     for (const m of src.matchAll(BINDING_RE)) {
-      bindings.set(m[1], m[2]);
+      const [, varName, ns] = m;
+      if (!bindings.has(varName)) bindings.set(varName, new Set());
+      bindings.get(varName).add(ns);
     }
     if (bindings.size === 0) continue;
 
-    for (const [varName, ns] of bindings) {
+    for (const [varName, namespaces] of bindings) {
       const callRe = new RegExp(
         `\\b${varName}(?:\\.(?:rich|raw))?\\s*\\(\\s*["'\`]([\\w.-]+)["'\`]`,
         "g",
       );
       for (const m of src.matchAll(callRe)) {
         const key = m[1];
-        const full = `${ns}.${key}`;
         validated++;
-        if (!esKeys.has(full) || !enKeys.has(full)) {
-          missing.push({ file: file.replace(ROOT + "/", ""), ns, key, full });
+        const candidates = [...namespaces].map((ns) => `${ns}.${key}`);
+        const resolvedInBoth = candidates.find(
+          (full) => esKeys.has(full) && enKeys.has(full),
+        );
+        if (!resolvedInBoth) {
+          // Pick the candidate "closest" to existing — prefer one that
+          // exists in at least one locale; fall back to the first.
+          const best =
+            candidates.find((full) => esKeys.has(full) || enKeys.has(full)) ||
+            candidates[0];
+          missing.push({
+            file: file.replace(ROOT + "/", ""),
+            ns: [...namespaces].join("|"),
+            key,
+            full: best,
+          });
         }
       }
     }

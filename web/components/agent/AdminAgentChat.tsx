@@ -39,74 +39,74 @@ export default function AdminAgentChat({ companyId, section = "Overview", varian
 
 type T = (key: string) => string;
 
-function buildPresets(section: string, t: T): Array<{ label: string; text: string }> {
+function buildPresets(section: string, tp: T): Array<{ label: string; text: string }> {
   const common = [
-    { label: t("diagnoseConfigLabel"),  text: t("diagnoseConfigText")  },
-    { label: t("listAuditLabel"),       text: t("listAuditText")       },
+    { label: tp("diagnoseConfigLabel"),  text: tp("diagnoseConfigText")  },
+    { label: tp("listAuditLabel"),       text: tp("listAuditText")       },
   ];
 
   switch (section) {
     case "Company Setup":
       return [
-        { label: t("companyMexicoLabel"),      text: t("companyMexicoText")      },
-        { label: t("companyMultiEntityLabel"), text: t("companyMultiEntityText") },
+        { label: tp("companyMexicoLabel"),      text: tp("companyMexicoText")      },
+        { label: tp("companyMultiEntityLabel"), text: tp("companyMultiEntityText") },
         ...common,
       ];
     case "Expense Policy":
       return [
-        { label: t("policyCfdiLabel"),   text: t("policyCfdiText")   },
-        { label: t("policyProofLabel"),  text: t("policyProofText")  },
+        { label: tp("policyCfdiLabel"),   text: tp("policyCfdiText")   },
+        { label: tp("policyProofLabel"),  text: tp("policyProofText")  },
         ...common,
       ];
     case "Accounting Setup":
       return [
-        { label: t("accountingUploadLabel"), text: t("accountingUploadText") },
-        { label: t("accountingPolizaLabel"), text: t("accountingPolizaText") },
+        { label: tp("accountingUploadLabel"), text: tp("accountingUploadText") },
+        { label: tp("accountingPolizaLabel"), text: tp("accountingPolizaText") },
         ...common,
       ];
     case "Approval Setup":
       return [
-        { label: t("approvalManagerLabel"),    text: t("approvalManagerText")    },
-        { label: t("approvalThresholdLabel"),  text: t("approvalThresholdText")  },
+        { label: tp("approvalManagerLabel"),    text: tp("approvalManagerText")    },
+        { label: tp("approvalThresholdLabel"),  text: tp("approvalThresholdText")  },
         ...common,
       ];
     case "Workflow Setup":
       return [
-        { label: t("workflowStagesLabel"),     text: t("workflowStagesText")     },
-        { label: t("workflowTransitionLabel"), text: t("workflowTransitionText") },
+        { label: tp("workflowStagesLabel"),     text: tp("workflowStagesText")     },
+        { label: tp("workflowTransitionLabel"), text: tp("workflowTransitionText") },
         ...common,
       ];
     case "Users":
       return [
-        { label: t("usersUploadLabel"), text: t("usersUploadText") },
-        { label: t("usersListLabel"),   text: t("usersListText")   },
+        { label: tp("usersUploadLabel"), text: tp("usersUploadText") },
+        { label: tp("usersListLabel"),   text: tp("usersListText")   },
         ...common,
       ];
     case "Roles":
     case "Permissions":
       return [
-        { label: t("rbacListLabel"),   text: t("rbacListText")   },
-        { label: t("rbacAssignLabel"), text: t("rbacAssignText") },
+        { label: tp("rbacListLabel"),   text: tp("rbacListText")   },
+        { label: tp("rbacAssignLabel"), text: tp("rbacAssignText") },
         ...common,
       ];
     case "Report Cycle":
       return [
-        { label: t("cycleWeeklyLabel"), text: t("cycleWeeklyText") },
+        { label: tp("cycleWeeklyLabel"), text: tp("cycleWeeklyText") },
         ...common,
       ];
     case "Channels":
       return [
-        { label: t("channelsReadLabel"),   text: t("channelsReadText")   },
+        { label: tp("channelsReadLabel"),   text: tp("channelsReadText")   },
         ...common,
       ];
     case "Authentication":
       return [
-        { label: t("authReadLabel"), text: t("authReadText") },
+        { label: tp("authReadLabel"), text: tp("authReadText") },
         ...common,
       ];
     default:
       return [
-        { label: t("overviewStartLabel"), text: t("overviewStartText") },
+        { label: tp("overviewStartLabel"), text: tp("overviewStartText") },
         ...common,
       ];
   }

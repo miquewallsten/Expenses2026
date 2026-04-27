@@ -1711,6 +1711,7 @@
       "inviteErrorRequired": "Email and full name are required.",
       "inviteErrorCreate": "Create failed",
       "inviteCreating": "Creating…",
+      "update": "Update",
       "inviteCreateUser": "Create user",
       "entityNone": "— None —",
       "entityNotAssigned": "— Not assigned —"
