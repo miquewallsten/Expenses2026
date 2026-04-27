@@ -600,3 +600,85 @@ def list_usage(
         }
         for r in rows
     ]
+
+
+@router.get("/usage/{cid}/rollup")
+def usage_rollup(
+    cid: int,
+    days: int = 30,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    """Phase 8.6 — aggregate agent usage for cost/latency dashboards.
+
+    Returns totals, p50/p95 latency, success rate, and tool-call breakdown
+    over the last ``days`` days for company ``cid``.
+    """
+    from datetime import datetime, timedelta
+    from sqlalchemy import Integer as _SaInt, cast as sa_cast, func as sa_func
+
+    from ..models import AgentUsage
+
+    require_same_company(cid, current_user)
+    days = max(1, min(days, 365))
+    since = datetime.utcnow() - timedelta(days=days)
+
+    base = db.query(AgentUsage).filter(
+        AgentUsage.company_id == cid,
+        AgentUsage.created_at >= since,
+    )
+
+    durations = sorted(r for (r,) in base.with_entities(AgentUsage.duration_ms).all())
+    n = len(durations)
+
+    def _pct(p: float) -> int:
+        if not durations:
+            return 0
+        idx = min(n - 1, int(round((p / 100.0) * (n - 1))))
+        return int(durations[idx])
+
+    totals = base.with_entities(
+        sa_func.count(AgentUsage.id),
+        sa_func.coalesce(sa_func.sum(AgentUsage.tool_count), 0),
+        sa_func.coalesce(sa_func.sum(AgentUsage.iterations), 0),
+        sa_func.coalesce(sa_func.sum(sa_cast(AgentUsage.ok, _SaInt)), 0),
+    ).one()
+    total_calls, total_tool_calls, total_iterations, ok_count = totals
+
+    by_model = (
+        base.with_entities(AgentUsage.model, sa_func.count(AgentUsage.id))
+        .group_by(AgentUsage.model)
+        .all()
+    )
+    by_persona = (
+        base.with_entities(AgentUsage.persona, sa_func.count(AgentUsage.id))
+        .group_by(AgentUsage.persona)
+        .all()
+    )
+
+    tool_breakdown = (
+        db.query(AgentToolCall.tool_name, sa_func.count(AgentToolCall.id))
+        .filter(
+            AgentToolCall.company_id == cid,
+            AgentToolCall.created_at >= since,
+        )
+        .group_by(AgentToolCall.tool_name)
+        .order_by(sa_func.count(AgentToolCall.id).desc())
+        .limit(20)
+        .all()
+    )
+
+    return {
+        "company_id":       cid,
+        "since":            since.isoformat(),
+        "days":             days,
+        "total_calls":      int(total_calls or 0),
+        "total_tool_calls": int(total_tool_calls or 0),
+        "total_iterations": int(total_iterations or 0),
+        "ok_rate":          (float(ok_count) / total_calls) if total_calls else 0.0,
+        "p50_latency_ms":   _pct(50),
+        "p95_latency_ms":   _pct(95),
+        "by_model":         [{"model": m, "count": int(c)} for m, c in by_model],
+        "by_persona":       [{"persona": p, "count": int(c)} for p, c in by_persona],
+        "tool_breakdown":   [{"tool_name": t, "count": int(c)} for t, c in tool_breakdown],
+    }
