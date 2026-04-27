@@ -2366,6 +2366,22 @@
       "workflowGaps": "Approval gaps",
       "draftApplied": "Draft applied",
       "applyApprovalDraft": "Apply Approval Draft"
+    },
+    "accountingCopilot": {
+      "copilotTitle": "Accounting Copilot",
+      "copilotAi": "AI",
+      "quickPrompts": "Quick prompts",
+      "promptPlaceholder": "Describe your accounting review requirements, CFDI controls, coding rules, and period close process…",
+      "analysing": "Analysing…",
+      "analyse": "Analyse",
+      "offlineMsg": "AI accounting copilot is offline. Manual configuration remains available in the setup panel.",
+      "parseErrorMsg": "AI returned an unexpected format. Try rephrasing.",
+      "resultSummary": "Summary",
+      "suggestedAccounting": "Suggested accounting setup",
+      "operationalNotes": "Operational notes",
+      "complianceGaps": "Compliance gaps",
+      "draftApplied": "Draft applied",
+      "applyAccountingDraft": "Apply Accounting Draft"
     }
   },
   "review": {

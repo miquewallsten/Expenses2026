@@ -2366,6 +2366,22 @@
       "workflowGaps": "Brechas de aprobación",
       "draftApplied": "Borrador aplicado",
       "applyApprovalDraft": "Aplicar borrador de aprobación"
+    },
+    "accountingCopilot": {
+      "copilotTitle": "Copiloto de contabilidad",
+      "copilotAi": "IA",
+      "quickPrompts": "Indicaciones rápidas",
+      "promptPlaceholder": "Describe los requisitos de revisión contable, controles CFDI, reglas de codificación y proceso de cierre de periodo…",
+      "analysing": "Analizando…",
+      "analyse": "Analizar",
+      "offlineMsg": "El copiloto de contabilidad no está disponible. La configuración manual sigue disponible en el panel.",
+      "parseErrorMsg": "La IA devolvió un formato inesperado. Intenta reformular.",
+      "resultSummary": "Resumen",
+      "suggestedAccounting": "Configuración contable sugerida",
+      "operationalNotes": "Notas operativas",
+      "complianceGaps": "Brechas de cumplimiento",
+      "draftApplied": "Borrador aplicado",
+      "applyAccountingDraft": "Aplicar borrador contable"
     }
   },
   "review": {
