@@ -2334,7 +2334,23 @@
     "hintAddOnsExpenses": "Enable Expenses before Accounting — poliza export depends on expense records.",
     "hintAddOnsInactive": "Inactive modules are hidden from employees. No data is deleted when a module is disabled.",
     "hintAuth0": "Configure SSO, magic-link, and session expiry settings for your company.",
-    "hintAuth1": "Changes to authentication settings take effect immediately for all new sessions."
+    "hintAuth1": "Changes to authentication settings take effect immediately for all new sessions.",
+    "workflowCopilot": {
+      "copilotTitle": "Workflow Copilot",
+      "copilotAi": "AI",
+      "quickPrompts": "Quick prompts",
+      "promptPlaceholder": "Describe how expenses should move from employee submission to final accounting control...",
+      "analysing": "Analysing…",
+      "analyse": "Analyse",
+      "offlineMsg": "AI workflow copilot is offline. Manual configuration remains available in the studio.",
+      "parseErrorMsg": "AI returned an unexpected format. Try rephrasing.",
+      "resultSummary": "Summary",
+      "suggestedWorkflow": "Suggested workflow setup",
+      "operationalNotes": "Operational notes",
+      "workflowGaps": "Workflow gaps",
+      "draftApplied": "Draft applied",
+      "applyWorkflowDraft": "Apply Workflow Draft"
+    }
   },
   "review": {
     "approve": "Approve",

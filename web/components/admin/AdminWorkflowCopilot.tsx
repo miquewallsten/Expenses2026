@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Bot, Zap, Loader2, CheckCircle2 } from "lucide-react";
 import { getAuthHeaders } from "@/lib/session";
 
@@ -202,6 +202,7 @@ export default function AdminWorkflowCopilot({
   const [parseError, setParseError] = useState(false);
   const [applied, setApplied]       = useState(false);
   const locale = useLocale();
+  const t = useTranslations("admin.workflowCopilot");
 
   const runQuery = async (text: string) => {
     if (!text.trim()) return;
@@ -296,9 +297,9 @@ export default function AdminWorkflowCopilot({
       {/* Header */}
       <div className="flex items-center gap-2">
         <Bot className="h-4 w-4 shrink-0 text-indigo-400/55" />
-        <span className="text-[11px] font-semibold text-white/45">Workflow Copilot</span>
+        <span className="text-[11px] font-semibold text-white/45">{t("copilotTitle")}</span>
         <span className="ml-auto rounded border border-indigo-500/15 bg-indigo-500/[0.06] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-indigo-300/40">
-          AI
+          {t("copilotAi")}
         </span>
       </div>
 
@@ -309,7 +310,7 @@ export default function AdminWorkflowCopilot({
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
-          placeholder="Describe how expenses should move from employee submission to final accounting control..."
+          placeholder={t("promptPlaceholder")}
           className="w-full resize-none rounded border border-white/[0.08] bg-white/[0.03] px-2.5 py-2 text-[10px] text-white/55 placeholder-white/18 outline-none focus:border-indigo-500/35"
         />
         <button
@@ -319,13 +320,13 @@ export default function AdminWorkflowCopilot({
           className="inline-flex w-full items-center justify-center gap-1.5 rounded border border-indigo-500/25 bg-indigo-600/15 px-3 py-1.5 text-[10px] font-semibold text-indigo-300/70 transition-colors hover:bg-indigo-600/25 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
-          {loading ? "Analysing…" : "Analyse"}
+          {loading ? t("analysing") : t("analyse")}
         </button>
       </div>
 
       {/* B — Quick prompts */}
       <div>
-        <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/20">Quick prompts</p>
+        <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/20">{t("quickPrompts")}</p>
         <div className="flex flex-wrap gap-1">
           {QUICK_PROMPTS.map(({ label, text }) => (
             <button
@@ -345,7 +346,7 @@ export default function AdminWorkflowCopilot({
       {offline && !loading && (
         <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
           <p className="text-[10px] text-white/30">
-            AI workflow copilot is offline. Manual configuration remains available in the studio.
+            {t("offlineMsg")}
           </p>
         </div>
       )}
@@ -353,7 +354,7 @@ export default function AdminWorkflowCopilot({
       {/* Parse error */}
       {parseError && !loading && (
         <div className="rounded border border-amber-500/15 bg-amber-500/[0.04] px-3 py-2">
-          <p className="text-[10px] text-amber-300/50">AI returned an unexpected format. Try rephrasing.</p>
+          <p className="text-[10px] text-amber-300/50">{t("parseErrorMsg")}</p>
         </div>
       )}
 
@@ -363,7 +364,7 @@ export default function AdminWorkflowCopilot({
 
           {/* Summary */}
           <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
-            <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-white/22">Summary</p>
+            <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-white/22">{t("resultSummary")}</p>
             <p className="text-[10px] leading-relaxed text-white/45">{result.summary}</p>
           </div>
 
@@ -371,7 +372,7 @@ export default function AdminWorkflowCopilot({
           {patchEntries.length > 0 && (
             <div className="overflow-hidden rounded border border-white/[0.07] bg-white/[0.02]">
               <p className="border-b border-white/[0.06] px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-white/22">
-                Suggested workflow setup
+                {t("suggestedWorkflow")}
               </p>
               <table className="w-full">
                 <tbody>
@@ -393,7 +394,7 @@ export default function AdminWorkflowCopilot({
           {/* Notes */}
           {result.notes.length > 0 && (
             <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
-              <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/22">Operational notes</p>
+              <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/22">{t("operationalNotes")}</p>
               <ul className="space-y-1">
                 {result.notes.map((n, i) => (
                   <li key={i} className="flex items-start gap-1.5 text-[10px] text-white/38">
@@ -408,7 +409,7 @@ export default function AdminWorkflowCopilot({
           {/* Risks */}
           {result.risks.length > 0 && (
             <div className="rounded border border-amber-500/12 bg-amber-500/[0.03] px-3 py-2.5">
-              <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-amber-400/35">Workflow gaps</p>
+              <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-amber-400/35">{t("workflowGaps")}</p>
               <ul className="space-y-1">
                 {result.risks.map((r, i) => (
                   <li key={i} className="flex items-start gap-1.5 text-[10px] text-amber-300/45">
@@ -429,8 +430,8 @@ export default function AdminWorkflowCopilot({
               className="inline-flex w-full items-center justify-center gap-1.5 rounded border border-indigo-500/25 bg-indigo-600/15 px-3 py-1.5 text-[10px] font-semibold text-indigo-300/70 transition-colors hover:bg-indigo-600/25 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {applied
-                ? <><CheckCircle2 className="h-3 w-3 text-emerald-400/60" /> Draft applied</>
-                : <><Zap className="h-3 w-3" /> Apply Workflow Draft</>
+                ? <><CheckCircle2 className="h-3 w-3 text-emerald-400/60" /> {t("draftApplied")}</>
+                : <><Zap className="h-3 w-3" /> {t("applyWorkflowDraft")}</>
               }
             </button>
           )}

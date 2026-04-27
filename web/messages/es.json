@@ -2334,7 +2334,23 @@
     "hintAddOnsExpenses": "Activa Gastos antes que Contabilidad — la exportación de pólizas depende de los registros de gastos.",
     "hintAddOnsInactive": "Los módulos inactivos están ocultos para los empleados. No se eliminan datos cuando se desactiva un módulo.",
     "hintAuth0": "Configura SSO, enlace mágico y la expiración de sesión para tu empresa.",
-    "hintAuth1": "Los cambios en la configuración de autenticación tienen efecto inmediato para todas las sesiones nuevas."
+    "hintAuth1": "Los cambios en la configuración de autenticación tienen efecto inmediato para todas las sesiones nuevas.",
+    "workflowCopilot": {
+      "copilotTitle": "Copiloto de flujo",
+      "copilotAi": "IA",
+      "quickPrompts": "Indicaciones rápidas",
+      "promptPlaceholder": "Describe cómo deben moverse los gastos desde el envío del empleado hasta el control contable final…",
+      "analysing": "Analizando…",
+      "analyse": "Analizar",
+      "offlineMsg": "El copiloto de flujo no está disponible. La configuración manual sigue disponible en el estudio.",
+      "parseErrorMsg": "La IA devolvió un formato inesperado. Intenta reformular.",
+      "resultSummary": "Resumen",
+      "suggestedWorkflow": "Configuración de flujo sugerida",
+      "operationalNotes": "Notas operativas",
+      "workflowGaps": "Brechas de flujo",
+      "draftApplied": "Borrador aplicado",
+      "applyWorkflowDraft": "Aplicar borrador de flujo"
+    }
   },
   "review": {
     "approve": "Aprobar",
