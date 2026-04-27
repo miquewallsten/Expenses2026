@@ -2350,6 +2350,22 @@
       "workflowGaps": "Brechas de flujo",
       "draftApplied": "Borrador aplicado",
       "applyWorkflowDraft": "Aplicar borrador de flujo"
+    },
+    "approvalCopilot": {
+      "copilotTitle": "Copiloto de aprobación",
+      "copilotAi": "IA",
+      "quickPrompts": "Indicaciones rápidas",
+      "promptPlaceholder": "Describe cómo deben funcionar las aprobaciones entre gerentes y contabilidad…",
+      "analysing": "Analizando…",
+      "analyse": "Analizar",
+      "offlineMsg": "El copiloto de aprobación no está disponible. La configuración manual sigue disponible en el estudio.",
+      "parseErrorMsg": "La IA devolvió un formato inesperado. Intenta reformular.",
+      "resultSummary": "Resumen",
+      "suggestedApproval": "Configuración de aprobación sugerida",
+      "operationalNotes": "Notas operativas",
+      "workflowGaps": "Brechas de aprobación",
+      "draftApplied": "Borrador aplicado",
+      "applyApprovalDraft": "Aplicar borrador de aprobación"
     }
   },
   "review": {

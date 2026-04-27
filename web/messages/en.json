@@ -2350,6 +2350,22 @@
       "workflowGaps": "Workflow gaps",
       "draftApplied": "Draft applied",
       "applyWorkflowDraft": "Apply Workflow Draft"
+    },
+    "approvalCopilot": {
+      "copilotTitle": "Approval Copilot",
+      "copilotAi": "AI",
+      "quickPrompts": "Quick prompts",
+      "promptPlaceholder": "Describe how approvals should work across managers and accounting...",
+      "analysing": "Analysing…",
+      "analyse": "Analyse",
+      "offlineMsg": "AI approval copilot is offline. Manual configuration remains available in the studio.",
+      "parseErrorMsg": "AI returned an unexpected format. Try rephrasing.",
+      "resultSummary": "Summary",
+      "suggestedApproval": "Suggested approval setup",
+      "operationalNotes": "Operational notes",
+      "workflowGaps": "Approval gaps",
+      "draftApplied": "Draft applied",
+      "applyApprovalDraft": "Apply Approval Draft"
     }
   },
   "review": {
