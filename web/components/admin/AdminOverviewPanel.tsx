@@ -19,7 +19,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 
 type SetupSection =
   | "Company Setup"
-  | "Expense Policy"
+  | "Policies"
   | "Accounting Setup"
   | "Workflow";
 
@@ -33,7 +33,7 @@ const SECTION_CONFLICT_CODES: Record<SetupSection, string[]> = {
     "EXPENSE_POLICY_MANAGER_APPROVAL_NO_MANAGERS",
     "MULTI_COUNTRY_INTL_DISABLED",
   ],
-  "Expense Policy": [
+  "Policies": [
     "INTL_ESCALATION_INTL_DISABLED",
     "INTL_ROUTING_INTL_DISABLED",
     "PROJECT_REQUIRED_NOT_IN_DIMS",
@@ -154,7 +154,7 @@ interface Props {
       | "Company Setup"
       | "Workflow"
       | "Accounting Setup"
-      | "Expense Policy"
+      | "Policies"
       | "Add-Ons"
   ) => void;
 }
@@ -191,7 +191,7 @@ export default function AdminOverviewPanel({
   const workflowMarker = wf.default_expense_workflow_mode;
 
   const companyStatus  = cardStatus(cs, companyMarker,  conflictCodes, SECTION_CONFLICT_CODES["Company Setup"]);
-  const expenseStatus  = cardStatus(ep, expenseMarker,  conflictCodes, SECTION_CONFLICT_CODES["Expense Policy"]);
+  const expenseStatus  = cardStatus(ep, expenseMarker,  conflictCodes, SECTION_CONFLICT_CODES["Policies"]);
   const accountStatus  = cardStatus(ac, accountMarker,  conflictCodes, SECTION_CONFLICT_CODES["Accounting Setup"]);
   const approvalStatus = cardStatus(ap, approvalMarker, conflictCodes, SECTION_CONFLICT_CODES["Workflow"]);
   const workflowStatus = cardStatus(wf, workflowMarker, conflictCodes, SECTION_CONFLICT_CODES["Workflow"]);
@@ -206,7 +206,7 @@ export default function AdminOverviewPanel({
     const order: SetupSection[] = [
       "Company Setup",
       "Workflow",
-      "Expense Policy",
+      "Policies",
       "Accounting Setup",
     ];
     return (
@@ -261,7 +261,7 @@ export default function AdminOverviewPanel({
       summary: companySummary,
     },
     {
-      section: "Expense Policy",
+      section: "Policies",
       sectionLabel: to("sectionExpensePolicy"),
       icon: <FileText className="h-3.5 w-3.5" />,
       status: expenseStatus,

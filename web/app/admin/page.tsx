@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import AppShell from "@/components/shell/AppShell";
 import AdminCompanySetupStudio from "@/components/admin/AdminCompanySetupStudio";
 import AdminCompanySetupCopilot from "@/components/admin/AdminCompanySetupCopilot";
-import AdminExpenseModulePanel from "@/components/admin/AdminExpenseModulePanel";
+import AdminPoliciesPanel from "@/components/admin/AdminPoliciesPanel";
 import AdminWorkflowMapPanel from "@/components/admin/AdminWorkflowMapPanel";
 import AdminAccountingSetupStudio from "@/components/admin/AdminAccountingSetupStudio";
 import AdminAccountingCopilot from "@/components/admin/AdminAccountingCopilot";
@@ -32,7 +32,7 @@ const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 const WORKLIST_ITEMS = [
   "Overview",
   "Company Setup",
-  "Expense Policy",
+  "Policies",
   "Accounting Setup",
   "Workflow",
   "Report Cycle",
@@ -49,7 +49,7 @@ const WORKLIST_ITEMS = [
 type WorklistItem = typeof WORKLIST_ITEMS[number];
 
 const WORKLIST_GROUPS: { label: string; items: WorklistItem[] }[] = [
-  { label: "Setup", items: ["Overview", "Company Setup", "Expense Policy", "Accounting Setup", "Workflow", "Report Cycle"] },
+  { label: "Setup", items: ["Overview", "Company Setup", "Policies", "Accounting Setup", "Workflow", "Report Cycle"] },
   { label: "Intake & Notifications", items: ["Channels"] },
   { label: "Data Out", items: ["Export Config", "Archive Config", "Storage Config"] },
   { label: "Administration", items: ["Users", "Roles", "Permissions", "Add-Ons", "Authentication"] },
@@ -545,7 +545,7 @@ function AdminStorageConfigPanel({
 const ITEM_MENU_KEY: Record<WorklistItem, string> = {
   "Overview": "overview",
   "Company Setup": "companySetup",
-  "Expense Policy": "expensePolicy",
+  "Policies": "policies",
   "Accounting Setup": "accountingSetup",
   "Workflow": "workflow",
   "Report Cycle": "reportCycle",
@@ -572,7 +572,7 @@ const GROUP_KEY: Record<string, string> = {
 const WORKLIST_ICONS: Record<WorklistItem, React.ReactNode> = {
   "Overview": <Bot className="h-3.5 w-3.5" />,
   "Company Setup":    <Building2 className="h-3.5 w-3.5" />,
-  "Expense Policy":   <FileText className="h-3.5 w-3.5" />,
+  "Policies":         <FileText className="h-3.5 w-3.5" />,
   "Accounting Setup": <Calculator className="h-3.5 w-3.5" />,
   "Workflow":         <GitBranch className="h-3.5 w-3.5" />,
   "Report Cycle":     <CalendarClock className="h-3.5 w-3.5" />,
@@ -631,7 +631,7 @@ function WorkList({
   const counts: Record<WorklistItem, number | string> = {
     "Overview": conflictsCount > 0 ? conflictsCount : unconfiguredSetupCount > 0 ? unconfiguredSetupCount : "✓",
     "Company Setup":    hasCompanySetup    ? "✓" : "—",
-    "Expense Policy":   hasExpensePolicy   ? "✓" : "—",
+    "Policies":         hasExpensePolicy   ? "✓" : "—",
     "Accounting Setup": hasAccountingSetup ? "✓" : "—",
     "Workflow":         (hasApprovalSetup && hasWorkflowSetup) ? "✓" : "—",
     "Report Cycle":     "→",
@@ -734,7 +734,7 @@ function AdminAIHints({
       "Company identity is read from the platform database.",
       "Extended configuration (expense rules, module activation) is managed under Expense Policy and Add-Ons.",
     ],
-    "Expense Policy": expensePolicy ? [
+    "Policies": expensePolicy ? [
       `XML mode: ${expensePolicy.xml_required_mode}. Tickets ${expensePolicy.tickets_allowed ? "allowed" : "not allowed"}.`,
       expensePolicy.manager_approval_required
         ? "Manager approval is required before accounting review."
@@ -1181,7 +1181,7 @@ export default function AdminPage() {
   // ── Pending-draft set — drives worklist dot indicators ───────────────────────
   const draftSections = new Set<string>([
     ...(companySetupDraftPatch    && Object.keys(companySetupDraftPatch).length    > 0 ? ["Company Setup"]    : []),
-    ...(expensePolicyDraftPatch   && Object.keys(expensePolicyDraftPatch).length   > 0 ? ["Expense Policy"]   : []),
+    ...(expensePolicyDraftPatch   && Object.keys(expensePolicyDraftPatch).length   > 0 ? ["Policies"]         : []),
     ...(accountingSetupDraftPatch && Object.keys(accountingSetupDraftPatch).length > 0 ? ["Accounting Setup"] : []),
     ...((approvalSetupDraftPatch   && Object.keys(approvalSetupDraftPatch).length   > 0) ||
         (workflowSetupDraftPatch   && Object.keys(workflowSetupDraftPatch).length   > 0) ? ["Workflow"] : []),
@@ -1233,12 +1233,13 @@ export default function AdminPage() {
           />
         );
 
-      case "Expense Policy":
+      case "Policies":
         return (
-          <AdminExpenseModulePanel
+          <AdminPoliciesPanel
             companyId={adminCompanyId}
-            policy={expensePolicy ?? {}}
-            onSaved={setExpensePolicy}
+            expensePolicy={expensePolicy ?? {}}
+            onExpensePolicySaved={setExpensePolicy}
+            draftPatch={expensePolicyDraftPatch}
           />
         );
 
