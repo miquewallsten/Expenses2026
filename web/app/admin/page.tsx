@@ -6,9 +6,11 @@ import AppShell from "@/components/shell/AppShell";
 import AdminCompanySetupStudio from "@/components/admin/AdminCompanySetupStudio";
 import AdminCompanySetupCopilot from "@/components/admin/AdminCompanySetupCopilot";
 import AdminExpenseModulePanel from "@/components/admin/AdminExpenseModulePanel";
-import AdminPoliciesPanel from "@/components/admin/AdminPoliciesPanel";
-import AdminWorkflowMapPanel from "@/components/admin/AdminWorkflowMapPanel";
-import AdminAccountingTabsPanel from "@/components/admin/AdminAccountingTabsPanel";
+import AdminApprovalSetupStudio from "@/components/admin/AdminApprovalSetupStudio";
+import AdminApprovalCopilot from "@/components/admin/AdminApprovalCopilot";
+import AdminWorkflowSetupStudio from "@/components/admin/AdminWorkflowSetupStudio";
+import AdminWorkflowCopilot from "@/components/admin/AdminWorkflowCopilot";
+import AdminAccountingSetupStudio from "@/components/admin/AdminAccountingSetupStudio";
 import AdminAccountingCopilot from "@/components/admin/AdminAccountingCopilot";
 import AdminSetupOrchestratorPanel from "@/components/admin/AdminSetupOrchestratorPanel";
 import AdminRolesPanel from "@/components/admin/AdminRolesPanel";
@@ -21,7 +23,7 @@ import AdminChannelsPanel from "@/components/admin/AdminChannelsPanel";
 import AdminReportCyclePanel from "@/components/admin/AdminReportCyclePanel";
 import {
   Building2, FileText, GitBranch, ShieldCheck, Puzzle, Key, Lock,
-  AlertTriangle, Calculator, Bot, Save, Loader2, FolderOutput, Archive, Users, Radio, CalendarClock, HardDrive,
+  AlertTriangle, Calculator, ClipboardCheck, Bot, Save, Loader2, FolderOutput, Archive, Users, Radio, CalendarClock, HardDrive,
 } from "lucide-react";
 import { getCurrentRole, getCurrentUserId, getCurrentCompanyId, getStoredSession, getAuthHeaders } from "@/lib/session";
 import { buildGlobalNav, GlobalNavItem } from "@/lib/navigation";
@@ -33,9 +35,10 @@ const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 const WORKLIST_ITEMS = [
   "Overview",
   "Company Setup",
-  "Policies",
+  "Expense Policy",
   "Accounting Setup",
-  "Workflow",
+  "Approval Setup",
+  "Workflow Setup",
   "Report Cycle",
   "Export Config",
   "Archive Config",
@@ -50,7 +53,7 @@ const WORKLIST_ITEMS = [
 type WorklistItem = typeof WORKLIST_ITEMS[number];
 
 const WORKLIST_GROUPS: { label: string; items: WorklistItem[] }[] = [
-  { label: "Setup", items: ["Overview", "Company Setup", "Policies", "Accounting Setup", "Workflow", "Report Cycle"] },
+  { label: "Setup", items: ["Overview", "Company Setup", "Expense Policy", "Accounting Setup", "Approval Setup", "Workflow Setup", "Report Cycle"] },
   { label: "Intake & Notifications", items: ["Channels"] },
   { label: "Data Out", items: ["Export Config", "Archive Config", "Storage Config"] },
   { label: "Administration", items: ["Users", "Roles", "Permissions", "Add-Ons", "Authentication"] },
@@ -181,7 +184,7 @@ function AdminExportConfigPanel({
       onSaved({ bundle_name_pattern: data.bundle_name_pattern, export_format: data.export_format });
       setSaved(true);
     } catch (e: any) {
-      setError(e?.message ?? t("saveFailed"));
+      setError(e?.message ?? "Save failed");
     } finally {
       setSaving(false);
     }
@@ -292,7 +295,7 @@ function AdminArchiveConfigPanel({
       onSaved({ file_pattern: data.file_pattern, folder_pattern: data.folder_pattern });
       setSaved(true);
     } catch (e: any) {
-      setError(e?.message ?? ta("saveFailed"));
+      setError(e?.message ?? "Save failed");
     } finally {
       setSaving(false);
     }
@@ -421,7 +424,7 @@ function AdminStorageConfigPanel({
       onSaved(data);
       setSaved(true);
     } catch (e: any) {
-      setError(e?.message ?? ta("saveFailed"));
+      setError(e?.message ?? "Save failed");
     } finally {
       setSaving(false);
     }
@@ -546,9 +549,10 @@ function AdminStorageConfigPanel({
 const ITEM_MENU_KEY: Record<WorklistItem, string> = {
   "Overview": "overview",
   "Company Setup": "companySetup",
-  "Policies": "policies",
+  "Expense Policy": "expensePolicy",
   "Accounting Setup": "accountingSetup",
-  "Workflow": "workflow",
+  "Approval Setup": "approvalSetup",
+  "Workflow Setup": "workflowSetup",
   "Report Cycle": "reportCycle",
   "Export Config": "exportConfig",
   "Archive Config": "archiveConfig",
@@ -573,9 +577,10 @@ const GROUP_KEY: Record<string, string> = {
 const WORKLIST_ICONS: Record<WorklistItem, React.ReactNode> = {
   "Overview": <Bot className="h-3.5 w-3.5" />,
   "Company Setup":    <Building2 className="h-3.5 w-3.5" />,
-  "Policies":         <FileText className="h-3.5 w-3.5" />,
+  "Expense Policy":   <FileText className="h-3.5 w-3.5" />,
   "Accounting Setup": <Calculator className="h-3.5 w-3.5" />,
-  "Workflow":         <GitBranch className="h-3.5 w-3.5" />,
+  "Approval Setup":   <ClipboardCheck className="h-3.5 w-3.5" />,
+  "Workflow Setup":   <GitBranch className="h-3.5 w-3.5" />,
   "Report Cycle":     <CalendarClock className="h-3.5 w-3.5" />,
   "Export Config":    <FolderOutput className="h-3.5 w-3.5" />,
   "Archive Config":   <Archive className="h-3.5 w-3.5" />,
@@ -599,6 +604,7 @@ function WorkList({
   hasExpensePolicy,
   hasAccountingSetup,
   hasApprovalSetup,
+  hasWorkflowSetup,
   hasExportConfig,
   hasArchiveConfig,
   hasStorageConfig,
@@ -615,6 +621,7 @@ function WorkList({
   hasExpensePolicy: boolean;
   hasAccountingSetup: boolean;
   hasApprovalSetup: boolean;
+  hasWorkflowSetup: boolean;
   hasExportConfig: boolean;
   hasArchiveConfig: boolean;
   hasStorageConfig: boolean;
@@ -624,15 +631,16 @@ function WorkList({
   const t = useTranslations("admin");
   const tc = useTranslations("common");
   const unconfiguredSetupCount = [
-    hasCompanySetup, hasExpensePolicy, hasAccountingSetup, hasApprovalSetup,
+    hasCompanySetup, hasExpensePolicy, hasAccountingSetup, hasApprovalSetup, hasWorkflowSetup,
   ].filter((v) => !v).length;
 
   const counts: Record<WorklistItem, number | string> = {
     "Overview": conflictsCount > 0 ? conflictsCount : unconfiguredSetupCount > 0 ? unconfiguredSetupCount : "✓",
     "Company Setup":    hasCompanySetup    ? "✓" : "—",
-    "Policies":         hasExpensePolicy   ? "✓" : "—",
+    "Expense Policy":   hasExpensePolicy   ? "✓" : "—",
     "Accounting Setup": hasAccountingSetup ? "✓" : "—",
-    "Workflow":          hasApprovalSetup   ? "✓" : "—",
+    "Approval Setup":   hasApprovalSetup   ? "✓" : "—",
+    "Workflow Setup":   hasWorkflowSetup   ? "✓" : "—",
     "Report Cycle":     "→",
     "Export Config":    hasExportConfig    ? "✓" : "—",
     "Archive Config":   hasArchiveConfig   ? "✓" : "—",
@@ -725,43 +733,113 @@ function AdminAIHints({
   approvalSetup?: any;
   workflowSetup?: any;
 }) {
-  const t = useTranslations("admin");
-
-  const items: string[] = {
-    "Overview":        [t("hintOverview0")],
-    "Company Setup":   [t("hintCompanySetup0"), t("hintCompanySetup1")],
-    "Policies":        expensePolicy ? [
-      t("hintPoliciesXml", { mode: expensePolicy.xml_required_mode, tickets: expensePolicy.tickets_allowed ? t("hintPoliciesTicketsAllowed") : t("hintPoliciesTicketsBlocked") }),
-      expensePolicy.manager_approval_required ? t("hintPoliciesMgrRequired") : t("hintPoliciesMgrDisabled"),
-      (!expensePolicy.require_justification && !expensePolicy.require_proof) ? t("hintPoliciesJustificationNone") : t("hintPoliciesJustificationActive"),
-    ] : [t("hintPoliciesNoData")],
+  const hints: Record<WorklistItem, string[]> = {
+    "Overview": [
+      "Use the AI panel on the right to analyse your full configuration and get recommended fixes.",
+    ],
+    "Company Setup": [
+      "Company identity is read from the platform database.",
+      "Extended configuration (expense rules, module activation) is managed under Expense Policy and Add-Ons.",
+    ],
+    "Expense Policy": expensePolicy ? [
+      `XML mode: ${expensePolicy.xml_required_mode}. Tickets ${expensePolicy.tickets_allowed ? "allowed" : "not allowed"}.`,
+      expensePolicy.manager_approval_required
+        ? "Manager approval is required before accounting review."
+        : "Manager approval is disabled. Expenses go directly to accounting.",
+      !expensePolicy.require_justification && !expensePolicy.require_proof
+        ? "Neither justification nor proof is required. Consider enabling at least one for audit trails."
+        : "Justification or proof requirements are active. Employees must attach supporting documents.",
+    ] : [
+      "No expense policy loaded yet. Save the form to initialise defaults.",
+    ],
     "Accounting Setup": accountingSetup ? [
-      t("hintAccountingMode", { mode: accountingSetup.accounting_review_mode ?? "—" }),
-      accountingSetup.poliza_required ? t("hintAccountingPolizaRequired") : t("hintAccountingPolizaOptional"),
-      (accountingSetup.project_required || accountingSetup.cost_center_required) ? t("hintAccountingDimensionsRequired") : t("hintAccountingDimensionsNone"),
-    ] : [t("hintAccountingNoData")],
-    "Workflow":         approvalSetup ? [
-      t("hintWorkflowApprovalMode", { mode: (approvalSetup.approval_mode ?? "none").replace(/_/g, " ") }),
-      workflowSetup?.default_expense_workflow_mode ? t("hintWorkflowModeConfigured", { mode: workflowSetup.default_expense_workflow_mode.replace(/_/g, " ") }) : t("hintWorkflowModeNotConfigured"),
-      approvalSetup.allow_resubmission_after_rejection ? t("hintWorkflowResubmitAllowed") : t("hintWorkflowResubmitDisabled"),
-    ] : [t("hintWorkflowNoData")],
-    "Report Cycle":    [t("hintReportCycle0"), t("hintReportCycle1"), t("hintReportCycle2")],
-    Roles:             [
-      rolesCount === 0 ? t("hintRolesNone") : t("hintRolesCount", { count: rolesCount }),
-      t("hintRolesAdvice"),
+      `Accounting review mode: ${accountingSetup.accounting_review_mode ?? "—"}.`,
+      accountingSetup.poliza_required
+        ? "Poliza XML is required. Ensure all expenses have CFDI documents before export."
+        : "Poliza is not required. Accounting export will proceed without XML validation.",
+      accountingSetup.project_required || accountingSetup.cost_center_required
+        ? "Project or cost center is required on expenses — employees must allocate correctly."
+        : "No allocation dimensions are required. Consider enabling for audit trails.",
+    ] : [
+      "Accounting setup not loaded.",
     ],
-    Permissions:       [
-      permissionsCount === 0 ? t("hintPermissionsNone") : t("hintPermissionsCount", { count: permissionsCount }),
-      t("hintPermissionsAdvice"),
+    "Approval Setup": approvalSetup ? [
+      `Approval mode: ${(approvalSetup.approval_mode ?? "none").replace(/_/g, " ")}.`,
+      approvalSetup.escalate_policy_failures_to_accounting
+        ? "Policy failures escalate to accounting automatically."
+        : "Policy failures do not escalate — review manually or enable escalation.",
+      approvalSetup.allow_resubmission_after_rejection
+        ? "Employees can resubmit after rejection."
+        : "Resubmission after rejection is disabled — employees must contact an admin.",
+    ] : [
+      "Approval setup not loaded. Save the form to initialise defaults.",
     ],
-    Users:             [t("hintUsers0"), t("hintUsers1"), t("hintUsers2")],
-    "Export Config":   [t("hintExportConfig0"), t("hintExportConfig1"), t("hintExportConfig2")],
-    "Archive Config":  [t("hintArchiveConfig0"), t("hintArchiveConfig1"), t("hintArchiveConfig2")],
-    "Storage Config":  [t("hintStorageConfig0"), t("hintStorageConfig1"), t("hintStorageConfig2")],
-    "Channels":        [t("hintChannels0"), t("hintChannels1"), t("hintChannels2")],
-    "Add-Ons":         [t("hintAddOnsCount", { count: enabledModulesCount }), t("hintAddOnsExpenses"), t("hintAddOnsInactive")],
-    Authentication:    [t("hintAuth0"), t("hintAuth1")],
-  }[section] ?? [];
+    "Report Cycle": [
+      "Configure when expense reports are automatically created for each user.",
+      "Validated expenses sit in a holding state until the cycle fires — then they are bundled per user and submitted for approval.",
+      "Use 'Run now' to trigger a cycle immediately. Use the title template tokens: {user}, {month}, {year}.",
+    ],
+    "Workflow Setup": workflowSetup ? [
+      `Workflow mode: ${(workflowSetup.default_expense_workflow_mode ?? "standard").replace(/_/g, " ")}.`,
+      workflowSetup.block_submit_on_failed_validation
+        ? "Submission is blocked on failed validation — invalid documents cannot be submitted."
+        : "Failed validation does not block submission — review routing rules for risk.",
+      workflowSetup.route_policy_failures_to && workflowSetup.route_policy_failures_to !== "none"
+        ? `Policy failures route to ${workflowSetup.route_policy_failures_to}.`
+        : "Policy failures are not routed — enable routing to accounting or manager.",
+    ] : [
+      "Workflow setup not loaded. Save the form to initialise defaults.",
+    ],
+    Roles: [
+      rolesCount === 0
+        ? "No roles created. Define at least an Employee and Manager role to enable approval workflows."
+        : `${rolesCount} role${rolesCount !== 1 ? "s" : ""} configured.`,
+      "Assign permissions to roles to enforce least-privilege access across expense and approval workflows.",
+    ],
+    Permissions: [
+      permissionsCount === 0
+        ? "No permissions defined. Create permission keys like submit_expense and approve_expense first."
+        : `${permissionsCount} permission${permissionsCount !== 1 ? "s" : ""} defined.`,
+      "Use snake_case keys that mirror the action name for easy readability in audit logs.",
+    ],
+    Users: [
+      "Create users here so they can log in via magic link.",
+      "Each user must have an email address and a role — employee, manager, accounting, or admin.",
+      "Changing a role takes effect immediately. The user's existing session will reflect the new role on next login.",
+    ],
+    "Export Config": [
+      "Controls how export bundle names are generated per company.",
+      "Use {company_id}, {date}, {year}, {month} as tokens in the bundle name pattern.",
+      "export_format determines serialisation — json (default) or csv.",
+    ],
+    "Archive Config": [
+      "Controls how archived file names and storage paths are structured per company.",
+      "Use {company}, {date}, {expense_id}, {year}, {month}, {filename} as tokens.",
+      "Changes apply to all new uploads — existing archived files are not renamed.",
+    ],
+    "Storage Config": [
+      "Controls where archived files are physically stored — local disk, NAS, S3, or Azure Blob.",
+      "Switching backends only affects new uploads. Existing files stay where they were originally written.",
+      "Test the connection after saving to confirm credentials and bucket/container access.",
+    ],
+    "Channels": [
+      "WhatsApp and email channels share the same AI agent — expenses, approvals, and queries work identically via both.",
+      "WhatsApp identity is anchored to the employee's email address via a one-time OTP challenge.",
+      "The webhook verify token and URL are generated automatically on first save — copy them into the Meta App Dashboard.",
+    ],
+    "Add-Ons": [
+      `${enabledModulesCount} module${enabledModulesCount !== 1 ? "s" : ""} currently active for this company.`,
+      "Enable Expenses before Accounting — poliza export depends on expense records.",
+      "Inactive modules are hidden from employees. No data is deleted when a module is disabled.",
+    ],
+    Authentication: [
+      "Configure SSO, magic-link, and session expiry settings for your company.",
+      "Changes to authentication settings take effect immediately for all new sessions.",
+    ],
+  };
+
+  const t = useTranslations("admin");
+  const items = hints[section] ?? [];
 
   return (
     <div className="space-y-3">
@@ -819,8 +897,8 @@ const PATCH_SECTION_DEFS: { key: keyof OrchestratorPatches; menuKey: string }[] 
   { key: "workflow_setup",   menuKey: "workflowSetup" },
 ];
 
-function patchVal(v: any, tFn: (k: string) => string): string {
-  if (typeof v === "boolean") return v ? tFn("patchOn") : tFn("patchOff");
+function patchVal(v: any): string {
+  if (typeof v === "boolean") return v ? "On" : "Off";
   if (v === null || v === undefined) return "—";
   return String(v).replace(/_/g, " ");
 }
@@ -873,7 +951,7 @@ function OrchestratorPatchSummary({
                   className="flex items-center justify-between border-b border-white/[0.04] px-3 py-2 last:border-0"
                 >
                   <span className="text-[10px] text-white/35">{field.replace(/_/g, " ")}</span>
-                  <span className="text-[10px] font-medium text-violet-300/70">{patchVal(value, t)}</span>
+                  <span className="text-[10px] font-medium text-violet-300/70">{patchVal(value)}</span>
                 </div>
               ))}
             </div>
@@ -1109,7 +1187,7 @@ export default function AdminPage() {
         setWorkflowSetupDraftPatch(undefined);
       }
     } catch (e: any) {
-      setSaveAllError(e?.message ?? tAdmin("saveFailed"));
+      setSaveAllError(e?.message ?? "Save failed");
     } finally {
       setSavingAllDrafts(false);
     }
@@ -1118,10 +1196,10 @@ export default function AdminPage() {
   // ── Pending-draft set — drives worklist dot indicators ───────────────────────
   const draftSections = new Set<string>([
     ...(companySetupDraftPatch    && Object.keys(companySetupDraftPatch).length    > 0 ? ["Company Setup"]    : []),
-    ...(expensePolicyDraftPatch   && Object.keys(expensePolicyDraftPatch).length   > 0 ? ["Policies"]   : []),
+    ...(expensePolicyDraftPatch   && Object.keys(expensePolicyDraftPatch).length   > 0 ? ["Expense Policy"]   : []),
     ...(accountingSetupDraftPatch && Object.keys(accountingSetupDraftPatch).length > 0 ? ["Accounting Setup"] : []),
-    ...((approvalSetupDraftPatch && Object.keys(approvalSetupDraftPatch).length > 0) ||
-       (workflowSetupDraftPatch  && Object.keys(workflowSetupDraftPatch).length  > 0) ? ["Workflow"] : []),
+    ...(approvalSetupDraftPatch   && Object.keys(approvalSetupDraftPatch).length   > 0 ? ["Approval Setup"]   : []),
+    ...(workflowSetupDraftPatch   && Object.keys(workflowSetupDraftPatch).length   > 0 ? ["Workflow Setup"]   : []),
     ...(exportConfigDraftPatch   && Object.keys(exportConfigDraftPatch).length   > 0 ? ["Export Config"]   : []),
     ...(archiveConfigDraftPatch   && Object.keys(archiveConfigDraftPatch).length   > 0 ? ["Archive Config"]   : []),
   ]);
@@ -1170,41 +1248,48 @@ export default function AdminPage() {
           />
         );
 
-      case "Policies":
+      case "Expense Policy":
         return (
-          <AdminPoliciesPanel
+          <AdminExpenseModulePanel
             companyId={adminCompanyId}
-            expensePolicy={expensePolicy ?? {}}
-            onExpensePolicySaved={setExpensePolicy}
-            draftPatch={expensePolicyDraftPatch}
+            policy={expensePolicy ?? {}}
+            onSaved={setExpensePolicy}
           />
         );
 
       case "Accounting Setup":
         return (
-          <AdminAccountingTabsPanel
+          <AdminAccountingSetupStudio
             companyId={adminCompanyId}
-            accountingSetup={accountingSetup ?? {}}
-            companySetup={companySetup}
-            expensePolicy={expensePolicy}
+            setup={accountingSetup ?? {}}
             onSaved={setAccountingSetup}
             draftPatch={accountingSetupDraftPatch}
           />
         );
 
-      case "Workflow":
+      case "Approval Setup":
         return (
-          <AdminWorkflowMapPanel
+          <AdminApprovalSetupStudio
             companyId={adminCompanyId}
-            approvalSetup={approvalSetup ?? {}}
-            workflowSetup={workflowSetup ?? {}}
+            setup={approvalSetup ?? {}}
+            companySetup={companySetup}
+            accountingSetup={accountingSetup}
+            onSaved={setApprovalSetup}
+            draftPatch={approvalSetupDraftPatch}
+          />
+        );
+
+      case "Workflow Setup":
+        return (
+          <AdminWorkflowSetupStudio
+            companyId={adminCompanyId}
+            setup={workflowSetup ?? {}}
             companySetup={companySetup}
             expensePolicy={expensePolicy}
             accountingSetup={accountingSetup}
-            onApprovalSaved={setApprovalSetup}
-            onWorkflowSaved={setWorkflowSetup}
-            approvalDraftPatch={approvalSetupDraftPatch}
-            workflowDraftPatch={workflowSetupDraftPatch}
+            approvalSetup={approvalSetup}
+            onSaved={setWorkflowSetup}
+            draftPatch={workflowSetupDraftPatch}
           />
         );
 
@@ -1288,6 +1373,39 @@ export default function AdminPage() {
             legalEntities={legalEntities}
             portalConfig={portalConfig}
             onApplySetupDraft={(patch) => setCompanySetupDraftPatch({ ...patch })}
+          />
+        </aside>
+      );
+    }
+
+    if (activeSection === "Approval Setup") {
+      return (
+        <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-l border-white/[0.07] bg-zinc-950 p-3">
+          <AdminApprovalCopilot
+            companyId={adminCompanyId}
+            companySetup={companySetup ?? {}}
+            expensePolicy={expensePolicy ?? {}}
+            accountingSetup={accountingSetup ?? {}}
+            approvalSetup={approvalSetup ?? {}}
+            portalConfig={portalConfig}
+            onApplyDraft={(patch) => setApprovalSetupDraftPatch({ ...patch })}
+          />
+        </aside>
+      );
+    }
+
+    if (activeSection === "Workflow Setup") {
+      return (
+        <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-l border-white/[0.07] bg-zinc-950 p-3">
+          <AdminWorkflowCopilot
+            companyId={adminCompanyId}
+            companySetup={companySetup ?? {}}
+            expensePolicy={expensePolicy ?? {}}
+            accountingSetup={accountingSetup ?? {}}
+            approvalSetup={approvalSetup ?? {}}
+            workflowSetup={workflowSetup ?? {}}
+            portalConfig={portalConfig}
+            onApplyDraft={(patch) => setWorkflowSetupDraftPatch({ ...patch })}
           />
         </aside>
       );
@@ -1379,6 +1497,7 @@ export default function AdminPage() {
           hasExpensePolicy={!!expensePolicy}
           hasAccountingSetup={!!accountingSetup}
           hasApprovalSetup={!!approvalSetup}
+          hasWorkflowSetup={!!workflowSetup}
           hasExportConfig={!!exportConfig}
           hasArchiveConfig={!!archiveConfig}
           hasStorageConfig={!!storageConfig}

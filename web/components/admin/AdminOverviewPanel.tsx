@@ -19,9 +19,9 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 
 type SetupSection =
   | "Company Setup"
-  | "Policies"
+  | "Expense Policy"
   | "Accounting Setup"
-  | "Workflow";
+  | "Approval Setup";
 
 type CardStatus = "ok" | "warn" | "unconfigured";
 
@@ -33,7 +33,7 @@ const SECTION_CONFLICT_CODES: Record<SetupSection, string[]> = {
     "EXPENSE_POLICY_MANAGER_APPROVAL_NO_MANAGERS",
     "MULTI_COUNTRY_INTL_DISABLED",
   ],
-  "Policies": [
+  "Expense Policy": [
     "INTL_ESCALATION_INTL_DISABLED",
     "INTL_ROUTING_INTL_DISABLED",
     "PROJECT_REQUIRED_NOT_IN_DIMS",
@@ -44,7 +44,7 @@ const SECTION_CONFLICT_CODES: Record<SetupSection, string[]> = {
     "CLIENT_REQUIRED_NOT_IN_DIMS",
     "COST_CENTER_REQUIRED_NOT_IN_DIMS",
   ],
-  "Workflow": [
+  "Approval Setup": [
     "MANAGER_FLOW_NO_MANAGERS",
     "REQUIRE_MANAGER_ALL_NO_MANAGERS",
     "EXPENSE_POLICY_MANAGER_APPROVAL_NO_MANAGERS",
@@ -152,9 +152,9 @@ interface Props {
   onNavigate: (
     section:
       | "Company Setup"
-      | "Workflow"
+      | "Approval Setup"
       | "Accounting Setup"
-      | "Policies"
+      | "Expense Policy"
       | "Add-Ons"
   ) => void;
 }
@@ -191,10 +191,10 @@ export default function AdminOverviewPanel({
   const workflowMarker = wf.default_expense_workflow_mode;
 
   const companyStatus  = cardStatus(cs, companyMarker,  conflictCodes, SECTION_CONFLICT_CODES["Company Setup"]);
-  const expenseStatus  = cardStatus(ep, expenseMarker,  conflictCodes, SECTION_CONFLICT_CODES["Policies"]);
+  const expenseStatus  = cardStatus(ep, expenseMarker,  conflictCodes, SECTION_CONFLICT_CODES["Expense Policy"]);
   const accountStatus  = cardStatus(ac, accountMarker,  conflictCodes, SECTION_CONFLICT_CODES["Accounting Setup"]);
-  const approvalStatus = cardStatus(ap, approvalMarker, conflictCodes, SECTION_CONFLICT_CODES["Workflow"]);
-  const workflowStatus = cardStatus(wf, workflowMarker, conflictCodes, SECTION_CONFLICT_CODES["Workflow"]);
+  const approvalStatus = cardStatus(ap, approvalMarker, conflictCodes, SECTION_CONFLICT_CODES["Approval Setup"]);
+  const workflowStatus = cardStatus(wf, workflowMarker, conflictCodes, SECTION_CONFLICT_CODES["Approval Setup"]);
 
   // Count sections with no saved marker — distinct from conflicts.
   const unconfiguredCount = [
@@ -205,8 +205,8 @@ export default function AdminOverviewPanel({
   const fixTarget: SetupSection | null = (() => {
     const order: SetupSection[] = [
       "Company Setup",
-      "Workflow",
-      "Policies",
+      "Approval Setup",
+      "Expense Policy",
       "Accounting Setup",
     ];
     return (
@@ -261,7 +261,7 @@ export default function AdminOverviewPanel({
       summary: companySummary,
     },
     {
-      section: "Policies",
+      section: "Expense Policy",
       sectionLabel: to("sectionExpensePolicy"),
       icon: <FileText className="h-3.5 w-3.5" />,
       status: expenseStatus,
@@ -289,7 +289,7 @@ export default function AdminOverviewPanel({
       summary: accountSummary,
     },
     {
-      section: "Workflow",
+      section: "Approval Setup",
       sectionLabel: to("sectionApprovalSetup"),
       icon: <GitBranch className="h-3.5 w-3.5" />,
       status: approvalStatus,
