@@ -156,6 +156,70 @@ Examples:
   "Buenos días" → greeting""".strip()
 
 
+# Phase 8.8 — natural-language expense filing patterns.
+# Triggers when no attachments are present but the body describes a real-world
+# spend ("gasté 450 en uber", "pagué $1,200 en oxxo").
+_NL_EXPENSE_RX = re.compile(
+    r"\b(gast[éeoó]|pagu[éeoó]|cobr[éeoó]|spent|paid|charged|"
+    r"uber|didi|cabify|oxxo|7-?eleven|walmart|costco|sams|"
+    r"taxi|aeropuerto|gasolina|comida|hotel|cena|desayuno|"
+    r"factura\s+de|recibo\s+de)\b",
+    re.IGNORECASE,
+)
+# Money pattern — handles "$1,200.50", "1200", "1,200 pesos", "MXN 450".
+# Two alternatives: (1) comma-thousand grouped, (2) plain integer/decimal.
+_AMOUNT_RX = re.compile(
+    r"(?:\$|MXN\s*|USD\s*)?"
+    r"(?<!\d)(\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)(?!\d)"
+    r"\s*(?:pesos|mxn|usd|dlls?)?",
+    re.IGNORECASE,
+)
+
+
+def _parse_nl_expense(body: str) -> dict[str, Any]:
+    """Extract {amount, supplier, category_hint} from a free-text spend note.
+
+    Best-effort regex parser — returns ``{}`` if no plausible amount is found.
+    """
+    text = body.strip()
+    amount: float | None = None
+    for m in _AMOUNT_RX.finditer(text):
+        raw = m.group(1)
+        cleaned = raw.replace(",", "")  # strip thousands separators
+        try:
+            val = float(cleaned)
+        except ValueError:
+            continue
+        if val < 1 or val > 10_000_000:
+            continue
+        amount = val
+        break
+    if amount is None:
+        return {}
+
+    supplier = None
+    sup_match = re.search(
+        r"\b(?:en|at|de|with|con)\s+([a-záéíóúñ][a-záéíóúñ0-9\s.&-]{1,40}?)(?:\s+(?:al|el|la|en|para|por)\b|[.,!?]|$)",
+        text, re.IGNORECASE,
+    )
+    if sup_match:
+        supplier = sup_match.group(1).strip().rstrip(".").title()[:64]
+
+    category_hint = None
+    cat_keywords = {
+        "transport": (r"uber|didi|cabify|taxi|aeropuerto|gasolina|estacionamiento|peaje"),
+        "meals":     (r"comida|cena|desayuno|almuerzo|restaurante|oxxo|7-?eleven"),
+        "lodging":   (r"hotel|airbnb|hospedaje"),
+        "supplies":  (r"papelería|office\s*depot|walmart|costco|sams|home\s*depot"),
+    }
+    for cat, pat in cat_keywords.items():
+        if re.search(pat, text, re.IGNORECASE):
+            category_hint = cat
+            break
+
+    return {"amount": amount, "supplier": supplier, "category_hint": category_hint}
+
+
 def _classify_intent(body: str, has_attachments: bool) -> str:
     """Classify message intent. Fast regex shortcuts, then LLM."""
     if has_attachments:
@@ -188,12 +252,18 @@ def _classify_intent(body: str, has_attachments: bool) -> str:
     if _APPROVAL_RX.search(b):
         return "approval_action"
 
+    # Phase 8.8 — natural-language expense filing without attachments.
+    # "gasté 450 en uber al aeropuerto" / "pagué $1,200 de comida en oxxo"
+    if _NL_EXPENSE_RX.search(b) and _AMOUNT_RX.search(b):
+        return "nl_expense_filing"
+
     # LLM classification for everything else
     result = chat_with_ollama(_INTENT_SYSTEM, b[:600], temperature=0.0)
     if result.get("ok"):
         raw = result.get("content", "").strip().lower().split()[0] if result.get("content") else ""
-        for key in ("expense_submission", "approval_action", "status_inquiry",
-                    "report_query", "verification_code", "greeting", "unknown"):
+        for key in ("expense_submission", "nl_expense_filing", "approval_action",
+                    "status_inquiry", "report_query", "verification_code",
+                    "greeting", "unknown"):
             if key == raw or key in raw:
                 return key
     return "unknown"
@@ -423,6 +493,63 @@ def _handle_expense_submission(
     )
 
 
+def _handle_nl_expense_filing(
+    db: Session,
+    msg: NormalizedMessage,
+    user_id: int,
+) -> str:
+    """Phase 8.8 — natural-language expense draft (no attachments).
+
+    "gasté 450 en uber al aeropuerto" → creates a draft Expense with
+    amount=450, description preserved, supplier and category_hint stored
+    in notes for downstream triage.
+    """
+    from decimal import Decimal
+    import json as json_mod
+    from packages.modules.expenses.models import Expense
+
+    parsed = _parse_nl_expense(msg.body or "")
+    if not parsed.get("amount"):
+        return (
+            "No alcancé a leer el monto. Intenta así: "
+            "“gasté 450 en uber al aeropuerto”."
+        )
+
+    amount = Decimal(str(parsed["amount"]))
+    supplier = parsed.get("supplier")
+    category_hint = parsed.get("category_hint")
+    desc = (msg.body or "").strip()[:240] or "Gasto por WhatsApp"
+
+    expense = Expense(
+        company_id=msg.company_id,
+        status="draft",
+        description=desc,
+        amount=amount,
+        notes=json_mod.dumps({
+            "submitted_by_user_id": user_id,
+            "channel": msg.channel,
+            "source": "nl_expense_filing",
+            "supplier_hint": supplier,
+            "category_hint": category_hint,
+        }),
+    )
+    db.add(expense)
+    try:
+        db.flush()
+        db.commit()
+    except Exception as exc:
+        log.error("NL expense draft failed: %s", exc)
+        db.rollback()
+        return "No pude crear el borrador. Vuelve a intentar o súbelo desde la app."
+
+    bits = [f"Borrador creado por ${amount:.2f}"]
+    if supplier:
+        bits.append(f"proveedor: {supplier}")
+    if category_hint:
+        bits.append(f"categoría sugerida: {category_hint}")
+    return " · ".join(bits) + ". ¿Tienes la factura o recibo para adjuntar?"
+
+
 def _handle_status_inquiry(
     db: Session,
     msg: NormalizedMessage,
@@ -647,6 +774,8 @@ def process_message(db: Session, msg: NormalizedMessage) -> str:
 
         if intent == "expense_submission":
             reply = _handle_expense_submission(db, msg, conv.user_id)
+        elif intent == "nl_expense_filing":
+            reply = _handle_nl_expense_filing(db, msg, conv.user_id)
         elif intent == "status_inquiry":
             reply = _handle_status_inquiry(db, msg, conv.user_id)
         elif intent == "report_query":
