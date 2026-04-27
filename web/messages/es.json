@@ -557,6 +557,25 @@
   },
   "admin": {
     "title": "Administrador",
+    "cfdiWatcher": {
+      "title": "Watcher SAT — CFDI cancelados",
+      "subtitle": "Gastos con CFDI marcado Cancelado por el SAT",
+      "back": "Volver al admin",
+      "refresh": "Refrescar",
+      "recheck": "Reverificar",
+      "loading": "Cargando…",
+      "count": "{count, plural, =0 {Sin cancelaciones} one {# CFDI cancelado} other {# CFDIs cancelados}}",
+      "emptyTitle": "Sin cancelaciones",
+      "emptyBody": "Ningún CFDI ha sido marcado Cancelado por el SAT.",
+      "amountMismatch": "Monto difiere",
+      "th": {
+        "expense": "Gasto",
+        "amount": "Monto",
+        "uuid": "UUID",
+        "checked": "Último chequeo",
+        "action": "Acción"
+      }
+    },
     "insights": {
       "title": "Insights del agente",
       "subtitle": "Triage del digest diario",

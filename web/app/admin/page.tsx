@@ -24,7 +24,7 @@ import AdminReportCyclePanel from "@/components/admin/AdminReportCyclePanel";
 import Link from "next/link";
 import {
   Building2, FileText, GitBranch, ShieldCheck, Puzzle, Key, Lock,
-  Calculator, ClipboardCheck, Bot, Save, Loader2, FolderOutput, Archive, Users, Radio, CalendarClock, HardDrive, Sparkles, BookOpen, Layers, Activity, Lightbulb,
+  Calculator, ClipboardCheck, Bot, Save, Loader2, FolderOutput, Archive, Users, Radio, CalendarClock, HardDrive, Sparkles, BookOpen, Layers, Activity, Lightbulb, XOctagon,
 } from "lucide-react";
 import { getCurrentRole, getCurrentUserId, getCurrentCompanyId, getStoredSession, getAuthHeaders } from "@/lib/session";
 import { buildGlobalNav, GlobalNavItem } from "@/lib/navigation";
@@ -747,6 +747,20 @@ function WorkList({
           <div className="flex-1 text-left">
             <div className="text-[10.5px] font-semibold text-yellow-200/70">Agent Insights</div>
             <div className="text-[9px] text-yellow-300/35">Daily digest triage</div>
+          </div>
+        </Link>
+      </div>
+
+      {/* CFDI Watcher CTA (Phase 4.8) */}
+      <div className="px-3 pb-2">
+        <Link
+          href="/admin/cfdi-watcher"
+          className="flex w-full items-center gap-2 rounded border border-rose-500/20 bg-rose-500/[0.05] px-3 py-2 transition-colors hover:border-rose-500/35 hover:bg-rose-500/[0.10]"
+        >
+          <XOctagon className="h-3.5 w-3.5 shrink-0 text-rose-300/60" />
+          <div className="flex-1 text-left">
+            <div className="text-[10.5px] font-semibold text-rose-200/70">CFDI Watcher</div>
+            <div className="text-[9px] text-rose-300/35">SAT cancellations · reversal</div>
           </div>
         </Link>
       </div>

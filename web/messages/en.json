@@ -557,6 +557,25 @@
   },
   "admin": {
     "title": "Admin",
+    "cfdiWatcher": {
+      "title": "SAT watcher — cancelled CFDIs",
+      "subtitle": "Expenses whose CFDI has been marked Cancelled by SAT",
+      "back": "Back to admin",
+      "refresh": "Refresh",
+      "recheck": "Re-check",
+      "loading": "Loading…",
+      "count": "{count, plural, =0 {No cancellations} one {# cancelled CFDI} other {# cancelled CFDIs}}",
+      "emptyTitle": "No cancellations",
+      "emptyBody": "No CFDI has been marked Cancelled by SAT.",
+      "amountMismatch": "Amount mismatch",
+      "th": {
+        "expense": "Expense",
+        "amount": "Amount",
+        "uuid": "UUID",
+        "checked": "Last check",
+        "action": "Action"
+      }
+    },
     "insights": {
       "title": "Agent insights",
       "subtitle": "Daily digest triage",

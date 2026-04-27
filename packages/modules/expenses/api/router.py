@@ -927,6 +927,77 @@ def delete_expense_route(expense_id: int, db: Session = Depends(get_db), current
         raise HTTPException(status_code=400, detail=str(e))
 
 
+# ── Phase 4.8 — SAT cancel watcher admin endpoints ───────────────────────────
+
+@router.get("/cfdi/cancelled")
+def list_cancelled_cfdis_route(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Admin-scoped list of expenses whose CFDI has flipped to Cancelado.
+
+    Used by /admin/cfdi-watcher to drive the reversal workflow. Cross-company
+    isolation enforced via company_id filter; admin role is required because
+    the underlying ``cfdi:recheck`` permission is admin-only by default.
+    """
+    from packages.core.platform.service_permissions import has_permission as _hp
+    if not _hp(db, current_user, "cfdi:recheck"):
+        raise HTTPException(status_code=403, detail="Admin permission required")
+    rows = (
+        db.query(Expense)
+        .filter(
+            Expense.company_id == current_user.company_id,
+            Expense.cfdi_status == "Cancelado",
+        )
+        .order_by(Expense.cfdi_last_checked_at.desc().nullslast())
+        .limit(200)
+        .all()
+    )
+    return [
+        {
+            "id": r.id,
+            "description": r.description,
+            "amount": float(r.amount),
+            "status": r.status,
+            "expense_date": r.expense_date,
+            "cfdi_uuid": r.cfdi_uuid,
+            "cfdi_status": r.cfdi_status,
+            "cfdi_last_checked_at": r.cfdi_last_checked_at,
+            "cfdi_amount_mismatch": bool(getattr(r, "cfdi_amount_mismatch", False)),
+        }
+        for r in rows
+    ]
+
+
+@router.post("/cfdi/recheck/{expense_id}")
+def recheck_cfdi_route(
+    expense_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Manually re-query SAT for one expense's CFDI status."""
+    from packages.core.platform.service_permissions import has_permission as _hp
+    from packages.modules.expenses.service.cfdi_lifecycle_service import recheck_expense_cfdi
+    if not _hp(db, current_user, "cfdi:recheck"):
+        raise HTTPException(status_code=403, detail="Admin permission required")
+    expense = (
+        db.query(Expense)
+        .filter(Expense.id == expense_id, Expense.company_id == current_user.company_id)
+        .one_or_none()
+    )
+    if expense is None:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    res = recheck_expense_cfdi(db, expense)
+    return {
+        "ok": True,
+        "expense_id": expense_id,
+        "cfdi_status": expense.cfdi_status,
+        "cfdi_last_checked_at": expense.cfdi_last_checked_at,
+        "changed": bool(res.get("changed")),
+        "cancelled": bool(res.get("cancelled")),
+    }
+
+
 # ── Expense-level validation results (all docs for this expense) ─────────────
 
 @router.get("/{expense_id}/validations", response_model=list[ValidationResultRead])
