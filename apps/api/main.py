@@ -345,6 +345,19 @@ except Exception:
     _log.getLogger(__name__).exception("Failed to start agent scheduler")
 
 
+# ── Phase 4.8 follow-up — CFDI watcher scheduler (opt-in via CFDI_SCHEDULER_ENABLED) ──
+try:
+    from packages.modules.expenses.jobs.scheduler import (
+        start_scheduler as _start_cfdi_scheduler,
+    )
+
+    _start_cfdi_scheduler()
+except Exception:
+    import logging as _log
+
+    _log.getLogger(__name__).exception("Failed to start CFDI scheduler")
+
+
 @app.get("/")
 def root():
     return {
