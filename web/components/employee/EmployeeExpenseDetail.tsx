@@ -13,6 +13,7 @@ import {
 import { useTranslations } from "next-intl";
 import XmlDetailModal from "@/components/employee/XmlDetailModal";
 import ExpenseAuditDrawer from "@/components/expense/ExpenseAuditDrawer";
+import AnomalyBanner from "@/components/expense/AnomalyBanner";
 import { getAuthHeaders } from "@/lib/session";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -904,6 +905,14 @@ export default function EmployeeExpenseDetail({
                 </div>
               </div>
             </div>
+
+            {/* Phase 5.4 — anomaly banner */}
+            <AnomalyBanner
+              expenseId={expense.id}
+              amount={Number(expense.amount)}
+              categoryCode={expense.category_code}
+              expenseDate={expense.expense_date}
+            />
 
             {/* ── Tabs + Submit ─────────────────────────────────────── */}
             <div className="border-b border-white/[0.07]">

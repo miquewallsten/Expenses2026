@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { X, Paperclip } from "lucide-react";
+import { X, Paperclip, AlertTriangle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { getAuthHeaders, getStoredSession } from "@/lib/session";
 
@@ -35,6 +35,11 @@ export default function NewExpenseModal({ open, onClose, onCreated }: Props) {
   const [form, setForm] = useState<FormState>(EMPTY);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dupes, setDupes] = useState<{
+    matches: { expense_id: number; confidence: string; reasons: string[] }[];
+    blocking: boolean;
+  } | null>(null);
+  const [dupeOverride, setDupeOverride] = useState(false);
   const descRef = useRef<HTMLInputElement>(null);
   const t = useTranslations("employee.newExpenseModal");
   const tc = useTranslations("common");
@@ -43,6 +48,8 @@ export default function NewExpenseModal({ open, onClose, onCreated }: Props) {
     if (open) {
       setForm(EMPTY);
       setError(null);
+      setDupes(null);
+      setDupeOverride(false);
       setTimeout(() => descRef.current?.focus(), 50);
     }
   }, [open]);
@@ -59,8 +66,44 @@ export default function NewExpenseModal({ open, onClose, onCreated }: Props) {
   function set(field: keyof FormState) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       setForm((prev) => ({ ...prev, [field]: e.target.value }));
+      setDupes(null);
+      setDupeOverride(false);
     };
   }
+
+  // Debounced duplicate check (Phase 5.3).
+  useEffect(() => {
+    if (!open) return;
+    const desc = form.description.trim();
+    const amt = parseFloat(form.amount);
+    if (!desc || !amt || isNaN(amt) || amt <= 0) {
+      setDupes(null);
+      return;
+    }
+    let cancelled = false;
+    const id = window.setTimeout(async () => {
+      try {
+        const r = await fetch(`${API}/expenses/duplicates/check`, {
+          method: "POST",
+          headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+          body: JSON.stringify({ amount: amt, description: desc }),
+        });
+        if (!r.ok) return;
+        const data = (await r.json()) as {
+          matches: { expense_id: number; confidence: string; reasons: string[] }[];
+          blocking: boolean;
+        };
+        if (cancelled) return;
+        setDupes(data.matches.length > 0 ? data : null);
+      } catch {
+        // swallow — duplicate check is non-critical
+      }
+    }, 450);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(id);
+    };
+  }, [form.description, form.amount, open]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -71,6 +114,10 @@ export default function NewExpenseModal({ open, onClose, onCreated }: Props) {
     }
     if (isNaN(parsed) || parsed <= 0) {
       setError(t("errorAmount"));
+      return;
+    }
+    if (dupes?.blocking && !dupeOverride) {
+      setError(t("errorDuplicateBlock"));
       return;
     }
     setError(null);
@@ -241,6 +288,46 @@ export default function NewExpenseModal({ open, onClose, onCreated }: Props) {
                 </div>
               </div>
             </div>
+
+            {/* Duplicate warning (Phase 5.3) */}
+            {dupes && dupes.matches.length > 0 && (
+              <div
+                className={`mx-5 mb-3 rounded-lg border px-3 py-2 text-[11px] ${
+                  dupes.blocking
+                    ? "border-red-500/25 bg-red-500/[0.07] text-red-200/85"
+                    : "border-amber-500/25 bg-amber-500/[0.07] text-amber-200/85"
+                }`}
+              >
+                <div className="flex items-start gap-1.5">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold">
+                      {dupes.blocking
+                        ? t("duplicateBlockingTitle")
+                        : t("duplicateWarningTitle", { count: dupes.matches.length })}
+                    </p>
+                    <ul className="mt-1 space-y-0.5">
+                      {dupes.matches.slice(0, 3).map((m) => (
+                        <li key={m.expense_id} className="font-mono text-[10px] opacity-75">
+                          #{m.expense_id} · {m.reasons.join(", ")}
+                        </li>
+                      ))}
+                    </ul>
+                    {dupes.blocking && (
+                      <label className="mt-1.5 flex cursor-pointer items-center gap-1.5 text-[10px]">
+                        <input
+                          type="checkbox"
+                          checked={dupeOverride}
+                          onChange={(e) => setDupeOverride(e.target.checked)}
+                          className="h-3 w-3 cursor-pointer accent-red-500"
+                        />
+                        {t("duplicateOverride")}
+                      </label>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Error */}
             {error && (

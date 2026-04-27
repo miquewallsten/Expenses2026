@@ -9,7 +9,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { AlertTriangle, ChevronLeft, ReceiptText } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ReceiptText, Loader2 } from "lucide-react";
 import ReviewActionBar from "@/components/review/ReviewActionBar";
 import StatusNextAction from "@/components/my-work/StatusNextAction";
 import { useMyWorkContext } from "@/context/MyWorkContext";
@@ -70,12 +70,18 @@ function QueueList({
   onSelect,
   loading,
   summary,
+  bulkIds,
+  onToggleBulk,
+  onToggleAll,
 }: {
   expenses: Expense[];
   selectedId: number | null;
   onSelect: (e: Expense) => void;
   loading: boolean;
   summary: QueueSummary | null;
+  bulkIds: Set<number>;
+  onToggleBulk: (id: number) => void;
+  onToggleAll: (ids: number[]) => void;
 }) {
   const t = useTranslations("manager");
   const tc = useTranslations("common");
@@ -111,12 +117,43 @@ function QueueList({
         </div>
       ) : (
         <ul className="flex-1 overflow-y-auto">
+          {expenses.length > 0 && (
+            <li className="flex items-center gap-2 border-b border-white/[0.05] bg-black/10 px-3 py-1.5">
+              <input
+                type="checkbox"
+                aria-label={t("bulk.selectAll")}
+                checked={bulkIds.size > 0 && bulkIds.size === expenses.length}
+                ref={(el) => {
+                  if (el) el.indeterminate = bulkIds.size > 0 && bulkIds.size < expenses.length;
+                }}
+                onChange={() => onToggleAll(expenses.map((e) => e.id))}
+                className="h-3 w-3 cursor-pointer accent-indigo-500"
+              />
+              <span className="text-[9px] uppercase tracking-widest text-white/30">
+                {bulkIds.size > 0 ? t("bulk.selectedCount", { count: bulkIds.size }) : t("bulk.selectAll")}
+              </span>
+            </li>
+          )}
           {expenses.map((e) => (
-            <li key={e.id}>
+            <li key={e.id} className="flex items-stretch">
+              <label
+                className={`flex shrink-0 cursor-pointer items-center border-b border-white/[0.05] pl-3 pr-1 ${
+                  bulkIds.has(e.id) ? "bg-indigo-500/[0.08]" : ""
+                }`}
+                onClick={(ev) => ev.stopPropagation()}
+              >
+                <input
+                  type="checkbox"
+                  checked={bulkIds.has(e.id)}
+                  onChange={() => onToggleBulk(e.id)}
+                  className="h-3 w-3 cursor-pointer accent-indigo-500"
+                  aria-label={t("bulk.selectRow", { id: e.id })}
+                />
+              </label>
               <button
                 type="button"
                 onClick={() => onSelect(e)}
-                className={`w-full border-b border-white/[0.05] px-3 py-2.5 text-left transition-colors ${
+                className={`flex-1 border-b border-white/[0.05] px-3 py-2.5 text-left transition-colors ${
                   selectedId === e.id ? "bg-white/[0.06]" : "hover:bg-white/[0.03]"
                 }`}
               >
@@ -276,6 +313,11 @@ export default function MyApprovalsModule() {
   const [actionError,    setActionError]    = useState<string | null>(null);
   const [managerActions, setManagerActions] = useState<ManagerActions | null>(null);
 
+  // ── Bulk-select state ─────────────────────────────────────────────────────
+  const [bulkIds, setBulkIds] = useState<Set<number>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
+
   const expensesRef = useRef<Expense[]>([]);
   expensesRef.current = expenses;
 
@@ -419,6 +461,76 @@ export default function MyApprovalsModule() {
     }
   }, [selected, postActionRefresh]);
 
+  // ── Bulk handlers ──────────────────────────────────────────────────────────
+
+  const toggleBulk = useCallback((id: number) => {
+    setBulkIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleAll = useCallback((ids: number[]) => {
+    setBulkIds((prev) => (prev.size === ids.length ? new Set() : new Set(ids)));
+  }, []);
+
+  const runBulk = useCallback(
+    async (action: "manager_approve" | "manager_reject" | "manager_return") => {
+      if (bulkIds.size === 0) return;
+      let comment: string | null = null;
+      if (action === "manager_reject" || action === "manager_return") {
+        comment = window.prompt(
+          action === "manager_reject" ? t("bulk.rejectPrompt") : t("bulk.returnPrompt"),
+        );
+        if (comment === null) return; // user cancelled
+        comment = comment.trim() || null;
+        if (action === "manager_reject" && !comment) {
+          setBulkError(t("bulk.commentRequired"));
+          return;
+        }
+      }
+      setBulkBusy(true);
+      setBulkError(null);
+      try {
+        const r = await fetch(`${API}/expenses/review-actions/bulk-transition`, {
+          method: "POST",
+          headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action,
+            expense_ids: Array.from(bulkIds),
+            comment,
+          }),
+        });
+        if (!r.ok) {
+          const body = (await r.json().catch(() => ({}))) as { detail?: string };
+          setBulkError(body.detail ?? `Bulk action failed (${r.status})`);
+          return;
+        }
+        const data = (await r.json()) as {
+          succeeded: number;
+          failed: number;
+          results: { expense_id: number; ok: boolean; error?: string }[];
+        };
+        if (data.failed > 0) {
+          const firstErr = data.results.find((x) => !x.ok)?.error;
+          setBulkError(
+            t("bulk.partialFailure", { ok: data.succeeded, failed: data.failed }) +
+              (firstErr ? ` — ${firstErr}` : ""),
+          );
+        }
+        setBulkIds(new Set());
+        await loadQueue();
+      } catch {
+        setBulkError(t("serverError"));
+      } finally {
+        setBulkBusy(false);
+      }
+    },
+    [bulkIds, loadQueue, t],
+  );
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
@@ -432,12 +544,62 @@ export default function MyApprovalsModule() {
           "shrink-0 flex-col overflow-hidden border-white/[0.07]",
         ].join(" ")}
       >
+        {bulkIds.size > 0 && (
+          <div className="shrink-0 border-b border-indigo-500/20 bg-indigo-500/[0.06] px-2.5 py-1.5">
+            <div className="mb-1 flex items-center justify-between">
+              <span className="text-[9px] font-bold uppercase tracking-widest text-indigo-300/80">
+                {t("bulk.selectedCount", { count: bulkIds.size })}
+              </span>
+              <button
+                type="button"
+                onClick={() => setBulkIds(new Set())}
+                disabled={bulkBusy}
+                className="text-[9px] text-white/40 hover:text-white/65 disabled:opacity-40"
+              >
+                {t("bulk.clear")}
+              </button>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => runBulk("manager_approve")}
+                disabled={bulkBusy}
+                className="inline-flex flex-1 items-center justify-center gap-1 rounded border border-emerald-500/25 bg-emerald-500/[0.08] px-2 py-1 text-[10px] font-semibold text-emerald-300/80 hover:bg-emerald-500/[0.14] disabled:opacity-40"
+              >
+                {bulkBusy && <Loader2 className="h-2.5 w-2.5 animate-spin" />}
+                {t("bulk.approve")}
+              </button>
+              <button
+                type="button"
+                onClick={() => runBulk("manager_return")}
+                disabled={bulkBusy}
+                className="inline-flex flex-1 items-center justify-center gap-1 rounded border border-amber-500/25 bg-amber-500/[0.08] px-2 py-1 text-[10px] font-semibold text-amber-300/80 hover:bg-amber-500/[0.14] disabled:opacity-40"
+              >
+                {t("bulk.return")}
+              </button>
+              <button
+                type="button"
+                onClick={() => runBulk("manager_reject")}
+                disabled={bulkBusy}
+                className="inline-flex flex-1 items-center justify-center gap-1 rounded border border-red-500/25 bg-red-500/[0.08] px-2 py-1 text-[10px] font-semibold text-red-300/80 hover:bg-red-500/[0.14] disabled:opacity-40"
+              >
+                {t("bulk.reject")}
+              </button>
+            </div>
+            {bulkError && (
+              <p className="mt-1 text-[9px] leading-snug text-red-300/70">{bulkError}</p>
+            )}
+          </div>
+        )}
         <QueueList
           expenses={expenses}
           selectedId={selected?.id ?? null}
           onSelect={(e) => { setSelected(e); setActionError(null); if (isMobile) setShowDetail(true); }}
           loading={listLoading}
           summary={summary}
+          bulkIds={bulkIds}
+          onToggleBulk={toggleBulk}
+          onToggleAll={toggleAll}
         />
       </div>
 

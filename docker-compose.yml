@@ -36,6 +36,7 @@ services:
       ENVIRONMENT: ${ENVIRONMENT:-production}
       DEBUG: ${DEBUG:-false}
       SECRET_KEY: ${SECRET_KEY:-dev-only-secret}
+      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:3000","http://127.0.0.1:3000","http://localhost:3001","http://127.0.0.1:3001"]}
       ARCHIVE_LOCAL_STORAGE_DIR: /app/storage
     ports:
       - "8000:8000"
@@ -57,7 +58,7 @@ services:
     environment:
       NODE_ENV: production
     ports:
-      - "3000:3000"
+      - "${FRONTEND_HOST_PORT:-3000}:3000"
 
 volumes:
   postgres_data:

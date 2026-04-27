@@ -369,7 +369,11 @@
       "saveExpense": "Save Expense",
       "errorRequired": "Description is required.",
       "errorAmount": "Enter a valid positive amount.",
-      "errorSave": "Failed to save expense."
+      "errorSave": "Failed to save expense.",
+      "errorDuplicateBlock": "Likely duplicate. Confirm to continue.",
+      "duplicateWarningTitle": "{count} possible duplicate found",
+      "duplicateBlockingTitle": "High-confidence duplicate detected",
+      "duplicateOverride": "I confirm this is not a duplicate"
     }
   },
   "manager": {
@@ -379,6 +383,19 @@
     "queueGuidanceFinal": "Manager approval is the final review stage for this workflow.",
     "queueEmpty": "No expenses pending review.",
     "selectExpense": "Select an expense to review.",
+    "bulk": {
+      "selectAll": "Select all",
+      "selectRow": "Select expense #{id}",
+      "selectedCount": "{count} selected",
+      "clear": "Clear",
+      "approve": "Approve",
+      "return": "Return",
+      "reject": "Reject",
+      "rejectPrompt": "Rejection reason (required):",
+      "returnPrompt": "Return reason (optional):",
+      "commentRequired": "A reason is required to reject.",
+      "partialFailure": "{ok} applied · {failed} failed"
+    },
     "workflow": "Workflow",
     "workflowBoth": "Expenses route to manager, then accounting.",
     "workflowManagerOnly": "Expenses route to manager only.",
@@ -2252,6 +2269,11 @@
       "loading": "Loading…",
       "end": "End of history",
       "actor": "User #{id}"
+    },
+    "anomaly": {
+      "alertTitle": "Anomaly alert",
+      "warnTitle": "Possible anomaly",
+      "dismiss": "Dismiss"
     }
   }
 }

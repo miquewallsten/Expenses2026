@@ -369,7 +369,11 @@
       "saveExpense": "Guardar gasto",
       "errorRequired": "La descripción es obligatoria.",
       "errorAmount": "Ingresa un importe positivo válido.",
-      "errorSave": "No se pudo guardar el gasto."
+      "errorSave": "No se pudo guardar el gasto.",
+      "errorDuplicateBlock": "Posible duplicado bloqueante. Confirma para continuar.",
+      "duplicateWarningTitle": "{count} posible duplicado encontrado",
+      "duplicateBlockingTitle": "Duplicado de alta confianza detectado",
+      "duplicateOverride": "Confirmo que no es duplicado"
     }
   },
   "manager": {
@@ -379,6 +383,19 @@
     "queueGuidanceFinal": "La aprobación gerencial es la etapa final de revisión para este flujo.",
     "queueEmpty": "Sin gastos pendientes de revisión.",
     "selectExpense": "Selecciona un gasto para revisar.",
+    "bulk": {
+      "selectAll": "Seleccionar todo",
+      "selectRow": "Seleccionar gasto #{id}",
+      "selectedCount": "{count} seleccionados",
+      "clear": "Limpiar",
+      "approve": "Aprobar",
+      "return": "Regresar",
+      "reject": "Rechazar",
+      "rejectPrompt": "Motivo del rechazo (obligatorio):",
+      "returnPrompt": "Motivo de la devolución (opcional):",
+      "commentRequired": "El motivo es obligatorio para rechazar.",
+      "partialFailure": "{ok} aplicados · {failed} con error"
+    },
     "workflow": "Flujo de trabajo",
     "workflowBoth": "Los gastos se envían al gerente y luego a contabilidad.",
     "workflowManagerOnly": "Los gastos se envían solo al gerente.",
@@ -2252,6 +2269,11 @@
       "loading": "Cargando…",
       "end": "Fin del historial",
       "actor": "Usuario #{id}"
+    },
+    "anomaly": {
+      "alertTitle": "Alerta de anomalía",
+      "warnTitle": "Posible anomalía",
+      "dismiss": "Ocultar"
     }
   }
 }
