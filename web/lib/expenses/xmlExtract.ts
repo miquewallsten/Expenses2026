@@ -11,6 +11,12 @@ export interface ExpenseDocument {
   document_type?: string | null;
   validation_status: string;
   created_at: string;
+  extracted_fields?: {
+    rfc?: string | null;
+    total?: string | null;
+    date?: string | null;
+    merchant?: string | null;
+  } | null;
 }
 
 export interface ExtractedData {

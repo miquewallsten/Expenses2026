@@ -1266,6 +1266,28 @@ export default function EmployeeExpenseDetail({
                             <p className="text-[9px] text-white/28">
                               {docTypeLabel(doc.document_type, { receipt: td("docType.receipt"), justification: td("docType.justification"), proof: td("docType.proof"), file: td("docType.file") })} · {new Date(doc.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                             </p>
+                            {doc.extracted_fields && (() => {
+                              const ef = doc.extracted_fields;
+                              const chips: { label: string; value: string }[] = [];
+                              if (ef.merchant) chips.push({ label: td("ocr.merchant"), value: ef.merchant });
+                              if (ef.total) chips.push({ label: td("ocr.total"), value: ef.total });
+                              if (ef.date) chips.push({ label: td("ocr.date"), value: ef.date });
+                              if (ef.rfc) chips.push({ label: td("ocr.rfc"), value: ef.rfc });
+                              if (chips.length === 0) return null;
+                              return (
+                                <div className="mt-1 flex flex-wrap gap-1" title={td("ocr.tooltip")}>
+                                  {chips.map((c) => (
+                                    <span
+                                      key={c.label}
+                                      className="inline-flex items-center gap-1 rounded border border-violet-500/25 bg-violet-500/10 px-1.5 py-0.5 text-[9px] text-violet-200/80"
+                                    >
+                                      <span className="font-semibold uppercase tracking-wide text-violet-300/55">{c.label}</span>
+                                      <span className="truncate max-w-[120px] text-violet-100/80">{c.value}</span>
+                                    </span>
+                                  ))}
+                                </div>
+                              );
+                            })()}
                           </div>
                           <div className="flex shrink-0 items-center gap-2">
                             {isXml && satStatus === "valid"   && <span className="text-[9px] text-emerald-400/55">SAT ✓</span>}

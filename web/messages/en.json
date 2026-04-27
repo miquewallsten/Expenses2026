@@ -332,6 +332,13 @@
         "proof": "Proof",
         "file": "File"
       },
+      "ocr": {
+        "merchant": "Merchant",
+        "total": "Total",
+        "date": "Date",
+        "rfc": "RFC",
+        "tooltip": "Auto-extracted from the document"
+      },
       "ruleLabel": {
         "XML_FORMAT": "XML format valid",
         "UUID_PRESENT": "UUID present",

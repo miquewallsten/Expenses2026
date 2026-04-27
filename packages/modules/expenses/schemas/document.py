@@ -20,6 +20,7 @@ class ExpenseDocumentRead(BaseModel):
     validation_status: str
     validation_summary: str | None
     extraction_status: str
+    extracted_fields: dict | None = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

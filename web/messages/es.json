@@ -331,6 +331,13 @@
         "proof": "Evidencia",
         "file": "Archivo"
       },
+      "ocr": {
+        "merchant": "Comercio",
+        "total": "Total",
+        "date": "Fecha",
+        "rfc": "RFC",
+        "tooltip": "Datos extraídos automáticamente del documento"
+      },
       "ruleLabel": {
         "XML_FORMAT": "Formato XML válido",
         "UUID_PRESENT": "UUID presente",
