@@ -87,10 +87,10 @@ export default function NavRail({
 
   return (
     <nav
-      className={`flex shrink-0 flex-col overflow-hidden bg-zinc-950 ${
+      className={`flex min-h-0 h-full flex-col overflow-hidden bg-zinc-950 ${
         fullWidth
           ? "w-full"
-          : `border-r border-white/[0.06] transition-[width] duration-200 ${collapsed ? "w-[72px]" : "w-[260px]"}`
+          : `shrink-0 border-r border-white/[0.06] transition-[width] duration-200 ${collapsed ? "w-[72px]" : "w-[260px]"}`
       }`}
     >
       {/* Header bar */}

@@ -233,6 +233,7 @@ function DevLoginPanel() {
 
 export default function DevLoginCheat() {
   const [demoEnabled, setDemoEnabled] = useState(false);
+  const [localhostEnabled, setLocalhostEnabled] = useState(false);
 
   useEffect(() => {
     const check = () => setDemoEnabled(localStorage.getItem("demo_mode_enabled") === "true");
@@ -241,7 +242,13 @@ export default function DevLoginCheat() {
     return () => window.removeEventListener("storage", check);
   }, []);
 
-  const isDevMode = IS_DEV || DEV_CHEAT === "true";
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const host = window.location.hostname;
+    setLocalhostEnabled(host === "localhost" || host === "127.0.0.1");
+  }, []);
+
+  const isDevMode = IS_DEV || DEV_CHEAT === "true" || localhostEnabled;
   if (!isDevMode && !demoEnabled) return null;
   return <DevLoginPanel />;
 }

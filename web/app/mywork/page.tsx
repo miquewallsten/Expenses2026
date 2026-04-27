@@ -55,11 +55,13 @@ function UnifiedSidebar({
   collapsed,
   onToggle,
   onSelect,
+  height,
 }: {
   globalNavItems: NavRailItem[];
   collapsed: boolean;
   onToggle: () => void;
   onSelect?: () => void;
+  height?: "full";
 }) {
   const { visibleModules, activeModule, setActiveModule } = useMyWorkContext();
   const tn = useTranslations("nav");
@@ -67,7 +69,7 @@ function UnifiedSidebar({
 
   return (
     <nav
-      className="flex shrink-0 flex-col overflow-hidden border-r border-white/[0.06] bg-zinc-950 transition-[width] duration-200"
+      className={`flex shrink-0 flex-col ${height === "full" ? "h-[100dvh]" : "overflow-hidden"} border-r border-white/[0.06] bg-zinc-950 transition-[width] duration-200`}
       style={{ width: collapsed ? SIDEBAR_COL_W : SIDEBAR_W }}
     >
       {/* Header row */}
@@ -92,7 +94,7 @@ function UnifiedSidebar({
         </button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto h-full">
         {/* Module nav */}
         <div className="py-1.5">
           {!collapsed && (
@@ -371,6 +373,7 @@ function MyWorkShell() {
         globalNavItems={globalNavItems}
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed((v) => !v)}
+        height="full"
       />
 
       {/* Workspace */}
