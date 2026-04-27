@@ -2200,5 +2200,38 @@
     "bulkCategory": "Assign category…",
     "bulkNoInvoice": "Mark no invoice",
     "clear": "Clear"
+  },
+  "copilot": {
+    "launcher": {
+      "openTitle": "Open Copilot (Cmd+K)",
+      "close": "Close",
+      "title": "Copilot",
+      "subtitle": "Operations assistant",
+      "greeting": "How can I help you today?"
+    },
+    "aiPolicy": {
+      "pageTitle": "AI Policy",
+      "description": "Control generative-model use for this company: PII redaction, allowed models, per-call token limits and monthly budget.",
+      "loading": "Loading policy…",
+      "save": "Save",
+      "saved": "Saved",
+      "aiEnabled": "Enable AI",
+      "aiEnabledHint": "When disabled, the Copilot and AI tools are turned off company-wide.",
+      "piiLevel": "PII redaction level",
+      "piiLevelHint": "Strict masks RFC, CURP, emails and phone numbers before any model call.",
+      "piiLevels": {
+        "strict": "Strict",
+        "standard": "Standard",
+        "off": "Off"
+      },
+      "allowedModels": "Allowed models",
+      "allowedModelsHint": "Comma-separated list or * for any. Example: gpt-4o,claude-3.5,deepseek-r1",
+      "maxTokens": "Max tokens per call",
+      "maxTokensHint": "Hard cap on a single request to the model. 0 = unlimited.",
+      "monthlyBudget": "Monthly token budget",
+      "monthlyBudgetHint": "Aggregate per-company budget per month. 0 = unlimited.",
+      "notes": "Notes",
+      "notesHint": "Internal compliance justification (admins only)."
+    }
   }
 }

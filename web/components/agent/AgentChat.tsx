@@ -12,6 +12,7 @@ import {
   type AgentReceipt,
   type AgentToolCall,
 } from "@/lib/agent/client";
+import { agentStream, type StreamFinalPayload } from "@/lib/agent/stream";
 import ReceiptCard from "./ReceiptCard";
 
 interface Preset {
@@ -32,6 +33,8 @@ interface Props {
   variant?: "rail" | "page";
   /** Fires each time the user confirms a destructive tool receipt. */
   onToolConfirmed?: (tool: string) => void;
+  /** When true, use SSE /agent/stream for incremental responses. */
+  streaming?: boolean;
 }
 
 type TurnKind = "user" | "assistant" | "tool" | "error";
@@ -54,6 +57,7 @@ export default function AgentChat({
   allowUpload = true,
   variant    = "rail",
   onToolConfirmed,
+  streaming  = false,
 }: Props) {
   const t = useTranslations("agent.chat");
   const [turns,     setTurns]     = useState<Turn[]>(() =>
@@ -105,26 +109,78 @@ export default function AgentChat({
     setLoading(true);
 
     try {
-      const res: AgentChatResponse = await agentChat(companyId, msg + fileHint, {
-        persona,
-        sessionId,
-      });
-      if (res.session_id) setSessionId(res.session_id);
+      if (streaming) {
+        // Append placeholder assistant turn we'll mutate as deltas arrive.
+        let assistantIdx = -1;
+        const toolCalls: AgentToolCall[] = [];
+        setTurns((prev) => {
+          assistantIdx = prev.length;
+          return [...prev, { kind: "assistant", content: "", toolCalls: [] }];
+        });
 
-      const receiptIds = res.pending?.map((p) => p.receipt_id) ?? [];
-      setTurns((prev) => [
-        ...prev,
-        {
-          kind:       "assistant",
-          content:    res.content || (res.tool_calls?.length ? t("toolOnlyReply") : t("emptyReply")),
-          toolCalls:  res.tool_calls,
-          receiptIds,
-        },
-      ]);
-      if (receiptIds.length > 0) fetchReceipts(receiptIds);
+        let final: StreamFinalPayload | null = null;
+        for await (const evt of agentStream(companyId, msg + fileHint, {
+          persona,
+          sessionId,
+        })) {
+          if (evt.event === "text_delta") {
+            const delta = String(evt.data.delta ?? "");
+            setTurns((prev) => prev.map((tn, i) =>
+              i === assistantIdx ? { ...tn, content: tn.content + delta } : tn,
+            ));
+          } else if (evt.event === "tool_call_done") {
+            toolCalls.push({
+              tool:   String(evt.data.tool ?? ""),
+              args:   {},
+              result: null,
+              error:  null,
+              status: (evt.data.status as AgentToolCall["status"]) ?? "ok",
+            });
+            const snapshot = [...toolCalls];
+            setTurns((prev) => prev.map((tn, i) =>
+              i === assistantIdx ? { ...tn, toolCalls: snapshot } : tn,
+            ));
+          } else if (evt.event === "final") {
+            final = evt.data as unknown as StreamFinalPayload;
+          } else if (evt.event === "cancelled") {
+            throw new Error(String(evt.data.reason ?? "cancelled"));
+          }
+        }
 
-      // Consume uploads on successful send.
-      setUploads([]);
+        if (final) {
+          if (final.session_id) setSessionId(final.session_id);
+          const receiptIds = final.pending?.map((p) => p.receipt_id) ?? [];
+          const finalContent = final.content
+            || (final.tool_calls?.length ? t("toolOnlyReply") : t("emptyReply"));
+          setTurns((prev) => prev.map((tn, i) =>
+            i === assistantIdx
+              ? { ...tn, content: finalContent, toolCalls: final!.tool_calls, receiptIds }
+              : tn,
+          ));
+          if (receiptIds.length > 0) fetchReceipts(receiptIds);
+          if (final.error) setError(final.error);
+        }
+        setUploads([]);
+      } else {
+        const res: AgentChatResponse = await agentChat(companyId, msg + fileHint, {
+          persona,
+          sessionId,
+        });
+        if (res.session_id) setSessionId(res.session_id);
+
+        const receiptIds = res.pending?.map((p) => p.receipt_id) ?? [];
+        setTurns((prev) => [
+          ...prev,
+          {
+            kind:       "assistant",
+            content:    res.content || (res.tool_calls?.length ? t("toolOnlyReply") : t("emptyReply")),
+            toolCalls:  res.tool_calls,
+            receiptIds,
+          },
+        ]);
+        if (receiptIds.length > 0) fetchReceipts(receiptIds);
+        setUploads([]);
+      }
     } catch (e) {
       const msgStr = e instanceof Error ? e.message : String(e);
       setError(msgStr);
@@ -132,7 +188,7 @@ export default function AgentChat({
     } finally {
       setLoading(false);
     }
-  }, [companyId, persona, sessionId, uploads, loading, t, fetchReceipts]);
+  }, [companyId, persona, sessionId, uploads, loading, t, fetchReceipts, streaming]);
 
   const handleFile = useCallback(async (file: File) => {
     setUploading(true);

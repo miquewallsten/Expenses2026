@@ -2200,5 +2200,38 @@
     "bulkCategory": "Asignar categoría…",
     "bulkNoInvoice": "Marcar sin factura",
     "clear": "Limpiar"
+  },
+  "copilot": {
+    "launcher": {
+      "openTitle": "Abrir Copilot (Cmd+K)",
+      "close": "Cerrar",
+      "title": "Copilot",
+      "subtitle": "Asistente de operaciones",
+      "greeting": "¿En qué puedo ayudarte hoy?"
+    },
+    "aiPolicy": {
+      "pageTitle": "Política de IA",
+      "description": "Controla el uso de modelos generativos para esta empresa: redacción de PII, modelos permitidos, límites de tokens y presupuesto mensual.",
+      "loading": "Cargando política…",
+      "save": "Guardar",
+      "saved": "Guardado",
+      "aiEnabled": "Habilitar IA",
+      "aiEnabledHint": "Cuando está desactivado, el copiloto y las herramientas de IA quedan inhabilitados para esta empresa.",
+      "piiLevel": "Nivel de redacción de PII",
+      "piiLevelHint": "Estricto enmascara RFC, CURP, correos y teléfonos antes de cualquier llamada al modelo.",
+      "piiLevels": {
+        "strict": "Estricto",
+        "standard": "Estándar",
+        "off": "Desactivado"
+      },
+      "allowedModels": "Modelos permitidos",
+      "allowedModelsHint": "Lista separada por comas o * para todos. Ej.: gpt-4o,claude-3.5,deepseek-r1",
+      "maxTokens": "Máximo de tokens por llamada",
+      "maxTokensHint": "Límite duro por solicitud individual al modelo. 0 = sin límite.",
+      "monthlyBudget": "Presupuesto mensual de tokens",
+      "monthlyBudgetHint": "Presupuesto agregado por empresa al mes. 0 = sin límite.",
+      "notes": "Notas",
+      "notesHint": "Justificación interna del cumplimiento (visible solo para administradores)."
+    }
   }
 }
