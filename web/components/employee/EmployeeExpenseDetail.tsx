@@ -1289,8 +1289,11 @@ export default function EmployeeExpenseDetail({
                               const chips: { label: string; value: string }[] = [];
                               if (ef.merchant) chips.push({ label: td("ocr.merchant"), value: ef.merchant });
                               if (ef.total) chips.push({ label: td("ocr.total"), value: ef.total });
+                              if (ef.subtotal) chips.push({ label: td("ocr.subtotal"), value: ef.subtotal });
+                              if (ef.tax) chips.push({ label: td("ocr.tax"), value: ef.tax });
                               if (ef.date) chips.push({ label: td("ocr.date"), value: ef.date });
                               if (ef.rfc) chips.push({ label: td("ocr.rfc"), value: ef.rfc });
+                              if (ef.payment_method) chips.push({ label: td("ocr.paymentMethod"), value: td(`ocr.paymentMethods.${ef.payment_method}`) });
                               if (chips.length === 0) return null;
                               return (
                                 <div className="mt-1 flex flex-wrap gap-1" title={td("ocr.tooltip")}>

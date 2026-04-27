@@ -13,8 +13,9 @@ extract_text(file_bytes, mime) -> str
       • OCR raises any exception (logged but never propagated)
 
 extract_fields(text) -> dict
-    Heuristic field extraction (RFC, total, date, merchant) from Spanish/English
-    receipt text. All values optional — returns ``{}`` when nothing matched.
+    Heuristic field extraction (RFC, total, subtotal, tax, date, merchant,
+    payment_method) from Spanish/English receipt text. All values optional —
+    returns ``{}`` when nothing matched.
 """
 from __future__ import annotations
 
@@ -129,11 +130,36 @@ _RE_RFC = re.compile(
 # Total amount — looks for "total" (word-bounded so "Subtotal" doesn't match)
 # followed by a number; tolerant of $, thousands separators (. , space) and
 # decimal separators (. ,).
+_AMOUNT_RE = (
+    r"([0-9]{1,3}(?:[.,\s][0-9]{3})*(?:[.,][0-9]{1,2})?|[0-9]+(?:[.,][0-9]{1,2})?)"
+)
 _RE_TOTAL = re.compile(
     r"(?:\btotal\b|importe\s+total|gran\s+total|amount\s+due)[^0-9$]{0,12}\$?\s*"
-    r"([0-9]{1,3}(?:[.,\s][0-9]{3})*(?:[.,][0-9]{1,2})?|[0-9]+(?:[.,][0-9]{1,2})?)",
+    + _AMOUNT_RE,
     re.IGNORECASE,
 )
+_RE_SUBTOTAL = re.compile(
+    r"\bsub[\s-]*total\b[^0-9$]{0,12}\$?\s*" + _AMOUNT_RE,
+    re.IGNORECASE,
+)
+# IVA / Tax — Mexican IVA, generic "tax", "impuesto"
+_RE_TAX = re.compile(
+    r"(?:\biva\b|\btax\b|impuesto(?:\s+trasladado)?)[^0-9$]{0,12}\$?\s*" + _AMOUNT_RE,
+    re.IGNORECASE,
+)
+
+# Payment method — match common ES/EN tokens; capture the canonical bucket.
+# Order matters: more specific tokens first.
+_PAYMENT_PATTERNS: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(r"\bamerican\s+express\b|\bamex\b", re.IGNORECASE), "amex"),
+    (re.compile(r"\bmastercard\b|\bmaster\s*card\b", re.IGNORECASE), "mastercard"),
+    (re.compile(r"\bvisa\b", re.IGNORECASE), "visa"),
+    (re.compile(r"\btarjeta\s+de\s+cr[eé]dito\b|\bcredit\s+card\b", re.IGNORECASE), "credit_card"),
+    (re.compile(r"\btarjeta\s+de\s+d[eé]bito\b|\bdebit\s+card\b", re.IGNORECASE), "debit_card"),
+    (re.compile(r"\btarjeta\b|\bcard\b", re.IGNORECASE), "card"),
+    (re.compile(r"\befectivo\b|\bcash\b", re.IGNORECASE), "cash"),
+    (re.compile(r"\btransferencia\b|\bspei\b|\btransfer\b|\bwire\b", re.IGNORECASE), "transfer"),
+]
 
 # Date — supports YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY, DD MMM YYYY
 _RE_DATE_ISO = re.compile(r"\b(\d{4}-\d{2}-\d{2})\b")
@@ -166,8 +192,9 @@ def _normalize_amount(raw: str) -> str | None:
 def extract_fields(text: str) -> dict:
     """Pull common receipt fields out of *text* via regex heuristics.
 
-    Returns a dict with any subset of: ``rfc``, ``total``, ``date``,
-    ``merchant``. Missing fields are simply absent.
+    Returns a dict with any subset of: ``rfc``, ``total``, ``subtotal``,
+    ``tax``, ``date``, ``merchant``, ``payment_method``. Missing fields are
+    simply absent.
     """
     if not text:
         return {}
@@ -182,6 +209,23 @@ def extract_fields(text: str) -> dict:
         amt = _normalize_amount(m.group(1))
         if amt is not None:
             out["total"] = amt
+
+    m = _RE_SUBTOTAL.search(text)
+    if m:
+        amt = _normalize_amount(m.group(1))
+        if amt is not None:
+            out["subtotal"] = amt
+
+    m = _RE_TAX.search(text)
+    if m:
+        amt = _normalize_amount(m.group(1))
+        if amt is not None:
+            out["tax"] = amt
+
+    for pattern, label in _PAYMENT_PATTERNS:
+        if pattern.search(text):
+            out["payment_method"] = label
+            break
 
     m = _RE_DATE_ISO.search(text)
     if m:

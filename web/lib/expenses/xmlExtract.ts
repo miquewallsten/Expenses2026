@@ -14,8 +14,11 @@ export interface ExpenseDocument {
   extracted_fields?: {
     rfc?: string | null;
     total?: string | null;
+    subtotal?: string | null;
+    tax?: string | null;
     date?: string | null;
     merchant?: string | null;
+    payment_method?: string | null;
   } | null;
 }
 

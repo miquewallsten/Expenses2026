@@ -335,8 +335,21 @@
       "ocr": {
         "merchant": "Merchant",
         "total": "Total",
+        "subtotal": "Subtotal",
+        "tax": "Tax",
         "date": "Date",
         "rfc": "RFC",
+        "paymentMethod": "Payment",
+        "paymentMethods": {
+          "amex": "Amex",
+          "mastercard": "Mastercard",
+          "visa": "Visa",
+          "credit_card": "Credit card",
+          "debit_card": "Debit card",
+          "card": "Card",
+          "cash": "Cash",
+          "transfer": "Transfer"
+        },
         "tooltip": "Auto-extracted from the document",
         "prefilledBadge": "Draft prefilled from receipt",
         "prefilledHint": "Verify amount, date, and description before submitting."

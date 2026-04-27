@@ -48,8 +48,42 @@ Fecha: 2026-03-15
     fields = extract_fields(text)
     assert fields.get("rfc") == "ABC123456XYZ"
     assert fields.get("total") == "116.00"
+    assert fields.get("subtotal") == "100.00"
+    assert fields.get("tax") == "16.00"
     assert fields.get("date") == "2026-03-15"
     assert fields.get("merchant") == "LA SUPER COMIDA SA DE CV"
+
+
+def test_extract_fields_payment_method_amex():
+    text = "Total: 250.00\nForma de pago: AMERICAN EXPRESS\nFecha: 2026-03-15"
+    fields = extract_fields(text)
+    assert fields.get("payment_method") == "amex"
+
+
+def test_extract_fields_payment_method_cash_es():
+    text = "Total: 50.00\nEfectivo\nGracias por su compra"
+    fields = extract_fields(text)
+    assert fields.get("payment_method") == "cash"
+
+
+def test_extract_fields_payment_method_visa_card_fallback():
+    # "Visa" wins over generic "tarjeta"
+    text = "Tarjeta VISA terminada 1234\nTotal: 99.00"
+    fields = extract_fields(text)
+    assert fields.get("payment_method") == "visa"
+
+
+def test_extract_fields_subtotal_only_no_total():
+    text = "Subtotal $42.50\nFecha 2026-04-01"
+    fields = extract_fields(text)
+    assert fields.get("subtotal") == "42.50"
+    assert "total" not in fields
+
+
+def test_extract_fields_no_payment_method_returns_no_key():
+    text = "Total: 50.00\nFecha 2026-04-01"
+    fields = extract_fields(text)
+    assert "payment_method" not in fields
 
 
 def test_extract_fields_handles_european_decimal():

@@ -334,8 +334,21 @@
       "ocr": {
         "merchant": "Comercio",
         "total": "Total",
+        "subtotal": "Subtotal",
+        "tax": "IVA",
         "date": "Fecha",
         "rfc": "RFC",
+        "paymentMethod": "Pago",
+        "paymentMethods": {
+          "amex": "Amex",
+          "mastercard": "Mastercard",
+          "visa": "Visa",
+          "credit_card": "Tarjeta de crédito",
+          "debit_card": "Tarjeta de débito",
+          "card": "Tarjeta",
+          "cash": "Efectivo",
+          "transfer": "Transferencia"
+        },
         "tooltip": "Datos extraídos automáticamente del documento",
         "prefilledBadge": "Borrador prellenado desde el recibo",
         "prefilledHint": "Verifica monto, fecha y descripción antes de enviar."
