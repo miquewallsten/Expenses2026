@@ -18,6 +18,8 @@ class User(Base):
 
     # ── Extended profile ────────────────────────────────────────────────────────
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    # Platform operator (cross-tenant). NEVER granted to customer users.
+    is_super_admin: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
     department: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     job_title: Mapped[Optional[str]] = mapped_column(String(150), nullable=True)
     phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)

@@ -107,6 +107,7 @@ class VerifyResponse(BaseModel):
     role: str
     company_id: int
     full_name: str
+    is_super_admin: bool = False
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -211,4 +212,5 @@ def verify_magic_link(request: Request, token: str, db: Session = Depends(get_db
         role=user.role,
         company_id=user.company_id,
         full_name=user.full_name,
+        is_super_admin=bool(getattr(user, "is_super_admin", False)),
     )

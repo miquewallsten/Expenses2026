@@ -934,7 +934,8 @@
     },
     "groups": {
       "setup": "Configuración",
-      "integration": "Integración",
+      "intakeNotifications": "Entrada y notificaciones",
+      "dataOut": "Salida de datos",
       "administration": "Administración"
     },
     "dimensions": {

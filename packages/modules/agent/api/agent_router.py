@@ -28,7 +28,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
-from apps.api.auth import get_current_user, require_admin, require_same_company
+from apps.api.auth import get_current_user, require_admin, require_super_admin, require_same_company
 from apps.api.deps import get_db
 from packages.core.platform.models_user import User
 from packages.core.platform.service_permissions import has_permission
@@ -542,21 +542,17 @@ def chat_stream(
 def trigger_insight_run(
     send_digest: bool = False,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_super_admin),
 ):
-    """Phase 8.5 — manual trigger: rescan every company the caller can see.
+    """Phase 8.5 — cross-tenant insight rescan. Super-admin only.
 
-    Admins are scoped to their own company; super-admins (no company_id)
-    rescan globally. When ``send_digest=true`` the daily digest job runs
-    after the rescan (also scoped to the caller's tenancy).
+    Rescans every company in the platform; customer admins must use the
+    per-company endpoint (``GET /insights/{cid}?refresh=true``) instead.
+    When ``send_digest=true`` the daily digest job runs after the rescan.
     """
     from ..insights import run_for_all_companies as _run_all
 
-    if getattr(current_user, "company_id", None):
-        rows = run_scanners(db, current_user.company_id)
-        out = {current_user.company_id: len(rows)}
-    else:
-        out = _run_all(db)
+    out = _run_all(db)
 
     digest_count = 0
     if send_digest:

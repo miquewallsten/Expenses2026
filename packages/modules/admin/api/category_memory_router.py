@@ -13,17 +13,18 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
-from apps.api.auth import get_current_user, require_admin, require_same_company
+from apps.api.auth import get_current_user, require_super_admin, require_same_company
 from apps.api.deps import get_db
 from packages.core.platform.models_user import User
 from packages.modules.ai.models_categorization_feedback import CategorizationFeedback
 from packages.modules.ai.service import categorization_feedback_service as svc
 
 
+# Super-admin only — kNN feedback store is cross-tenant infrastructure.
 router = APIRouter(
     prefix="/admin/category-memory",
     tags=["admin", "category-memory"],
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_super_admin)],
 )
 
 

@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bot, LogOut, Menu, Search, Settings } from "lucide-react";
-import { clearSession, getCurrentRole } from "@/lib/session";
+import { Bot, LogOut, Menu, Search, Settings, Shield } from "lucide-react";
+import { clearSession, getCurrentRole, getStoredSession } from "@/lib/session";
 import { useTranslations } from "next-intl";
 import SettingsModal from "./SettingsModal";
 
@@ -17,6 +18,7 @@ interface TopBarProps {
 export default function TopBar({ title, portal, onMenuOpen, onAiOpen }: TopBarProps) {
   const router = useRouter();
   const [role, setRole] = useState<string | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const t = useTranslations("shell");
   const tc = useTranslations("common");
@@ -24,6 +26,8 @@ export default function TopBar({ title, portal, onMenuOpen, onAiOpen }: TopBarPr
 
   useEffect(() => {
     setRole(getCurrentRole());
+    const s = getStoredSession();
+    setIsSuperAdmin(Boolean(s?.isSuperAdmin));
   }, []);
 
   const handleLogout = () => {
@@ -112,6 +116,18 @@ export default function TopBar({ title, portal, onMenuOpen, onAiOpen }: TopBarPr
         >
           <LogOut className="h-3.5 w-3.5" />
         </button>
+
+        {isSuperAdmin && (
+          <Link
+            href="/super-admin"
+            title="Super Admin"
+            aria-label="Super Admin"
+            className="hidden items-center gap-1.5 border-r border-white/[0.05] px-3 text-rose-300/70 transition-colors hover:bg-rose-500/[0.08] hover:text-rose-200 md:flex"
+          >
+            <Shield className="h-3.5 w-3.5" />
+            <span className="text-[9px] font-bold uppercase tracking-widest">Super</span>
+          </Link>
+        )}
 
         {role && (
           <div className="hidden items-center px-3 md:flex">

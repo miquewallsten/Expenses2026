@@ -14,17 +14,19 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from apps.api.auth import get_current_user, require_admin, require_same_company
+from apps.api.auth import get_current_user, require_super_admin, require_same_company
 from apps.api.deps import get_db
 from packages.core.platform.models_ai_governance import PII_LEVELS
 from packages.core.platform.models_user import User
 from packages.modules.agent.core import governance as governance_service
 
 
+# Super-admin only — controls AI model allow-list, token budgets, redaction.
+# Customer-facing expense AI rules live in ai_policy_router (require_admin).
 router = APIRouter(
     prefix="/admin/ai-policy",
     tags=["admin", "ai-governance"],
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_super_admin)],
 )
 
 

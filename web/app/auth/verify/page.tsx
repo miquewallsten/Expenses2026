@@ -40,6 +40,7 @@ function AuthVerifyInner() {
           role:      data.role,
           companyId: data.company_id,
           fullName:  data.full_name,
+          isSuperAdmin: Boolean(data.is_super_admin),
         });
         // All roles use the single MyWork portal at /mywork.
         // Admin also gets /admin as their landing so they see the setup dashboard.

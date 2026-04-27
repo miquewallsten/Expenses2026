@@ -7,6 +7,7 @@ export interface StoredSession {
   role: string;
   companyId: number;
   fullName: string;
+  isSuperAdmin?: boolean;
 }
 
 export function getStoredSession(): StoredSession | null {
@@ -71,12 +72,55 @@ export function clearSession(): void {
 }
 
 /** Returns the correct Authorization headers for API calls.
- *  Prefers Bearer JWT (from stored session); falls back to X-User-Id in dev. */
+ *  Prefers Bearer JWT (from stored session); falls back to X-User-Id in dev.
+ *  If the stored token is expired, the session is cleared and empty headers
+ *  are returned (forces re-auth). */
 export function getAuthHeaders(): Record<string, string> {
   const stored = getStoredSession();
   if (stored?.token) {
+    if (isSessionExpired(stored.token)) {
+      clearSession();
+      return {};
+    }
     return { Authorization: `Bearer ${stored.token}` };
   }
   const userId = getCurrentUserId() ?? "1";
   return { "X-User-Id": userId };
+}
+
+
+/** Returns true if a JWT's exp claim has elapsed. Malformed tokens count as
+ *  expired (forces re-auth). Tokens without an exp claim are treated as
+ *  non-expiring (returns false). */
+export function isSessionExpired(token: string): boolean {
+  if (!token) return true;
+  const parts = token.split(".");
+  if (parts.length !== 3) return true;
+  try {
+    const payload = JSON.parse(
+      typeof atob === "function"
+        ? atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"))
+        : Buffer.from(parts[1].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8"),
+    );
+    if (typeof payload.exp !== "number") return false;
+    return payload.exp * 1000 < Date.now();
+  } catch {
+    return true;
+  }
+}
+
+
+/** Decodes a JWT payload. Returns null if the token is malformed. */
+export function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  if (!token) return null;
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  try {
+    const json = typeof atob === "function"
+      ? atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"))
+      : Buffer.from(parts[1].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
+    return JSON.parse(json) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
 }

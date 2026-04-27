@@ -84,6 +84,15 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
     return current_user
 
 
+def require_super_admin(current_user: User = Depends(get_current_user)) -> User:
+    """Platform operator gate. Cross-tenant — never granted to customer admins.
+    Used for AI engine config, agent usage, insights digest, category memory,
+    and any other surface that touches more than one company."""
+    if not getattr(current_user, "is_super_admin", False):
+        raise HTTPException(status_code=403, detail="Super admin access required")
+    return current_user
+
+
 def require_same_company(target_company_id: int, current_user: User) -> None:
     if current_user.company_id != target_company_id:
         raise HTTPException(status_code=403, detail="Cross-company access is not allowed")

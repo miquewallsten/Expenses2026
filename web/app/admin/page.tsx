@@ -54,7 +54,8 @@ type WorklistItem = typeof WORKLIST_ITEMS[number];
 
 const WORKLIST_GROUPS: { label: string; items: WorklistItem[] }[] = [
   { label: "Setup", items: ["Overview", "Company Setup", "Expense Policy", "Accounting Setup", "Approval Setup", "Workflow Setup", "Report Cycle"] },
-  { label: "Integration", items: ["Export Config", "Archive Config", "Storage Config", "Channels"] },
+  { label: "Intake & Notifications", items: ["Channels"] },
+  { label: "Data Out", items: ["Export Config", "Archive Config", "Storage Config"] },
   { label: "Administration", items: ["Users", "Roles", "Permissions", "Add-Ons", "Authentication"] },
 ];
 
@@ -566,7 +567,8 @@ const ITEM_MENU_KEY: Record<WorklistItem, string> = {
 
 const GROUP_KEY: Record<string, string> = {
   "Setup": "setup",
-  "Integration": "integration",
+  "Intake & Notifications": "intakeNotifications",
+  "Data Out": "dataOut",
   "Administration": "administration",
 };
 
@@ -579,7 +581,6 @@ const WORKLIST_ICONS: Record<WorklistItem, React.ReactNode> = {
   "Accounting Setup": <Calculator className="h-3.5 w-3.5" />,
   "Approval Setup":   <ClipboardCheck className="h-3.5 w-3.5" />,
   "Workflow Setup":   <GitBranch className="h-3.5 w-3.5" />,
-  "Report Cycle":     <CalendarClock className="h-3.5 w-3.5" />,
   "Report Cycle":     <CalendarClock className="h-3.5 w-3.5" />,
   "Export Config":    <FolderOutput className="h-3.5 w-3.5" />,
   "Archive Config":   <Archive className="h-3.5 w-3.5" />,
@@ -815,6 +816,11 @@ function AdminAIHints({
       "Controls how archived file names and storage paths are structured per company.",
       "Use {company}, {date}, {expense_id}, {year}, {month}, {filename} as tokens.",
       "Changes apply to all new uploads — existing archived files are not renamed.",
+    ],
+    "Storage Config": [
+      "Controls where archived files are physically stored — local disk, NAS, S3, or Azure Blob.",
+      "Switching backends only affects new uploads. Existing files stay where they were originally written.",
+      "Test the connection after saving to confirm credentials and bucket/container access.",
     ],
     "Channels": [
       "WhatsApp and email channels share the same AI agent — expenses, approvals, and queries work identically via both.",
