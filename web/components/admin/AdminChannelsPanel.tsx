@@ -54,7 +54,7 @@ interface ChannelStats {
 }
 
 type ChannelTab = "whatsapp" | "email";
-type SubTab = "settings" | "log";
+type SubTab = "settings" | "log" | "dispatches";
 
 // ── Small helpers ──────────────────────────────────────────────────────────────
 
@@ -585,6 +585,149 @@ function MessageLog({ channel, companyId }: { channel: ChannelTab | "all"; compa
   );
 }
 
+// ── Dispatch Log (Phase 1.8) ───────────────────────────────────────────────────
+
+interface DispatchRow {
+  id: number;
+  event_type: string;
+  resource_type: string | null;
+  resource_id: number | null;
+  recipient_user_id: number | null;
+  recipient_address: string | null;
+  channel: string;
+  status: string;
+  attempts: number;
+  last_error_text: string | null;
+  created_at: string | null;
+  sent_at: string | null;
+}
+
+function DispatchLog({ channel, companyId }: { channel: ChannelTab; companyId: number }) {
+  const [rows, setRows] = useState<DispatchRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "sent" | "failed">("all");
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams();
+      params.set("channel", channel);
+      if (statusFilter !== "all") params.set("status", statusFilter);
+      params.set("limit", "100");
+      const r = await fetch(`${API}/admin/channels/dispatches/${companyId}?${params}`, { headers: getAuthHeaders() });
+      if (!r.ok) throw new Error(await r.text());
+      setRows(await r.json());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error");
+    } finally {
+      setLoading(false);
+    }
+  }, [channel, statusFilter, companyId]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const statusTone = (s: string) =>
+    s === "sent" ? "bg-emerald-500/15 text-emerald-300"
+      : s === "failed" ? "bg-rose-500/15 text-rose-300"
+      : "bg-amber-500/15 text-amber-300";
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1">
+          {(["all", "pending", "sent", "failed"] as const).map((s) => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className={`rounded px-2 py-0.5 text-[10px] capitalize transition-colors ${
+                statusFilter === s ? "bg-white/[0.10] text-white/80" : "text-white/35 hover:bg-white/[0.04] hover:text-white/60"
+              }`}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => void load()}
+          disabled={loading}
+          className="flex items-center gap-1 rounded border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] text-white/60 transition hover:border-white/20 hover:text-white/80 disabled:opacity-50"
+        >
+          {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+          Refresh
+        </button>
+      </div>
+
+      {error && (
+        <div className="rounded border border-rose-500/30 bg-rose-500/[0.08] p-2 text-[10.5px] text-rose-200 break-all">
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex items-center gap-2 py-6 text-[11px] text-white/30">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="rounded border border-white/[0.07] bg-white/[0.02] py-8 text-center text-[11px] text-white/35">
+          No dispatches.
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded border border-white/[0.07]">
+          <table className="w-full text-[10.5px]">
+            <thead>
+              <tr className="border-b border-white/[0.07] bg-white/[0.02] text-left text-[9.5px] uppercase tracking-wide text-white/35">
+                <th className="px-2 py-1.5 font-medium">Event</th>
+                <th className="px-2 py-1.5 font-medium">Recipient</th>
+                <th className="px-2 py-1.5 font-medium">Status</th>
+                <th className="px-2 py-1.5 font-medium">Attempts</th>
+                <th className="px-2 py-1.5 font-medium">Created</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.id} className="border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.02]">
+                  <td className="px-2 py-1.5">
+                    <span className="font-mono text-white/75">{r.event_type}</span>
+                    {r.resource_type && (
+                      <span className="ml-1 text-[9.5px] text-white/30">
+                        · {r.resource_type}#{r.resource_id ?? "—"}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-2 py-1.5">
+                    {r.recipient_address ? (
+                      <span className="font-mono text-white/65">{r.recipient_address}</span>
+                    ) : (
+                      <span className="text-white/30">user#{r.recipient_user_id ?? "—"}</span>
+                    )}
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <span className={`rounded px-1.5 py-0.5 font-mono text-[9.5px] ${statusTone(r.status)}`}>
+                      {r.status}
+                    </span>
+                    {r.last_error_text && (
+                      <div className="mt-0.5 max-w-xs truncate text-[9.5px] text-rose-300/70" title={r.last_error_text}>
+                        {r.last_error_text}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-2 py-1.5 tabular-nums text-white/60">{r.attempts}</td>
+                  <td className="px-2 py-1.5 text-[10px] text-white/40">
+                    {r.created_at ? new Date(r.created_at).toLocaleString() : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Stats bar ──────────────────────────────────────────────────────────────────
 
 function StatsBar({ stats }: { stats: ChannelStats | null }) {
@@ -674,7 +817,7 @@ export default function AdminChannelsPanel({ companyId }: { companyId: number })
 
       {/* Sub-tabs */}
       <div className="flex shrink-0 items-center gap-2 border-b border-white/[0.06] px-4 py-0">
-        {(["settings", "log"] as SubTab[]).map((t) => (
+        {((["settings", "log", "dispatches"]) as SubTab[]).map((t) => (
           <button
             key={t}
             onClick={() => setSubTab(t)}
@@ -682,8 +825,8 @@ export default function AdminChannelsPanel({ companyId }: { companyId: number })
               subTab === t ? "text-white/70" : "text-white/28 hover:text-white/50"
             }`}
           >
-            {t === "settings" ? <Settings2 className="h-3 w-3" /> : <MessageSquare className="h-3 w-3" />}
-            {t === "settings" ? "Configuration" : "Message Log"}
+            {t === "settings" ? <Settings2 className="h-3 w-3" /> : t === "log" ? <MessageSquare className="h-3 w-3" /> : <Send className="h-3 w-3" />}
+            {t === "settings" ? "Configuration" : t === "log" ? "Message Log" : "Dispatches"}
           </button>
         ))}
       </div>
@@ -702,8 +845,10 @@ export default function AdminChannelsPanel({ companyId }: { companyId: number })
           ) : (
             <p className="py-8 text-center text-[11px] text-white/25">Could not load settings.</p>
           )
-        ) : (
+        ) : subTab === "log" ? (
           <MessageLog channel={channelTab} companyId={companyId} />
+        ) : (
+          <DispatchLog channel={channelTab} companyId={companyId} />
         )}
       </div>
     </div>
