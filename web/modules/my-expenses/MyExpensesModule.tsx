@@ -23,6 +23,7 @@ import EmployeeExpenseDetail from "@/components/employee/EmployeeExpenseDetail";
 import { useMyWorkContext } from "@/context/MyWorkContext";
 import { useUserContext } from "@/context/UserContext";
 import { getAuthHeaders } from "@/lib/session";
+import { enqueueUpload } from "@/lib/offline/uploadQueue";
 import { MODULE_IDS, deriveExpenseDecision } from "@/lib/my-work/expenseDecision";
 import {
   type ExtractedData,
@@ -328,6 +329,7 @@ export default function MyExpensesModule() {
 
     const docs: Array<{ expense_id: number; document_type: string | null }> = [];
     const failures: string[] = [];
+    let queued = 0;
     for (let i = 0; i < ordered.length; i++) {
       const file = ordered[i];
       setUploadProgress({ current: i + 1, total: ordered.length, name: file.name });
@@ -348,17 +350,38 @@ export default function MyExpensesModule() {
         const j = await res.json();
         if (j) docs.push(j);
       } catch (e) {
+        // Network failure (offline / DNS / CORS preflight refused). Stash
+        // the file in IndexedDB and let PwaBootstrap drain it when we're
+        // back online. Falls through to the regular failure list when IDB
+        // itself isn't available (private mode, server-rendered, etc).
+        const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+        if (offline) {
+          try {
+            await enqueueUpload({ companyId: cid, filename: file.name, blob: file });
+            queued += 1;
+            continue;
+          } catch {
+            // fall through to failure list below
+          }
+        }
         failures.push(`${file.name}: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
-    if (failures.length) setUploadError(failures.join(" · "));
+    if (queued > 0) {
+      // Surface in the same banner; localized lookup happens at render
+      // (uploadError is plain text). Plural-aware label comes from i18n.
+      const label = te("queuedOffline", { count: queued });
+      setUploadError(failures.length ? `${label} · ${failures.join(" · ")}` : label);
+    } else if (failures.length) {
+      setUploadError(failures.join(" · "));
+    }
 
     const xmlDoc      = docs.find((d) => d.document_type === "cfdi_xml");
     const preferredId = (xmlDoc ?? docs[0])?.expense_id ?? null;
     setUploading(false);
     setUploadProgress(null);
     loadExpenses(preferredId == null, preferredId ?? undefined);
-  }, [companyId, userIdStr, loadExpenses]);
+  }, [companyId, userIdStr, loadExpenses, te]);
 
   // ── Decision context ──────────────────────────────────────────────────────
 

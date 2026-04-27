@@ -3,6 +3,30 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Download, X } from "lucide-react";
+import { drainUploadQueue, type QueuedUpload } from "@/lib/offline/uploadQueue";
+import { getAuthHeaders } from "@/lib/session";
+
+const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+async function uploadOne(row: QueuedUpload): Promise<boolean> {
+  if (!API) return false;
+  try {
+    const form = new FormData();
+    form.append("company_id", String(row.companyId));
+    form.append("file", row.blob, row.filename);
+    const res = await fetch(`${API}/expenses/documents/upload`, {
+      method: "POST",
+      headers: { ...getAuthHeaders() },
+      body: form,
+    });
+    // 4xx is a permanent failure (auth / validation / wrong company). Drop
+    // the row so we don't loop forever; the user can re-capture if needed.
+    if (res.status >= 400 && res.status < 500) return true;
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
 
 // PWA install prompt + service worker registrar.
 // - Registers /sw.js (production only — dev SW caching makes Turbopack a nightmare).
@@ -46,6 +70,18 @@ export default function PwaBootstrap() {
     };
     window.addEventListener("beforeinstallprompt", handler);
     return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  // Drain the offline upload queue when we boot online and whenever the
+  // browser flips back to online. Best-effort, never blocks UI.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const drain = () => {
+      void drainUploadQueue(uploadOne);
+    };
+    drain();
+    window.addEventListener("online", drain);
+    return () => window.removeEventListener("online", drain);
   }, []);
 
   const onInstall = async () => {

@@ -238,6 +238,7 @@
     "searchPlaceholder": "Search…",
     "newExpense": "New",
     "uploadFile": "Upload file",
+    "queuedOffline": "{count, plural, one {# file queued offline} other {# files queued offline}} — they'll send when you reconnect.",
     "takePhoto": "Take photo",
     "noReceipt": "No receipt",
     "quickExpense": "Quick",

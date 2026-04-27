@@ -238,7 +238,7 @@
     "searchPlaceholder": "Buscar…",
     "newExpense": "Nuevo",
     "uploadFile": "Subir archivo",
-    "takePhoto": "Tomar foto",
+    "queuedOffline": "{count, plural, one {# archivo en cola sin conexión} other {# archivos en cola sin conexión}} — se enviarán al reconectar.",
     "noReceipt": "Sin comprobante",
     "quickExpense": "Rápido",
     "uploadingDoc": "Subiendo…",
