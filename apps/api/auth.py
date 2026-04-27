@@ -13,19 +13,19 @@ JWT payload:  { sub, email, role, company_id, iat, exp }
 """
 
 import logging
+import os
 
 import jwt
 from fastapi import Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 
-from apps.api.config import settings
 from apps.api.deps import get_db
 from packages.core.platform.models_user import User
 
 _log = logging.getLogger(__name__)
 
-_ENV    = settings.environment.lower().strip()
-_SECRET = settings.auth_secret
+_ENV    = os.environ.get("ENVIRONMENT", "development").lower().strip()
+_SECRET = os.environ.get("AUTH_SECRET", "dev-secret-change-in-production-32ch")
 
 _ALLOW_HEADER_AUTH = _ENV in ("development", "dev", "test", "testing")
 
@@ -78,19 +78,8 @@ def require_manager_or_accountant(current_user: User = Depends(get_current_user)
     return current_user
 
 
-def require_admin(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> User:
-    """Phase 2.3 — admin gate now backed by the permission catalog. The
-    ``admin:roles:read`` key is shared by every admin-level surface
-    (anything broader than a single panel), so it doubles as a coarse
-    'is this user an admin' probe. Custom roles can hold the exact same
-    permission to gain admin access without flipping ``users.role``.
-    """
-    from packages.core.platform.service_permissions import has_permission
-
-    if not has_permission(db, current_user, "admin:roles:read"):
+def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     return current_user
 

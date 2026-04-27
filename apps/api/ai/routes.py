@@ -1,10 +1,9 @@
 import json
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from apps.api.auth import get_current_user
-from apps.api.rate_limit import RATE_LIMIT_AI, limiter
 from apps.api.ai.ollama_client import (
     OLLAMA_BASE_URL,
     chat_with_ollama,
@@ -37,25 +36,24 @@ def _json_instruction() -> str:
 # ── Request models ────────────────────────────────────────────────────────────
 
 class ChatRequest(BaseModel):
-    prompt: str = Field(..., max_length=8000)
-    context: str | None = Field(default=None, max_length=16000)
+    prompt: str
+    context: str | None = None
     locale: str | None = None
-    system_prompt: str | None = Field(default=None, max_length=8000)
+    system_prompt: str | None = None
     # Optional conversation history for multi-turn chat
     history: list[dict] | None = None
 
 
 class StreamChatRequest(BaseModel):
-    prompt: str = Field(..., max_length=8000)
-    context: str | None = Field(default=None, max_length=16000)
+    prompt: str
+    context: str | None = None
     locale: str | None = None
-    system_prompt: str | None = Field(default=None, max_length=8000)
+    system_prompt: str | None = None
     history: list[dict] | None = None
 
 
 class ExpenseReviewRequest(BaseModel):
-    model_config = {"extra": "ignore"}
-    expense_text: str = ""
+    expense_text: str
     validation_summary: str | None = None
     extracted_summary: str | None = None
     locale: str | None = None
@@ -78,8 +76,7 @@ class AllocationSuggestionRequest(BaseModel):
 
 
 class NextActionRequest(BaseModel):
-    model_config = {"extra": "ignore"}
-    expense_text: str = ""
+    expense_text: str
     status: str | None = None
     validation_summary: str | None = None
     has_account_code: bool = False
@@ -115,11 +112,10 @@ def ai_status() -> dict:
 
 
 @router.post("/chat")
-@limiter.limit(RATE_LIMIT_AI)
-def ai_chat(request: Request, payload: ChatRequest) -> dict:
+def ai_chat(request: ChatRequest) -> dict:
     """General-purpose copilot chat (non-streaming). Supports multi-turn history."""
-    if payload.system_prompt:
-        system = payload.system_prompt
+    if request.system_prompt:
+        system = request.system_prompt
     else:
         system = (
             "You are an expert financial operations copilot embedded in an enterprise "
@@ -128,32 +124,31 @@ def ai_chat(request: Request, payload: ChatRequest) -> dict:
             "allocation, and identify the precise next step needed for approval. "
             "Be concise, direct, and practical. Avoid generic advice — focus on what "
             "this specific expense needs right now. "
-            f"{_lang(payload.locale)}"
+            f"{_lang(request.locale)}"
         )
 
-    if payload.history:
+    if request.history:
         # Multi-turn: reconstruct full message list
         messages: list[dict] = [{"role": "system", "content": system}]
-        for turn in payload.history:
+        for turn in request.history:
             if turn.get("role") in ("user", "assistant"):
                 messages.append({"role": turn["role"], "content": turn["content"]})
         # Append current user prompt with optional context
-        user_content = payload.prompt
-        if payload.context:
-            user_content = f"Context:\n{payload.context}\n\nQuestion:\n{payload.prompt}"
+        user_content = request.prompt
+        if request.context:
+            user_content = f"Context:\n{request.context}\n\nQuestion:\n{request.prompt}"
         messages.append({"role": "user", "content": user_content})
         from apps.api.ai.ollama_client import chat_with_messages
         return chat_with_messages(messages, temperature=0.5)
     else:
-        user_prompt = payload.prompt
-        if payload.context:
-            user_prompt = f"Context:\n{payload.context}\n\nQuestion:\n{payload.prompt}"
+        user_prompt = request.prompt
+        if request.context:
+            user_prompt = f"Context:\n{request.context}\n\nQuestion:\n{request.prompt}"
         return chat_with_ollama(system, user_prompt, temperature=0.5)
 
 
 @router.post("/chat/stream")
-@limiter.limit(RATE_LIMIT_AI)
-def ai_chat_stream(request: Request, payload: StreamChatRequest):
+def ai_chat_stream(request: StreamChatRequest):
     """
     SSE streaming chat endpoint.
 
@@ -164,8 +159,8 @@ def ai_chat_stream(request: Request, payload: StreamChatRequest):
 
     Frontend reads this with the Fetch Streaming API (see AICopilotRail / MyWorkAssistant).
     """
-    if payload.system_prompt:
-        system = payload.system_prompt
+    if request.system_prompt:
+        system = request.system_prompt
     else:
         system = (
             "You are an expert financial operations copilot embedded in an enterprise "
@@ -174,16 +169,16 @@ def ai_chat_stream(request: Request, payload: StreamChatRequest):
             "allocation, and identify the precise next step needed for approval. "
             "Be concise, direct, and practical. Avoid generic advice — focus on what "
             "this specific expense needs right now. "
-            f"{_lang(payload.locale)}"
+            f"{_lang(request.locale)}"
         )
 
-    user_content = payload.prompt
-    if payload.context:
-        user_content = f"Context:\n{payload.context}\n\nQuestion:\n{payload.prompt}"
+    user_content = request.prompt
+    if request.context:
+        user_content = f"Context:\n{request.context}\n\nQuestion:\n{request.prompt}"
 
-    if payload.history:
+    if request.history:
         messages: list[dict] = [{"role": "system", "content": system}]
-        for turn in payload.history:
+        for turn in request.history:
             if turn.get("role") in ("user", "assistant"):
                 messages.append({"role": turn["role"], "content": turn["content"]})
         messages.append({"role": "user", "content": user_content})

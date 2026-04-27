@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
 import { Bot, Zap, Loader2, AlertTriangle, AlertCircle, CheckCircle2 } from "lucide-react";
 import { getAuthHeaders } from "@/lib/session";
 import {
@@ -43,33 +43,240 @@ interface Props {
   onApplySetupDraft?: (draft: any) => void;
 }
 
-interface SuggestedPatches {
-  company_setup: Record<string, unknown>;
-  expense_policy: Record<string, unknown>;
-  accounting_setup: Record<string, unknown>;
-  approval_setup: Record<string, unknown>;
-  workflow_setup: Record<string, unknown>;
+interface LegalEntitySuggestion {
+  entity_name: string;
+  country_code: string | null;
+  base_currency: string | null;
+  rfc: string | null;
+  is_reimbursement_entity: boolean;
+  is_invoice_receiver_entity: boolean;
 }
 
 interface AIResult {
-  understanding: string;
   summary: string;
-  suggested_patches: SuggestedPatches;
-  risks_gaps: string[];
-  next_steps: string[];
-  detected_conflicts: Array<{ code: string; message: string; severity: string }>;
-  action_state: string;
-  ok: boolean;
+  company_profile: {
+    company_type: string;
+    operating_notes: string[];
+  };
+  setup_patch: Record<string, any>;
+  expense_policy_patch: Record<string, any>;
+  legal_entity_suggestions: LegalEntitySuggestion[];
+  risks: string[];
 }
 
-const QUICK_PROMPT_TEXTS = [
-  "We are a Mexico-only company. We reimburse employees for expenses and require CFDI XML documents. Set country_code to MX, base_currency to MXN, and xml_required_mode to always.",
-  "We operate multiple legal entities. Some are for invoicing, others for reimbursements. Set operates_multi_entity to true.",
-  "We allow employees to submit expenses in foreign currencies including USD. Set international_expenses_allowed to true and require proof for international expenses.",
-  "We allocate all expenses to projects only. No clients or cost centers. Set allocation_dimensions to project.",
-  "Expenses must be approved by a direct manager before being reviewed by accounting. Set has_managers to true and manager_approval_required to true.",
-  "We have subcontractors who submit expenses through the platform. Set has_subcontractors to true and subcontractor_module_enabled to true.",
-] as const;
+// ── Quick prompts ─────────────────────────────────────────────────────────────
+
+const QUICK_PROMPTS: { label: string; text: string }[] = [
+  {
+    label: "Mexico-only company with CFDI reimbursements",
+    text:  "We are a Mexico-only company. We reimburse employees for expenses and require CFDI XML documents.",
+  },
+  {
+    label: "Multiple legal entities",
+    text:  "We operate multiple legal entities. Some are for invoicing, others for reimbursements.",
+  },
+  {
+    label: "International expenses allowed",
+    text:  "We allow employees to submit expenses in foreign currencies including USD. We need proof for international expenses.",
+  },
+  {
+    label: "Projects only",
+    text:  "We allocate all expenses to projects only. No clients or cost centers.",
+  },
+  {
+    label: "Manager approval then accounting",
+    text:  "Expenses must be approved by a direct manager before being reviewed by accounting.",
+  },
+  {
+    label: "Also manage subcontractors",
+    text:  "We have subcontractors who submit expenses through the platform. They need their own approval flow.",
+  },
+];
+
+// ── Allowed setup_patch keys ──────────────────────────────────────────────────
+
+const ALLOWED_SETUP_KEYS = new Set([
+  "display_name", "country_code", "base_currency", "timezone", "language_code", "industry",
+  "employee_count_range", "has_managers", "has_accounting_team", "has_subcontractors",
+  "operates_multi_entity", "operates_multi_country",
+  "allocation_dimensions", "allow_split_allocations",
+  "expenses_module_enabled", "time_allocation_module_enabled", "subcontractor_module_enabled",
+  "reimbursements_module_enabled", "approvals_module_enabled", "accounting_module_enabled",
+  "archive_module_enabled", "ai_copilot_enabled",
+]);
+
+// ── Allowed expense_policy_patch keys ───────────────────────────────────────
+
+const ALLOWED_POLICY_KEYS = new Set([
+  "xml_required_mode", "pdf_pair_required_for_cfdi",
+  "international_expenses_allowed", "tickets_allowed",
+  "require_justification", "require_proof",
+  "manager_approval_required", "accounting_review_required",
+  "ai_policy_assist_enabled",
+]);
+
+const POLICY_PATCH_LABELS: Record<string, string> = {
+  xml_required_mode:             "XML required",
+  pdf_pair_required_for_cfdi:    "PDF pair for CFDI",
+  international_expenses_allowed:"International expenses",
+  tickets_allowed:               "Tickets allowed",
+  require_justification:         "Justification required",
+  require_proof:                 "Proof required",
+  manager_approval_required:     "Manager approval",
+  accounting_review_required:    "Accounting review",
+  ai_policy_assist_enabled:      "AI assist",
+};
+
+const XML_MODE_LABELS: Record<string, string> = {
+  never:    "Never",
+  mxn_only: "MXN expenses only",
+  always:   "All expenses",
+};
+
+function buildPolicySummaryLines(patch: Record<string, any>): string[] {
+  const lines: string[] = [];
+  if ("xml_required_mode" in patch)
+    lines.push(`XML: ${XML_MODE_LABELS[patch.xml_required_mode] ?? patch.xml_required_mode}`);
+  if ("pdf_pair_required_for_cfdi" in patch)
+    lines.push(`CFDI PDF pair: ${patch.pdf_pair_required_for_cfdi ? "Required" : "Not required"}`);
+  if ("international_expenses_allowed" in patch)
+    lines.push(`International expenses: ${patch.international_expenses_allowed ? "Allowed" : "Blocked"}`);
+  if ("tickets_allowed" in patch)
+    lines.push(`Tickets: ${patch.tickets_allowed ? "Allowed" : "Blocked"}`);
+  if ("require_proof" in patch)
+    lines.push(`Proof: ${patch.require_proof ? "Required" : "Not required"}`);
+  if ("require_justification" in patch)
+    lines.push(`Justification: ${patch.require_justification ? "Required" : "Not required"}`);
+  if ("manager_approval_required" in patch)
+    lines.push(`Manager approval: ${patch.manager_approval_required ? "On" : "Off"}`);
+  if ("accounting_review_required" in patch)
+    lines.push(`Accounting review: ${patch.accounting_review_required ? "On" : "Off"}`);
+  if ("ai_policy_assist_enabled" in patch)
+    lines.push(`AI assist: ${patch.ai_policy_assist_enabled ? "On" : "Off"}`);
+  return lines;
+}
+
+const SETUP_PATCH_LABELS: Record<string, string> = {
+  display_name:                    "Display name",
+  country_code:                    "Country",
+  base_currency:                   "Base currency",
+  timezone:                        "Timezone",
+  language_code:                   "Language",
+  industry:                        "Industry",
+  employee_count_range:            "Employee range",
+  has_managers:                    "Has managers",
+  has_accounting_team:             "Accounting team",
+  has_subcontractors:              "Has subcontractors",
+  operates_multi_entity:           "Multi-entity",
+  operates_multi_country:          "Multi-country",
+  allocation_dimensions:           "Allocation dims",
+  allow_split_allocations:         "Split allocations",
+  expenses_module_enabled:         "Expenses module",
+  time_allocation_module_enabled:  "Time allocation",
+  subcontractor_module_enabled:    "Subcontractors",
+  reimbursements_module_enabled:   "Reimbursements",
+  approvals_module_enabled:        "Approvals",
+  accounting_module_enabled:       "Accounting",
+  archive_module_enabled:          "Archive",
+  ai_copilot_enabled:              "AI Copilot",
+};
+
+function patchValueLabel(v: any): string {
+  if (typeof v === "boolean") return v ? "On" : "Off";
+  return String(v).replace(/_/g, " ");
+}
+
+// ── Context builder ───────────────────────────────────────────────────────────
+
+function buildDerivedContext(portalConfig?: any): string {
+  const d = portalConfig?.derived;
+  if (!d) return "derived:unavailable";
+  return [
+    `derived_modules:[${(d.enabled_modules ?? []).join(",")}]`,
+    `derived_manager_flow:${d.manager_flow_enabled ?? "unset"}`,
+    `derived_accounting_flow:${d.accounting_flow_enabled ?? "unset"}`,
+    `derived_workflow_mode:${d.workflow_mode ?? "unset"}`,
+    `derived_xml_mode:${d.xml_required_mode ?? "unset"}`,
+    `derived_pdf_pair:${d.pdf_pair_required_for_cfdi ?? "unset"}`,
+    `derived_intl_allowed:${d.international_expenses_allowed ?? "unset"}`,
+    `derived_allocation:[${(d.allocation_dimensions ?? []).join(",")}]`,
+    `derived_allow_split:${d.allow_split_allocations ?? "unset"}`,
+    `derived_tickets:${d.tickets_allowed ?? "unset"}`,
+  ].join(", ");
+}
+
+function buildSetupContext(setup: any, legalEntities: any[], portalConfig?: any): string {
+  const s = setup ?? {};
+  const parts = [
+    `country_code:${s.country_code ?? "unset"}`,
+    `base_currency:${s.base_currency ?? "unset"}`,
+    `industry:${s.industry ?? "unset"}`,
+    `employee_count_range:${s.employee_count_range ?? "unset"}`,
+    `has_managers:${s.has_managers ?? "unset"}`,
+    `has_accounting_team:${s.has_accounting_team ?? "unset"}`,
+    `has_subcontractors:${s.has_subcontractors ?? "unset"}`,
+    `operates_multi_entity:${s.operates_multi_entity ?? "unset"}`,
+    `operates_multi_country:${s.operates_multi_country ?? "unset"}`,
+    `allocation_dimensions:${s.allocation_dimensions ?? "unset"}`,
+    `allow_split_allocations:${s.allow_split_allocations ?? "unset"}`,
+    `expenses_module_enabled:${s.expenses_module_enabled ?? "unset"}`,
+    `approvals_module_enabled:${s.approvals_module_enabled ?? "unset"}`,
+    `accounting_module_enabled:${s.accounting_module_enabled ?? "unset"}`,
+    `legal_entities_count:${legalEntities?.length ?? 0}`,
+    buildDerivedContext(portalConfig),
+  ];
+  return parts.join(", ");
+}
+
+function buildSystemPrompt(userText: string, setup: any, legalEntities: any[], portalConfig?: any): string {
+  const ctx = buildSetupContext(setup, legalEntities, portalConfig);
+  return [
+    "You are a senior financial operations and enterprise configuration consultant",
+    "setting up a modular finance operations platform.",
+    "Your job is to translate the user's description into a structured platform configuration.",
+    "Be pragmatic — only change fields that the user's description clearly implies.",
+    "Reason holistically over all five setup domains (company structure, expense rules,",
+    "accounting controls, approval logic, workflow routing) when identifying risks",
+    "and suggesting configurations.",
+    "",
+    `Current company setup context: ${ctx}.`,
+    "",
+    `User instruction: "${userText.trim()}".`,
+    "",
+    "Reply ONLY with a single valid JSON object. No markdown fences, no prose outside the JSON.",
+    "Schema:",
+    '{',
+    '  "summary": string,',
+    '  "company_profile": { "company_type": string, "operating_notes": string[] },',
+    '  "setup_patch": { ...only changed company setup fields },',
+    '  "expense_policy_patch": { ...only changed expense policy fields },',
+    '  "legal_entity_suggestions": [',
+    '    { "entity_name": string, "country_code": string|null, "base_currency": string|null,',
+    '      "rfc": string|null, "is_reimbursement_entity": boolean, "is_invoice_receiver_entity": boolean }',
+    '  ],',
+    '  "risks": string[]',
+    '}',
+    "",
+    "setup_patch allowed keys: display_name, country_code, base_currency, timezone, language_code,",
+    "industry, employee_count_range, has_managers, has_accounting_team, has_subcontractors,",
+    "operates_multi_entity, operates_multi_country, allocation_dimensions, allow_split_allocations,",
+    "expenses_module_enabled, time_allocation_module_enabled, subcontractor_module_enabled,",
+    "reimbursements_module_enabled, approvals_module_enabled, accounting_module_enabled,",
+    "archive_module_enabled, ai_copilot_enabled.",
+    "",
+    "expense_policy_patch allowed keys: xml_required_mode (never|mxn_only|always),",
+    "pdf_pair_required_for_cfdi (boolean), tickets_allowed (boolean),",
+    "international_expenses_allowed (boolean), require_justification (boolean),",
+    "require_proof (boolean), allow_split_allocations (boolean),",
+    "allocation_dimensions (string), manager_approval_required (boolean),",
+    "accounting_review_required (boolean).",
+    "",
+    "risks: 2-4 concise strings about compliance gaps, missing controls, or operational friction.",
+    "Do not include any key not listed above. Do not repeat fields already at the correct value.",
+  ].join(" ");
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export default function AdminCompanySetupCopilot({
   companyId,
@@ -78,75 +285,13 @@ export default function AdminCompanySetupCopilot({
   portalConfig,
   onApplySetupDraft,
 }: Props) {
-  const [prompt, setPrompt]         = useState("");
-  const [loading, setLoading]       = useState(false);
-  const [result, setResult]         = useState<AIResult | null>(null);
-  const [offline, setOffline]       = useState(false);
+  const [prompt, setPrompt]       = useState("");
+  const [loading, setLoading]     = useState(false);
+  const [result, setResult]       = useState<AIResult | null>(null);
+  const [offline, setOffline]     = useState(false);
   const [parseError, setParseError] = useState(false);
-  const [applied, setApplied]       = useState(false);
-  const [applying, setApplying]     = useState(false);
-  const [applyError, setApplyError] = useState<string | null>(null);
+  const [applied, setApplied]     = useState(false);
   const locale = useLocale();
-  const tc = useTranslations("admin.copilot");
-  const tcSetup = useTranslations("admin.copilot.setupPatchLabels");
-  const tcPolicy = useTranslations("admin.copilot.policyPatchLabels");
-  const tcXml = useTranslations("admin.copilot.xmlModeLabels");
-
-  const quickPrompts = [
-    { label: tc("quickPromptMexicoCfdi"),     text: QUICK_PROMPT_TEXTS[0] },
-    { label: tc("quickPromptMultiEntity"),     text: QUICK_PROMPT_TEXTS[1] },
-    { label: tc("quickPromptInternational"),   text: QUICK_PROMPT_TEXTS[2] },
-    { label: tc("quickPromptProjectsOnly"),    text: QUICK_PROMPT_TEXTS[3] },
-    { label: tc("quickPromptManagerApproval"), text: QUICK_PROMPT_TEXTS[4] },
-    { label: tc("quickPromptSubcontractors"),  text: QUICK_PROMPT_TEXTS[5] },
-  ];
-
-  const setupPatchLabels: Record<string, string> = {
-    display_name:                   tcSetup("display_name"),
-    country_code:                   tcSetup("country_code"),
-    base_currency:                  tcSetup("base_currency"),
-    timezone:                       tcSetup("timezone"),
-    language_code:                  tcSetup("language_code"),
-    industry:                       tcSetup("industry"),
-    employee_count_range:           tcSetup("employee_count_range"),
-    has_managers:                   tcSetup("has_managers"),
-    has_accounting_team:            tcSetup("has_accounting_team"),
-    has_subcontractors:             tcSetup("has_subcontractors"),
-    operates_multi_entity:          tcSetup("operates_multi_entity"),
-    operates_multi_country:         tcSetup("operates_multi_country"),
-    allocation_dimensions:          tcSetup("allocation_dimensions"),
-    allow_split_allocations:        tcSetup("allow_split_allocations"),
-    expenses_module_enabled:        tcSetup("expenses_module_enabled"),
-    time_allocation_module_enabled: tcSetup("time_allocation_module_enabled"),
-    subcontractor_module_enabled:   tcSetup("subcontractor_module_enabled"),
-    approvals_module_enabled:       tcSetup("approvals_module_enabled"),
-    accounting_module_enabled:      tcSetup("accounting_module_enabled"),
-    archive_module_enabled:         tcSetup("archive_module_enabled"),
-    ai_copilot_enabled:             tcSetup("ai_copilot_enabled"),
-  };
-
-  const buildPolicySummaryLines = (patch: Record<string, unknown>): string[] => {
-    const lines: string[] = [];
-    if ("xml_required_mode" in patch)
-      lines.push(`${tcPolicy("xml_required_mode")}: ${tcXml(patch.xml_required_mode as any) ?? patch.xml_required_mode}`);
-    if ("pdf_pair_required_for_cfdi" in patch)
-      lines.push(`${tcPolicy("pdf_pair_required_for_cfdi")}: ${patch.pdf_pair_required_for_cfdi ? tc("requiredLabel") : tc("notRequiredLabel")}`);
-    if ("international_expenses_allowed" in patch)
-      lines.push(`${tcPolicy("international_expenses_allowed")}: ${patch.international_expenses_allowed ? tc("allowedLabel") : tc("blockedLabel")}`);
-    if ("tickets_allowed" in patch)
-      lines.push(`${tcPolicy("tickets_allowed")}: ${patch.tickets_allowed ? tc("allowedLabel") : tc("blockedLabel")}`);
-    if ("require_proof" in patch)
-      lines.push(`${tcPolicy("require_proof")}: ${patch.require_proof ? tc("requiredLabel") : tc("notRequiredLabel")}`);
-    if ("require_justification" in patch)
-      lines.push(`${tcPolicy("require_justification")}: ${patch.require_justification ? tc("requiredLabel") : tc("notRequiredLabel")}`);
-    if ("manager_approval_required" in patch)
-      lines.push(`${tcPolicy("manager_approval_required")}: ${patch.manager_approval_required ? tc("valueOn") : tc("valueOff")}`);
-    if ("accounting_review_required" in patch)
-      lines.push(`${tcPolicy("accounting_review_required")}: ${patch.accounting_review_required ? tc("valueOn") : tc("valueOff")}`);
-    if ("ai_policy_assist_enabled" in patch)
-      lines.push(`${tcPolicy("ai_policy_assist_enabled")}: ${patch.ai_policy_assist_enabled ? tc("valueOn") : tc("valueOff")}`);
-    return lines;
-  };
 
   const runQuery = async (text: string) => {
     if (!text.trim()) return;
@@ -155,21 +300,89 @@ export default function AdminCompanySetupCopilot({
     setParseError(false);
     setResult(null);
     setApplied(false);
-    setApplyError(null);
 
     try {
-      const res = await fetch(`${API}/admin/setup-orchestrator/analyze/${companyId}`, {
+      const res = await fetch(`${API}/ai/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ prompt: text, locale }),
+        body: JSON.stringify({
+          system_prompt: buildSystemPrompt(text, setup, legalEntities, portalConfig),
+          prompt:        text,
+          context:       `company_id:${companyId}`,
+          locale,
+        }),
       });
 
       if (!res.ok) { setOffline(true); return; }
 
-      const data = await res.json() as AIResult;
-      if (!data?.ok) { setParseError(true); return; }
+      const data = await res.json();
+      const raw: string = typeof data?.content === "string" ? data.content : "";
 
-      setResult(data);
+      const jsonStr = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+      if (!jsonStr.startsWith("{")) { setParseError(true); return; }
+
+      let parsed: unknown;
+      try { parsed = JSON.parse(jsonStr); }
+      catch { setParseError(true); return; }
+
+      if (
+        typeof parsed !== "object" || parsed === null ||
+        typeof (parsed as any).summary !== "string" ||
+        typeof (parsed as any).company_profile !== "object" ||
+        typeof (parsed as any).setup_patch !== "object" ||
+        typeof (parsed as any).expense_policy_patch !== "object" ||
+        !Array.isArray((parsed as any).legal_entity_suggestions) ||
+        !Array.isArray((parsed as any).risks)
+      ) {
+        setParseError(true);
+        return;
+      }
+
+      const p = parsed as any;
+
+      // Sanitise setup_patch
+      const rawSetupPatch = p.setup_patch as Record<string, any>;
+      const cleanSetupPatch: Record<string, any> = {};
+      for (const [k, v] of Object.entries(rawSetupPatch ?? {})) {
+        if (!ALLOWED_SETUP_KEYS.has(k)) continue;
+        if (typeof v !== "boolean" && typeof v !== "string") continue;
+        cleanSetupPatch[k] = v;
+      }
+
+      // Sanitise expense_policy_patch
+      const rawPolicyPatch = p.expense_policy_patch as Record<string, any>;
+      const cleanPolicyPatch: Record<string, any> = {};
+      for (const [k, v] of Object.entries(rawPolicyPatch ?? {})) {
+        if (!ALLOWED_POLICY_KEYS.has(k)) continue;
+        if (typeof v !== "boolean" && typeof v !== "string") continue;
+        cleanPolicyPatch[k] = v;
+      }
+
+      // Sanitise legal_entity_suggestions
+      const cleanEntities: LegalEntitySuggestion[] = (p.legal_entity_suggestions as any[])
+        .filter((e) => typeof e?.entity_name === "string")
+        .slice(0, 10)
+        .map((e) => ({
+          entity_name:                e.entity_name,
+          country_code:               typeof e.country_code === "string" ? e.country_code : null,
+          base_currency:              typeof e.base_currency === "string" ? e.base_currency : null,
+          rfc:                        typeof e.rfc === "string" ? e.rfc : null,
+          is_reimbursement_entity:    !!e.is_reimbursement_entity,
+          is_invoice_receiver_entity: !!e.is_invoice_receiver_entity,
+        }));
+
+      setResult({
+        summary:       (p.summary as string).slice(0, 500),
+        company_profile: {
+          company_type:    typeof p.company_profile?.company_type === "string" ? p.company_profile.company_type : "",
+          operating_notes: (p.company_profile?.operating_notes as any[] ?? [])
+            .filter((n): n is string => typeof n === "string").slice(0, 6),
+        },
+        setup_patch:             cleanSetupPatch,
+        expense_policy_patch:    cleanPolicyPatch,
+        legal_entity_suggestions: cleanEntities,
+        risks: (p.risks as any[]).filter((r): r is string => typeof r === "string").slice(0, 6),
+      });
     } catch {
       setOffline(true);
     } finally {
@@ -177,51 +390,22 @@ export default function AdminCompanySetupCopilot({
     }
   };
 
-  const handleSubmit = ()             => runQuery(prompt);
-  const handleQuick  = (text: string) => { setPrompt(text); runQuery(text); };
+  const handleSubmit   = () => runQuery(prompt);
+  const handleQuick    = (text: string) => { setPrompt(text); runQuery(text); };
 
-  const handleApply = async () => {
-    const setupPatch  = result?.suggested_patches?.company_setup ?? {};
-    const policyPatch = result?.suggested_patches?.expense_policy ?? {};
-    if (!Object.keys(setupPatch).length && !Object.keys(policyPatch).length) return;
-    setApplying(true);
-    setApplyError(null);
-    try {
-      const res = await fetch(`${API}/admin/setup-orchestrator/apply/${companyId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({
-          patches: {
-            company_setup: setupPatch,
-            expense_policy: policyPatch,
-            accounting_setup: {}, approval_setup: {}, workflow_setup: {},
-          },
-          session_id: null,
-        }),
-      });
-      if (res.ok) {
-        onApplySetupDraft?.({ ...setupPatch, ...policyPatch });
-        setApplied(true);
-      } else {
-        const body = await res.json().catch(() => ({}));
-        setApplyError((body as { error?: string }).error ?? `Apply failed (${res.status})`);
-      }
-    } catch {
-      setApplyError("Network error");
-    } finally {
-      setApplying(false);
-    }
+  const handleApply = () => {
+    if (!result?.setup_patch) return;
+    onApplySetupDraft?.(result.setup_patch);
+    setApplied(true);
   };
 
-  const setupPatchEntries = result?.suggested_patches?.company_setup
-    ? Object.entries(result.suggested_patches.company_setup).filter(([k]) => k in setupPatchLabels)
+  const setupPatchEntries = result?.setup_patch
+    ? Object.entries(result.setup_patch).filter(([k]) => k in SETUP_PATCH_LABELS)
     : [];
 
-  const policyPatchLines = result?.suggested_patches?.expense_policy
-    ? buildPolicySummaryLines(result.suggested_patches.expense_policy)
+  const policyPatchLines = result?.expense_policy_patch
+    ? buildPolicySummaryLines(result.expense_policy_patch)
     : [];
-
-  const hasPatches = setupPatchEntries.length > 0 || policyPatchLines.length > 0;
 
   const configConflicts: PortalConfigConflict[] = portalConfig
     ? getPortalConfigConflicts(portalConfig).filter((c) => COMPANY_SETUP_CODES.has(c.code))
@@ -238,9 +422,9 @@ export default function AdminCompanySetupCopilot({
       {/* Header */}
       <div className="flex items-center gap-2">
         <Bot className="h-4 w-4 shrink-0 text-indigo-400/55" />
-        <span className="text-[11px] font-semibold text-white/45">{tc("setupTitle")}</span>
+        <span className="text-[11px] font-semibold text-white/45">Setup Copilot</span>
         <span className="ml-auto rounded border border-indigo-500/15 bg-indigo-500/[0.06] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-indigo-300/40">
-          {tc("ai")}
+          AI
         </span>
       </div>
 
@@ -275,7 +459,7 @@ export default function AdminCompanySetupCopilot({
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
-          placeholder={tc("setupPromptPlaceholder")}
+          placeholder="Describe your company, legal entities, employee model, approvals, and how you want expenses to work…"
           className="w-full resize-none rounded border border-white/[0.08] bg-white/[0.03] px-2.5 py-2 text-[10px] text-white/55 placeholder-white/18 outline-none focus:border-indigo-500/35"
         />
         <button
@@ -285,15 +469,15 @@ export default function AdminCompanySetupCopilot({
           className="inline-flex w-full items-center justify-center gap-1.5 rounded border border-indigo-500/25 bg-indigo-600/15 px-3 py-1.5 text-[10px] font-semibold text-indigo-300/70 transition-colors hover:bg-indigo-600/25 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
-          {loading ? tc("analysing") : tc("analyse")}
+          {loading ? "Analysing…" : "Analyse"}
         </button>
       </div>
 
       {/* B — Quick prompts */}
       <div>
-        <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/20">{tc("quickPrompts")}</p>
+        <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/20">Quick prompts</p>
         <div className="flex flex-wrap gap-1">
-          {quickPrompts.map(({ label, text }) => (
+          {QUICK_PROMPTS.map(({ label, text }) => (
             <button
               key={label}
               type="button"
@@ -308,18 +492,18 @@ export default function AdminCompanySetupCopilot({
       </div>
 
       {/* Offline fallback */}
-      {offline && !loading && (
+      {offline && (
         <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
           <p className="text-[10px] text-white/30">
-            {tc("aiOfflineSetup")}
+            AI setup copilot is offline. Structured setup remains available.
           </p>
         </div>
       )}
 
       {/* Parse error */}
-      {parseError && !loading && (
+      {parseError && (
         <div className="rounded border border-amber-500/15 bg-amber-500/[0.04] px-3 py-2">
-          <p className="text-[10px] text-amber-300/50">{tc("parseError")}</p>
+          <p className="text-[10px] text-amber-300/50">AI returned an unexpected format. Try rephrasing.</p>
         </div>
       )}
 
@@ -328,95 +512,119 @@ export default function AdminCompanySetupCopilot({
         <div className="space-y-3">
 
           {/* Summary */}
-          <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
-            <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-white/22">{tc("summary")}</p>
-            <p className="text-[10px] leading-relaxed text-white/45">{result.understanding || result.summary}</p>
+          <div className="rounded border border-indigo-500/[0.12] bg-indigo-500/[0.04] px-3 py-2.5">
+            <p className="mb-0.5 text-[9px] font-bold uppercase tracking-widest text-indigo-300/40">Summary</p>
+            <p className="text-[10px] leading-snug text-white/40">{result.summary}</p>
           </div>
 
-          {/* Company setup patch */}
-          {setupPatchEntries.length > 0 && (
-            <div className="overflow-hidden rounded border border-white/[0.07] bg-white/[0.02]">
-              <p className="border-b border-white/[0.06] px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-white/22">
-                {tc("suggestedSetupChanges")}
-              </p>
-              {setupPatchEntries.map(([k, v]) => (
-                <div key={k} className="flex items-center justify-between gap-3 border-b border-white/[0.04] px-3 py-2 last:border-0">
-                  <span className="text-[10px] text-white/35">{setupPatchLabels[k] ?? k}</span>
-                  <span className="text-[10px] font-medium text-white/55">
-                    {typeof v === "boolean" ? (v ? tc("valueOn") : tc("valueOff")) : String(v).replace(/_/g, " ")}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Expense Policy suggestions */}
-          {policyPatchLines.length > 0 && (
-            <div className="overflow-hidden rounded border border-sky-500/[0.10] bg-sky-500/[0.03]">
-              <p className="border-b border-sky-500/[0.08] px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-sky-300/40">
-                {tc("suggestedForExpensePolicy")}
-              </p>
-              <div className="px-3 py-2 space-y-1">
-                {policyPatchLines.map((line, i) => (
-                  <p key={i} className="text-[10px] text-white/35 leading-snug">· {line}</p>
+          {/* Company profile */}
+          {(result.company_profile.company_type || result.company_profile.operating_notes.length > 0) && (
+            <div className="overflow-hidden rounded border border-white/[0.07]">
+              <div className="border-b border-white/[0.05] bg-black/15 px-3 py-1.5">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-white/22">Company profile</p>
+              </div>
+              <div className="px-3 py-2.5 space-y-1">
+                {result.company_profile.company_type && (
+                  <p className="text-[10px] text-white/50">
+                    <span className="text-white/25">Type: </span>{result.company_profile.company_type}
+                  </p>
+                )}
+                {result.company_profile.operating_notes.map((note, i) => (
+                  <p key={i} className="text-[10px] text-white/38 leading-snug">· {note}</p>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Next steps */}
-          {(result.next_steps?.length ?? 0) > 0 && (
-            <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
-              <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/22">{tc("operationalNotes")}</p>
-              <ul className="space-y-1">
-                {result.next_steps.map((n, i) => (
-                  <li key={i} className="flex items-start gap-1.5 text-[10px] text-white/38">
-                    <span className="mt-0.5 text-white/18">·</span>
-                    {n}
-                  </li>
-                ))}
-              </ul>
+          {/* Setup patch */}
+          {setupPatchEntries.length > 0 && (
+            <div className="overflow-hidden rounded border border-white/[0.07]">
+              <div className="border-b border-white/[0.05] bg-black/15 px-3 py-1.5">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-white/22">
+                  Suggested setup changes
+                </p>
+              </div>
+              {setupPatchEntries.map(([k, v]) => (
+                <div key={k} className="flex items-center justify-between gap-3 border-b border-white/[0.04] px-3 py-2 last:border-0">
+                  <span className="text-[10px] text-white/38">{SETUP_PATCH_LABELS[k] ?? k}</span>
+                  <span className="font-mono text-[10px] text-indigo-300/70">{patchValueLabel(v)}</span>
+                </div>
+              ))}
             </div>
           )}
 
-          {/* Risks & gaps */}
-          {(result.risks_gaps?.length ?? 0) > 0 && (
-            <div className="rounded border border-amber-500/12 bg-amber-500/[0.03] px-3 py-2.5">
-              <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-amber-400/35">{tc("riskNotes")}</p>
-              <ul className="space-y-1">
-                {result.risks_gaps.map((r, i) => (
-                  <li key={i} className="flex items-start gap-1.5 text-[10px] text-amber-300/45">
-                    <span className="mt-0.5 text-amber-400/25">·</span>
-                    {r}
-                  </li>
+          {/* Expense Policy suggestion card */}
+          {policyPatchLines.length > 0 && (
+            <div className="overflow-hidden rounded border border-sky-500/[0.10] bg-sky-500/[0.03]">
+              <div className="border-b border-sky-500/[0.08] bg-black/10 px-3 py-1.5">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-sky-300/40">
+                  Also suggested for Expense Policy
+                </p>
+              </div>
+              <div className="px-3 py-2 space-y-1">
+                {policyPatchLines.map((line, i) => (
+                  <p key={i} className="text-[10px] text-white/35 leading-snug">· {line}</p>
                 ))}
-              </ul>
+              </div>
+              <div className="border-t border-sky-500/[0.06] px-3 py-1.5">
+                <p className="text-[9px] text-white/20">
+                  Navigate to <span className="text-sky-300/40">Expense Policy</span> to review and apply these changes.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Legal entity suggestions */}
+          {result.legal_entity_suggestions.length > 0 && (
+            <div className="overflow-hidden rounded border border-white/[0.07]">
+              <div className="border-b border-white/[0.05] bg-black/15 px-3 py-1.5">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-white/22">
+                  Recommended legal entities
+                </p>
+              </div>
+              {result.legal_entity_suggestions.map((e, i) => (
+                <div key={i} className="border-b border-white/[0.04] px-3 py-2.5 last:border-0">
+                  <p className="text-[11px] font-medium text-white/55">{e.entity_name}</p>
+                  <p className="mt-0.5 text-[9px] text-white/28">
+                    {[
+                      e.country_code,
+                      e.base_currency,
+                      e.rfc ? `RFC: ${e.rfc}` : null,
+                      e.is_reimbursement_entity ? "Reimbursement" : null,
+                      e.is_invoice_receiver_entity ? "Invoice receiver" : null,
+                    ].filter(Boolean).join(" · ")}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Risks */}
+          {result.risks.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-white/20">Risk notes</p>
+              {result.risks.map((r, i) => (
+                <div key={i} className="flex items-start gap-2 rounded border border-amber-500/[0.10] bg-amber-500/[0.03] px-3 py-2">
+                  <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-amber-400/45" />
+                  <p className="text-[10px] leading-snug text-amber-300/55">{r}</p>
+                </div>
+              ))}
             </div>
           )}
 
           {/* Apply button */}
-          {hasPatches && (
-            <div className="space-y-1.5">
-              {applyError && (
-                <div className="flex items-center gap-1.5 rounded border border-red-500/15 bg-red-500/[0.06] px-2.5 py-1.5">
-                  <AlertCircle className="h-3 w-3 shrink-0 text-red-400/60" />
-                  <span className="text-[9.5px] text-red-300/60">{applyError}</span>
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={handleApply}
-                disabled={applied || applying}
-                className="inline-flex w-full items-center justify-center gap-1.5 rounded border border-indigo-500/25 bg-indigo-600/15 px-3 py-1.5 text-[10px] font-semibold text-indigo-300/70 transition-colors hover:bg-indigo-600/25 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {applied
-                  ? <><CheckCircle2 className="h-3 w-3 text-emerald-400/60" /> {tc("draftApplied")}</>
-                  : applying
-                  ? <><Loader2 className="h-3 w-3 animate-spin" /> Applying…</>
-                  : <><Zap className="h-3 w-3" /> {tc("applySetupDraft")}</>
-                }
-              </button>
-            </div>
+          {setupPatchEntries.length > 0 && (
+            <button
+              type="button"
+              onClick={handleApply}
+              disabled={applied}
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded border border-indigo-500/30 bg-indigo-600/20 px-3 py-1.5 text-[10px] font-semibold text-indigo-300/80 transition-colors hover:bg-indigo-600/30 disabled:opacity-40"
+            >
+              {applied
+                ? <><CheckCircle2 className="h-3 w-3" /> Draft applied</>
+                : "Apply Setup Draft"
+              }
+            </button>
           )}
 
         </div>

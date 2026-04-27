@@ -1,18 +1,18 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/shell/AppShell";
 import AdminCompanySetupStudio from "@/components/admin/AdminCompanySetupStudio";
+import AdminCompanySetupCopilot from "@/components/admin/AdminCompanySetupCopilot";
 import AdminExpenseModulePanel from "@/components/admin/AdminExpenseModulePanel";
 import AdminApprovalSetupStudio from "@/components/admin/AdminApprovalSetupStudio";
-import AdminAIPoliciesStudio from "@/components/admin/AdminAIPoliciesStudio";
+import AdminApprovalCopilot from "@/components/admin/AdminApprovalCopilot";
+import AdminWorkflowSetupStudio from "@/components/admin/AdminWorkflowSetupStudio";
+import AdminWorkflowCopilot from "@/components/admin/AdminWorkflowCopilot";
 import AdminAccountingSetupStudio from "@/components/admin/AdminAccountingSetupStudio";
-import AdminChartOfAccountsStudio from "@/components/admin/AdminChartOfAccountsStudio";
-import AdminDimensionsStudio from "@/components/admin/AdminDimensionsStudio";
-import AdminAgentChat from "@/components/agent/AdminAgentChat";
+import AdminAccountingCopilot from "@/components/admin/AdminAccountingCopilot";
+import AdminSetupOrchestratorPanel from "@/components/admin/AdminSetupOrchestratorPanel";
 import AdminRolesPanel from "@/components/admin/AdminRolesPanel";
 import AdminPermissionsPanel from "@/components/admin/AdminPermissionsPanel";
 import { getPortalConfigConflicts } from "@/lib/portal-config-conflicts";
@@ -21,16 +21,13 @@ import AdminUsersPanel from "@/components/admin/AdminUsersPanel";
 import AdminAuthSettingsPanel from "@/components/admin/AdminAuthSettingsPanel";
 import AdminChannelsPanel from "@/components/admin/AdminChannelsPanel";
 import AdminReportCyclePanel from "@/components/admin/AdminReportCyclePanel";
-import Link from "next/link";
 import {
   Building2, FileText, GitBranch, ShieldCheck, Puzzle, Key, Lock,
-  Calculator, ClipboardCheck, Bot, Save, Loader2, FolderOutput, Archive, Users, Radio, CalendarClock, HardDrive, Sparkles, BookOpen, Layers, Activity, Lightbulb, XOctagon, Brain, KeyRound, ScrollText,
+  AlertTriangle, Calculator, ClipboardCheck, Bot, Save, Loader2, FolderOutput, Archive, Users, Radio, CalendarClock, HardDrive,
 } from "lucide-react";
 import { getCurrentRole, getCurrentUserId, getCurrentCompanyId, getStoredSession, getAuthHeaders } from "@/lib/session";
 import { buildGlobalNav, GlobalNavItem } from "@/lib/navigation";
 import AdminOverviewPanel from "@/components/admin/AdminOverviewPanel";
-import AdminConfigReviewPanel from "@/components/admin/AdminConfigReviewPanel";
-import AdminQuickPoliciesPanel from "@/components/admin/AdminQuickPoliciesPanel";
 import { useTranslations } from "next-intl";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -40,10 +37,8 @@ const WORKLIST_ITEMS = [
   "Company Setup",
   "Expense Policy",
   "Accounting Setup",
-  "Chart of Accounts",
-  "Dimensions",
   "Approval Setup",
-  "AI Policies",
+  "Workflow Setup",
   "Report Cycle",
   "Export Config",
   "Archive Config",
@@ -58,9 +53,9 @@ const WORKLIST_ITEMS = [
 type WorklistItem = typeof WORKLIST_ITEMS[number];
 
 const WORKLIST_GROUPS: { label: string; items: WorklistItem[] }[] = [
-  { label: "Setup", items: ["Overview", "Company Setup", "Expense Policy", "Chart of Accounts", "Approval Setup", "AI Policies", "Report Cycle"] },
+  { label: "Setup", items: ["Overview", "Company Setup", "Expense Policy", "Accounting Setup", "Approval Setup", "Workflow Setup", "Report Cycle"] },
   { label: "Integration", items: ["Export Config", "Archive Config", "Storage Config", "Channels"] },
-  { label: "Administration", items: ["Users", "Roles", "Permissions", "Dimensions", "Add-Ons", "Authentication"] },
+  { label: "Administration", items: ["Users", "Roles", "Permissions", "Add-Ons", "Authentication"] },
 ];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -112,6 +107,20 @@ interface CompanyModuleRead {
   config_json: string | null;
   created_at: string;
 }
+// ── Orchestrator types ───────────────────────────────────────────────────────
+
+interface OrchestratorPatches {
+  company_setup:    Record<string, any>;
+  expense_policy:   Record<string, any>;
+  accounting_setup: Record<string, any>;
+  approval_setup:   Record<string, any>;
+  workflow_setup:   Record<string, any>;
+}
+
+interface OrchestratorResult {
+  summary: string;
+  suggested_patches: OrchestratorPatches;
+}
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
 function SectionHeader({ title, count }: { title: string; count?: number }) {
@@ -129,29 +138,6 @@ function SectionHeader({ title, count }: { title: string; count?: number }) {
 
 function EmptyState({ text }: { text: string }) {
   return <p className="text-xs text-white/20 italic">{text}</p>;
-}
-
-function ModuleNotInstalledBlock({ moduleKey, onGoToAddOns }: { moduleKey: string; onGoToAddOns: () => void }) {
-  const t = useTranslations("admin.moduleNotInstalled");
-  return (
-    <div className="max-w-md rounded-lg border border-amber-500/20 bg-amber-500/[0.04] p-5">
-      <div className="mb-2 flex items-center gap-2">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-amber-300/70">
-          {t("title")}
-        </span>
-      </div>
-      <p className="mb-4 text-[11px] leading-relaxed text-white/55">
-        {t("body", { module: t(`moduleKey.${moduleKey}`) })}
-      </p>
-      <button
-        type="button"
-        onClick={onGoToAddOns}
-        className="inline-flex items-center gap-1.5 rounded border border-indigo-500/30 bg-indigo-500/10 px-3 py-1.5 text-[11px] font-semibold text-indigo-200/90 transition-colors hover:bg-indigo-500/20"
-      >
-        {t("goToAddOns")}
-      </button>
-    </div>
-  );
 }
 
 // ── Panel: Export Config ──────────────────────────────────────────────────────
@@ -564,10 +550,8 @@ const ITEM_MENU_KEY: Record<WorklistItem, string> = {
   "Company Setup": "companySetup",
   "Expense Policy": "expensePolicy",
   "Accounting Setup": "accountingSetup",
-  "Chart of Accounts": "chartOfAccounts",
-  "Dimensions": "dimensions",
   "Approval Setup": "approvalSetup",
-  "AI Policies": "aiPolicies",
+  "Workflow Setup": "workflowSetup",
   "Report Cycle": "reportCycle",
   "Export Config": "exportConfig",
   "Archive Config": "archiveConfig",
@@ -593,10 +577,9 @@ const WORKLIST_ICONS: Record<WorklistItem, React.ReactNode> = {
   "Company Setup":    <Building2 className="h-3.5 w-3.5" />,
   "Expense Policy":   <FileText className="h-3.5 w-3.5" />,
   "Accounting Setup": <Calculator className="h-3.5 w-3.5" />,
-  "Chart of Accounts":<BookOpen className="h-3.5 w-3.5" />,
-  "Dimensions":       <Layers className="h-3.5 w-3.5" />,
   "Approval Setup":   <ClipboardCheck className="h-3.5 w-3.5" />,
-  "AI Policies":      <Sparkles className="h-3.5 w-3.5" />,
+  "Workflow Setup":   <GitBranch className="h-3.5 w-3.5" />,
+  "Report Cycle":     <CalendarClock className="h-3.5 w-3.5" />,
   "Report Cycle":     <CalendarClock className="h-3.5 w-3.5" />,
   "Export Config":    <FolderOutput className="h-3.5 w-3.5" />,
   "Archive Config":   <Archive className="h-3.5 w-3.5" />,
@@ -626,7 +609,6 @@ function WorkList({
   hasStorageConfig,
   conflictsCount,
   draftSections,
-  moduleFlags,
 }: {
   active: WorklistItem;
   onSelect: (s: WorklistItem) => void;
@@ -644,29 +626,20 @@ function WorkList({
   hasStorageConfig: boolean;
   conflictsCount: number;
   draftSections: Set<string>;
-  moduleFlags: { archive: boolean; timeAllocation: boolean };
 }) {
   const t = useTranslations("admin");
   const tc = useTranslations("common");
   const unconfiguredSetupCount = [
-    hasCompanySetup, hasExpensePolicy, hasAccountingSetup, hasApprovalSetup,
+    hasCompanySetup, hasExpensePolicy, hasAccountingSetup, hasApprovalSetup, hasWorkflowSetup,
   ].filter((v) => !v).length;
 
-  const overviewCount: number | string = (() => {
-    if (conflictsCount > 0) return conflictsCount;
-    if (unconfiguredSetupCount > 0) return unconfiguredSetupCount;
-    return "✓";
-  })();
-
   const counts: Record<WorklistItem, number | string> = {
-    "Overview": overviewCount,
+    "Overview": conflictsCount > 0 ? conflictsCount : unconfiguredSetupCount > 0 ? unconfiguredSetupCount : "✓",
     "Company Setup":    hasCompanySetup    ? "✓" : "—",
     "Expense Policy":   hasExpensePolicy   ? "✓" : "—",
     "Accounting Setup": hasAccountingSetup ? "✓" : "—",
-    "Chart of Accounts":"→",
-    "Dimensions":       "→",
     "Approval Setup":   hasApprovalSetup   ? "✓" : "—",
-    "AI Policies":      "→",
+    "Workflow Setup":   hasWorkflowSetup   ? "✓" : "—",
     "Report Cycle":     "→",
     "Export Config":    hasExportConfig    ? "✓" : "—",
     "Archive Config":   hasArchiveConfig   ? "✓" : "—",
@@ -681,164 +654,14 @@ function WorkList({
 
   return (
     <div className="py-1">
-      {/* Setup Assistant CTA */}
-      <div className="px-3 pb-2 pt-1">
-        <Link
-          href="/admin/setup-assistant"
-          className="flex w-full items-center gap-2 rounded border border-indigo-500/20 bg-indigo-500/[0.07] px-3 py-2 transition-colors hover:border-indigo-500/35 hover:bg-indigo-500/[0.12]"
-        >
-          <Sparkles className="h-3.5 w-3.5 shrink-0 text-indigo-300/60" />
-          <div className="flex-1 text-left">
-            <div className="text-[10.5px] font-semibold text-indigo-200/70">Setup Assistant</div>
-            <div className="text-[9px] text-indigo-300/35">AI-guided configuration</div>
-          </div>
-        </Link>
-      </div>
-
-      {/* Onboarding Wizard CTA (Phase 4.6) */}
-      <div className="px-3 pb-2">
-        <Link
-          href="/admin/onboarding"
-          className="flex w-full items-center gap-2 rounded border border-emerald-500/20 bg-emerald-500/[0.05] px-3 py-2 transition-colors hover:border-emerald-500/35 hover:bg-emerald-500/[0.10]"
-        >
-          <ClipboardCheck className="h-3.5 w-3.5 shrink-0 text-emerald-300/60" />
-          <div className="flex-1 text-left">
-            <div className="text-[10.5px] font-semibold text-emerald-200/70">Onboarding Wizard</div>
-            <div className="text-[9px] text-emerald-300/35">Go-live checklist · 5 steps</div>
-          </div>
-        </Link>
-      </div>
-
-      {/* Integrations CTA (Phase 4.3) */}
-      <div className="px-3 pb-2">
-        <Link
-          href="/admin/integrations"
-          className="flex w-full items-center gap-2 rounded border border-sky-500/20 bg-sky-500/[0.05] px-3 py-2 transition-colors hover:border-sky-500/35 hover:bg-sky-500/[0.10]"
-        >
-          <Radio className="h-3.5 w-3.5 shrink-0 text-sky-300/60" />
-          <div className="flex-1 text-left">
-            <div className="text-[10.5px] font-semibold text-sky-200/70">Integrations</div>
-            <div className="text-[9px] text-sky-300/35">ERP & external system sync</div>
-          </div>
-        </Link>
-      </div>
-
-      {/* Agent Usage CTA (Phase 8.6) */}
-      <div className="px-3 pb-2">
-        <Link
-          href="/admin/agent-usage"
-          className="flex w-full items-center gap-2 rounded border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2 transition-colors hover:border-amber-500/35 hover:bg-amber-500/[0.10]"
-        >
-          <Activity className="h-3.5 w-3.5 shrink-0 text-amber-300/60" />
-          <div className="flex-1 text-left">
-            <div className="text-[10.5px] font-semibold text-amber-200/70">Agent Usage</div>
-            <div className="text-[9px] text-amber-300/35">Cost, latency & tool mix</div>
-          </div>
-        </Link>
-      </div>
-
-      {/* Agent Insights CTA (Phase 8.5) */}
-      <div className="px-3 pb-2">
-        <Link
-          href="/admin/insights"
-          className="flex w-full items-center gap-2 rounded border border-yellow-500/20 bg-yellow-500/[0.05] px-3 py-2 transition-colors hover:border-yellow-500/35 hover:bg-yellow-500/[0.10]"
-        >
-          <Lightbulb className="h-3.5 w-3.5 shrink-0 text-yellow-300/60" />
-          <div className="flex-1 text-left">
-            <div className="text-[10.5px] font-semibold text-yellow-200/70">Agent Insights</div>
-            <div className="text-[9px] text-yellow-300/35">Daily digest triage</div>
-          </div>
-        </Link>
-      </div>
-
-      {/* CFDI Watcher CTA (Phase 4.8) */}
-      <div className="px-3 pb-2">
-        <Link
-          href="/admin/cfdi-watcher"
-          className="flex w-full items-center gap-2 rounded border border-rose-500/20 bg-rose-500/[0.05] px-3 py-2 transition-colors hover:border-rose-500/35 hover:bg-rose-500/[0.10]"
-        >
-          <XOctagon className="h-3.5 w-3.5 shrink-0 text-rose-300/60" />
-          <div className="flex-1 text-left">
-            <div className="text-[10.5px] font-semibold text-rose-200/70">CFDI Watcher</div>
-            <div className="text-[9px] text-rose-300/35">SAT cancellations · reversal</div>
-          </div>
-        </Link>
-      </div>
-
-      {/* Category Memory CTA (Phase 8.3) */}
-      <div className="px-3 pb-2">
-        <Link
-          href="/admin/category-memory"
-          className="flex w-full items-center gap-2 rounded border border-violet-500/20 bg-violet-500/[0.05] px-3 py-2 transition-colors hover:border-violet-500/35 hover:bg-violet-500/[0.10]"
-        >
-          <Brain className="h-3.5 w-3.5 shrink-0 text-violet-300/60" />
-          <div className="flex-1 text-left">
-            <div className="text-[10.5px] font-semibold text-violet-200/70">Category Memory</div>
-            <div className="text-[9px] text-violet-300/35">kNN feedback corpus · inspector</div>
-          </div>
-        </Link>
-      </div>
-
-      {/* Platform API CTA (Phase 4.2) */}
-      <div className="px-3 pb-2">
-        <Link
-          href="/admin/platform-api"
-          className="flex w-full items-center gap-2 rounded border border-cyan-500/20 bg-cyan-500/[0.05] px-3 py-2 transition-colors hover:border-cyan-500/35 hover:bg-cyan-500/[0.10]"
-        >
-          <KeyRound className="h-3.5 w-3.5 shrink-0 text-cyan-300/60" />
-          <div className="flex-1 text-left">
-            <div className="text-[10.5px] font-semibold text-cyan-200/70">Platform API</div>
-            <div className="text-[9px] text-cyan-300/35">API keys · outbound webhooks</div>
-          </div>
-        </Link>
-      </div>
-
-      {/* Audit Log CTA */}
-      <div className="px-3 pb-2">
-        <Link
-          href="/admin/audit-log"
-          className="flex w-full items-center gap-2 rounded border border-slate-500/20 bg-slate-500/[0.05] px-3 py-2 transition-colors hover:border-slate-500/35 hover:bg-slate-500/[0.10]"
-        >
-          <ScrollText className="h-3.5 w-3.5 shrink-0 text-slate-300/60" />
-          <div className="flex-1 text-left">
-            <div className="text-[10.5px] font-semibold text-slate-200/70">Audit Log</div>
-            <div className="text-[9px] text-slate-300/35">Trail of every system event</div>
-          </div>
-        </Link>
-      </div>
-
-      {/* Routing Rules CTA (Phase 5.5) */}
-      <div className="px-3 pb-2">
-        <Link
-          href="/admin/routing-rules"
-          className="flex w-full items-center gap-2 rounded border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2 transition-colors hover:border-amber-500/35 hover:bg-amber-500/[0.10]"
-        >
-          <GitBranch className="h-3.5 w-3.5 shrink-0 text-amber-300/60" />
-          <div className="flex-1 text-left">
-            <div className="text-[10.5px] font-semibold text-amber-200/70">Routing Rules</div>
-            <div className="text-[9px] text-amber-300/35">Approval routing · SLA escalation</div>
-          </div>
-        </Link>
-      </div>
-
-      {WORKLIST_GROUPS.map((group) => {
-        // Gate nav items by installed add-on modules. If an add-on is not
-        // installed, hide all of its admin sections entirely — nothing of it
-        // is usable until the admin installs it from "Add-Ons".
-        const ARCHIVE_DEPENDENT: WorklistItem[] = ["Export Config", "Archive Config", "Storage Config"];
-        const filteredItems = group.items.filter((item) => {
-          if (!moduleFlags.archive && ARCHIVE_DEPENDENT.includes(item)) return false;
-          return true;
-        });
-        if (filteredItems.length === 0) return null;
-        return (
+      {WORKLIST_GROUPS.map((group) => (
         <div key={group.label}>
           <div className="px-4 pb-0.5 pt-3 first:pt-2">
             <span className="text-[8.5px] font-bold uppercase tracking-[0.12em] text-white/18">
               {t(`groups.${GROUP_KEY[group.label] ?? group.label.toLowerCase()}`)}
             </span>
           </div>
-          {filteredItems.map((item) => {
+          {group.items.map((item) => {
             const isActive = active === item;
             const count = counts[item];
             const hasDraft = draftSections.has(item);
@@ -879,8 +702,7 @@ function WorkList({
             );
           })}
         </div>
-        );
-      })}
+      ))}
     </div>
   );
 }
@@ -920,6 +742,9 @@ function AdminAIHints({
     ],
     "Expense Policy": expensePolicy ? [
       `XML mode: ${expensePolicy.xml_required_mode}. Tickets ${expensePolicy.tickets_allowed ? "allowed" : "not allowed"}.`,
+      expensePolicy.manager_approval_required
+        ? "Manager approval is required before accounting review."
+        : "Manager approval is disabled. Expenses go directly to accounting.",
       !expensePolicy.require_justification && !expensePolicy.require_proof
         ? "Neither justification nor proof is required. Consider enabling at least one for audit trails."
         : "Justification or proof requirements are active. Employees must attach supporting documents.",
@@ -937,13 +762,6 @@ function AdminAIHints({
     ] : [
       "Accounting setup not loaded.",
     ],
-    "Chart of Accounts": [
-      "Live póliza engine — map categories to GL accounts and IVA rates.",
-    ],
-    "Dimensions": [
-      "Projects, clients and cost centers used for expense allocation.",
-      "Use Excel/CSV import to bulk-load catalogs.",
-    ],
     "Approval Setup": approvalSetup ? [
       `Approval mode: ${(approvalSetup.approval_mode ?? "none").replace(/_/g, " ")}.`,
       approvalSetup.escalate_policy_failures_to_accounting
@@ -960,9 +778,16 @@ function AdminAIHints({
       "Validated expenses sit in a holding state until the cycle fires — then they are bundled per user and submitted for approval.",
       "Use 'Run now' to trigger a cycle immediately. Use the title template tokens: {user}, {month}, {year}.",
     ],
-    "AI Policies": [
-      "Escriba en lenguaje natural lo que la IA debe revisar al validar facturas.",
-      "Cada política activa se aplica al envió del gasto y a la revisión contable.",
+    "Workflow Setup": workflowSetup ? [
+      `Workflow mode: ${(workflowSetup.default_expense_workflow_mode ?? "standard").replace(/_/g, " ")}.`,
+      workflowSetup.block_submit_on_failed_validation
+        ? "Submission is blocked on failed validation — invalid documents cannot be submitted."
+        : "Failed validation does not block submission — review routing rules for risk.",
+      workflowSetup.route_policy_failures_to && workflowSetup.route_policy_failures_to !== "none"
+        ? `Policy failures route to ${workflowSetup.route_policy_failures_to}.`
+        : "Policy failures are not routed — enable routing to accounting or manager.",
+    ] : [
+      "Workflow setup not loaded. Save the form to initialise defaults.",
     ],
     Roles: [
       rolesCount === 0
@@ -991,11 +816,6 @@ function AdminAIHints({
       "Use {company}, {date}, {expense_id}, {year}, {month}, {filename} as tokens.",
       "Changes apply to all new uploads — existing archived files are not renamed.",
     ],
-    "Storage Config": [
-      "Configure the storage provider and bucket for expense documents and attachments.",
-      "Supports local filesystem and S3-compatible storage backends.",
-      "Changes take effect for new uploads only — existing files remain in their original location.",
-    ],
     "Channels": [
       "WhatsApp and email channels share the same AI agent — expenses, approvals, and queries work identically via both.",
       "WhatsApp identity is anchored to the employee's email address via a one-time OTP challenge.",
@@ -1017,112 +837,134 @@ function AdminAIHints({
 
   return (
     <div className="space-y-3">
-      <div className="px-1 pb-0.5">
-        <span className="text-[8.5px] font-bold uppercase tracking-[0.12em] text-white/18">Notes</span>
+      <div className="rounded-lg border border-white/[0.07] bg-white/[0.03] p-3">
+        <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/22">{t("copilotLabel")}</p>
+        <p className="text-[11px] text-white/40 leading-relaxed">
+          {t("reviewing", { section })}.
+        </p>
+      </div>
+
+      <div className="overflow-hidden rounded-lg border border-white/[0.07]">
+        <div className="grid grid-cols-2 divide-x divide-white/[0.05] border-b border-white/[0.05]">
+          <div className="px-3 py-2.5 text-center">
+            <p className="font-mono text-base font-bold text-white">{rolesCount}</p>
+            <p className="text-[9px] uppercase tracking-widest text-white/25">{t("stats.roles")}</p>
+          </div>
+          <div className="px-3 py-2.5 text-center">
+            <p className="font-mono text-base font-bold text-white">{permissionsCount}</p>
+            <p className="text-[9px] uppercase tracking-widest text-white/25">{t("stats.permissions")}</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 divide-x divide-white/[0.05]">
+          <div className="px-3 py-2.5 text-center">
+            <p className="font-mono text-base font-bold text-white">{stagesCount}</p>
+            <p className="text-[9px] uppercase tracking-widest text-white/25">{t("stats.stages")}</p>
+          </div>
+          <div className="px-3 py-2.5 text-center">
+            <p className="font-mono text-base font-bold text-white">{transitionsCount}</p>
+            <p className="text-[9px] uppercase tracking-widest text-white/25">{t("stats.transactions")}</p>
+          </div>
+          <div className="px-3 py-2.5 text-center">
+            <p className="font-mono text-base font-bold text-white">{enabledModulesCount}</p>
+            <p className="text-[9px] uppercase tracking-widest text-white/25">{t("stats.modules")}</p>
+          </div>
+        </div>
       </div>
 
       {items.map((hint, i) => (
-        <div key={i} className="flex items-start gap-2 rounded border border-white/[0.05] bg-white/[0.02] px-3 py-2">
-          <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-white/20" />
-          <p className="text-[10.5px] text-white/35 leading-relaxed">{hint}</p>
+        <div key={i} className="flex items-start gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
+          <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-amber-400/50" />
+          <p className="text-[11px] text-white/40 leading-relaxed">{hint}</p>
         </div>
       ))}
-
-      <div className="border-t border-white/[0.04] pt-2">
-        <div className="overflow-hidden rounded border border-white/[0.05]">
-          <div className="grid grid-cols-2 divide-x divide-white/[0.04] border-b border-white/[0.04]">
-            <div className="px-2.5 py-2 text-center">
-              <p className="font-mono text-sm font-semibold text-white/70">{rolesCount}</p>
-              <p className="text-[8px] uppercase tracking-widest text-white/20">{t("stats.roles")}</p>
-            </div>
-            <div className="px-2.5 py-2 text-center">
-              <p className="font-mono text-sm font-semibold text-white/70">{permissionsCount}</p>
-              <p className="text-[8px] uppercase tracking-widest text-white/20">{t("stats.permissions")}</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-3 divide-x divide-white/[0.04]">
-            <div className="px-2.5 py-2 text-center">
-              <p className="font-mono text-sm font-semibold text-white/70">{stagesCount}</p>
-              <p className="text-[8px] uppercase tracking-widest text-white/20">{t("stats.stages")}</p>
-            </div>
-            <div className="px-2.5 py-2 text-center">
-              <p className="font-mono text-sm font-semibold text-white/70">{transitionsCount}</p>
-              <p className="text-[8px] uppercase tracking-widest text-white/20">{t("stats.transactions")}</p>
-            </div>
-            <div className="px-2.5 py-2 text-center">
-              <p className="font-mono text-sm font-semibold text-white/70">{enabledModulesCount}</p>
-              <p className="text-[8px] uppercase tracking-widest text-white/20">{t("stats.modules")}</p>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
+// ── Orchestrator patch summary ─────────────────────────────────────────────────────────
 
-// Merged "Contable" surface — replaces the split between Accounting Setup
-// and Chart of Accounts. Two tabs at the top toggle between policy/required
-// fields ("Configuración") and the Motor de Pólizas studio ("Motor").
-function ContableMerged({
-  initialTab,
-  companyId,
-  accountingSetup,
-  setAccountingSetup,
-  accountingSetupDraftPatch,
-  companySetup,
-  expensePolicy,
-  onRefresh,
+const PATCH_SECTION_DEFS: { key: keyof OrchestratorPatches; menuKey: string }[] = [
+  { key: "company_setup",    menuKey: "companySetup" },
+  { key: "expense_policy",   menuKey: "expensePolicy" },
+  { key: "accounting_setup", menuKey: "accountingSetup" },
+  { key: "approval_setup",   menuKey: "approvalSetup" },
+  { key: "workflow_setup",   menuKey: "workflowSetup" },
+];
+
+function patchVal(v: any): string {
+  if (typeof v === "boolean") return v ? "On" : "Off";
+  if (v === null || v === undefined) return "—";
+  return String(v).replace(/_/g, " ");
+}
+
+function OrchestratorPatchSummary({
+  result,
+  onApply,
 }: {
-  initialTab: "setup" | "motor";
-  companyId: number;
-  accountingSetup: any;
-  setAccountingSetup: (s: any) => void;
-  accountingSetupDraftPatch: Partial<any> | undefined;
-  companySetup: any;
-  expensePolicy: any;
-  onRefresh?: () => void;
+  result: OrchestratorResult;
+  onApply: (patches: OrchestratorPatches) => void;
 }) {
-  const [tab, setTab] = useState<"setup" | "motor">(initialTab);
-  useEffect(() => { setTab(initialTab); }, [initialTab]);
+  const t = useTranslations("admin");
+  const [applied, setApplied] = useState(false);
+
+  const totalPatches = PATCH_SECTION_DEFS.reduce(
+    (n, s) => n + Object.keys(result.suggested_patches[s.key] ?? {}).length,
+    0,
+  );
+
+  if (totalPatches === 0) return null;
 
   return (
     <div className="space-y-3">
-      <div className="inline-flex rounded border border-white/[0.08] bg-white/[0.02] p-0.5 text-[11px]">
-        {([
-          { k: "setup", label: "Configuración" },
-          { k: "motor", label: "Catálogo & Motor de pólizas" },
-        ] as const).map((opt) => (
-          <button
-            key={opt.k}
-            onClick={() => setTab(opt.k)}
-            className={`rounded px-3 py-1 transition ${
-              tab === opt.k
-                ? "bg-indigo-500/20 text-indigo-100 border border-indigo-500/30"
-                : "text-white/55 hover:text-white/80"
-            }`}
-          >
-            {opt.label}
-          </button>
-        ))}
+      <div className="flex items-center gap-2">
+        <h2 className="text-sm font-semibold text-white">{t("aiSuggestedPatches")}</h2>
+        <span className="rounded border border-white/[0.08] bg-white/[0.04] px-1.5 py-0.5 font-mono text-[10px] text-white/30">
+          {t("changes", { n: totalPatches })}
+        </span>
       </div>
 
-      {tab === "setup" ? (
-        <AdminAccountingSetupStudio
-          companyId={companyId}
-          setup={accountingSetup ?? {}}
-          companySetup={companySetup}
-          expensePolicy={expensePolicy}
-          onSaved={(s) => { setAccountingSetup(s); onRefresh?.(); }}
-          draftPatch={accountingSetupDraftPatch}
-        />
-      ) : (
-        <AdminChartOfAccountsStudio companyId={companyId} />
+      {result.summary && (
+        <p className="text-[11px] text-white/35 leading-relaxed">{result.summary}</p>
       )}
+
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
+        {PATCH_SECTION_DEFS.map(({ key, menuKey }) => {
+          const entries = Object.entries(result.suggested_patches[key] ?? {});
+          if (entries.length === 0) return null;
+          return (
+            <div key={key} className="overflow-hidden rounded-lg border border-white/[0.07]">
+              <div className="flex items-center justify-between border-b border-white/[0.05] bg-black/20 px-3 py-1.5">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-white/25">{t(`menu.${menuKey}`)}</p>
+                <span className="rounded border border-white/[0.07] bg-white/[0.03] px-1 py-0 font-mono text-[9px] text-white/30">
+                  {entries.length}
+                </span>
+              </div>
+              {entries.map(([field, value]) => (
+                <div
+                  key={field}
+                  className="flex items-center justify-between border-b border-white/[0.04] px-3 py-2 last:border-0"
+                >
+                  <span className="text-[10px] text-white/35">{field.replace(/_/g, " ")}</span>
+                  <span className="text-[10px] font-medium text-violet-300/70">{patchVal(value)}</span>
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => { onApply(result.suggested_patches); setApplied(true); }}
+        disabled={applied}
+        className="inline-flex items-center gap-1.5 rounded border border-violet-500/25 bg-violet-600/15 px-3 py-1.5 text-[10px] font-semibold text-violet-300/70 transition-colors hover:bg-violet-600/25 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {applied ? t("draftsApplied") : t("applyDrafts")}
+      </button>
     </div>
   );
 }
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AdminPage() {
   const router = useRouter();
@@ -1136,7 +978,6 @@ export default function AdminPage() {
   const tAdmin = useTranslations("admin");
   const tcAdmin = useTranslations("common");
   const [activeSection, setActiveSection] = useState<WorklistItem>("Overview");
-  const [overviewTab, setOverviewTab]       = useState<"overview" | "policies" | "review">("overview");
   const adminCompanyId = Number(getCurrentCompanyId() ?? 1);
 
   // ── Lists not covered by portal config ──────────────────────────────────────
@@ -1170,7 +1011,7 @@ export default function AdminPage() {
   // ── Nav + portal config ──────────────────────────────────────────────────────
   const [globalNavItems, setGlobalNavItems] = useState<GlobalNavItem[]>([]);
   const [permissionKeys, setPermissionKeys] = useState<string[]>([]);
-  const [portalConfig, setPortalConfig]     = useState<any>(null);
+  const [portalConfig, setPortalConfig]     = useState<any>(null);  const [orchestratorResult, setOrchestratorResult] = useState<OrchestratorResult | null>(null);
   const [savingAllDrafts, setSavingAllDrafts] = useState(false);
   const [saveAllError, setSaveAllError]       = useState<string | null>(null);
   // ── Permission fetch ─────────────────────────────────────────────────────────
@@ -1184,24 +1025,6 @@ export default function AdminPage() {
   }, []);
 
   // ── Portal config — primary source for setup data + banner ──────────────────
-  function refreshPortalConfig() {
-    const companyId = getCurrentCompanyId() ?? "1";
-    fetch(`${API}/admin/portal-config/${companyId}`, { headers: getAuthHeaders() })
-      .then((r) => r.ok ? r.json() : null)
-      .catch(() => null)
-      .then((cfg: any) => {
-        if (!cfg) return;
-        setPortalConfig(cfg);
-        if (cfg.expense_policy)   setExpensePolicy(cfg.expense_policy);
-        if (cfg.company_setup)    setCompanySetup(cfg.company_setup);
-        if (cfg.accounting_setup) setAccountingSetup(cfg.accounting_setup);
-        if (cfg.approval_setup)   setApprovalSetup(cfg.approval_setup);
-        if (cfg.workflow_setup)   setWorkflowSetup(cfg.workflow_setup);
-        if (cfg.export_config)    setExportConfig(cfg.export_config);
-        if (cfg.archive_config)   setArchiveConfig(cfg.archive_config);
-      });
-  }
-
   useEffect(() => {
     const companyId = getCurrentCompanyId() ?? "1";
     fetch(`${API}/admin/portal-config/${companyId}`, { headers: getAuthHeaders() })
@@ -1250,8 +1073,11 @@ export default function AdminPage() {
 
   // ── Supplemental data not in portal config ───────────────────────────────────
   // Roles list, permission definitions, workflow graph, company modules, legal entities.
-  const refreshSupplemental = () => {
-    const h = getAuthHeaders();
+  useEffect(() => {
+    const stored = getStoredSession();
+    const h: Record<string, string> = stored
+      ? { Authorization: `Bearer ${stored.token}` }
+      : { "X-User-Id": String(getCurrentUserId() ?? 1) };
     Promise.all([
       fetch(`${API}/roles/`,                                                          { headers: h }).then((r) => r.ok ? r.json() : []),
       fetch(`${API}/roles/permissions`,                                               { headers: h }).then((r) => r.ok ? r.json() : []),
@@ -1269,25 +1095,55 @@ export default function AdminPage() {
       if (Array.isArray(entities)) setLegalEntities(entities);
       if (Array.isArray(u)) setUsers(u);
     }).catch(() => {});
-  };
-
-  useEffect(() => {
-    refreshSupplemental();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const MODULE_FLAGS = [
-    "time_allocation_module_enabled", "archive_module_enabled",
+    "time_allocation_module_enabled", "reimbursements_module_enabled", "archive_module_enabled",
     "subcontractor_module_enabled", "ai_copilot_enabled", "purchase_requests_module_enabled",
   ];
   const enabledModulesCount = MODULE_FLAGS.filter((f) => !!companySetup?.[f]).length;
   const conflictsCount = getPortalConfigConflicts(portalConfig ?? {}).length;
 
+  // ── Orchestrator: merge AI patches into per-domain draft states ──────────────
+  const handleOrchestratorApplyPatch = (patches: {
+    company_setup:    Record<string, any>;
+    expense_policy:   Record<string, any>;
+    accounting_setup: Record<string, any>;
+    approval_setup:   Record<string, any>;
+    workflow_setup:   Record<string, any>;
+  }) => {
+    if (patches.company_setup    && Object.keys(patches.company_setup).length    > 0)
+      setCompanySetupDraftPatch   ((p) => ({ ...(p ?? {}), ...patches.company_setup    }));
+    if (patches.expense_policy   && Object.keys(patches.expense_policy).length   > 0)
+      setExpensePolicyDraftPatch  ((p) => ({ ...(p ?? {}), ...patches.expense_policy   }));
+    if (patches.accounting_setup && Object.keys(patches.accounting_setup).length > 0)
+      setAccountingSetupDraftPatch((p) => ({ ...(p ?? {}), ...patches.accounting_setup }));
+    if (patches.approval_setup   && Object.keys(patches.approval_setup).length   > 0)
+      setApprovalSetupDraftPatch  ((p) => ({ ...(p ?? {}), ...patches.approval_setup   }));
+    if (patches.workflow_setup   && Object.keys(patches.workflow_setup).length   > 0)
+      setWorkflowSetupDraftPatch  ((p) => ({ ...(p ?? {}), ...patches.workflow_setup   }));
+  };
+
+  // ── Orchestrator analysis result handler ────────────────────────────────────
+  const handleAnalysisResult = (result: OrchestratorResult) => {
+    setOrchestratorResult(result);
+    if (result.summary) {
+      setCompanySetupDraftPatch((p) => ({
+        ...(p ?? {}),
+        ai_setup_last_summary: result.summary,
+      }));
+    }
+  };
+
   // ── Save all drafted sections ────────────────────────────────────────────────
-  const handleSaveAllDrafts = async (): Promise<void> => {
+  const handleSaveAllDrafts = async () => {
     setSavingAllDrafts(true);
     setSaveAllError(null);
-    const headers = { "Content-Type": "application/json", ...getAuthHeaders() };
+    const stored = getStoredSession();
+    const authHeader: Record<string, string> = stored
+      ? { Authorization: `Bearer ${stored.token}` }
+      : { "X-User-Id": String(getCurrentUserId() ?? 1) };
+    const headers = { "Content-Type": "application/json", ...authHeader };
     try {
       if (companySetupDraftPatch && Object.keys(companySetupDraftPatch).length > 0) {
         const body = { ...(companySetup ?? {}), ...companySetupDraftPatch };
@@ -1317,6 +1173,13 @@ export default function AdminPage() {
         setApprovalSetup(await res.json());
         setApprovalSetupDraftPatch(undefined);
       }
+      if (workflowSetupDraftPatch && Object.keys(workflowSetupDraftPatch).length > 0) {
+        const body = { ...(workflowSetup ?? {}), ...workflowSetupDraftPatch };
+        const res = await fetch(`${API}/admin/workflow-setup/${adminCompanyId}`, { method: "PUT", headers, body: JSON.stringify(body) });
+        if (!res.ok) throw new Error(`Workflow Setup: ${res.status}`);
+        setWorkflowSetup(await res.json());
+        setWorkflowSetupDraftPatch(undefined);
+      }
     } catch (e: any) {
       setSaveAllError(e?.message ?? "Save failed");
     } finally {
@@ -1330,6 +1193,7 @@ export default function AdminPage() {
     ...(expensePolicyDraftPatch   && Object.keys(expensePolicyDraftPatch).length   > 0 ? ["Expense Policy"]   : []),
     ...(accountingSetupDraftPatch && Object.keys(accountingSetupDraftPatch).length > 0 ? ["Accounting Setup"] : []),
     ...(approvalSetupDraftPatch   && Object.keys(approvalSetupDraftPatch).length   > 0 ? ["Approval Setup"]   : []),
+    ...(workflowSetupDraftPatch   && Object.keys(workflowSetupDraftPatch).length   > 0 ? ["Workflow Setup"]   : []),
     ...(exportConfigDraftPatch   && Object.keys(exportConfigDraftPatch).length   > 0 ? ["Export Config"]   : []),
     ...(archiveConfigDraftPatch   && Object.keys(archiveConfigDraftPatch).length   > 0 ? ["Archive Config"]   : []),
   ]);
@@ -1337,90 +1201,30 @@ export default function AdminPage() {
   const detailNode = (() => {
     switch (activeSection) {
       case "Overview": {
-        const unconfiguredSetupCount = [
-          !!companySetup, !!expensePolicy, !!accountingSetup, !!approvalSetup, !!workflowSetup,
-        ].filter((v) => !v).length;
+        const hasPatch = orchestratorResult && PATCH_SECTION_DEFS.some(
+          (s) => Object.keys(orchestratorResult.suggested_patches[s.key] ?? {}).length > 0,
+        );
         return (
-          <div className="space-y-4">
-            {/* Tab bar */}
-            <div className="flex items-center gap-0.5 border-b border-white/[0.06] pb-0">
-              {(["overview", "policies", "review"] as const).map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setOverviewTab(tab)}
-                  className={`-mb-px rounded-t px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest transition-colors ${
-                    overviewTab === tab
-                      ? "border border-b-zinc-950 border-white/[0.08] bg-zinc-950 text-white/70"
-                      : "border border-transparent text-white/28 hover:text-white/50"
-                  }`}
-                >
-                  {(() => {
-                    if (tab === "overview") return tAdmin("overviewTabStatus");
-                    if (tab === "policies") return tAdmin("overviewTabPolicies");
-                    return tAdmin("overviewTabReview");
-                  })()}
-                </button>
-              ))}
-            </div>
-
-            {overviewTab === "overview" && (
+          <div className="space-y-5">
+            {hasPatch && (
               <>
-                {/* First-run banner — routes to the unified agent. */}
-                {unconfiguredSetupCount >= 3 && (
-                  <Link
-                    href="/admin/agent"
-                    className="flex items-center gap-3 rounded border border-indigo-500/20 bg-indigo-500/[0.06] px-4 py-3 transition-colors hover:border-indigo-500/35 hover:bg-indigo-500/[0.10]"
-                  >
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-indigo-500/10">
-                      <Sparkles className="h-4 w-4 text-indigo-300/70" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-[11px] font-semibold text-indigo-200/75">{tAdmin("firstRunTitle")}</div>
-                      <div className="mt-0.5 text-[10px] text-indigo-300/40">{tAdmin("firstRunBody")}</div>
-                    </div>
-                    <span className="text-[9px] font-semibold uppercase tracking-widest text-indigo-300/35">{tAdmin("firstRunOpen")}</span>
-                  </Link>
-                )}
-                <AdminOverviewPanel
-                  portalConfig={portalConfig}
-                  companySetup={companySetup}
-                  expensePolicy={expensePolicy}
-                  accountingSetup={accountingSetup}
-                  approvalSetup={approvalSetup}
-                  workflowSetup={workflowSetup}
-                  onNavigate={(s) => setActiveSection(s as WorklistItem)}
+                <OrchestratorPatchSummary
+                  key={orchestratorResult!.summary}
+                  result={orchestratorResult!}
+                  onApply={handleOrchestratorApplyPatch}
                 />
+                <div className="border-t border-white/[0.05]" />
               </>
             )}
-
-            {overviewTab === "policies" && (
-              <AdminQuickPoliciesPanel
-                companyId={adminCompanyId}
-                expensePolicy={expensePolicy}
-                approvalSetup={approvalSetup}
-                accountingSetup={accountingSetup}
-                workflowSetup={workflowSetup}
-                onSaved={(domain, data) => {
-                  if (domain === "expense")    setExpensePolicy(data);
-                  if (domain === "approval")   setApprovalSetup(data);
-                  if (domain === "accounting") setAccountingSetup(data);
-                  if (domain === "workflow")   setWorkflowSetup(data);
-                }}
-              />
-            )}
-
-            {overviewTab === "review" && (
-              <AdminConfigReviewPanel
-                portalConfig={portalConfig}
-                companySetup={companySetup}
-                expensePolicy={expensePolicy}
-                accountingSetup={accountingSetup}
-                approvalSetup={approvalSetup}
-                workflowSetup={workflowSetup}
-                onNavigate={(s) => setActiveSection(s as WorklistItem)}
-              />
-            )}
+            <AdminOverviewPanel
+              portalConfig={portalConfig}
+              companySetup={companySetup}
+              expensePolicy={expensePolicy}
+              accountingSetup={accountingSetup}
+              approvalSetup={approvalSetup}
+              workflowSetup={workflowSetup}
+              onNavigate={setActiveSection}
+            />
           </div>
         );
       }
@@ -1431,7 +1235,7 @@ export default function AdminPage() {
             companyId={adminCompanyId}
             setup={companySetup ?? {}}
             legalEntities={legalEntities}
-            onSaved={(s) => { setCompanySetup(s); refreshPortalConfig(); }}
+            onSaved={setCompanySetup}
             onLegalEntitiesChanged={setLegalEntities}
             draftPatch={companySetupDraftPatch}
             portalConfig={portalConfig}
@@ -1443,40 +1247,19 @@ export default function AdminPage() {
           <AdminExpenseModulePanel
             companyId={adminCompanyId}
             policy={expensePolicy ?? {}}
-            onSaved={(p) => { setExpensePolicy(p); refreshPortalConfig(); }}
+            onSaved={setExpensePolicy}
           />
         );
 
       case "Accounting Setup":
         return (
-          <ContableMerged
-            initialTab="setup"
+          <AdminAccountingSetupStudio
             companyId={adminCompanyId}
-            accountingSetup={accountingSetup}
-            setAccountingSetup={setAccountingSetup}
-            accountingSetupDraftPatch={accountingSetupDraftPatch}
-            companySetup={companySetup}
-            expensePolicy={expensePolicy}
-            onRefresh={refreshPortalConfig}
+            setup={accountingSetup ?? {}}
+            onSaved={setAccountingSetup}
+            draftPatch={accountingSetupDraftPatch}
           />
         );
-
-      case "Chart of Accounts":
-        return (
-          <ContableMerged
-            initialTab="motor"
-            companyId={adminCompanyId}
-            accountingSetup={accountingSetup}
-            setAccountingSetup={setAccountingSetup}
-            accountingSetupDraftPatch={accountingSetupDraftPatch}
-            companySetup={companySetup}
-            expensePolicy={expensePolicy}
-            onRefresh={refreshPortalConfig}
-          />
-        );
-
-      case "Dimensions":
-        return <AdminDimensionsStudio companyId={adminCompanyId} allocationDimensions={expensePolicy?.allocation_dimensions} />;
 
       case "Approval Setup":
         return (
@@ -1485,16 +1268,26 @@ export default function AdminPage() {
             setup={approvalSetup ?? {}}
             companySetup={companySetup}
             accountingSetup={accountingSetup}
-            onSaved={(s) => { setApprovalSetup(s); refreshPortalConfig(); }}
+            onSaved={setApprovalSetup}
             draftPatch={approvalSetupDraftPatch}
           />
         );
 
-      case "AI Policies":
-        return <AdminAIPoliciesStudio companyId={adminCompanyId} onSettingApplied={refreshPortalConfig} />;
+      case "Workflow Setup":
+        return (
+          <AdminWorkflowSetupStudio
+            companyId={adminCompanyId}
+            setup={workflowSetup ?? {}}
+            companySetup={companySetup}
+            expensePolicy={expensePolicy}
+            accountingSetup={accountingSetup}
+            approvalSetup={approvalSetup}
+            onSaved={setWorkflowSetup}
+            draftPatch={workflowSetupDraftPatch}
+          />
+        );
 
       case "Export Config":
-        if (!companySetup?.archive_module_enabled) return <ModuleNotInstalledBlock moduleKey="archive" onGoToAddOns={() => setActiveSection("Add-Ons")} />;
         return (
           <AdminExportConfigPanel
             companyId={adminCompanyId}
@@ -1504,7 +1297,6 @@ export default function AdminPage() {
         );
 
       case "Archive Config":
-        if (!companySetup?.archive_module_enabled) return <ModuleNotInstalledBlock moduleKey="archive" onGoToAddOns={() => setActiveSection("Add-Ons")} />;
         return (
           <AdminArchiveConfigPanel
             companyId={adminCompanyId}
@@ -1514,7 +1306,6 @@ export default function AdminPage() {
         );
 
       case "Storage Config":
-        if (!companySetup?.archive_module_enabled) return <ModuleNotInstalledBlock moduleKey="archive" onGoToAddOns={() => setActiveSection("Add-Ons")} />;
         return (
           <AdminStorageConfigPanel
             companyId={adminCompanyId}
@@ -1532,7 +1323,6 @@ export default function AdminPage() {
             companyId={adminCompanyId}
             users={users}
             onUsersChanged={setUsers}
-            companySetup={companySetup}
           />
         );
 
@@ -1543,7 +1333,7 @@ export default function AdminPage() {
         return <AdminPermissionsPanel permissions={permissions} onPermissionsChanged={setPermissions} />;
 
       case "Add-Ons":
-        return <AdminModulesPanel companySetup={companySetup} onSetupChanged={setCompanySetup} onNavigate={(s) => setActiveSection(s as WorklistItem)} />;
+        return <AdminModulesPanel companySetup={companySetup} onSetupChanged={setCompanySetup} />;
 
       case "Report Cycle":
         return <AdminReportCyclePanel companyId={adminCompanyId} />;
@@ -1554,9 +1344,84 @@ export default function AdminPage() {
   })();
 
   const aiPanelNode = (() => {
-    // Unified AI agent rail. Legacy per-section copilots were removed in
-    // Phase 7.5; the Archive Config section keeps its own documentation
-    // aside. All other sections delegate to the section-aware AdminAgentChat.
+    if (activeSection === "Overview") {
+      return (
+        <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-l border-white/[0.07] bg-zinc-950 p-3">
+          <AdminSetupOrchestratorPanel
+            companyId={adminCompanyId}
+            portalConfig={portalConfig}
+            onApplyPatch={handleOrchestratorApplyPatch}
+            onAnalysisResult={handleAnalysisResult}
+            onNavigate={(section) => setActiveSection(section as WorklistItem)}
+          />
+        </aside>
+      );
+    }
+
+    if (activeSection === "Company Setup") {
+      return (
+        <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-l border-white/[0.07] bg-zinc-950 p-3">
+          <AdminCompanySetupCopilot
+            companyId={adminCompanyId}
+            setup={companySetup ?? {}}
+            legalEntities={legalEntities}
+            portalConfig={portalConfig}
+            onApplySetupDraft={(patch) => setCompanySetupDraftPatch({ ...patch })}
+          />
+        </aside>
+      );
+    }
+
+    if (activeSection === "Approval Setup") {
+      return (
+        <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-l border-white/[0.07] bg-zinc-950 p-3">
+          <AdminApprovalCopilot
+            companyId={adminCompanyId}
+            companySetup={companySetup ?? {}}
+            expensePolicy={expensePolicy ?? {}}
+            accountingSetup={accountingSetup ?? {}}
+            approvalSetup={approvalSetup ?? {}}
+            portalConfig={portalConfig}
+            onApplyDraft={(patch) => setApprovalSetupDraftPatch({ ...patch })}
+          />
+        </aside>
+      );
+    }
+
+    if (activeSection === "Workflow Setup") {
+      return (
+        <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-l border-white/[0.07] bg-zinc-950 p-3">
+          <AdminWorkflowCopilot
+            companyId={adminCompanyId}
+            companySetup={companySetup ?? {}}
+            expensePolicy={expensePolicy ?? {}}
+            accountingSetup={accountingSetup ?? {}}
+            approvalSetup={approvalSetup ?? {}}
+            workflowSetup={workflowSetup ?? {}}
+            portalConfig={portalConfig}
+            onApplyDraft={(patch) => setWorkflowSetupDraftPatch({ ...patch })}
+          />
+        </aside>
+      );
+    }
+
+    if (activeSection === "Accounting Setup") {
+      return (
+        <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-l border-white/[0.07] bg-zinc-950 p-3">
+          <AdminAccountingCopilot
+            companyId={adminCompanyId}
+            companySetup={companySetup ?? {}}
+            expensePolicy={expensePolicy ?? {}}
+            accountingSetup={accountingSetup ?? {}}
+            approvalSetup={approvalSetup ?? {}}
+            workflowSetup={workflowSetup ?? {}}
+            portalConfig={portalConfig}
+            onApplyDraft={(patch) => setAccountingSetupDraftPatch({ ...patch })}
+          />
+        </aside>
+      );
+    }
+
     if (activeSection === "Archive Config") {
       return (
         <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-l border-white/[0.07] bg-zinc-950 p-3">
@@ -1572,13 +1437,13 @@ export default function AdminPage() {
                 <p className="text-[9px] font-bold uppercase tracking-widest text-white/25">{tAdmin("availableTokens")}</p>
               </div>
               {([
-                ["{company}",    tAdmin("tokenCompany")],
-                ["{date}",       tAdmin("tokenDate")],
-                ["{expense_id}", tAdmin("tokenExpenseId")],
-                ["{year}",       tAdmin("tokenYear")],
-                ["{month}",      tAdmin("tokenMonth")],
-                ["{day}",        tAdmin("tokenDay")],
-                ["{filename}",   tAdmin("tokenFilename")],
+                ["{company}",    "Company slug derived from display name"],
+                ["{date}",       "Archive date — YYYY-MM-DD"],
+                ["{expense_id}", "Linked expense id or empty string"],
+                ["{year}",       "4-digit year"],
+                ["{month}",      "2-digit month"],
+                ["{day}",        "2-digit day"],
+                ["{filename}",   "Original file stem (no extension)"],
               ] as [string, string][]).map(([token, desc]) => (
                 <div key={token} className="flex items-start gap-3 border-b border-white/[0.04] px-3 py-2 last:border-0">
                   <span className="shrink-0 font-mono text-[10px] text-sky-300/70">{token}</span>
@@ -1591,35 +1456,19 @@ export default function AdminPage() {
       );
     }
 
-    if (companySetup?.agent_v2_enabled === false) {
-      return (
-        <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-l border-white/[0.07] bg-zinc-950 p-3">
-          <AdminAIHints
-            section={activeSection}
-            rolesCount={roles.length}
-            permissionsCount={permissions.length}
-            stagesCount={stages.length}
-            transitionsCount={transitions.length}
-            enabledModulesCount={enabledModulesCount}
-            expensePolicy={expensePolicy}
-            accountingSetup={accountingSetup}
-            approvalSetup={approvalSetup}
-            workflowSetup={workflowSetup}
-          />
-        </aside>
-      );
-    }
-
     return (
-      <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-l border-white/[0.07] bg-zinc-950">
-        <AdminAgentChat
-          companyId={adminCompanyId}
+      <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-l border-white/[0.07] bg-zinc-950 p-3">
+        <AdminAIHints
           section={activeSection}
-          variant="rail"
-          onToolConfirmed={() => {
-            refreshPortalConfig();
-            refreshSupplemental();
-          }}
+          rolesCount={roles.length}
+          permissionsCount={permissions.length}
+          stagesCount={stages.length}
+          transitionsCount={transitions.length}
+          enabledModulesCount={enabledModulesCount}
+          expensePolicy={expensePolicy}
+          accountingSetup={accountingSetup}
+          approvalSetup={approvalSetup}
+          workflowSetup={workflowSetup}
         />
       </aside>
     );
@@ -1648,10 +1497,6 @@ export default function AdminPage() {
           hasStorageConfig={!!storageConfig}
           conflictsCount={conflictsCount}
           draftSections={draftSections}
-          moduleFlags={{
-            archive: !!companySetup?.archive_module_enabled,
-            timeAllocation: !!companySetup?.time_allocation_module_enabled,
-          }}
         />
       }
       detail={

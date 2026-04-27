@@ -194,36 +194,6 @@ class LocalStorageBackend:
             "storage_backend": "local",
         }
 
-    def delete_bytes(self, storage_key: str) -> bool:
-        """Permanently remove the file at *storage_key*. No-op if missing."""
-        # Reject absolute keys and traversal — storage_key is stored relative.
-        if not storage_key or storage_key.startswith("/") or ".." in storage_key.split("/"):
-            return False
-        target = (self._base / storage_key).resolve()
-        try:
-            target.relative_to(self._base)
-        except ValueError:
-            return False
-        try:
-            target.unlink(missing_ok=True)
-            return True
-        except OSError:
-            return False
-
-    def read_bytes(self, storage_key: str) -> bytes | None:
-        """Return the file bytes at *storage_key*, or ``None`` if not found."""
-        if not storage_key or storage_key.startswith("/") or ".." in storage_key.split("/"):
-            return None
-        target = (self._base / storage_key).resolve()
-        try:
-            target.relative_to(self._base)
-        except ValueError:
-            return None
-        try:
-            return target.read_bytes()
-        except OSError:
-            return None
-
 
 # ── Object storage backend — reserved for production use ──────────────────────
 
@@ -293,26 +263,6 @@ class ObjectStorageBackend:
             "file_type": _ext(original_filename),
             "storage_backend": "object",
         }
-
-    def delete_bytes(self, storage_key: str) -> bool:
-        """Permanently remove the object at *storage_key*. No-op if missing."""
-        if not storage_key:
-            return False
-        try:
-            self._client.delete_object(Bucket=self._container, Key=storage_key)
-            return True
-        except Exception:  # noqa: BLE001 — best-effort; DB row still removed
-            return False
-
-    def read_bytes(self, storage_key: str) -> bytes | None:
-        """Return the file bytes at *storage_key*, or ``None`` if not found."""
-        if not storage_key:
-            return None
-        try:
-            resp = self._client.get_object(Bucket=self._container, Key=storage_key)
-            return resp["Body"].read()
-        except Exception:  # noqa: BLE001
-            return None
 
 
 # ── Factory ────────────────────────────────────────────────────────────────────

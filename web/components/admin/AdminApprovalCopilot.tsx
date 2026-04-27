@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
-import { Bot, Zap, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { useLocale } from "next-intl";
+import { Bot, Zap, Loader2, CheckCircle2 } from "lucide-react";
 import { getAuthHeaders } from "@/lib/session";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -17,52 +17,161 @@ interface Props {
   onApplyDraft?: (draft: any) => void;
 }
 
-interface SuggestedPatches {
-  company_setup: Record<string, unknown>;
-  expense_policy: Record<string, unknown>;
-  accounting_setup: Record<string, unknown>;
-  approval_setup: Record<string, unknown>;
-  workflow_setup: Record<string, unknown>;
-}
-
 interface AIResult {
-  understanding: string;
   summary: string;
-  suggested_patches: SuggestedPatches;
-  risks_gaps: string[];
-  next_steps: string[];
-  detected_conflicts: Array<{ code: string; message: string; severity: string }>;
-  action_state: string;
-  ok: boolean;
+  approval_setup_patch: Record<string, any>;
+  risks: string[];
+  notes: string[];
 }
 
-// ── Quick prompt texts (not translated — sent to AI) ─────────────────────────
+// ── Quick prompts ─────────────────────────────────────────────────────────────
 
-const QUICK_PROMPT_TEXTS = [
-  "All expense reports must be approved by the employee's direct manager before being processed. Set approval_mode to manager_only or manager_then_accounting and require_manager_for_all_employees to true.",
-  "Manager approval should only be required for expense reports above MXN 5,000. Use threshold_based approval mode.",
-  "Every expense report must go through an accounting review regardless of amount. Set require_accounting_for_all_expenses to true.",
-  "Any expense that violates a policy rule should escalate directly to accounting automatically.",
-  "All international or foreign-currency expenses must be escalated to accounting for additional review.",
-  "Employees should be allowed to correct and resubmit expense reports after rejection.",
-] as const;
+const QUICK_PROMPTS: { label: string; text: string }[] = [
+  {
+    label: "Managers approve everything",
+    text:  "All expense reports must be approved by the employee's direct manager before being processed.",
+  },
+  {
+    label: "Only high-value expenses need manager approval",
+    text:  "Manager approval should only be required for expense reports above a certain threshold amount.",
+  },
+  {
+    label: "Accounting reviews everything",
+    text:  "Every expense report must go through an accounting review before reimbursement regardless of amount.",
+  },
+  {
+    label: "Policy failures go to accounting",
+    text:  "Any expense report that violates a policy rule should be escalated directly to accounting for review.",
+  },
+  {
+    label: "International expenses always escalate",
+    text:  "All international or foreign-currency expenses must be escalated to accounting for additional review.",
+  },
+  {
+    label: "Employees can resubmit after rejection",
+    text:  "Employees should be allowed to correct and resubmit expense reports after they have been rejected.",
+  },
+];
 
-const PATCH_LABEL_KEYS: Record<string, string> = {
-  approval_mode:                         "patchApprovalMode",
-  manager_threshold_amount:              "patchManagerThreshold",
-  accounting_threshold_amount:           "patchAccountingThreshold",
-  require_manager_for_all_employees:     "patchRequireManagerAll",
-  require_accounting_for_all_expenses:   "patchRequireAccountingAll",
-  allow_self_submission_without_manager: "patchSelfSubmissionAllowed",
-  allow_resubmission_after_rejection:    "patchResubmissionAllowed",
-  escalate_policy_failures_to_accounting:"patchEscalatePolicyFailures",
-  escalate_international_to_accounting:  "patchEscalateInternational",
-  escalate_missing_documents_to_manager: "patchEscalateMissingDocs",
-  ai_approval_assist_enabled:            "patchAiAssist",
-  ai_approval_notes:                     "patchAiNotes",
+// ── Allowed patch keys ────────────────────────────────────────────────────────
+
+const ALLOWED_PATCH_KEYS = new Set([
+  "approval_mode",
+  "manager_threshold_amount",
+  "accounting_threshold_amount",
+  "require_manager_for_all_employees",
+  "require_accounting_for_all_expenses",
+  "allow_self_submission_without_manager",
+  "allow_resubmission_after_rejection",
+  "escalate_policy_failures_to_accounting",
+  "escalate_international_to_accounting",
+  "escalate_missing_documents_to_manager",
+  "ai_approval_assist_enabled",
+  "ai_approval_notes",
+]);
+
+const PATCH_LABELS: Record<string, string> = {
+  approval_mode:                         "Approval mode",
+  manager_threshold_amount:              "Manager threshold",
+  accounting_threshold_amount:           "Accounting threshold",
+  require_manager_for_all_employees:     "Manager required (all)",
+  require_accounting_for_all_expenses:   "Accounting required (all)",
+  allow_self_submission_without_manager: "Self-submission allowed",
+  allow_resubmission_after_rejection:    "Resubmission allowed",
+  escalate_policy_failures_to_accounting:"Escalate policy failures",
+  escalate_international_to_accounting:  "Escalate international",
+  escalate_missing_documents_to_manager: "Escalate missing docs",
+  ai_approval_assist_enabled:            "AI assist",
+  ai_approval_notes:                     "AI notes",
 };
 
+function patchValueLabel(v: any): string {
+  if (typeof v === "boolean") return v ? "On" : "Off";
+  if (typeof v === "number")  return String(v);
+  return String(v).replace(/_/g, " ");
+}
+
 // ── Context builder ───────────────────────────────────────────────────────────
+
+function buildContext(
+  companySetup: any,
+  expensePolicy: any,
+  accountingSetup: any,
+  approvalSetup: any,
+  portalConfig?: any,
+): string {
+  const cs = companySetup    ?? {};
+  const ep = expensePolicy   ?? {};
+  const ac = accountingSetup ?? {};
+  const ap = approvalSetup   ?? {};
+  const d  = portalConfig?.derived;
+  const derivedCtx = d ? [
+    `derived_modules:[${(d.enabled_modules ?? []).join(",")}]`,
+    `derived_manager_flow:${d.manager_flow_enabled ?? "unset"}`,
+    `derived_accounting_flow:${d.accounting_flow_enabled ?? "unset"}`,
+    `derived_workflow_mode:${d.workflow_mode ?? "unset"}`,
+    `derived_xml_mode:${d.xml_required_mode ?? "unset"}`,
+    `derived_intl_allowed:${d.international_expenses_allowed ?? "unset"}`,
+    `derived_tickets:${d.tickets_allowed ?? "unset"}`,
+  ].join(", ") : "derived:unavailable";
+  return [
+    `has_managers:${cs.has_managers ?? "unset"}`,
+    `has_accounting_team:${cs.has_accounting_team ?? "unset"}`,
+    `operates_multi_entity:${cs.operates_multi_entity ?? "unset"}`,
+    `operates_multi_country:${cs.operates_multi_country ?? "unset"}`,
+    `approvals_module_enabled:${cs.approvals_module_enabled ?? "unset"}`,
+    `accounting_module_enabled:${cs.accounting_module_enabled ?? "unset"}`,
+    `xml_required_mode:${ep.xml_required_mode ?? "unset"}`,
+    `international_expenses_allowed:${ep.international_expenses_allowed ?? "unset"}`,
+    `accounting_review_mode:${ac.accounting_review_mode ?? "unset"}`,
+    `manager_approval_mode:${ac.manager_approval_mode ?? "unset"}`,
+    `current_approval_mode:${ap.approval_mode ?? "unset"}`,
+    `current_require_manager:${ap.require_manager_for_all_employees ?? "unset"}`,
+    `current_require_accounting:${ap.require_accounting_for_all_expenses ?? "unset"}`,
+    derivedCtx,
+  ].join(", ");
+}
+
+function buildSystemPrompt(userText: string, ctx: string): string {
+  return [
+    "You are a finance operations workflow consultant configuring approval routing",
+    "for employee expenses, managers, and accounting.",
+    "Your job is to translate the user's instruction into a structured approval setup patch.",
+    "Only change fields that are clearly implied by the user's description.",
+    "Reason holistically over all five setup domains (company structure, expense rules,",
+    "accounting controls, approval logic, workflow routing) when identifying risks",
+    "and suggesting configurations.",
+    "",
+    `Current platform context: ${ctx}.`,
+    "",
+    `User instruction: "${userText.trim()}".`,
+    "",
+    "Reply ONLY with a single valid JSON object. No markdown fences, no prose outside the JSON.",
+    "Schema:",
+    "{",
+    '  "summary": string,',
+    '  "approval_setup_patch": {',
+    '    "approval_mode"?: "none"|"manager_only"|"accounting_only"|"manager_then_accounting"|"threshold_based",',
+    '    "manager_threshold_amount"?: number|null,',
+    '    "accounting_threshold_amount"?: number|null,',
+    '    "require_manager_for_all_employees"?: boolean,',
+    '    "require_accounting_for_all_expenses"?: boolean,',
+    '    "allow_self_submission_without_manager"?: boolean,',
+    '    "allow_resubmission_after_rejection"?: boolean,',
+    '    "escalate_policy_failures_to_accounting"?: boolean,',
+    '    "escalate_international_to_accounting"?: boolean,',
+    '    "escalate_missing_documents_to_manager"?: boolean,',
+    '    "ai_approval_assist_enabled"?: boolean',
+    "  },",
+    '  "risks": string[],',
+    '  "notes": string[]',
+    "}",
+    "",
+    "risks: 2–4 concise strings about compliance gaps, missing controls, or approval blind spots.",
+    "notes: 1–3 concise operational notes about the suggested configuration.",
+    "Do not include any key not listed above.",
+  ].join(" ");
+}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -81,26 +190,7 @@ export default function AdminApprovalCopilot({
   const [offline, setOffline]       = useState(false);
   const [parseError, setParseError] = useState(false);
   const [applied, setApplied]       = useState(false);
-  const [applying, setApplying]     = useState(false);
-  const [applyError, setApplyError] = useState<string | null>(null);
   const locale = useLocale();
-  const t  = useTranslations("admin.approvalSetup");
-  const tc = useTranslations("admin.copilot");
-
-  const QUICK_PROMPTS: { label: string; text: string }[] = [
-    { label: t("quickPromptManagersAll"),    text: QUICK_PROMPT_TEXTS[0] },
-    { label: t("quickPromptHighValueOnly"),  text: QUICK_PROMPT_TEXTS[1] },
-    { label: t("quickPromptAccountingAll"), text: QUICK_PROMPT_TEXTS[2] },
-    { label: t("quickPromptPolicyFailures"), text: QUICK_PROMPT_TEXTS[3] },
-    { label: t("quickPromptInternational"),  text: QUICK_PROMPT_TEXTS[4] },
-    { label: t("quickPromptResubmission"),   text: QUICK_PROMPT_TEXTS[5] },
-  ];
-
-  function patchValueLabel(v: any): string {
-    if (typeof v === "boolean") return v ? tc("valueOn") : tc("valueOff");
-    if (typeof v === "number")  return String(v);
-    return String(v).replace(/_/g, " ");
-  }
 
   const runQuery = async (text: string) => {
     if (!text.trim()) return;
@@ -109,21 +199,66 @@ export default function AdminApprovalCopilot({
     setParseError(false);
     setResult(null);
     setApplied(false);
-    setApplyError(null);
 
     try {
-      const res = await fetch(`${API}/admin/setup-orchestrator/analyze/${companyId}`, {
+      const ctx = buildContext(companySetup, expensePolicy, accountingSetup, approvalSetup, portalConfig);
+
+      const res = await fetch(`${API}/ai/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ prompt: text, locale }),
+        body: JSON.stringify({
+          system_prompt: buildSystemPrompt(text, ctx),
+          prompt:        text,
+          context:       `company_id:${companyId}`,
+          locale,
+        }),
       });
 
       if (!res.ok) { setOffline(true); return; }
 
-      const data = await res.json() as AIResult;
-      if (!data?.ok) { setParseError(true); return; }
+      const data = await res.json();
+      const raw: string = typeof data?.content === "string" ? data.content : "";
 
-      setResult(data);
+      const jsonStr = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+      if (!jsonStr.startsWith("{")) { setParseError(true); return; }
+
+      let parsed: unknown;
+      try { parsed = JSON.parse(jsonStr); }
+      catch { setParseError(true); return; }
+
+      if (
+        typeof parsed !== "object" || parsed === null ||
+        typeof (parsed as any).summary !== "string" ||
+        typeof (parsed as any).approval_setup_patch !== "object" ||
+        !Array.isArray((parsed as any).risks) ||
+        !Array.isArray((parsed as any).notes)
+      ) {
+        setParseError(true);
+        return;
+      }
+
+      const p = parsed as any;
+
+      // Sanitise approval_setup_patch
+      const rawPatch = p.approval_setup_patch as Record<string, any>;
+      const cleanPatch: Record<string, any> = {};
+      for (const [k, v] of Object.entries(rawPatch ?? {})) {
+        if (!ALLOWED_PATCH_KEYS.has(k)) continue;
+        if (
+          typeof v !== "boolean" &&
+          typeof v !== "string" &&
+          typeof v !== "number" &&
+          v !== null
+        ) continue;
+        cleanPatch[k] = v;
+      }
+
+      setResult({
+        summary:              (p.summary as string).slice(0, 500),
+        approval_setup_patch: cleanPatch,
+        risks: (p.risks as any[]).filter((r): r is string => typeof r === "string").slice(0, 6),
+        notes: (p.notes as any[]).filter((n): n is string => typeof n === "string").slice(0, 4),
+      });
     } catch {
       setOffline(true);
     } finally {
@@ -134,40 +269,14 @@ export default function AdminApprovalCopilot({
   const handleSubmit = ()            => runQuery(prompt);
   const handleQuick  = (text: string) => { setPrompt(text); runQuery(text); };
 
-  const handleApply = async () => {
-    const patch = result?.suggested_patches?.approval_setup ?? {};
-    if (!Object.keys(patch).length) return;
-    setApplying(true);
-    setApplyError(null);
-    try {
-      const res = await fetch(`${API}/admin/setup-orchestrator/apply/${companyId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({
-          patches: {
-            company_setup: {}, expense_policy: {}, accounting_setup: {},
-            approval_setup: patch,
-            workflow_setup: {},
-          },
-          session_id: null,
-        }),
-      });
-      if (res.ok) {
-        onApplyDraft?.(patch);
-        setApplied(true);
-      } else {
-        const body = await res.json().catch(() => ({}));
-        setApplyError((body as { error?: string }).error ?? `Apply failed (${res.status})`);
-      }
-    } catch {
-      setApplyError("Network error");
-    } finally {
-      setApplying(false);
-    }
+  const handleApply = () => {
+    if (!result?.approval_setup_patch) return;
+    onApplyDraft?.(result.approval_setup_patch);
+    setApplied(true);
   };
 
-  const patchEntries = result?.suggested_patches?.approval_setup
-    ? Object.entries(result.suggested_patches.approval_setup).filter(([k]) => k in PATCH_LABEL_KEYS)
+  const patchEntries = result?.approval_setup_patch
+    ? Object.entries(result.approval_setup_patch).filter(([k]) => k in PATCH_LABELS)
     : [];
 
   return (
@@ -176,9 +285,9 @@ export default function AdminApprovalCopilot({
       {/* Header */}
       <div className="flex items-center gap-2">
         <Bot className="h-4 w-4 shrink-0 text-indigo-400/55" />
-        <span className="text-[11px] font-semibold text-white/45">{tc("approvalTitle")}</span>
+        <span className="text-[11px] font-semibold text-white/45">Approval Copilot</span>
         <span className="ml-auto rounded border border-indigo-500/15 bg-indigo-500/[0.06] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-indigo-300/40">
-          {tc("ai")}
+          AI
         </span>
       </div>
 
@@ -189,7 +298,7 @@ export default function AdminApprovalCopilot({
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
-          placeholder={tc("approvalPromptPlaceholder")}
+          placeholder="Describe how approvals should work across managers and accounting..."
           className="w-full resize-none rounded border border-white/[0.08] bg-white/[0.03] px-2.5 py-2 text-[10px] text-white/55 placeholder-white/18 outline-none focus:border-indigo-500/35"
         />
         <button
@@ -199,13 +308,13 @@ export default function AdminApprovalCopilot({
           className="inline-flex w-full items-center justify-center gap-1.5 rounded border border-indigo-500/25 bg-indigo-600/15 px-3 py-1.5 text-[10px] font-semibold text-indigo-300/70 transition-colors hover:bg-indigo-600/25 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
-          {loading ? tc("analysing") : tc("analyse")}
+          {loading ? "Analysing…" : "Analyse"}
         </button>
       </div>
 
       {/* B — Quick prompts */}
       <div>
-        <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/20">{tc("quickPrompts")}</p>
+        <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/20">Quick prompts</p>
         <div className="flex flex-wrap gap-1">
           {QUICK_PROMPTS.map(({ label, text }) => (
             <button
@@ -225,7 +334,7 @@ export default function AdminApprovalCopilot({
       {offline && !loading && (
         <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
           <p className="text-[10px] text-white/30">
-            {tc("aiOfflineApproval")}
+            AI approval copilot is offline. Manual configuration remains available in the studio.
           </p>
         </div>
       )}
@@ -233,7 +342,7 @@ export default function AdminApprovalCopilot({
       {/* Parse error */}
       {parseError && !loading && (
         <div className="rounded border border-amber-500/15 bg-amber-500/[0.04] px-3 py-2">
-          <p className="text-[10px] text-amber-300/50">{tc("parseError")}</p>
+          <p className="text-[10px] text-amber-300/50">AI returned an unexpected format. Try rephrasing.</p>
         </div>
       )}
 
@@ -243,22 +352,22 @@ export default function AdminApprovalCopilot({
 
           {/* Summary */}
           <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
-            <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-white/22">{tc("summary")}</p>
-            <p className="text-[10px] leading-relaxed text-white/45">{result.understanding || result.summary}</p>
+            <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-white/22">Summary</p>
+            <p className="text-[10px] leading-relaxed text-white/45">{result.summary}</p>
           </div>
 
           {/* Approval setup patch */}
           {patchEntries.length > 0 && (
             <div className="overflow-hidden rounded border border-white/[0.07] bg-white/[0.02]">
               <p className="border-b border-white/[0.06] px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-white/22">
-                {tc("suggestedApprovalSetup")}
+                Suggested approval setup
               </p>
               <table className="w-full">
                 <tbody>
                   {patchEntries.map(([k, v]) => (
                     <tr key={k} className="border-b border-white/[0.04] last:border-0">
                       <td className="px-3 py-1.5 text-[10px] text-white/35">
-                        {PATCH_LABEL_KEYS[k] ? t(PATCH_LABEL_KEYS[k] as any) : k}
+                        {PATCH_LABELS[k] ?? k}
                       </td>
                       <td className="px-3 py-1.5 text-right text-[10px] font-medium text-white/55">
                         {patchValueLabel(v)}
@@ -270,12 +379,12 @@ export default function AdminApprovalCopilot({
             </div>
           )}
 
-          {/* Next steps */}
-          {(result.next_steps?.length ?? 0) > 0 && (
+          {/* Notes */}
+          {result.notes.length > 0 && (
             <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
-              <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/22">{tc("operationalNotes")}</p>
+              <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/22">Operational notes</p>
               <ul className="space-y-1">
-                {result.next_steps.map((n, i) => (
+                {result.notes.map((n, i) => (
                   <li key={i} className="flex items-start gap-1.5 text-[10px] text-white/38">
                     <span className="mt-0.5 text-white/18">·</span>
                     {n}
@@ -285,12 +394,12 @@ export default function AdminApprovalCopilot({
             </div>
           )}
 
-          {/* Risks & conflicts */}
-          {(result.risks_gaps?.length ?? 0) > 0 && (
+          {/* Risks */}
+          {result.risks.length > 0 && (
             <div className="rounded border border-amber-500/12 bg-amber-500/[0.03] px-3 py-2.5">
-              <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-amber-400/35">{tc("workflowGaps")}</p>
+              <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-amber-400/35">Workflow gaps</p>
               <ul className="space-y-1">
-                {result.risks_gaps.map((r, i) => (
+                {result.risks.map((r, i) => (
                   <li key={i} className="flex items-start gap-1.5 text-[10px] text-amber-300/45">
                     <span className="mt-0.5 text-amber-400/25">·</span>
                     {r}
@@ -302,27 +411,17 @@ export default function AdminApprovalCopilot({
 
           {/* Apply button */}
           {patchEntries.length > 0 && (
-            <div className="space-y-1.5">
-              {applyError && (
-                <div className="flex items-center gap-1.5 rounded border border-red-500/15 bg-red-500/[0.06] px-2.5 py-1.5">
-                  <AlertCircle className="h-3 w-3 shrink-0 text-red-400/60" />
-                  <span className="text-[9.5px] text-red-300/60">{applyError}</span>
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={handleApply}
-                disabled={applied || applying}
-                className="inline-flex w-full items-center justify-center gap-1.5 rounded border border-indigo-500/25 bg-indigo-600/15 px-3 py-1.5 text-[10px] font-semibold text-indigo-300/70 transition-colors hover:bg-indigo-600/25 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {applied
-                  ? <><CheckCircle2 className="h-3 w-3 text-emerald-400/60" /> {tc("draftApplied")}</>
-                  : applying
-                  ? <><Loader2 className="h-3 w-3 animate-spin" /> Applying…</>
-                  : <><Zap className="h-3 w-3" /> {tc("applyApprovalDraft")}</>
-                }
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={handleApply}
+              disabled={applied}
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded border border-indigo-500/25 bg-indigo-600/15 px-3 py-1.5 text-[10px] font-semibold text-indigo-300/70 transition-colors hover:bg-indigo-600/25 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {applied
+                ? <><CheckCircle2 className="h-3 w-3 text-emerald-400/60" /> Draft applied</>
+                : <><Zap className="h-3 w-3" /> Apply Approval Draft</>
+              }
+            </button>
           )}
 
         </div>

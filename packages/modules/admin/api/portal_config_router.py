@@ -4,11 +4,12 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from apps.api.auth import get_current_user
+from apps.api.auth import require_admin
 from apps.api.deps import get_db
 from packages.modules.admin.service.company_setup_service import get_or_create_company_setup
 from packages.modules.admin.service.accounting_setup_service import get_or_create_accounting_setup
 from packages.modules.admin.service.approval_setup_service import get_or_create_approval_setup
+from packages.modules.admin.service.workflow_setup_service import get_or_create_workflow_setup
 from packages.modules.expenses.service.policy_service import get_or_create_company_expense_policy
 from packages.core.platform.models_accounting_category import AccountingCategory
 from packages.core.platform.models_export_bundle_config import ExportBundleConfig
@@ -17,9 +18,10 @@ from packages.core.platform.models_archive_config import ArchiveConfig
 from packages.modules.admin.schemas.company_setup import CompanySetupRead
 from packages.modules.admin.schemas.accounting_setup import AccountingSetupRead
 from packages.modules.admin.schemas.approval_setup import ApprovalSetupRead
+from packages.modules.admin.schemas.workflow_setup import WorkflowSetupRead
 from packages.modules.expenses.schemas.policy import CompanyExpensePolicyRead
 
-router = APIRouter(prefix="/admin/portal-config", tags=["admin"])
+router = APIRouter(prefix="/admin/portal-config", tags=["admin"], dependencies=[Depends(require_admin)])
 
 
 class DerivedConfig(BaseModel):
@@ -33,6 +35,7 @@ class DerivedConfig(BaseModel):
     allow_document_free_expenses: bool
     manager_flow_enabled: bool
     accounting_flow_enabled: bool
+    workflow_mode: str
     # Derived routing outcome — the actual path expenses will travel given the
     # *combination* of company setup, approval setup, and accounting setup.
     # Possible values:
@@ -66,6 +69,7 @@ class PortalConfigRead(BaseModel):
     expense_policy: CompanyExpensePolicyRead
     accounting_setup: AccountingSetupRead
     approval_setup: ApprovalSetupRead
+    workflow_setup: WorkflowSetupRead
     derived: DerivedConfig
     accounting_categories: list[AccountingCategoryBrief] = []
     export_config: ExportBundleConfigBrief
@@ -77,33 +81,20 @@ def _compute_enabled_modules(cs: Any) -> list[str]:
         "expenses": cs.expenses_module_enabled,
         "time_allocation": cs.time_allocation_module_enabled,
         "subcontractor": cs.subcontractor_module_enabled,
+        "reimbursements": cs.reimbursements_module_enabled,
         "approvals": cs.approvals_module_enabled,
         "accounting": cs.accounting_module_enabled,
         "archive": cs.archive_module_enabled,
+        "ai_copilot": cs.ai_copilot_enabled,
         "purchase_requests": cs.purchase_requests_module_enabled,
-        "amex_reconciliation": cs.amex_reconciliation_module_enabled,
     }
     return [name for name, enabled in mapping.items() if enabled]
 
 
 def _parse_allocation_dimensions(raw: str | None) -> list[str]:
-    """Parse the policy's ``allocation_dimensions`` preset into canonical tokens.
-
-    Presets are underscore-joined strings such as ``project_client_cost_center``
-    or ``cost_center_only``. Naively splitting on ``_`` would turn ``cost_center``
-    into ``cost`` + ``center``, so we substring-match the three known dimensions.
-    Returns canonical tokens: ``project``, ``client``, ``cost_center``.
-    """
     if not raw:
         return []
-    s = raw.strip().lower()
-    if not s or s == "none":
-        return []
-    dims: list[str] = []
-    if "project" in s:     dims.append("project")
-    if "client" in s:      dims.append("client")
-    if "cost_center" in s: dims.append("cost_center")
-    return dims
+    return [dim.strip() for dim in raw.split("_") if dim.strip()]
 
 
 def _compute_effective_review_route(
@@ -164,11 +155,12 @@ def _compute_effective_review_route(
 
 
 @router.get("/{company_id}", response_model=PortalConfigRead)
-def get_portal_config(company_id: int, db: Session = Depends(get_db), _: object = Depends(get_current_user)):
+def get_portal_config(company_id: int, db: Session = Depends(get_db)):
     company_setup = get_or_create_company_setup(db, company_id)
     expense_policy = get_or_create_company_expense_policy(db, company_id)
     accounting_setup = get_or_create_accounting_setup(db, company_id)
     approval_setup = get_or_create_approval_setup(db, company_id)
+    workflow_setup = get_or_create_workflow_setup(db, company_id)
 
     manager_flow_enabled = (
         bool(company_setup.has_managers)
@@ -191,6 +183,7 @@ def get_portal_config(company_id: int, db: Session = Depends(get_db), _: object 
         allow_document_free_expenses=expense_policy.allow_document_free_expenses,
         manager_flow_enabled=manager_flow_enabled,
         accounting_flow_enabled=accounting_flow_enabled,
+        workflow_mode=workflow_setup.default_expense_workflow_mode or "standard",
         effective_review_route=_compute_effective_review_route(
             approval_mode=approval_setup.approval_mode or "none",
             manager_flow_enabled=manager_flow_enabled,
@@ -234,6 +227,7 @@ def get_portal_config(company_id: int, db: Session = Depends(get_db), _: object 
         expense_policy=CompanyExpensePolicyRead.model_validate(expense_policy),
         accounting_setup=AccountingSetupRead.model_validate(accounting_setup),
         approval_setup=ApprovalSetupRead.model_validate(approval_setup),
+        workflow_setup=WorkflowSetupRead.model_validate(workflow_setup),
         derived=derived,
         accounting_categories=[
             AccountingCategoryBrief(

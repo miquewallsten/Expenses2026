@@ -30,8 +30,8 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-from packages.core.platform.models_archive_config import ArchiveConfig
 from packages.core.platform.models_archive_file import ArchiveFile
+from packages.core.platform.models_export_config import ExportConfig
 from packages.core.platform.models_storage_config import StorageConfig
 from packages.modules.archive.service.storage_backend import get_storage_backend
 
@@ -98,8 +98,8 @@ def _resolve_hints(
     """
     try:
         cfg = (
-            db.query(ArchiveConfig)
-            .filter(ArchiveConfig.company_id == company_id)
+            db.query(ExportConfig)
+            .filter(ExportConfig.company_id == company_id)
             .first()
         )
 
@@ -241,103 +241,4 @@ def store_file(
     db.add(record)
     db.commit()
     db.refresh(record)
-
-    # Phase 8.1 — best-effort embedding ingestion. Non-blocking on failure so
-    # archive writes never fail because of an embedding/Ollama hiccup.
-    if content_text and content_text.strip():
-        try:
-            from packages.modules.ai.service.embedding_service import index_document
-            from packages.modules.expenses.service.document_classifier_service import (
-                classify_document,
-            )
-
-            # Phase 8.11 — coarse classification stamped onto the embedding
-            # rows so future kNN votes have ground-truth labels to learn from.
-            try:
-                triage = classify_document(
-                    db,
-                    company_id=company_id,
-                    content_text=content_text,
-                    filename=result["original_filename"],
-                )
-            except Exception:
-                triage = {"label": "other", "confidence": 0.0, "method": "default"}
-
-            index_document(
-                db,
-                company_id=company_id,
-                text=content_text,
-                expense_id=expense_id,
-                meta={
-                    "archive_file_id": record.id,
-                    "source_type": source_type,
-                    "filename": result["original_filename"],
-                    "label": triage.get("label"),
-                    "label_confidence": triage.get("confidence"),
-                    "label_method": triage.get("method"),
-                },
-            )
-            db.commit()
-        except Exception:
-            db.rollback()
-
     return record
-
-
-def purge_archive_files_for_expense(
-    db: Session,
-    company_id: int,
-    expense_id: int,
-    filename: str,
-) -> int:
-    """Permanently delete every ArchiveFile row + stored bytes matching the
-    given expense + filename. Returns the number of rows removed.
-
-    Used when a draft expense document is deleted and must leave no trace.
-    """
-    rows = (
-        db.query(ArchiveFile)
-        .filter(
-            ArchiveFile.company_id == company_id,
-            ArchiveFile.expense_id == expense_id,
-            ArchiveFile.file_name  == filename,
-        )
-        .all()
-    )
-    if not rows:
-        return 0
-
-    # Resolve the same storage backend used at write time.
-    db_cfg: dict | None = None
-    try:
-        scfg = (
-            db.query(StorageConfig).filter(StorageConfig.company_id == company_id).first()
-        ) or (
-            db.query(StorageConfig).filter(StorageConfig.company_id == 0).first()
-        )
-        if scfg:
-            db_cfg = {
-                "backend":         scfg.backend,
-                "local_path":      scfg.local_path,
-                "endpoint_url":    scfg.endpoint_url,
-                "bucket":          scfg.bucket,
-                "prefix":          scfg.prefix,
-                "region":          scfg.region,
-                "azure_account":   scfg.azure_account,
-                "azure_container": scfg.azure_container,
-            }
-    except Exception:  # noqa: BLE001
-        pass
-
-    backend = get_storage_backend(db_cfg=db_cfg)
-
-    removed = 0
-    for row in rows:
-        try:
-            backend.delete_bytes(row.storage_key)
-        except Exception:  # noqa: BLE001 — DB row removal still proceeds
-            pass
-        db.delete(row)
-        removed += 1
-    db.commit()
-    return removed

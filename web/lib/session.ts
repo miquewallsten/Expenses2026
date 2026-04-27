@@ -71,65 +71,12 @@ export function clearSession(): void {
 }
 
 /** Returns the correct Authorization headers for API calls.
- *  Prefers Bearer JWT (from stored session); falls back to X-User-Id in dev.
- *  If the JWT is expired, clears the session and redirects to login. */
+ *  Prefers Bearer JWT (from stored session); falls back to X-User-Id in dev. */
 export function getAuthHeaders(): Record<string, string> {
   const stored = getStoredSession();
   if (stored?.token) {
-    if (isSessionExpired(stored.token)) {
-      clearSession();
-      if (typeof window !== "undefined") {
-        window.location.href = "/auth/login";
-      }
-      return {};
-    }
     return { Authorization: `Bearer ${stored.token}` };
   }
   const userId = getCurrentUserId() ?? "1";
   return { "X-User-Id": userId };
-}
-
-/** Decode a JWT payload without verifying the signature.
- *  Returns null on malformed input. */
-export function decodeJwtPayload(token: string): Record<string, unknown> | null {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-    // base64url → base64
-    const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-    const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
-    const json =
-      typeof atob === "function"
-        ? atob(padded)
-        : Buffer.from(padded, "base64").toString("utf-8");
-    return JSON.parse(json) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-}
-
-/** True if the JWT has an `exp` claim that has passed (with 30s clock skew). */
-export function isSessionExpired(token: string, skewSeconds = 30): boolean {
-  const payload = decodeJwtPayload(token);
-  if (!payload) return true;
-  const exp = payload.exp;
-  if (typeof exp !== "number") return false;
-  const nowSec = Math.floor(Date.now() / 1000);
-  return exp < nowSec + skewSeconds;
-}
-
-/** Fetch wrapper that auto-clears the session on 401. */
-export async function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const headers = {
-    ...(init?.headers || {}),
-    ...getAuthHeaders(),
-  };
-  const res = await fetch(input, { ...init, headers });
-  if (res.status === 401) {
-    clearSession();
-    if (typeof window !== "undefined") {
-      window.location.href = "/auth/login";
-    }
-  }
-  return res;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
 import { Bot, Zap, Loader2, CheckCircle2, AlertTriangle, AlertCircle } from "lucide-react";
 import { getAuthHeaders } from "@/lib/session";
 import {
@@ -36,49 +36,175 @@ interface Props {
   onApplyDraft?: (draft: any) => void;
 }
 
-interface SuggestedPatches {
-  company_setup: Record<string, unknown>;
-  expense_policy: Record<string, unknown>;
-  accounting_setup: Record<string, unknown>;
-  approval_setup: Record<string, unknown>;
-  workflow_setup: Record<string, unknown>;
-}
-
 interface AIResult {
-  understanding: string;
   summary: string;
-  suggested_patches: SuggestedPatches;
-  risks_gaps: string[];
-  next_steps: string[];
-  detected_conflicts: Array<{ code: string; message: string; severity: string }>;
-  action_state: string;
-  ok: boolean;
+  accounting_setup_patch: Record<string, any>;
+  risks: string[];
+  notes: string[];
 }
 
 // ── Quick prompts ─────────────────────────────────────────────────────────────
 
-const QUICK_PROMPT_TEXTS = [
-  "Every expense must go through an accounting review before reimbursement, regardless of amount. Set accounting_review_mode to all.",
-  "All expenses must have a valid CFDI XML. Pólizas must be generated and reviewed before SAT export. Set poliza_required and require_final_accounting_review_before_export to true.",
-  "Only expenses above MXN 2,000 require accounting review. Set accounting_review_mode to threshold.",
-  "Every expense must have an account code and a cost center assigned before it can be approved.",
-  "Enable AI account code suggestions based on expense description. Accountants still manually review.",
-  "No expense data should be exported without final accounting sign-off. Block export until fully reviewed.",
+const QUICK_PROMPTS: { label: string; text: string }[] = [
+  {
+    label: "Full accounting review for all expenses",
+    text:  "Every expense must go through an accounting review before reimbursement, regardless of amount or category.",
+  },
+  {
+    label: "CFDI XML required + póliza export",
+    text:  "All expenses must have a valid CFDI XML document. Pólizas must be generated and reviewed before SAT export.",
+  },
+  {
+    label: "Threshold-based accounting review",
+    text:  "Only expenses above a threshold amount require accounting review. Smaller amounts can be auto-processed.",
+  },
+  {
+    label: "Account codes and cost centers required",
+    text:  "Every expense must have an account code and a cost center assigned before it can be approved.",
+  },
+  {
+    label: "AI-assisted account code suggestion",
+    text:  "Enable AI to suggest account codes based on expense description and category. Accountants still review.",
+  },
+  {
+    label: "Final review before SAT export",
+    text:  "No expense data should be exported to SAT or external systems without final accounting sign-off.",
+  },
 ];
 
-const PATCH_LABEL_KEYS: Record<string, string> = {
-  accounting_review_mode:                        "patchAccountingReviewMode",
-  accounting_threshold_amount:                   "patchAccountingThreshold",
-  poliza_required:                               "patchPolizaRequired",
-  account_code_required:                         "patchAccountCodeRequired",
-  cost_center_required:                          "patchCostCenterRequired",
-  project_required:                              "patchProjectRequired",
-  client_required:                               "patchClientRequired",
-  allow_accounting_override:                     "patchAccountingOverride",
-  require_final_accounting_review_before_export: "patchFinalReviewBeforeExport",
-  archive_retention_years:                       "patchArchiveRetention",
-  ai_accounting_assist_enabled:                  "patchAiAccountingAssist",
+// ── Allowed patch keys ────────────────────────────────────────────────────────
+
+const ALLOWED_PATCH_KEYS = new Set([
+  "accounting_review_mode",
+  "accounting_threshold_amount",
+  "poliza_required",
+  "account_code_required",
+  "cost_center_required",
+  "project_required",
+  "client_required",
+  "allow_accounting_override",
+  "require_final_accounting_review_before_export",
+  "archive_retention_years",
+  "ai_accounting_assist_enabled",
+]);
+
+const PATCH_LABELS: Record<string, string> = {
+  accounting_review_mode:                       "Accounting review mode",
+  accounting_threshold_amount:                  "Accounting threshold",
+  poliza_required:                               "Póliza required",
+  account_code_required:                        "Account code required",
+  cost_center_required:                         "Cost center required",
+  project_required:                             "Project required",
+  client_required:                              "Client required",
+  allow_accounting_override:                    "Accounting override allowed",
+  require_final_accounting_review_before_export:"Final review before export",
+  archive_retention_years:                      "Archive retention (years)",
+  ai_accounting_assist_enabled:                 "AI accounting assist",
 };
+
+function patchValueLabel(v: any): string {
+  if (typeof v === "boolean") return v ? "On" : "Off";
+  if (typeof v === "number")  return String(v);
+  return String(v).replace(/_/g, " ");
+}
+
+// ── Context builder ───────────────────────────────────────────────────────────
+
+function buildContext(
+  companySetup: any,
+  expensePolicy: any,
+  accountingSetup: any,
+  approvalSetup: any,
+  workflowSetup: any,
+  portalConfig?: any,
+): string {
+  const cs = companySetup    ?? {};
+  const ep = expensePolicy   ?? {};
+  const ac = accountingSetup ?? {};
+  const ap = approvalSetup   ?? {};
+  const wf = workflowSetup   ?? {};
+  const d  = portalConfig?.derived;
+
+  const derivedCtx = d ? [
+    `derived_modules:[${(d.enabled_modules ?? []).join(",")}]`,
+    `derived_manager_flow:${d.manager_flow_enabled ?? "unset"}`,
+    `derived_accounting_flow:${d.accounting_flow_enabled ?? "unset"}`,
+    `derived_workflow_mode:${d.workflow_mode ?? "unset"}`,
+    `derived_xml_mode:${d.xml_required_mode ?? "unset"}`,
+    `derived_pdf_pair:${d.pdf_pair_required_for_cfdi ?? "unset"}`,
+    `derived_intl_allowed:${d.international_expenses_allowed ?? "unset"}`,
+    `derived_allocation:[${(d.allocation_dimensions ?? []).join(",")}]`,
+    `derived_allow_split:${d.allow_split_allocations ?? "unset"}`,
+    `derived_tickets:${d.tickets_allowed ?? "unset"}`,
+  ].join(", ") : "derived:unavailable";
+
+  return [
+    `has_managers:${cs.has_managers ?? "unset"}`,
+    `has_accounting_team:${cs.has_accounting_team ?? "unset"}`,
+    `accounting_module_enabled:${cs.accounting_module_enabled ?? "unset"}`,
+    `operates_multi_entity:${cs.operates_multi_entity ?? "unset"}`,
+    `operates_multi_country:${cs.operates_multi_country ?? "unset"}`,
+    `xml_required_mode:${ep.xml_required_mode ?? "unset"}`,
+    `pdf_pair_required_for_cfdi:${ep.pdf_pair_required_for_cfdi ?? "unset"}`,
+    `international_expenses_allowed:${ep.international_expenses_allowed ?? "unset"}`,
+    `allocation_dimensions:${ep.allocation_dimensions ?? "unset"}`,
+    `current_accounting_review_mode:${ac.accounting_review_mode ?? "unset"}`,
+    `current_poliza_required:${ac.poliza_required ?? "unset"}`,
+    `current_account_code_required:${ac.account_code_required ?? "unset"}`,
+    `current_cost_center_required:${ac.cost_center_required ?? "unset"}`,
+    `current_project_required:${ac.project_required ?? "unset"}`,
+    `current_allow_override:${ac.allow_accounting_override ?? "unset"}`,
+    `current_final_review_required:${ac.require_final_accounting_review_before_export ?? "unset"}`,
+    `current_ai_assist:${ac.ai_accounting_assist_enabled ?? "unset"}`,
+    `current_approval_mode:${ap.approval_mode ?? "unset"}`,
+    `current_escalate_policy_failures:${ap.escalate_policy_failures_to_accounting ?? "unset"}`,
+    `current_workflow_mode:${wf.default_expense_workflow_mode ?? "unset"}`,
+    derivedCtx,
+  ].join(", ");
+}
+
+function buildSystemPrompt(userText: string, ctx: string): string {
+  return [
+    "You are a financial controls and accounting configuration specialist",
+    "for a modular expense management platform used in Mexico and Latin America.",
+    "Your job is to translate the user's instruction into a structured accounting setup patch.",
+    "Only change fields that are clearly implied by the user's description.",
+    "Reason holistically over all five setup domains (company structure, expense rules,",
+    "accounting controls, approval logic, workflow routing) when identifying risks",
+    "and suggesting configurations. Consider CFDI/SAT compliance, póliza generation,",
+    "account coding, cost center allocation, and period close requirements.",
+    "",
+    `Current platform context: ${ctx}.`,
+    "",
+    `User instruction: "${userText.trim()}".`,
+    "",
+    "Reply ONLY with a single valid JSON object. No markdown fences, no prose outside the JSON.",
+    "Schema:",
+    "{",
+    '  "summary": string,',
+    '  "accounting_setup_patch": {',
+    '    "accounting_review_mode"?: "none"|"all"|"threshold",',
+    '    "accounting_threshold_amount"?: number|null,',
+    '    "poliza_required"?: boolean,',
+    '    "account_code_required"?: boolean,',
+    '    "cost_center_required"?: boolean,',
+    '    "project_required"?: boolean,',
+    '    "client_required"?: boolean,',
+    '    "allow_accounting_override"?: boolean,',
+    '    "require_final_accounting_review_before_export"?: boolean,',
+    '    "archive_retention_years"?: number|null,',
+    '    "ai_accounting_assist_enabled"?: boolean',
+    "  },",
+    '  "risks": string[],',
+    '  "notes": string[]',
+    "}",
+    "",
+    "risks: 2–4 concise strings about SAT compliance gaps, coding coverage gaps,",
+    "period close risks, or missing controls.",
+    "notes: 1–3 concise operational notes about the suggested configuration.",
+    "Do not include any key not listed above.",
+  ].join(" ");
+}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -98,20 +224,7 @@ export default function AdminAccountingCopilot({
   const [offline, setOffline]       = useState(false);
   const [parseError, setParseError] = useState(false);
   const [applied, setApplied]       = useState(false);
-  const [applying, setApplying]     = useState(false);
-  const [applyError, setApplyError] = useState<string | null>(null);
   const locale = useLocale();
-  const tc = useTranslations("admin.copilot");
-  const ta = useTranslations("admin.accountingSetup");
-
-  const QUICK_PROMPTS = [
-    { label: tc("quickPromptAccountingReviewAll"), text: QUICK_PROMPT_TEXTS[0] },
-    { label: tc("quickPromptCfdiPoliza"),          text: QUICK_PROMPT_TEXTS[1] },
-    { label: tc("quickPromptThresholdAccounting"), text: QUICK_PROMPT_TEXTS[2] },
-    { label: tc("quickPromptAccountCodesRequired"),text: QUICK_PROMPT_TEXTS[3] },
-    { label: tc("quickPromptAiAccountCode"),       text: QUICK_PROMPT_TEXTS[4] },
-    { label: tc("quickPromptFinalReviewSat"),      text: QUICK_PROMPT_TEXTS[5] },
-  ];
 
   const runQuery = async (text: string) => {
     if (!text.trim()) return;
@@ -120,21 +233,76 @@ export default function AdminAccountingCopilot({
     setParseError(false);
     setResult(null);
     setApplied(false);
-    setApplyError(null);
 
     try {
-      const res = await fetch(`${API}/admin/setup-orchestrator/analyze/${companyId}`, {
+      const ctx = buildContext(
+        companySetup, expensePolicy, accountingSetup,
+        approvalSetup, workflowSetup, portalConfig,
+      );
+
+      const res = await fetch(`${API}/ai/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ prompt: text, locale }),
+        body: JSON.stringify({
+          system_prompt: buildSystemPrompt(text, ctx),
+          prompt:        text,
+          context:       `company_id:${companyId}`,
+          locale,
+        }),
       });
 
       if (!res.ok) { setOffline(true); return; }
 
-      const data = await res.json() as AIResult;
-      if (!data?.ok) { setParseError(true); return; }
+      const data = await res.json();
+      const raw: string = typeof data?.content === "string" ? data.content : "";
 
-      setResult(data);
+      // Strip markdown fences if the model wraps output
+      const jsonStr = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+      if (!jsonStr.startsWith("{")) { setParseError(true); return; }
+
+      let parsed: unknown;
+      try { parsed = JSON.parse(jsonStr); }
+      catch { setParseError(true); return; }
+
+      if (
+        typeof parsed !== "object" || parsed === null ||
+        typeof (parsed as any).summary !== "string" ||
+        typeof (parsed as any).accounting_setup_patch !== "object" ||
+        !Array.isArray((parsed as any).risks) ||
+        !Array.isArray((parsed as any).notes)
+      ) {
+        setParseError(true);
+        return;
+      }
+
+      const p = parsed as any;
+
+      // Sanitise accounting_setup_patch — only known keys, known value types
+      const rawPatch = p.accounting_setup_patch as Record<string, any>;
+      const cleanPatch: Record<string, any> = {};
+      for (const [k, v] of Object.entries(rawPatch ?? {})) {
+        if (!ALLOWED_PATCH_KEYS.has(k)) continue;
+        if (
+          typeof v !== "boolean" &&
+          typeof v !== "string" &&
+          typeof v !== "number" &&
+          v !== null
+        ) continue;
+        cleanPatch[k] = v;
+      }
+
+      setResult({
+        summary:               (p.summary as string).slice(0, 500),
+        accounting_setup_patch: cleanPatch,
+        risks: (p.risks as any[])
+          .filter((r): r is string => typeof r === "string")
+          .map((r) => r.slice(0, 300))
+          .slice(0, 6),
+        notes: (p.notes as any[])
+          .filter((n): n is string => typeof n === "string")
+          .map((n) => n.slice(0, 300))
+          .slice(0, 4),
+      });
     } catch {
       setOffline(true);
     } finally {
@@ -145,46 +313,14 @@ export default function AdminAccountingCopilot({
   const handleSubmit = ()             => runQuery(prompt);
   const handleQuick  = (text: string) => { setPrompt(text); runQuery(text); };
 
-  const handleApply = async () => {
-    const patch = result?.suggested_patches?.accounting_setup ?? {};
-    if (!Object.keys(patch).length) return;
-    setApplying(true);
-    setApplyError(null);
-    try {
-      const res = await fetch(`${API}/admin/setup-orchestrator/apply/${companyId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({
-          patches: {
-            company_setup: {}, expense_policy: {},
-            accounting_setup: patch,
-            approval_setup: {}, workflow_setup: {},
-          },
-          session_id: null,
-        }),
-      });
-      if (res.ok) {
-        onApplyDraft?.(patch);
-        setApplied(true);
-      } else {
-        const body = await res.json().catch(() => ({}));
-        setApplyError((body as { error?: string }).error ?? `Apply failed (${res.status})`);
-      }
-    } catch {
-      setApplyError("Network error");
-    } finally {
-      setApplying(false);
-    }
+  const handleApply = () => {
+    if (!result?.accounting_setup_patch) return;
+    onApplyDraft?.(result.accounting_setup_patch);
+    setApplied(true);
   };
 
-  const patchValueLabel = (v: unknown): string => {
-    if (typeof v === "boolean") return v ? tc("valueOn") : tc("valueOff");
-    if (v === null) return "—";
-    return String(v);
-  };
-
-  const patchEntries = result?.suggested_patches?.accounting_setup
-    ? Object.entries(result.suggested_patches.accounting_setup).filter(([k]) => k in PATCH_LABEL_KEYS)
+  const patchEntries = result?.accounting_setup_patch
+    ? Object.entries(result.accounting_setup_patch).filter(([k]) => k in PATCH_LABELS)
     : [];
 
   // Pre-flight: accounting-relevant cross-domain conflicts
@@ -198,7 +334,7 @@ export default function AdminAccountingCopilot({
       {/* Header */}
       <div className="flex items-center gap-2">
         <Bot className="h-4 w-4 shrink-0 text-indigo-400/55" />
-        <span className="text-[11px] font-semibold text-white/45">{tc("accountingTitle")}</span>
+        <span className="text-[11px] font-semibold text-white/45">Accounting Copilot</span>
         <span className="ml-auto rounded border border-indigo-500/15 bg-indigo-500/[0.06] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-indigo-300/40">
           AI
         </span>
@@ -237,7 +373,7 @@ export default function AdminAccountingCopilot({
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); }
           }}
-          placeholder={tc("accountingPromptPlaceholder")}
+          placeholder="Describe your accounting review requirements, CFDI controls, coding rules, and period close process…"
           className="w-full resize-none rounded border border-white/[0.08] bg-white/[0.03] px-2.5 py-2 text-[10px] text-white/55 placeholder-white/18 outline-none focus:border-indigo-500/35"
         />
         <button
@@ -247,13 +383,13 @@ export default function AdminAccountingCopilot({
           className="inline-flex w-full items-center justify-center gap-1.5 rounded border border-indigo-500/25 bg-indigo-600/15 px-3 py-1.5 text-[10px] font-semibold text-indigo-300/70 transition-colors hover:bg-indigo-600/25 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
-          {loading ? tc("analysing") : tc("analyse")}
+          {loading ? "Analysing…" : "Analyse"}
         </button>
       </div>
 
       {/* B — Quick prompts */}
       <div>
-        <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/20">{tc("quickPrompts")}</p>
+        <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/20">Quick prompts</p>
         <div className="flex flex-wrap gap-1">
           {QUICK_PROMPTS.map(({ label, text }) => (
             <button
@@ -273,7 +409,7 @@ export default function AdminAccountingCopilot({
       {offline && !loading && (
         <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
           <p className="text-[10px] text-white/30">
-            {tc("aiOfflineAccounting")}
+            AI accounting copilot is offline. Manual configuration remains available in the setup panel.
           </p>
         </div>
       )}
@@ -281,7 +417,7 @@ export default function AdminAccountingCopilot({
       {/* Parse error */}
       {parseError && !loading && (
         <div className="rounded border border-amber-500/15 bg-amber-500/[0.04] px-3 py-2">
-          <p className="text-[10px] text-amber-300/50">{tc("parseError")}</p>
+          <p className="text-[10px] text-amber-300/50">AI returned an unexpected format. Try rephrasing.</p>
         </div>
       )}
 
@@ -291,22 +427,22 @@ export default function AdminAccountingCopilot({
 
           {/* Summary */}
           <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
-            <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-white/22">{tc("summary")}</p>
-            <p className="text-[10px] leading-relaxed text-white/45">{result.understanding || result.summary}</p>
+            <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-white/22">Summary</p>
+            <p className="text-[10px] leading-relaxed text-white/45">{result.summary}</p>
           </div>
 
           {/* Accounting setup patch */}
           {patchEntries.length > 0 && (
             <div className="overflow-hidden rounded border border-white/[0.07] bg-white/[0.02]">
               <p className="border-b border-white/[0.06] px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-white/22">
-                {tc("suggestedAccountingSetup")}
+                Suggested accounting setup
               </p>
               <table className="w-full">
                 <tbody>
                   {patchEntries.map(([k, v]) => (
                     <tr key={k} className="border-b border-white/[0.04] last:border-0">
                       <td className="px-3 py-1.5 text-[10px] text-white/35">
-                        {ta(PATCH_LABEL_KEYS[k] ?? k)}
+                        {PATCH_LABELS[k] ?? k}
                       </td>
                       <td className="px-3 py-1.5 text-right text-[10px] font-medium text-white/55">
                         {patchValueLabel(v)}
@@ -319,11 +455,11 @@ export default function AdminAccountingCopilot({
           )}
 
           {/* Operational notes */}
-          {(result.next_steps?.length ?? 0) > 0 && (
+          {result.notes.length > 0 && (
             <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
-              <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/22">{tc("operationalNotes")}</p>
+              <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/22">Operational notes</p>
               <ul className="space-y-1">
-                {result.next_steps.map((n, i) => (
+                {result.notes.map((n, i) => (
                   <li key={i} className="flex items-start gap-1.5 text-[10px] text-white/38">
                     <span className="mt-0.5 text-white/18">·</span>
                     {n}
@@ -333,44 +469,35 @@ export default function AdminAccountingCopilot({
             </div>
           )}
 
-          {/* Risks & gaps */}
-          {(result.risks_gaps?.length ?? 0) > 0 && (
-            <div className="rounded border border-amber-500/12 bg-amber-500/[0.03] px-3 py-2.5">
-              <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-amber-400/35">{tc("complianceGaps")}</p>
-              <ul className="space-y-1">
-                {result.risks_gaps.map((r, i) => (
-                  <li key={i} className="flex items-start gap-1.5 text-[10px] text-amber-300/45">
-                    <span className="mt-0.5 text-amber-400/25">·</span>
-                    {r}
-                  </li>
-                ))}
-              </ul>
+          {/* Risks */}
+          {result.risks.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-white/20">Compliance gaps</p>
+              {result.risks.map((r, i) => (
+                <div
+                  key={i}
+                  className="flex items-start gap-2 rounded border border-amber-500/[0.10] bg-amber-500/[0.03] px-3 py-2"
+                >
+                  <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-amber-400/45" />
+                  <p className="text-[10px] leading-snug text-amber-300/55">{r}</p>
+                </div>
+              ))}
             </div>
           )}
 
-          {/* Apply button */}
+          {/* Apply button — does NOT auto-save; applies draft to parent form only */}
           {patchEntries.length > 0 && (
-            <div className="space-y-1.5">
-              {applyError && (
-                <div className="flex items-center gap-1.5 rounded border border-red-500/15 bg-red-500/[0.06] px-2.5 py-1.5">
-                  <AlertCircle className="h-3 w-3 shrink-0 text-red-400/60" />
-                  <span className="text-[9.5px] text-red-300/60">{applyError}</span>
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={handleApply}
-                disabled={applied || applying}
-                className="inline-flex w-full items-center justify-center gap-1.5 rounded border border-indigo-500/25 bg-indigo-600/15 px-3 py-1.5 text-[10px] font-semibold text-indigo-300/70 transition-colors hover:bg-indigo-600/25 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {applied
-                  ? <><CheckCircle2 className="h-3 w-3 text-emerald-400/60" /> {tc("draftApplied")}</>
-                  : applying
-                  ? <><Loader2 className="h-3 w-3 animate-spin" /> Applying…</>
-                  : <><Zap className="h-3 w-3" /> {tc("applyAccountingDraft")}</>
-                }
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={handleApply}
+              disabled={applied}
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded border border-indigo-500/25 bg-indigo-600/15 px-3 py-1.5 text-[10px] font-semibold text-indigo-300/70 transition-colors hover:bg-indigo-600/25 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {applied
+                ? <><CheckCircle2 className="h-3 w-3 text-emerald-400/60" /> Draft applied</>
+                : <><Zap className="h-3 w-3" /> Apply Accounting Draft</>
+              }
+            </button>
           )}
 
         </div>

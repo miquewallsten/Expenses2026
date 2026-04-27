@@ -28,43 +28,6 @@ log = logging.getLogger(__name__)
 OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
 OLLAMA_MODEL: str    = os.getenv("OLLAMA_MODEL", "")
 OLLAMA_NUM_CTX: int  = int(os.getenv("OLLAMA_NUM_CTX", "32768"))
-# Reasoning effort for gpt-oss / o-series style models: "low" | "medium" | "high".
-# Harmless on models that don't understand it.
-OLLAMA_REASONING_EFFORT: str = os.getenv("OLLAMA_REASONING_EFFORT", "low")
-
-# Request timeouts (seconds). Override in extreme cases via env vars.
-OLLAMA_CHAT_TIMEOUT: float      = float(os.getenv("OLLAMA_CHAT_TIMEOUT", "60"))
-OLLAMA_TOOL_TIMEOUT: float      = float(os.getenv("OLLAMA_TOOL_TIMEOUT", "90"))
-OLLAMA_STREAM_TIMEOUT: float    = float(os.getenv("OLLAMA_STREAM_TIMEOUT", "120"))
-
-# Prompt length caps. 8000 chars is plenty for any user-authored field and
-# protects against token-flooding / cost attacks.
-OLLAMA_MAX_PROMPT_CHARS: int    = int(os.getenv("OLLAMA_MAX_PROMPT_CHARS", "8000"))
-
-
-def _truncate_prompt(text: str, label: str = "prompt") -> str:
-    if not isinstance(text, str):
-        return text
-    if len(text) > OLLAMA_MAX_PROMPT_CHARS:
-        log.warning(
-            "Truncating %s from %d to %d chars",
-            label, len(text), OLLAMA_MAX_PROMPT_CHARS,
-        )
-        return text[:OLLAMA_MAX_PROMPT_CHARS]
-    return text
-
-
-def _reasoning_options() -> dict:
-    """Extra options passed to every /api/chat call.
-
-    gpt-oss exposes the reasoning effort via the top-level `reasoning` field
-    on Ollama's chat API (`{"effort": "low|medium|high"}`). Other models
-    ignore it.
-    """
-    effort = (OLLAMA_REASONING_EFFORT or "").strip().lower()
-    if effort in ("low", "medium", "high"):
-        return {"reasoning": {"effort": effort}}
-    return {}
 
 
 def list_models() -> list[str]:
@@ -134,9 +97,6 @@ def chat_with_ollama(
     if model is None:
         return _not_configured()
 
-    system_prompt = _truncate_prompt(system_prompt, "system_prompt")
-    user_prompt   = _truncate_prompt(user_prompt, "user_prompt")
-
     payload = {
         "model": model,
         "messages": [
@@ -149,14 +109,13 @@ def chat_with_ollama(
             "top_p":       top_p,
             "num_ctx":     num_ctx or OLLAMA_NUM_CTX,
         },
-        **_reasoning_options(),
     }
 
     try:
         response = requests.post(
             f"{OLLAMA_BASE_URL}/api/chat",
             json=payload,
-            timeout=OLLAMA_CHAT_TIMEOUT,
+            timeout=300,
         )
         response.raise_for_status()
         return {"ok": True, "model": model, "content": _extract_content(response.json()), "error": None}
@@ -180,29 +139,22 @@ def chat_with_messages(
     if model is None:
         return _not_configured()
 
-    # Truncate every content field defensively.
-    safe_messages = [
-        {**m, "content": _truncate_prompt(m.get("content", ""), f"msg[{i}]")}
-        for i, m in enumerate(messages)
-    ]
-
     payload = {
         "model":    model,
-        "messages": safe_messages,
+        "messages": messages,
         "stream":   False,
         "options": {
             "temperature": temperature,
             "top_p":       top_p,
             "num_ctx":     num_ctx or OLLAMA_NUM_CTX,
         },
-        **_reasoning_options(),
     }
 
     try:
         response = requests.post(
             f"{OLLAMA_BASE_URL}/api/chat",
             json=payload,
-            timeout=OLLAMA_CHAT_TIMEOUT,
+            timeout=300,
         )
         response.raise_for_status()
         return {"ok": True, "model": model, "content": _extract_content(response.json()), "error": None}
@@ -239,8 +191,8 @@ def chat_with_tools(
         return _not_configured()
 
     messages: list[dict] = [
-        {"role": "system", "content": _truncate_prompt(system_prompt, "system")},
-        {"role": "user",   "content": _truncate_prompt(user_prompt, "user")},
+        {"role": "system", "content": system_prompt},
+        {"role": "user",   "content": user_prompt},
     ]
 
     try:
@@ -254,12 +206,11 @@ def chat_with_tools(
                     "temperature": temperature,
                     "num_ctx":     num_ctx or OLLAMA_NUM_CTX,
                 },
-                **_reasoning_options(),
             }
             response = requests.post(
                 f"{OLLAMA_BASE_URL}/api/chat",
                 json=payload,
-                timeout=OLLAMA_TOOL_TIMEOUT,
+                timeout=300,
             )
             response.raise_for_status()
             data = response.json()
@@ -331,8 +282,8 @@ def stream_chat_sse(
     payload = {
         "model": model,
         "messages": [
-            {"role": "system", "content": _truncate_prompt(system_prompt, "system")},
-            {"role": "user",   "content": _truncate_prompt(user_prompt, "user")},
+            {"role": "system", "content": system_prompt},
+            {"role": "user",   "content": user_prompt},
         ],
         "stream": True,
         "options": {
@@ -346,7 +297,7 @@ def stream_chat_sse(
             f"{OLLAMA_BASE_URL}/api/chat",
             json=payload,
             stream=True,
-            timeout=OLLAMA_STREAM_TIMEOUT,
+            timeout=300,
         ) as resp:
             resp.raise_for_status()
             for raw_line in resp.iter_lines():
@@ -382,14 +333,9 @@ def stream_chat_with_messages_sse(
         yield "data: [DONE]\n\n"
         return
 
-    safe_messages = [
-        {**m, "content": _truncate_prompt(m.get("content", ""), f"msg[{i}]")}
-        for i, m in enumerate(messages)
-    ]
-
     payload = {
         "model":   model,
-        "messages": safe_messages,
+        "messages": messages,
         "stream":   True,
         "options": {
             "temperature": temperature,
@@ -402,7 +348,7 @@ def stream_chat_with_messages_sse(
             f"{OLLAMA_BASE_URL}/api/chat",
             json=payload,
             stream=True,
-            timeout=OLLAMA_STREAM_TIMEOUT,
+            timeout=300,
         ) as resp:
             resp.raise_for_status()
             for raw_line in resp.iter_lines():

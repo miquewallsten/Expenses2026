@@ -8,7 +8,6 @@ from packages.core.platform.models_accounting_category import (
     TAX_BEHAVIOR_VALUES,
 )
 from packages.modules.admin.schemas.accounting_category import (
-    AccountingCategoryBindingPatch,
     AccountingCategoryCreate,
     AccountingCategoryRead,
 )
@@ -73,21 +72,3 @@ def list_accounting_categories(
         .order_by(AccountingCategory.code)
         .all()
     )
-
-
-@router.patch("/{category_id}/bindings", response_model=AccountingCategoryRead)
-def patch_category_bindings(
-    category_id: int,
-    body: AccountingCategoryBindingPatch,
-    db: Session = Depends(get_db),
-):
-    """Update CoA + tax-rate FK bindings on a category (Motor de Pólizas)."""
-    cat = db.query(AccountingCategory).filter(AccountingCategory.id == category_id).first()
-    if cat is None:
-        raise HTTPException(status_code=404, detail="Category not found")
-    cat.expense_account_id      = body.expense_account_id
-    cat.tax_rate_id             = body.tax_rate_id
-    cat.counterparty_account_id = body.counterparty_account_id
-    db.commit()
-    db.refresh(cat)
-    return cat

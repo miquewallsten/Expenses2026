@@ -14,7 +14,6 @@ from packages.modules.expenses.models.document import ExpenseDocument
 from packages.modules.expenses.schemas.document import ExpenseDocumentCreate
 from packages.modules.expenses.schemas.document_update import ExpenseDocumentUpdate
 from packages.modules.expenses.service.document_classifier import classify_document
-from packages.modules.ai.service.ocr_service import extract_fields as ocr_extract_fields
 from packages.modules.expenses.service.pdf_intake_service import analyze_pdf_intake
 from packages.modules.expenses.service.xml_extraction_service import extract_xml_fields
 from packages.modules.expenses.service.pdf_ticket_extraction_service import extract_ticket_signals
@@ -252,50 +251,6 @@ def create_document(
             return existing
         raise
 
-    # ── Heuristic field extraction (Phase 8.2) ────────────────────────────────
-    # Best-effort regex-based scrape of merchant/total/date/rfc from the
-    # document text. Skipped for cfdi_xml (canonical CFDI parser owns those
-    # fields). Failure must never block document creation.
-    if document.document_type != "cfdi_xml" and document.content_text:
-        try:
-            fields = ocr_extract_fields(document.content_text)
-            if fields:
-                document.extracted_fields = fields
-                document.extraction_status = "completed"
-                db.commit()
-                db.refresh(document)
-        except Exception:  # noqa: BLE001
-            db.rollback()
-
-    # ── Phase 8.11 — coarse triage classifier (rule + kNN over embeddings) ───
-    # Stash {label, confidence, method} into extracted_fields["classifier"]
-    # so the UI can render a tone-coded label pill. Best-effort, never blocks.
-    if document.content_text:
-        try:
-            from packages.modules.expenses.service.document_classifier_service import (
-                classify_document as triage_classify_document,
-            )
-
-            triage = triage_classify_document(
-                db,
-                company_id=document.company_id,
-                content_text=document.content_text,
-                filename=document.filename,
-            )
-            label = triage.get("label")
-            if label:
-                ef = dict(document.extracted_fields or {})
-                ef["classifier"] = {
-                    "label": label,
-                    "confidence": float(triage.get("confidence") or 0.0),
-                    "method": triage.get("method") or "default",
-                }
-                document.extracted_fields = ef
-                db.commit()
-                db.refresh(document)
-        except Exception:  # noqa: BLE001
-            db.rollback()
-
     # ── Archive original bytes (only when real file bytes are available) ──────
     if file_bytes is not None:
         try:
@@ -357,29 +312,11 @@ def create_document(
             db.commit()
             db.refresh(document)
         else:
-            # Phase 8.2 follow-up — prefill draft Expense from OCR fields when
-            # available. Saves the employee a re-keying step on the new draft.
-            ef = document.extracted_fields or {}
-            draft_amount = Decimal("0")
-            draft_date = None
-            if ef.get("total"):
-                try:
-                    draft_amount = Decimal(str(ef["total"]))
-                except (InvalidOperation, ValueError):
-                    draft_amount = Decimal("0")
-            if ef.get("date"):
-                try:
-                    from datetime import date as _date
-                    draft_date = _date.fromisoformat(str(ef["date"]))
-                except ValueError:
-                    draft_date = None
-
             new_expense = Expense(
                 company_id=payload.company_id,
                 description=payload.filename,
-                amount=draft_amount,
+                amount=Decimal("0"),
                 status="draft",
-                expense_date=draft_date,
             )
             db.add(new_expense)
             db.commit()
@@ -388,25 +325,6 @@ def create_document(
             document.expense_id = new_expense.id
             db.commit()
             db.refresh(document)
-
-        # Backfill archive row expense_id — the file was archived before the
-        # expense was resolved, so its expense_id is NULL. Linking it now keeps
-        # delete-purge + file-serve lookups working by expense scope.
-        if file_bytes is not None:
-            try:
-                from packages.core.platform.models_archive_file import ArchiveFile
-                (
-                    db.query(ArchiveFile)
-                    .filter(
-                        ArchiveFile.company_id == document.company_id,
-                        ArchiveFile.file_name  == document.filename,
-                        ArchiveFile.expense_id.is_(None),
-                    )
-                    .update({"expense_id": document.expense_id}, synchronize_session=False)
-                )
-                db.commit()
-            except Exception:  # noqa: BLE001 — best-effort backfill
-                db.rollback()
 
     # ── Extract XML fields (once — canonical call) ───────────────────────────
     # Computed here so both the enrichment block and validate_document can use
@@ -426,18 +344,14 @@ def create_document(
                     expense.amount = parsed_amount
 
                 # Description priority:
-                #   1. extracted.emisor_nombre  (the company that issued the
-                #      invoice — Costco, Telmex, Telcel, etc.  This is what
-                #      users recognise; the concepto is a line item, not a
-                #      vendor.)
-                #   2. extracted.descripcion    (concepto description — line
-                #      item, shown only if emisor is blank)
-                #   3. extracted.conceptos_summary
+                #   1. extracted.descripcion
+                #   2. extracted.conceptos_summary
+                #   3. extracted.emisor_nombre
                 #   4. "CFDI Invoice"
                 new_desc = _good_desc(
-                    extracted.get("emisor_nombre"),
                     extracted.get("descripcion"),
                     extracted.get("conceptos_summary"),
+                    extracted.get("emisor_nombre"),
                     "CFDI Invoice",
                 )
                 if new_desc:
@@ -482,12 +396,7 @@ def create_document(
                 if expense is not None:
                     raw_amount = signals.get("amount")
                     parsed_amount = _parse_amount(raw_amount)
-                    # Phase 8.2 follow-up — only overwrite amount if the draft
-                    # was never prefilled. The legacy "largest number anywhere"
-                    # heuristic in extract_ticket_signals will happily pick up
-                    # date fragments (e.g. 2026-04-22 → "202") and stomp the
-                    # label-aware OCR prefill (Total: 87.40 → "87.40").
-                    if parsed_amount is not None and (expense.amount is None or expense.amount == Decimal("0")):
+                    if parsed_amount is not None:
                         expense.amount = parsed_amount
 
                     vendor_name = signals.get("vendor_name")
