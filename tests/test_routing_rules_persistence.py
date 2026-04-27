@@ -219,3 +219,70 @@ def test_list_rules_for_company_round_trips_through_engine(db_session, co):
     assert resolved.rule_id == "big"
     assert resolved.approver_roles == ["cfo"]
     assert resolved.escalation_role == "ceo"
+
+
+# ── Preview endpoint ────────────────────────────────────────────────────
+
+
+def test_preview_matches_highest_priority_enabled(client, db_session, co):
+    admin = _admin(db_session, co)
+    db_session.add_all(
+        [
+            ApprovalRoutingRule(
+                company_id=co.id,
+                rule_key="cheap",
+                name="cheap",
+                priority=0,
+                when_json={"field": "amount", "op": "lt", "value": 100},
+                approvers_json=[{"role": "manager"}],
+            ),
+            ApprovalRoutingRule(
+                company_id=co.id,
+                rule_key="big",
+                name="big",
+                priority=10,
+                when_json={"field": "amount", "op": "gte", "value": 5000},
+                approvers_json=[{"role": "cfo"}],
+                sla_hours=24,
+                escalation_role="ceo",
+            ),
+        ]
+    )
+    db_session.commit()
+
+    r = client.post(
+        f"/admin/routing-rules/{co.id}/preview",
+        json={"context": {"amount": 7000}},
+        headers={"X-User-Id": str(admin.id)},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["matched_rule_id"] == "big"
+    assert body["approver_roles"] == ["cfo"]
+    assert body["sla_hours"] == 24
+    assert body["escalation_role"] == "ceo"
+    assert body["rules_evaluated"] == 2
+
+
+def test_preview_no_match(client, db_session, co):
+    admin = _admin(db_session, co)
+    r = client.post(
+        f"/admin/routing-rules/{co.id}/preview",
+        json={"context": {"amount": 1}},
+        headers={"X-User-Id": str(admin.id)},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["matched_rule_id"] is None
+    assert body["approver_user_ids"] == []
+    assert body["rules_evaluated"] == 0
+
+
+def test_preview_admin_only(client, db_session, co):
+    emp = _emp(db_session, co)
+    r = client.post(
+        f"/admin/routing-rules/{co.id}/preview",
+        json={"context": {}},
+        headers={"X-User-Id": str(emp.id)},
+    )
+    assert r.status_code == 403

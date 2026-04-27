@@ -691,7 +691,19 @@
       "delete": "Delete",
       "confirmDelete": "Delete this rule?",
       "enabled": "Enabled",
-      "disabled": "Disabled"
+      "disabled": "Disabled",
+      "probeTitle": "Rule simulator",
+      "probeHint": "test which rule fires for a hypothetical context",
+      "probeRun": "Run",
+      "probeContext": "Context (JSON)",
+      "probeResult": "Result",
+      "probeEmpty": "Run the simulator to see which rule fires.",
+      "matched": "Rule",
+      "roles": "Roles",
+      "userIds": "Users",
+      "escalates": "Escalates to",
+      "noMatch": "No rule matches this context.",
+      "evaluated": "{count, plural, =0 {No active rules} one {# rule evaluated} other {# rules evaluated}}"
     },
     "cfdiWatcher": {
       "title": "SAT watcher — cancelled CFDIs",

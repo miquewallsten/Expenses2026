@@ -24,6 +24,10 @@ from apps.api.auth import get_current_user, require_admin, require_same_company
 from apps.api.deps import get_db
 from packages.core.platform.models_user import User
 from packages.modules.expenses.models_routing import ApprovalRoutingRule
+from packages.modules.expenses.service.approval_routing_service import (
+    list_rules_for_company,
+    resolve_approvers,
+)
 
 
 router = APIRouter(
@@ -235,3 +239,47 @@ def delete_rule(
     row = _get_or_404(db, company_id=company_id, rule_id=rule_id)
     db.delete(row)
     db.commit()
+
+
+# ── Preview / probe ──────────────────────────────────────────────────────
+
+
+class RoutingPreviewRequest(BaseModel):
+    """Arbitrary expense-like context dict; engine matches by field name."""
+
+    context: dict[str, Any] = Field(default_factory=dict)
+
+
+class RoutingPreviewResponse(BaseModel):
+    matched_rule_id: Optional[str] = None
+    approver_user_ids: list[int] = Field(default_factory=list)
+    approver_roles: list[str] = Field(default_factory=list)
+    sla_hours: Optional[int] = None
+    escalation_role: Optional[str] = None
+    rules_evaluated: int
+
+
+@router.post("/{company_id}/preview", response_model=RoutingPreviewResponse)
+def preview_match(
+    company_id: int,
+    payload: RoutingPreviewRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> RoutingPreviewResponse:
+    """Run the rule engine against a context dict and return the match.
+
+    Read-only — never mutates expenses or fires notifications. Admins use
+    this from the UI to confirm which rule will fire for a hypothetical
+    expense before enabling it in production.
+    """
+    require_same_company(company_id, current_user)
+    rules = list_rules_for_company(db, company_id=company_id)
+    resolved = resolve_approvers(db, context=payload.context, rules=rules)
+    return RoutingPreviewResponse(
+        matched_rule_id=resolved.rule_id,
+        approver_user_ids=resolved.approver_user_ids,
+        approver_roles=resolved.approver_roles,
+        sla_hours=resolved.sla_hours,
+        escalation_role=resolved.escalation_role,
+        rules_evaluated=len(rules),
+    )

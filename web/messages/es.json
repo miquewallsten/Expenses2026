@@ -691,7 +691,19 @@
       "delete": "Eliminar",
       "confirmDelete": "¿Eliminar esta regla?",
       "enabled": "Activa",
-      "disabled": "Inactiva"
+      "disabled": "Inactiva",
+      "probeTitle": "Simulador de reglas",
+      "probeHint": "prueba qué regla aplica para un contexto hipotético",
+      "probeRun": "Probar",
+      "probeContext": "Contexto (JSON)",
+      "probeResult": "Resultado",
+      "probeEmpty": "Ejecuta el simulador para ver qué regla aplica.",
+      "matched": "Regla",
+      "roles": "Roles",
+      "userIds": "Usuarios",
+      "escalates": "Escala a",
+      "noMatch": "Ninguna regla aplica para este contexto.",
+      "evaluated": "{count, plural, =0 {Sin reglas activas} one {# regla evaluada} other {# reglas evaluadas}}"
     },
     "cfdiWatcher": {
       "title": "Watcher SAT — CFDI cancelados",

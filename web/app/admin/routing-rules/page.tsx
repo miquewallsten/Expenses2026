@@ -30,6 +30,7 @@ import {
   Plus,
   RefreshCw,
   Save,
+  Sparkles,
   Trash2,
 } from "lucide-react";
 import { getCurrentCompanyId, getAuthHeaders } from "@/lib/session";
@@ -76,6 +77,21 @@ export default function RoutingRulesPage() {
   const [draft, setDraft] = useState<string>("");
   const [draftError, setDraftError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // ── Preview probe ──────────────────────────────────────────────────────
+  const [probeContext, setProbeContext] = useState<string>(
+    JSON.stringify({ amount: 7000, category_code: "travel" }, null, 2),
+  );
+  const [probeResult, setProbeResult] = useState<{
+    matched_rule_id: string | null;
+    approver_user_ids: number[];
+    approver_roles: string[];
+    sla_hours: number | null;
+    escalation_role: string | null;
+    rules_evaluated: number;
+  } | null>(null);
+  const [probeError, setProbeError] = useState<string | null>(null);
+  const [probing, setProbing] = useState(false);
 
   useEffect(() => {
     const cid = getCurrentCompanyId();
@@ -203,6 +219,37 @@ export default function RoutingRulesPage() {
       await load(companyId);
     } catch (e) {
       setError(e instanceof Error ? e.message : "toggle_failed");
+    }
+  };
+
+  const handleProbe = async () => {
+    if (companyId == null) return;
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(probeContext);
+    } catch (e) {
+      setProbeError(e instanceof Error ? e.message : "invalid_json");
+      setProbeResult(null);
+      return;
+    }
+    setProbeError(null);
+    setProbing(true);
+    try {
+      const res = await fetch(
+        `${API}/admin/routing-rules/${companyId}/preview`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+          body: JSON.stringify({ context: parsed }),
+        },
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setProbeResult(await res.json());
+    } catch (e) {
+      setProbeError(e instanceof Error ? e.message : "probe_failed");
+      setProbeResult(null);
+    } finally {
+      setProbing(false);
     }
   };
 
@@ -395,6 +442,132 @@ export default function RoutingRulesPage() {
               )}
             </div>
           )}
+        </section>
+      </div>
+
+      {/* Probe panel — preview which rule fires for a hypothetical context */}
+      <div className="px-4 pb-6">
+        <section className="rounded border border-violet-500/15 bg-violet-500/[0.02]">
+          <div className="flex items-center justify-between border-b border-white/[0.06] px-3 py-2">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-3.5 w-3.5 text-violet-300/70" />
+              <span className="text-[11px] font-semibold text-white/85">
+                {t("probeTitle")}
+              </span>
+              <span className="text-[10px] text-white/45">
+                · {t("probeHint")}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => void handleProbe()}
+              disabled={probing}
+              className="flex items-center gap-1 rounded border border-violet-500/30 bg-violet-500/[0.10] px-2 py-1 text-[10.5px] font-medium text-violet-200 transition-colors hover:border-violet-500/50 hover:bg-violet-500/[0.16] disabled:opacity-50"
+            >
+              {probing ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Sparkles className="h-3 w-3" />
+              )}
+              {t("probeRun")}
+            </button>
+          </div>
+          <div className="grid gap-3 p-3 lg:grid-cols-2">
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase tracking-wider text-white/45">
+                {t("probeContext")}
+              </label>
+              <textarea
+                value={probeContext}
+                onChange={(e) => setProbeContext(e.target.value)}
+                spellCheck={false}
+                className="min-h-[140px] resize-y rounded border border-white/[0.08] bg-zinc-950 p-2.5 font-mono text-[11px] leading-[1.5] text-white/85 outline-none focus:border-violet-500/40"
+              />
+              {probeError && (
+                <div className="flex items-start gap-1.5 rounded border border-rose-500/30 bg-rose-500/[0.06] p-1.5 text-[10.5px] text-rose-200">
+                  <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+                  <span className="font-mono">{probeError}</span>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase tracking-wider text-white/45">
+                {t("probeResult")}
+              </label>
+              {probeResult == null ? (
+                <div className="rounded border border-white/[0.06] bg-white/[0.015] p-3 text-[11px] text-white/40">
+                  {t("probeEmpty")}
+                </div>
+              ) : (
+                <div className="rounded border border-white/[0.06] bg-white/[0.015] p-3 text-[11px]">
+                  {probeResult.matched_rule_id ? (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-white/45">{t("matched")}:</span>
+                        <span className="rounded bg-emerald-500/[0.12] px-1.5 py-px font-mono text-[10.5px] text-emerald-300">
+                          {probeResult.matched_rule_id}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-white/45">{t("roles")}:</span>
+                        {probeResult.approver_roles.length === 0 ? (
+                          <span className="text-white/35">—</span>
+                        ) : (
+                          probeResult.approver_roles.map((role) => (
+                            <span
+                              key={role}
+                              className="rounded bg-sky-500/[0.10] px-1.5 py-px text-sky-300"
+                            >
+                              {role}
+                            </span>
+                          ))
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-white/45">{t("userIds")}:</span>
+                        {probeResult.approver_user_ids.length === 0 ? (
+                          <span className="text-white/35">—</span>
+                        ) : (
+                          probeResult.approver_user_ids.map((uid) => (
+                            <span
+                              key={uid}
+                              className="rounded bg-white/[0.06] px-1.5 py-px font-mono tabular-nums text-white/75"
+                            >
+                              #{uid}
+                            </span>
+                          ))
+                        )}
+                      </div>
+                      {probeResult.sla_hours != null && (
+                        <div className="text-white/55">
+                          <span className="text-white/45">SLA:</span>{" "}
+                          <span className="font-mono tabular-nums text-amber-300">
+                            {probeResult.sla_hours}h
+                          </span>
+                          {probeResult.escalation_role && (
+                            <>
+                              {" · "}
+                              <span className="text-white/45">
+                                {t("escalates")}:
+                              </span>{" "}
+                              <span className="text-amber-300">
+                                {probeResult.escalation_role}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-white/55">{t("noMatch")}</div>
+                  )}
+                  <div className="mt-2 border-t border-white/[0.06] pt-2 text-[10px] text-white/40">
+                    {t("evaluated", { count: probeResult.rules_evaluated })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </section>
       </div>
     </div>
