@@ -7,6 +7,7 @@ import { ErrorBoundary } from "@/components/shell/ErrorBoundary";
 import { ToastProvider } from "@/components/ui/Toast";
 import CopilotLauncher from "@/components/agent/CopilotLauncher";
 import PwaBootstrap from "@/components/pwa/PwaBootstrap";
+import { ThemeProvider } from "@/components/shell/ThemeProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,7 +29,6 @@ export const viewport: Viewport = {
   initialScale: 1,
   minimumScale: 1,
   viewportFit: "cover",
-  themeColor: "#09090b",
 };
 
 // ── Metadata ─────────────────────────────────────────────────────────────────
@@ -53,23 +53,28 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      // dark: force dark-mode colour tokens everywhere
-      className={`${geistSans.variable} ${geistMono.variable} antialiased dark`}
+      className={`${geistSans.variable} ${geistMono.variable} antialiased`}
     >
-      {/*
-       * body: h-full + overflow-hidden so the AppShell owns every pixel.
-       * Scrolling is managed by individual overflow-y-auto containers inside
-       * the shell, never the browser viewport.
-       */}
+      {/* Blocking script: reads pref_theme from localStorage before React hydrates
+          to prevent flash-of-wrong-theme on page load. */}
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('pref_theme')||'dark';var s=window.matchMedia('(prefers-color-scheme:dark)').matches;var c=t==='system'?(s?'dark':'light'):t;document.documentElement.classList.remove('dark','light');document.documentElement.classList.add(c);}catch(e){}})()`,
+          }}
+        />
+      </head>
       <body className="h-full overflow-hidden bg-zinc-950 text-white">
-        <ErrorBoundary>
-          <LocaleProvider>
-            <ToastProvider>{children}</ToastProvider>
-            <CopilotLauncher />
-            <PwaBootstrap />
-          </LocaleProvider>
-        </ErrorBoundary>
-        <DevLoginCheat />
+        <ThemeProvider>
+          <ErrorBoundary>
+            <LocaleProvider>
+              <ToastProvider>{children}</ToastProvider>
+              <CopilotLauncher />
+              <PwaBootstrap />
+            </LocaleProvider>
+          </ErrorBoundary>
+          <DevLoginCheat />
+        </ThemeProvider>
       </body>
     </html>
   );
