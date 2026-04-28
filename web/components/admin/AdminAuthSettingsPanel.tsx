@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Lock, Globe, Shield, Plus, Trash2, Save, Loader2, Check, AlertCircle } from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -29,6 +30,7 @@ function DomainListEditor({
   domains: string[];
   onChange: (d: string[]) => void;
 }) {
+  const t = useTranslations("admin.auth");
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -37,11 +39,11 @@ function DomainListEditor({
     if (!raw) return;
     // Basic domain validation: at least one dot, no spaces
     if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(raw)) {
-      setError("Enter a valid domain, e.g. acme.com");
+      setError(t("invalidDomain"));
       return;
     }
     if (domains.includes(raw)) {
-      setError("Domain already in list");
+      setError(t("domainExists"));
       return;
     }
     onChange([...domains, raw]);
@@ -58,7 +60,7 @@ function DomainListEditor({
       <div className="flex gap-2 mb-2">
         <input
           type="text"
-          placeholder="acme.com"
+          placeholder={t("domainPlaceholder")}
           value={input}
           onChange={(e) => { setInput(e.target.value); setError(null); }}
           onKeyDown={handleKeyDown}
@@ -70,7 +72,7 @@ function DomainListEditor({
           className="inline-flex items-center gap-1 rounded border border-white/[0.09] bg-white/[0.04] px-2.5 py-1 text-[10px] text-white/45 transition-colors hover:border-white/20 hover:text-white/70"
         >
           <Plus className="h-3 w-3" />
-          Add
+          {t("add")}
         </button>
       </div>
       {error && (
@@ -80,7 +82,7 @@ function DomainListEditor({
         </p>
       )}
       {domains.length === 0 ? (
-        <p className="text-[10px] text-white/20 italic">No restrictions — any domain can sign in.</p>
+        <p className="text-[10px] text-white/20 italic">{t("noRestrictions")}</p>
       ) : (
         <div className="flex flex-wrap gap-1.5">
           {domains.map((d) => (
@@ -159,6 +161,7 @@ function ToggleRow({
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function AdminAuthSettingsPanel({ companyId }: Props) {
+  const t = useTranslations("admin.auth");
   const [settings, setSettings]   = useState<AuthSettings | null>(null);
   const [loading,  setLoading]    = useState(true);
   const [saving,   setSaving]     = useState(false);
@@ -214,7 +217,7 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (e: any) {
-      setError(e?.message ?? "Save failed");
+      setError(e?.message ?? t("saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -224,7 +227,7 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
     return (
       <div className="flex items-center gap-2 py-8 text-white/20">
         <Loader2 className="h-4 w-4 animate-spin" />
-        <span className="text-xs">Loading authentication settings…</span>
+        <span className="text-xs">{t("loading")}</span>
       </div>
     );
   }
@@ -233,23 +236,23 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
     <div className="max-w-2xl space-y-5">
       <div className="flex items-center gap-2">
         <Lock className="h-4 w-4 text-white/25" />
-        <h2 className="text-sm font-semibold text-white">Authentication</h2>
+        <h2 className="text-sm font-semibold text-white">{t("title")}</h2>
       </div>
 
       {/* ── Magic Link ─────────────────────────────────────────────────────── */}
       <div className="overflow-hidden rounded-lg border border-white/[0.07]">
         <div className="flex items-center gap-2 border-b border-white/[0.06] bg-white/[0.025] px-4 py-2.5">
           <Globe className="h-3.5 w-3.5 text-indigo-400/50" />
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/35">Magic Link</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-white/35">{t("magicLink")}</p>
           <span className="ml-auto rounded border border-emerald-500/20 bg-emerald-500/[0.07] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-emerald-300/60">
-            Active
+            {t("active")}
           </span>
         </div>
 
         <div className="px-4">
           <ToggleRow
-            label="Enable Magic Link sign-in"
-            description="Users receive a one-time link by email. No password required."
+            label={t("enableMagicLink")}
+            description={t("enableMagicLinkDesc")}
             value={magicLinkEnabled}
             onChange={setMagicLinkEnabled}
           />
@@ -257,9 +260,9 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
           <div className="py-3">
             <div className="mb-2 flex items-baseline justify-between">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30">
-                Allowed Email Domains
+                {t("allowedDomains")}
               </p>
-              <p className="text-[9px] text-white/18">Leave empty to allow any domain</p>
+              <p className="text-[9px] text-white/18">{t("allowedDomainsHelp")}</p>
             </div>
             <DomainListEditor domains={allowedDomains} onChange={setAllowedDomains} />
           </div>
@@ -268,9 +271,9 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
             <div className="flex items-center gap-4">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30">
-                  Session Duration
+                  {t("sessionDuration")}
                 </p>
-                <p className="text-[10px] text-white/25">Hours before the session token expires</p>
+                <p className="text-[10px] text-white/25">{t("sessionDurationDesc")}</p>
               </div>
               <div className="ml-auto flex items-center gap-2">
                 <input
@@ -281,7 +284,7 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
                   onChange={(e) => setSessionTimeout(Math.max(1, Math.min(168, Number(e.target.value))))}
                   className="w-16 rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 text-center font-mono text-[11px] text-white/70 outline-none focus:border-indigo-500/40"
                 />
-                <span className="text-[10px] text-white/30">hours</span>
+                <span className="text-[10px] text-white/30">{t("hoursUnit")}</span>
               </div>
             </div>
           </div>
@@ -292,26 +295,26 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
       <div className="overflow-hidden rounded-lg border border-white/[0.07] opacity-60">
         <div className="flex items-center gap-2 border-b border-white/[0.06] bg-white/[0.025] px-4 py-2.5">
           <Shield className="h-3.5 w-3.5 text-white/25" />
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/35">SSO / SAML / OIDC</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-white/35">{t("sso")}</p>
           <span className="ml-auto rounded border border-white/[0.07] bg-white/[0.03] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white/20">
-            Enterprise
+            {t("enterprise")}
           </span>
         </div>
         <div className="px-4">
           <ToggleRow
-            label="Enable Single Sign-On"
-            description="Authenticate via your company's identity provider (Okta, Azure AD, Google Workspace)."
+            label={t("enableSso")}
+            description={t("enableSsoDesc")}
             value={false}
             onChange={() => {}}
             disabled
-            disabledLabel="Coming soon"
+            disabledLabel={t("comingSoon")}
           />
           <div className="py-3 space-y-2">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30">IdP Metadata URL</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30">{t("idpMetadataUrl")}</p>
             <input
               type="text"
               disabled
-              placeholder="https://your-idp.example.com/metadata.xml"
+              placeholder={t("idpMetadataPlaceholder")}
               className="w-full rounded border border-white/[0.06] bg-zinc-900/50 px-2.5 py-1.5 font-mono text-[11px] text-white/25 outline-none"
             />
           </div>
@@ -322,14 +325,14 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
       <div className="overflow-hidden rounded-lg border border-white/[0.07] opacity-60">
         <div className="flex items-center gap-2 border-b border-white/[0.06] bg-white/[0.025] px-4 py-2.5">
           <Globe className="h-3.5 w-3.5 text-white/25" />
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/35">Bulk User Import</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-white/35">{t("bulkImport")}</p>
           <span className="ml-auto rounded border border-white/[0.07] bg-white/[0.03] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white/20">
-            Coming soon
+            {t("comingSoon")}
           </span>
         </div>
         <div className="px-4 py-3">
           <p className="text-[11px] text-white/30 leading-relaxed">
-            Upload a CSV or Excel file. AI will map columns to user fields, detect roles and delegations, and show a confirmation preview before inviting anyone.
+            {t("bulkImportDesc")}
           </p>
         </div>
       </div>
@@ -338,12 +341,12 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
       <div className="overflow-hidden rounded-lg border border-amber-500/20">
         <div className="flex items-center gap-2 border-b border-amber-500/15 bg-amber-500/[0.04] px-4 py-2.5">
           <Shield className="h-3.5 w-3.5 text-amber-400/50" />
-          <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400/50">Demo / Presentation Mode</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400/50">{t("demoMode")}</p>
         </div>
         <div className="px-4">
           <ToggleRow
-            label="Enable Demo Mode"
-            description="Shows the quick user-switcher panel for live demos. Stored locally — does not affect other users."
+            label={t("enableDemo")}
+            description={t("enableDemoDesc")}
             value={demoMode}
             onChange={handleDemoToggle}
           />
@@ -358,9 +361,9 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
           disabled={saving}
           className="inline-flex items-center gap-1.5 rounded border border-white/10 bg-white/[0.05] px-3 py-1.5 text-[10px] font-semibold text-white/60 transition-colors hover:bg-white/[0.09] disabled:opacity-50"
         >
-          {saving ? <><Loader2 className="h-3 w-3 animate-spin" /> Saving…</> : <><Save className="h-3 w-3" /> Save</>}
+          {saving ? <><Loader2 className="h-3 w-3 animate-spin" /> {t("saving")}</> : <><Save className="h-3 w-3" /> {t("save")}</>}
         </button>
-        {saved  && <span className="flex items-center gap-1 text-[10px] text-emerald-400/60"><Check className="h-3 w-3" /> Saved</span>}
+        {saved  && <span className="flex items-center gap-1 text-[10px] text-emerald-400/60"><Check className="h-3 w-3" /> {t("saved")}</span>}
         {error  && <span className="text-[10px] text-red-400/60">{error}</span>}
       </div>
     </div>
