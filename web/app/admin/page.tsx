@@ -740,8 +740,8 @@ function AdminAIHints({
       "Use the AI panel on the right to analyse your full configuration and get recommended fixes.",
     ],
     "Onboarding": [
-      "Guided 5-step go-live checklist. Folds the legacy setup-assistant route and links to Agent config.",
-      "Progress is auto-saved — jump to any step at any time.",
+      "Guided 5-step go-live checklist: Company, Legal Entities, Chart of Accounts, Approval Policy, Users.",
+      "Progress is auto-saved — jump to any step at any time. The footer links to Agent config.",
     ],
     "Company Setup": [
       "Company identity is read from the platform database.",
