@@ -1275,7 +1275,22 @@ export default function AdminPage() {
       }
 
       case "Onboarding":
-        return <AdminOnboardingPanel companyId={adminCompanyId} />;
+        return (
+          <AdminOnboardingPanel
+            companyId={adminCompanyId}
+            onNavigate={(panel) => {
+              const map: Record<string, WorklistItem> = {
+                company: "Company Setup",
+                legal_entities: "Company Setup",
+                chart_of_accounts: "Accounting Setup",
+                approval_setup: "Workflow",
+                users: "Users",
+              };
+              const target = map[panel] ?? "Overview";
+              setActiveSection(target);
+            }}
+          />
+        );
 
       case "Company Setup":
         return (

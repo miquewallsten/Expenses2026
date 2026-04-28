@@ -61,11 +61,20 @@ const STEP_LINKS: Record<StepKey, string> = {
   users: "/admin?panel=users",
 };
 
+const STEP_PANEL_KEY: Record<StepKey, string> = {
+  company: "company",
+  legal_entities: "legal_entities",
+  chart_of_accounts: "chart_of_accounts",
+  approval_policy: "approval_setup",
+  users: "users",
+};
+
 interface Props {
   companyId: number | null;
+  onNavigate?: (panelKey: string) => void;
 }
 
-export default function AdminOnboardingPanel({ companyId }: Props) {
+export default function AdminOnboardingPanel({ companyId, onNavigate }: Props) {
   const t = useTranslations("admin.onboarding");
   const [data, setData] = useState<ChecklistResponse | null>(null);
   const [activeStep, setActiveStep] = useState(0);
@@ -242,6 +251,8 @@ export default function AdminOnboardingPanel({ companyId }: Props) {
             item={currentItem}
             t={t}
             link={STEP_LINKS[currentKey]}
+            panelKey={STEP_PANEL_KEY[currentKey]}
+            onNavigate={onNavigate}
             index={activeStep}
             total={STEP_KEYS.length}
           />
@@ -297,6 +308,8 @@ function StepPanel({
   stepKey,
   item,
   link,
+  panelKey,
+  onNavigate,
   index,
   total,
   t,
@@ -304,6 +317,8 @@ function StepPanel({
   stepKey: StepKey;
   item: ChecklistItem;
   link: string;
+  panelKey: string;
+  onNavigate?: (panelKey: string) => void;
   index: number;
   total: number;
   t: ReturnType<typeof useTranslations>;
@@ -348,6 +363,12 @@ function StepPanel({
 
       <Link
         href={link}
+        onClick={(e) => {
+          if (onNavigate) {
+            e.preventDefault();
+            onNavigate(panelKey);
+          }
+        }}
         className="mt-3 inline-flex items-center gap-1 rounded border border-indigo-500/30 bg-indigo-500/[0.08] px-2.5 py-1 text-[10.5px] text-indigo-200/85 hover:border-indigo-500/50 hover:bg-indigo-500/[0.14]"
       >
         {t(`steps.${stepKey}.cta`)}
