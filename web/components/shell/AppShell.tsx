@@ -412,13 +412,13 @@ export default function AppShell({
                 <div className="flex items-center gap-2">
                   <Bot className="h-3 w-3 text-indigo-300/60" />
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">
-                    AI Assistant
+                    {t("aiAssistant")}
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setAiSheetOpen(false)}
-                  aria-label="Close AI assistant"
+                  aria-label={t("closeAI")}
                   className="flex h-7 w-7 items-center justify-center rounded text-white/30 transition-colors hover:bg-white/[0.06] hover:text-white/60"
                 >
                   <X className="h-3.5 w-3.5" />
