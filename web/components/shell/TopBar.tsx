@@ -122,7 +122,7 @@ export default function TopBar({ title, portal, onMenuOpen, onAiOpen }: TopBarPr
             href="/super-admin"
             title="Super Admin"
             aria-label="Super Admin"
-            className="hidden items-center gap-1.5 border-r border-white/[0.05] px-3 text-rose-300/70 [html.light_&]:text-rose-600/80 transition-colors hover:bg-rose-500/[0.08] hover:text-rose-200 [html.light_&]:hover:text-rose-700 md:flex"
+            className="hidden items-center gap-1.5 border-r border-white/[0.05] px-3 text-rose-300/70 [html.light_&]:text-rose-600/80 transition-colors hover:bg-rose-500/[0.08] [html.light_&]:hover:bg-rose-500/[0.12] hover:text-rose-200 [html.light_&]:hover:text-rose-700 md:flex"
           >
             <Shield className="h-3.5 w-3.5" />
             <span className="text-[9px] font-bold uppercase tracking-widest">Super</span>

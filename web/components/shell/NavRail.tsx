@@ -102,7 +102,7 @@ export default function NavRail({ collapsed, onToggle, items, hideToggle = false
             type="button"
             onClick={onToggle}
             title={collapsed ? t("expandNav") : t("collapseNav")}
-            className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-white/22 transition-colors hover:bg-white/[0.05] hover:text-white/50 [html.light_&]:text-black/28 [html.light_&]:hover:bg-black/[0.05] [html.light_&]:hover:text-black/55"
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-white/22 transition-colors hover:bg-white/[0.05] hover:text-white/50 [html.light_&]:text-black/27 [html.light_&]:hover:bg-black/[0.05] [html.light_&]:hover:text-black/55"
           >
             {collapsed
               ? <ChevronRight className="h-3 w-3" />
@@ -189,11 +189,11 @@ export default function NavRail({ collapsed, onToggle, items, hideToggle = false
         <Link
           href="/help"
           title={collapsed ? t("help") : undefined}
-          className={`flex items-center gap-2.5 rounded text-[11px] font-medium text-white/35 transition-colors hover:bg-white/[0.04] hover:text-white/60 ${
+          className={`flex items-center gap-2.5 rounded text-[11px] font-medium text-white/35 [html.light_&]:text-black/40 transition-colors hover:bg-white/[0.04] hover:text-white/60 [html.light_&]:hover:bg-black/[0.05] [html.light_&]:hover:text-black/65 ${
             collapsed ? "justify-center px-2 py-1.5" : "px-3 py-1.5"
           }`}
         >
-          <HelpCircle className="h-3.5 w-3.5 shrink-0 text-white/30" />
+          <HelpCircle className="h-3.5 w-3.5 shrink-0 text-white/30 [html.light_&]:text-black/35" />
           {!collapsed && <span className="truncate">{t("help")}</span>}
         </Link>
       </div>
