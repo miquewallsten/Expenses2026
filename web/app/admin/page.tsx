@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/shell/AppShell";
 import AdminCompanySetupStudio from "@/components/admin/AdminCompanySetupStudio";
@@ -981,7 +981,45 @@ export default function AdminPage() {
   }, [router]);
   const tAdmin = useTranslations("admin");
   const tcAdmin = useTranslations("common");
-  const [activeSection, setActiveSection] = useState<WorklistItem>("Overview");
+  const initialSection = useMemo<WorklistItem>(() => {
+    if (typeof window === "undefined") return "Overview";
+    const p = new URLSearchParams(window.location.search).get("panel");
+    if (!p) return "Overview";
+    const map: Record<string, WorklistItem> = {
+      onboarding: "Onboarding",
+      overview: "Overview",
+      company: "Company Setup",
+      company_setup: "Company Setup",
+      legal_entities: "Company Setup",
+      policies: "Policies",
+      expense_policy: "Policies",
+      accounting: "Accounting Setup",
+      accounting_setup: "Accounting Setup",
+      chart_of_accounts: "Accounting Setup",
+      workflow: "Workflow",
+      approval_setup: "Workflow",
+      approval_policy: "Workflow",
+      report_cycle: "Report Cycle",
+      export: "Export Config",
+      export_config: "Export Config",
+      archive: "Archive Config",
+      archive_config: "Archive Config",
+      storage: "Storage Config",
+      storage_config: "Storage Config",
+      channels: "Channels",
+      users: "Users",
+      roles: "Roles",
+      permissions: "Permissions",
+      addons: "Add-Ons",
+      add_ons: "Add-Ons",
+      authentication: "Authentication",
+    };
+    return map[p.toLowerCase()] ?? "Overview";
+  }, []);
+  const [activeSection, setActiveSection] = useState<WorklistItem>(initialSection);
+  useEffect(() => {
+    setActiveSection(initialSection);
+  }, [initialSection]);
   const adminCompanyId = Number(getCurrentCompanyId() ?? 1);
 
   // ── Lists not covered by portal config ──────────────────────────────────────
