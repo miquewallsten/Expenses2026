@@ -19,6 +19,38 @@
   --sai-r: env(safe-area-inset-right,  0px);
 }
 
+/* ── Theme transition ─────────────────────────────────────────────────────── */
+
+html {
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+/* ── Light-mode token overrides ──────────────────────────────────────────── */
+/*
+ * Tailwind v4 compiles every color utility through CSS custom properties.
+ * Overriding these inside html.light propagates automatically to all
+ * components that use bg-zinc-950, text-white/60, border-white/[0.07], etc.
+ * — no component files need to change.
+ *
+ * Mapping: zinc scale inverts.  --color-white flips to near-black so that
+ * text-white/X and border-white/X become dark text/borders at X% opacity.
+ * Indigo accent stays unchanged — it reads well on both themes.
+ */
+html.light {
+  --color-zinc-950: #fafafa;
+  --color-zinc-900: #f4f4f5;
+  --color-zinc-800: #e4e4e7;
+  --color-zinc-700: #d4d4d8;
+  --color-zinc-600: #a1a1aa;
+  --color-white:    #09090b;
+}
+
+html.light,
+html.light body {
+  background-color: #fafafa;
+  color: #09090b;
+}
+
 /*
  * Viewport containment
  * ─────────────────────────────────────────────────────────────────────────────
@@ -90,6 +122,17 @@ body {
     rgba(255,255,255,0.04) 25%,
     rgba(255,255,255,0.08) 50%,
     rgba(255,255,255,0.04) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+html.light .skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.04) 25%,
+    rgba(0, 0, 0, 0.08) 50%,
+    rgba(0, 0, 0, 0.04) 75%
   );
   background-size: 200% 100%;
   animation: shimmer 1.6s ease-in-out infinite;
