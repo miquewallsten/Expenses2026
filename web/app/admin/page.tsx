@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import AppShell from "@/components/shell/AppShell";
 import AdminCompanySetupStudio from "@/components/admin/AdminCompanySetupStudio";
 import AdminCompanySetupCopilot from "@/components/admin/AdminCompanySetupCopilot";
+import AdminOnboardingPanel from "@/components/admin/AdminOnboardingPanel";
 import AdminPoliciesPanel from "@/components/admin/AdminPoliciesPanel";
 import AdminWorkflowMapPanel from "@/components/admin/AdminWorkflowMapPanel";
 import AdminAccountingTabsPanel from "@/components/admin/AdminAccountingTabsPanel";
@@ -20,7 +21,7 @@ import AdminChannelsPanel from "@/components/admin/AdminChannelsPanel";
 import AdminReportCyclePanel from "@/components/admin/AdminReportCyclePanel";
 import {
   Building2, FileText, GitBranch, ShieldCheck, Puzzle, Key, Lock,
-  AlertTriangle, Calculator, Bot, Save, Loader2, FolderOutput, Archive, Users, Radio, CalendarClock, HardDrive,
+  AlertTriangle, Calculator, Bot, Save, Loader2, FolderOutput, Archive, Users, Radio, CalendarClock, HardDrive, Sparkles,
 } from "lucide-react";
 import { getCurrentRole, getCurrentUserId, getCurrentCompanyId, getStoredSession, getAuthHeaders } from "@/lib/session";
 import { buildGlobalNav, GlobalNavItem } from "@/lib/navigation";
@@ -31,6 +32,7 @@ const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 const WORKLIST_ITEMS = [
   "Overview",
+  "Onboarding",
   "Company Setup",
   "Policies",
   "Accounting Setup",
@@ -49,7 +51,7 @@ const WORKLIST_ITEMS = [
 type WorklistItem = typeof WORKLIST_ITEMS[number];
 
 const WORKLIST_GROUPS: { label: string; items: WorklistItem[] }[] = [
-  { label: "Setup", items: ["Overview", "Company Setup", "Policies", "Accounting Setup", "Workflow", "Report Cycle"] },
+  { label: "Setup", items: ["Overview", "Onboarding", "Company Setup", "Policies", "Accounting Setup", "Workflow", "Report Cycle"] },
   { label: "Intake & Notifications", items: ["Channels"] },
   { label: "Data Out", items: ["Export Config", "Archive Config", "Storage Config"] },
   { label: "Administration", items: ["Users", "Roles", "Permissions", "Add-Ons", "Authentication"] },
@@ -544,6 +546,7 @@ function AdminStorageConfigPanel({
 // ── Menu key mapping (English key → i18n key) ────────────────────────────────
 const ITEM_MENU_KEY: Record<WorklistItem, string> = {
   "Overview": "overview",
+  "Onboarding": "onboarding",
   "Company Setup": "companySetup",
   "Policies": "policies",
   "Accounting Setup": "accountingSetup",
@@ -571,6 +574,7 @@ const GROUP_KEY: Record<string, string> = {
 
 const WORKLIST_ICONS: Record<WorklistItem, React.ReactNode> = {
   "Overview": <Bot className="h-3.5 w-3.5" />,
+  "Onboarding":       <Sparkles className="h-3.5 w-3.5" />,
   "Company Setup":    <Building2 className="h-3.5 w-3.5" />,
   "Policies":         <FileText className="h-3.5 w-3.5" />,
   "Accounting Setup": <Calculator className="h-3.5 w-3.5" />,
@@ -630,6 +634,7 @@ function WorkList({
 
   const counts: Record<WorklistItem, number | string> = {
     "Overview": conflictsCount > 0 ? conflictsCount : unconfiguredSetupCount > 0 ? unconfiguredSetupCount : "✓",
+    "Onboarding":       "→",
     "Company Setup":    hasCompanySetup    ? "✓" : "—",
     "Policies":         hasExpensePolicy   ? "✓" : "—",
     "Accounting Setup": hasAccountingSetup ? "✓" : "—",
@@ -729,6 +734,10 @@ function AdminAIHints({
   const hints: Record<WorklistItem, string[]> = {
     "Overview": [
       "Use the AI panel on the right to analyse your full configuration and get recommended fixes.",
+    ],
+    "Onboarding": [
+      "Guided 5-step go-live checklist. Folds the legacy setup-assistant route and links to Agent config.",
+      "Progress is auto-saved — jump to any step at any time.",
     ],
     "Company Setup": [
       "Company identity is read from the platform database.",
@@ -1219,6 +1228,9 @@ export default function AdminPage() {
           </div>
         );
       }
+
+      case "Onboarding":
+        return <AdminOnboardingPanel companyId={adminCompanyId} />;
 
       case "Company Setup":
         return (

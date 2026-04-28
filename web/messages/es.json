@@ -896,6 +896,7 @@
       "backToAdmin": "Volver al admin",
       "complete": "Completos",
       "recheck": "Volver a verificar",
+      "agentConfigLink": "Configuración del agente",
       "errorLoad": "No se pudo cargar la lista.",
       "statusComplete": "Listo",
       "statusPending": "Pendiente",
@@ -981,7 +982,8 @@
       "addOns": "Módulos adicionales",
       "authentication": "Autenticación",
       "policies": "Políticas",
-      "workflow": "Flujo de trabajo"
+      "workflow": "Flujo de trabajo",
+      "onboarding": "Asistente de inicio"
     },
     "groups": {
       "setup": "Configuración",

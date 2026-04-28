@@ -896,6 +896,7 @@
       "backToAdmin": "Back to admin",
       "complete": "Complete",
       "recheck": "Re-check",
+      "agentConfigLink": "Agent config",
       "errorLoad": "Failed to load checklist.",
       "statusComplete": "Done",
       "statusPending": "Pending",
@@ -981,7 +982,8 @@
       "addOns": "Add-Ons",
       "authentication": "Authentication",
       "policies": "Policies",
-      "workflow": "Workflow"
+      "workflow": "Workflow",
+      "onboarding": "Onboarding"
     },
     "groups": {
       "setup": "Setup",
