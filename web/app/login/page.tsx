@@ -132,10 +132,11 @@ export default function LoginPage() {
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-white/40">
+                  <label htmlFor="email" className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-white/40">
                     {t("emailLabel")}
                   </label>
                   <input
+                    id="email"
                     type="email"
                     autoFocus
                     value={email}
