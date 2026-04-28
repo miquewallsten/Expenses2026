@@ -20,8 +20,8 @@ import AdminAuthSettingsPanel from "@/components/admin/AdminAuthSettingsPanel";
 import AdminChannelsPanel from "@/components/admin/AdminChannelsPanel";
 import AdminReportCyclePanel from "@/components/admin/AdminReportCyclePanel";
 import {
-  Building2, FileText, GitBranch, ShieldCheck, Puzzle, Key, Lock,
-  AlertTriangle, Calculator, Bot, Save, Loader2, FolderOutput, Archive, Users, Radio, CalendarClock, HardDrive, Sparkles,
+  Building2, FileText, GitBranch, ShieldCheck, Puzzle, Lock,
+  Calculator, Bot, Save, Loader2, FolderOutput, Users, Radio, CalendarClock, Sparkles,
 } from "lucide-react";
 import { getCurrentRole, getCurrentUserId, getCurrentCompanyId, getStoredSession, getAuthHeaders } from "@/lib/session";
 import { buildGlobalNav, GlobalNavItem } from "@/lib/navigation";
@@ -38,13 +38,10 @@ const WORKLIST_ITEMS = [
   "Accounting Setup",
   "Workflow",
   "Report Cycle",
-  "Export Config",
-  "Archive Config",
-  "Storage Config",
+  "Data Out",
   "Channels",
   "Users",
-  "Roles",
-  "Permissions",
+  "Access Control",
   "Add-Ons",
   "Authentication",
 ] as const;
@@ -53,9 +50,11 @@ type WorklistItem = typeof WORKLIST_ITEMS[number];
 const WORKLIST_GROUPS: { label: string; items: WorklistItem[] }[] = [
   { label: "Setup", items: ["Overview", "Onboarding", "Company Setup", "Policies", "Accounting Setup", "Workflow", "Report Cycle"] },
   { label: "Intake & Notifications", items: ["Channels"] },
-  { label: "Data Out", items: ["Export Config", "Archive Config", "Storage Config"] },
-  { label: "Administration", items: ["Users", "Roles", "Permissions", "Add-Ons", "Authentication"] },
+  { label: "Data Out", items: ["Data Out"] },
+  { label: "Administration", items: ["Users", "Access Control", "Add-Ons", "Authentication"] },
 ];
+
+type DataOutTab = "export" | "archive" | "storage";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -552,13 +551,10 @@ const ITEM_MENU_KEY: Record<WorklistItem, string> = {
   "Accounting Setup": "accountingSetup",
   "Workflow": "workflow",
   "Report Cycle": "reportCycle",
-  "Export Config": "exportConfig",
-  "Archive Config": "archiveConfig",
-  "Storage Config": "storageConfig",
+  "Data Out": "dataOut",
   "Channels": "channels",
   "Users": "users",
-  "Roles": "roles",
-  "Permissions": "permissions",
+  "Access Control": "accessControl",
   "Add-Ons": "addOns",
   "Authentication": "authentication",
 };
@@ -580,13 +576,10 @@ const WORKLIST_ICONS: Record<WorklistItem, React.ReactNode> = {
   "Accounting Setup": <Calculator className="h-3.5 w-3.5" />,
   "Workflow":         <GitBranch className="h-3.5 w-3.5" />,
   "Report Cycle":     <CalendarClock className="h-3.5 w-3.5" />,
-  "Export Config":    <FolderOutput className="h-3.5 w-3.5" />,
-  "Archive Config":   <Archive className="h-3.5 w-3.5" />,
-  "Storage Config":   <HardDrive className="h-3.5 w-3.5" />,
+  "Data Out":         <FolderOutput className="h-3.5 w-3.5" />,
   "Channels":         <Radio className="h-3.5 w-3.5" />,
   Users:              <Users className="h-3.5 w-3.5" />,
-  Roles:              <ShieldCheck className="h-3.5 w-3.5" />,
-  Permissions:        <Key className="h-3.5 w-3.5" />,
+  "Access Control":   <ShieldCheck className="h-3.5 w-3.5" />,
   "Add-Ons":          <Puzzle className="h-3.5 w-3.5" />,
   Authentication:     <Lock className="h-3.5 w-3.5" />,
 };
@@ -634,6 +627,7 @@ function WorkList({
     hasCompanySetup, hasExpensePolicy, hasAccountingSetup, hasApprovalSetup, hasWorkflowSetup,
   ].filter((v) => !v).length;
 
+  const dataOutDone = [hasExportConfig, hasArchiveConfig, hasStorageConfig].filter(Boolean).length;
   const counts: Record<WorklistItem, number | string> = {
     "Overview": conflictsCount > 0 ? conflictsCount : unconfiguredSetupCount > 0 ? unconfiguredSetupCount : "✓",
     "Onboarding":       onboardingChecklist
@@ -644,13 +638,10 @@ function WorkList({
     "Accounting Setup": hasAccountingSetup ? "✓" : "—",
     "Workflow":         (hasApprovalSetup && hasWorkflowSetup) ? "✓" : "—",
     "Report Cycle":     "→",
-    "Export Config":    hasExportConfig    ? "✓" : "—",
-    "Archive Config":   hasArchiveConfig   ? "✓" : "—",
-    "Storage Config":   hasStorageConfig   ? "✓" : "—",
+    "Data Out":         dataOutDone === 3 ? "✓" : `${dataOutDone}/3`,
     "Channels":         "→",
     Users:              users.length,
-    Roles:              roles.length,
-    Permissions:        permissions.length,
+    "Access Control":   `${roles.length}/${permissions.length}`,
     "Add-Ons":          enabledModulesCount,
     Authentication:     "✓",
   };
@@ -710,182 +701,7 @@ function WorkList({
   );
 }
 
-// ── AI Hints sidebar ────────────────────────────────────────────────────────
-
-function AdminAIHints({
-  section,
-  rolesCount,
-  permissionsCount,
-  stagesCount,
-  transitionsCount,
-  enabledModulesCount,
-  expensePolicy,
-  accountingSetup,
-  approvalSetup,
-  workflowSetup,
-}: {
-  section: WorklistItem;
-  rolesCount: number;
-  permissionsCount: number;
-  stagesCount: number;
-  transitionsCount: number;
-  enabledModulesCount: number;
-  expensePolicy?: any;
-  accountingSetup?: any;
-  approvalSetup?: any;
-  workflowSetup?: any;
-}) {
-  const hints: Record<WorklistItem, string[]> = {
-    "Overview": [
-      "Use the AI panel on the right to analyse your full configuration and get recommended fixes.",
-    ],
-    "Onboarding": [
-      "Guided 5-step go-live checklist: Company, Legal Entities, Chart of Accounts, Approval Policy, Users.",
-      "Progress is auto-saved — jump to any step at any time. The footer links to Agent config.",
-    ],
-    "Company Setup": [
-      "Company identity is read from the platform database.",
-      "Extended configuration (expense rules, module activation) is managed under Expense Policy and Add-Ons.",
-    ],
-    "Policies": expensePolicy ? [
-      `XML mode: ${expensePolicy.xml_required_mode}. Tickets ${expensePolicy.tickets_allowed ? "allowed" : "not allowed"}.`,
-      expensePolicy.manager_approval_required
-        ? "Manager approval is required before accounting review."
-        : "Manager approval is disabled. Expenses go directly to accounting.",
-      !expensePolicy.require_justification && !expensePolicy.require_proof
-        ? "Neither justification nor proof is required. Consider enabling at least one for audit trails."
-        : "Justification or proof requirements are active. Employees must attach supporting documents.",
-    ] : [
-      "No expense policy loaded yet. Save the form to initialise defaults.",
-    ],
-    "Accounting Setup": accountingSetup ? [
-      `Accounting review mode: ${accountingSetup.accounting_review_mode ?? "—"}.`,
-      accountingSetup.poliza_required
-        ? "Poliza XML is required. Ensure all expenses have CFDI documents before export."
-        : "Poliza is not required. Accounting export will proceed without XML validation.",
-      accountingSetup.project_required || accountingSetup.cost_center_required
-        ? "Project or cost center is required on expenses — employees must allocate correctly."
-        : "No allocation dimensions are required. Consider enabling for audit trails.",
-    ] : [
-      "Accounting setup not loaded.",
-    ],
-    "Workflow": [
-      ...(approvalSetup ? [
-        `Approval mode: ${(approvalSetup.approval_mode ?? "none").replace(/_/g, " ")}.`,
-        approvalSetup.escalate_policy_failures_to_accounting
-          ? "Policy failures escalate to accounting automatically."
-          : "Policy failures do not escalate — review manually or enable escalation.",
-      ] : ["Approval setup not loaded."]),
-      ...(workflowSetup ? [
-        `Workflow mode: ${(workflowSetup.default_expense_workflow_mode ?? "standard").replace(/_/g, " ")}.`,
-        workflowSetup.block_submit_on_failed_validation
-          ? "Submission is blocked on failed validation."
-          : "Failed validation does not block submission — review routing rules.",
-      ] : ["Workflow setup not loaded."]),
-    ],
-    "Report Cycle": [
-      "Configure when expense reports are automatically created for each user.",
-      "Validated expenses sit in a holding state until the cycle fires — then they are bundled per user and submitted for approval.",
-      "Use 'Run now' to trigger a cycle immediately. Use the title template tokens: {user}, {month}, {year}.",
-    ],
-    Roles: [
-      rolesCount === 0
-        ? "No roles created. Define at least an Employee and Manager role to enable approval workflows."
-        : `${rolesCount} role${rolesCount !== 1 ? "s" : ""} configured.`,
-      "Assign permissions to roles to enforce least-privilege access across expense and approval workflows.",
-    ],
-    Permissions: [
-      permissionsCount === 0
-        ? "No permissions defined. Create permission keys like submit_expense and approve_expense first."
-        : `${permissionsCount} permission${permissionsCount !== 1 ? "s" : ""} defined.`,
-      "Use snake_case keys that mirror the action name for easy readability in audit logs.",
-    ],
-    Users: [
-      "Create users here so they can log in via magic link.",
-      "Each user must have an email address and a role — employee, manager, accounting, or admin.",
-      "Changing a role takes effect immediately. The user's existing session will reflect the new role on next login.",
-    ],
-    "Export Config": [
-      "Controls how export bundle names are generated per company.",
-      "Use {company_id}, {date}, {year}, {month} as tokens in the bundle name pattern.",
-      "export_format determines serialisation — json (default) or csv.",
-    ],
-    "Archive Config": [
-      "Controls how archived file names and storage paths are structured per company.",
-      "Use {company}, {date}, {expense_id}, {year}, {month}, {filename} as tokens.",
-      "Changes apply to all new uploads — existing archived files are not renamed.",
-    ],
-    "Storage Config": [
-      "Controls where archived files are physically stored — local disk, NAS, S3, or Azure Blob.",
-      "Switching backends only affects new uploads. Existing files stay where they were originally written.",
-      "Test the connection after saving to confirm credentials and bucket/container access.",
-    ],
-    "Channels": [
-      "WhatsApp and email channels share the same AI agent — expenses, approvals, and queries work identically via both.",
-      "WhatsApp identity is anchored to the employee's email address via a one-time OTP challenge.",
-      "The webhook verify token and URL are generated automatically on first save — copy them into the Meta App Dashboard.",
-    ],
-    "Add-Ons": [
-      `${enabledModulesCount} module${enabledModulesCount !== 1 ? "s" : ""} currently active for this company.`,
-      "Enable Expenses before Accounting — poliza export depends on expense records.",
-      "Inactive modules are hidden from employees. No data is deleted when a module is disabled.",
-    ],
-    Authentication: [
-      "Configure SSO, magic-link, and session expiry settings for your company.",
-      "Changes to authentication settings take effect immediately for all new sessions.",
-    ],
-  };
-
-  const t = useTranslations("admin");
-  const items = hints[section] ?? [];
-
-  return (
-    <div className="space-y-3">
-      <div className="rounded-lg border border-white/[0.07] bg-white/[0.03] p-3">
-        <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/22">{t("copilotLabel")}</p>
-        <p className="text-[11px] text-white/40 leading-relaxed">
-          {t("reviewing", { section })}.
-        </p>
-      </div>
-
-      <div className="overflow-hidden rounded-lg border border-white/[0.07]">
-        <div className="grid grid-cols-2 divide-x divide-white/[0.05] border-b border-white/[0.05]">
-          <div className="px-3 py-2.5 text-center">
-            <p className="font-mono text-base font-bold text-white">{rolesCount}</p>
-            <p className="text-[9px] uppercase tracking-widest text-white/25">{t("stats.roles")}</p>
-          </div>
-          <div className="px-3 py-2.5 text-center">
-            <p className="font-mono text-base font-bold text-white">{permissionsCount}</p>
-            <p className="text-[9px] uppercase tracking-widest text-white/25">{t("stats.permissions")}</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-3 divide-x divide-white/[0.05]">
-          <div className="px-3 py-2.5 text-center">
-            <p className="font-mono text-base font-bold text-white">{stagesCount}</p>
-            <p className="text-[9px] uppercase tracking-widest text-white/25">{t("stats.stages")}</p>
-          </div>
-          <div className="px-3 py-2.5 text-center">
-            <p className="font-mono text-base font-bold text-white">{transitionsCount}</p>
-            <p className="text-[9px] uppercase tracking-widest text-white/25">{t("stats.transactions")}</p>
-          </div>
-          <div className="px-3 py-2.5 text-center">
-            <p className="font-mono text-base font-bold text-white">{enabledModulesCount}</p>
-            <p className="text-[9px] uppercase tracking-widest text-white/25">{t("stats.modules")}</p>
-          </div>
-        </div>
-      </div>
-
-      {items.map((hint, i) => (
-        <div key={i} className="flex items-start gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
-          <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-amber-400/50" />
-          <p className="text-[11px] text-white/40 leading-relaxed">{hint}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ── Orchestrator patch summary ─────────────────────────────────────────────────────────
+// ── Orchestrator patch summary ─────────────────────────────────────────────
 
 const PATCH_SECTION_DEFS: { key: keyof OrchestratorPatches; menuKey: string }[] = [
   { key: "company_setup",    menuKey: "companySetup" },
@@ -1000,16 +816,18 @@ export default function AdminPage() {
       approval_setup: "Workflow",
       approval_policy: "Workflow",
       report_cycle: "Report Cycle",
-      export: "Export Config",
-      export_config: "Export Config",
-      archive: "Archive Config",
-      archive_config: "Archive Config",
-      storage: "Storage Config",
-      storage_config: "Storage Config",
+      export: "Data Out",
+      export_config: "Data Out",
+      archive: "Data Out",
+      archive_config: "Data Out",
+      storage: "Data Out",
+      storage_config: "Data Out",
+      data_out: "Data Out",
       channels: "Channels",
       users: "Users",
-      roles: "Roles",
-      permissions: "Permissions",
+      roles: "Access Control",
+      permissions: "Access Control",
+      access_control: "Access Control",
       addons: "Add-Ons",
       add_ons: "Add-Ons",
       authentication: "Authentication",
@@ -1043,6 +861,26 @@ export default function AdminPage() {
   }, []);
   const [workflowSubtab, setWorkflowSubtab] = useState<WorkflowTab | undefined>(initialWorkflowTab);
 
+  const initialDataOutTab = useMemo<DataOutTab | undefined>(() => {
+    if (typeof window === "undefined") return undefined;
+    const p = new URLSearchParams(window.location.search).get("panel")?.toLowerCase();
+    if (p === "archive" || p === "archive_config") return "archive";
+    if (p === "storage" || p === "storage_config") return "storage";
+    if (p === "export" || p === "export_config") return "export";
+    return undefined;
+  }, []);
+  const [dataOutTab, setDataOutTab] = useState<DataOutTab>(initialDataOutTab ?? "export");
+
+  type AccessControlTab = "roles" | "permissions";
+  const initialAccessTab = useMemo<AccessControlTab | undefined>(() => {
+    if (typeof window === "undefined") return undefined;
+    const p = new URLSearchParams(window.location.search).get("panel")?.toLowerCase();
+    if (p === "permissions") return "permissions";
+    if (p === "roles") return "roles";
+    return undefined;
+  }, []);
+  const [accessTab, setAccessTab] = useState<AccessControlTab>(initialAccessTab ?? "roles");
+
   // Keep ?panel= in sync with the active section (and active sub-tab where
   // applicable) so refresh / share works and so the deep-link reader above
   // stays accurate. replaceState avoids polluting browser history.
@@ -1056,13 +894,10 @@ export default function AdminPage() {
       "Accounting Setup": "accounting",
       "Workflow": "workflow",
       "Report Cycle": "report_cycle",
-      "Export Config": "export",
-      "Archive Config": "archive",
-      "Storage Config": "storage",
+      "Data Out": "data_out",
       "Channels": "channels",
       "Users": "users",
-      "Roles": "roles",
-      "Permissions": "permissions",
+      "Access Control": "access_control",
       "Add-Ons": "addons",
       "Authentication": "authentication",
     };
@@ -1075,6 +910,10 @@ export default function AdminPage() {
       else if (accountingSubtab === "dimensions") next = "dimensions";
     } else if (activeSection === "Workflow") {
       if (workflowSubtab === "approval") next = "approval_setup";
+    } else if (activeSection === "Data Out") {
+      next = dataOutTab; // "export" | "archive" | "storage"
+    } else if (activeSection === "Access Control") {
+      next = accessTab; // "roles" | "permissions"
     }
     if (url.searchParams.get("panel") === next) return;
     if (activeSection === "Overview") {
@@ -1083,7 +922,7 @@ export default function AdminPage() {
       url.searchParams.set("panel", next);
     }
     window.history.replaceState({}, "", url.toString());
-  }, [activeSection, accountingSubtab, workflowSubtab]);
+  }, [activeSection, accountingSubtab, workflowSubtab, dataOutTab, accessTab]);
   const adminCompanyId = Number(getCurrentCompanyId() ?? 1);
 
   // ── Lists not covered by portal config ──────────────────────────────────────
@@ -1413,31 +1252,51 @@ export default function AdminPage() {
           />
         );
 
-      case "Export Config":
+      case "Data Out":
         return (
-          <AdminExportConfigPanel
-            companyId={adminCompanyId}
-            config={exportConfig}
-            onSaved={setExportConfig}
-          />
-        );
-
-      case "Archive Config":
-        return (
-          <AdminArchiveConfigPanel
-            companyId={adminCompanyId}
-            config={archiveConfig}
-            onSaved={setArchiveConfig}
-          />
-        );
-
-      case "Storage Config":
-        return (
-          <AdminStorageConfigPanel
-            companyId={adminCompanyId}
-            config={storageConfig}
-            onSaved={setStorageConfig}
-          />
+          <div>
+            <div className="mb-4 flex gap-1 border-b border-white/[0.05]">
+              {([
+                ["export", tAdmin("exportConfig.title")],
+                ["archive", tAdmin("archiveConfig.title")],
+                ["storage", tAdmin("storageConfig.title")],
+              ] as [DataOutTab, string][]).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setDataOutTab(key)}
+                  className={`-mb-px border-b px-3 py-1.5 text-[11px] font-medium transition-colors ${
+                    dataOutTab === key
+                      ? "border-indigo-400/60 text-white/85"
+                      : "border-transparent text-white/35 hover:text-white/60"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {dataOutTab === "export" && (
+              <AdminExportConfigPanel
+                companyId={adminCompanyId}
+                config={exportConfig}
+                onSaved={setExportConfig}
+              />
+            )}
+            {dataOutTab === "archive" && (
+              <AdminArchiveConfigPanel
+                companyId={adminCompanyId}
+                config={archiveConfig}
+                onSaved={setArchiveConfig}
+              />
+            )}
+            {dataOutTab === "storage" && (
+              <AdminStorageConfigPanel
+                companyId={adminCompanyId}
+                config={storageConfig}
+                onSaved={setStorageConfig}
+              />
+            )}
+          </div>
         );
 
       case "Channels":
@@ -1452,11 +1311,37 @@ export default function AdminPage() {
           />
         );
 
-      case "Roles":
-        return <AdminRolesPanel roles={roles} companyId={adminCompanyId} onRolesChanged={setRoles} />;
-
-      case "Permissions":
-        return <AdminPermissionsPanel permissions={permissions} onPermissionsChanged={setPermissions} />;
+      case "Access Control":
+        return (
+          <div>
+            <div className="mb-4 flex gap-1 border-b border-white/[0.05]">
+              {([
+                ["roles", tAdmin("menu.roles"), roles.length],
+                ["permissions", tAdmin("menu.permissions"), permissions.length],
+              ] as [AccessControlTab, string, number][]).map(([key, label, n]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setAccessTab(key)}
+                  className={`-mb-px flex items-center gap-1.5 border-b px-3 py-1.5 text-[11px] font-medium transition-colors ${
+                    accessTab === key
+                      ? "border-indigo-400/60 text-white/85"
+                      : "border-transparent text-white/35 hover:text-white/60"
+                  }`}
+                >
+                  {label}
+                  <span className="font-mono text-[9.5px] text-white/30">{n}</span>
+                </button>
+              ))}
+            </div>
+            {accessTab === "roles" && (
+              <AdminRolesPanel roles={roles} companyId={adminCompanyId} onRolesChanged={setRoles} />
+            )}
+            {accessTab === "permissions" && (
+              <AdminPermissionsPanel permissions={permissions} onPermissionsChanged={setPermissions} />
+            )}
+          </div>
+        );
 
       case "Add-Ons":
         return <AdminModulesPanel companySetup={companySetup} onSetupChanged={setCompanySetup} />;
@@ -1515,56 +1400,7 @@ export default function AdminPage() {
       );
     }
 
-    if (activeSection === "Archive Config") {
-      return (
-        <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-l border-white/[0.07] bg-zinc-950 p-3">
-          <div className="space-y-3">
-            <div className="rounded-lg border border-white/[0.07] bg-white/[0.03] p-3">
-              <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/22">{tAdmin("archiveNaming")}</p>
-              <p className="text-[11px] text-white/40 leading-relaxed">
-                {tAdmin("archiveNamingDesc")}
-              </p>
-            </div>
-            <div className="overflow-hidden rounded-lg border border-white/[0.07]">
-              <div className="border-b border-white/[0.05] bg-black/20 px-3 py-1.5">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-white/25">{tAdmin("availableTokens")}</p>
-              </div>
-              {([
-                ["{company}",    "Company slug derived from display name"],
-                ["{date}",       "Archive date — YYYY-MM-DD"],
-                ["{expense_id}", "Linked expense id or empty string"],
-                ["{year}",       "4-digit year"],
-                ["{month}",      "2-digit month"],
-                ["{day}",        "2-digit day"],
-                ["{filename}",   "Original file stem (no extension)"],
-              ] as [string, string][]).map(([token, desc]) => (
-                <div key={token} className="flex items-start gap-3 border-b border-white/[0.04] px-3 py-2 last:border-0">
-                  <span className="shrink-0 font-mono text-[10px] text-sky-300/70">{token}</span>
-                  <span className="text-[10px] text-white/35 leading-snug">{desc}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </aside>
-      );
-    }
-
-    return (
-      <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-l border-white/[0.07] bg-zinc-950 p-3">
-        <AdminAIHints
-          section={activeSection}
-          rolesCount={roles.length}
-          permissionsCount={permissions.length}
-          stagesCount={stages.length}
-          transitionsCount={transitions.length}
-          enabledModulesCount={enabledModulesCount}
-          expensePolicy={expensePolicy}
-          accountingSetup={accountingSetup}
-          approvalSetup={approvalSetup}
-          workflowSetup={workflowSetup}
-        />
-      </aside>
-    );
+    return null;
   })();
 
   return (

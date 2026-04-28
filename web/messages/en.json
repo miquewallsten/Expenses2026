@@ -755,6 +755,8 @@
       "exportConfig": "Export Config",
       "archiveConfig": "Archive Config",
       "storageConfig": "Storage Config",
+      "dataOut": "Data Out",
+      "accessControl": "Access Control",
       "channels": "Channels",
       "users": "Users",
       "roles": "Roles",
