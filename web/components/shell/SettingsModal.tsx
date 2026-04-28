@@ -197,7 +197,7 @@ function SettingsDetail({ sectionKey }: { sectionKey: SectionKey }) {
   const { locale, setLocale } = useLocale();
   const themeCtx = useTheme();
   const [timezone, setTimezone]           = useState("America/Mexico_City");
-  const [theme, setLocalTheme] = useState<Theme>(() =>
+  const [localTheme, setLocalTheme] = useState<Theme>(() =>
     (typeof window !== "undefined" ? (localStorage.getItem("pref_theme") ?? "dark") : "dark") as Theme
   );
   const [aiOpen, setAiOpen]               = useState(false);
@@ -273,7 +273,7 @@ function SettingsDetail({ sectionKey }: { sectionKey: SectionKey }) {
                   type="button"
                   onClick={() => handleThemeChange(opt)}
                   className={`flex-1 rounded px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider transition-colors ${
-                    theme === opt
+                    localTheme === opt
                       ? "bg-indigo-600 text-white shadow-sm"
                       : "text-white/40 hover:text-white/70"
                   }`}
