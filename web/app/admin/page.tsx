@@ -1043,9 +1043,9 @@ export default function AdminPage() {
   }, []);
   const [workflowSubtab, setWorkflowSubtab] = useState<WorkflowTab | undefined>(initialWorkflowTab);
 
-  // Keep ?panel= in sync with the active section so refresh / share works
-  // and so the deep-link reader above stays accurate. replaceState avoids
-  // polluting browser history.
+  // Keep ?panel= in sync with the active section (and active sub-tab where
+  // applicable) so refresh / share works and so the deep-link reader above
+  // stays accurate. replaceState avoids polluting browser history.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const slug: Record<WorklistItem, string> = {
@@ -1067,7 +1067,15 @@ export default function AdminPage() {
       "Authentication": "authentication",
     };
     const url = new URL(window.location.href);
-    const next = slug[activeSection];
+    let next = slug[activeSection];
+    // Honour sub-tabs so /admin?panel=chart_of_accounts (etc.) survives
+    // both the URL-sync round-trip and a hard refresh.
+    if (activeSection === "Accounting Setup") {
+      if (accountingSubtab === "chart") next = "chart_of_accounts";
+      else if (accountingSubtab === "dimensions") next = "dimensions";
+    } else if (activeSection === "Workflow") {
+      if (workflowSubtab === "approval") next = "approval_setup";
+    }
     if (url.searchParams.get("panel") === next) return;
     if (activeSection === "Overview") {
       url.searchParams.delete("panel");
@@ -1075,7 +1083,7 @@ export default function AdminPage() {
       url.searchParams.set("panel", next);
     }
     window.history.replaceState({}, "", url.toString());
-  }, [activeSection]);
+  }, [activeSection, accountingSubtab, workflowSubtab]);
   const adminCompanyId = Number(getCurrentCompanyId() ?? 1);
 
   // ── Lists not covered by portal config ──────────────────────────────────────
@@ -1383,6 +1391,7 @@ export default function AdminPage() {
             onSaved={setAccountingSetup}
             draftPatch={accountingSetupDraftPatch}
             initialTab={accountingSubtab}
+            onTabChange={setAccountingSubtab}
           />
         );
 
@@ -1400,6 +1409,7 @@ export default function AdminPage() {
             approvalDraftPatch={approvalSetupDraftPatch}
             workflowDraftPatch={workflowSetupDraftPatch}
             initialTab={workflowSubtab}
+            onTabChange={setWorkflowSubtab}
           />
         );
 

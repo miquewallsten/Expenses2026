@@ -16,6 +16,7 @@ interface Props {
   onSaved: (s: any) => void;
   draftPatch?: Partial<any>;
   initialTab?: AccountingTab;
+  onTabChange?: (tab: AccountingTab) => void;
 }
 
 export default function AdminAccountingTabsPanel({
@@ -26,6 +27,7 @@ export default function AdminAccountingTabsPanel({
   onSaved,
   draftPatch,
   initialTab,
+  onTabChange,
 }: Props) {
   const t = useTranslations("admin.accountingTabs");
   const [tab, setTab] = useState<AccountingTab>(initialTab ?? "setup");
@@ -36,6 +38,11 @@ export default function AdminAccountingTabsPanel({
   useEffect(() => {
     if (initialTab) setTab(initialTab);
   }, [initialTab]);
+
+  const selectTab = (next: AccountingTab) => {
+    setTab(next);
+    onTabChange?.(next);
+  };
 
   const tabs: { key: AccountingTab; label: string }[] = [
     { key: "setup",      label: t("setup")      },
@@ -50,7 +57,7 @@ export default function AdminAccountingTabsPanel({
         {tabs.map(({ key, label }) => (
           <button
             key={key}
-            onClick={() => setTab(key)}
+            onClick={() => selectTab(key)}
             className={`px-3 pb-2 text-[11px] font-medium transition-colors ${
               tab === key
                 ? "border-b-2 border-indigo-400/60 text-white/80"
