@@ -5,6 +5,7 @@ import { Loader2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useLocale, type Locale } from "@/context/LocaleContext";
 import { getAuthHeaders } from "@/lib/session";
+import { useTheme, type Theme } from "@/components/shell/ThemeProvider";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -194,31 +195,36 @@ const TIMEZONES = [
 function SettingsDetail({ sectionKey }: { sectionKey: SectionKey }) {
   const t = useTranslations("settings");
   const { locale, setLocale } = useLocale();
+  const themeCtx = useTheme();
   const [timezone, setTimezone]           = useState("America/Mexico_City");
-  const [theme, setTheme]                 = useState("dark");
+  const [theme, setLocalTheme] = useState<Theme>(() =>
+    (typeof window !== "undefined" ? (localStorage.getItem("pref_theme") ?? "dark") : "dark") as Theme
+  );
   const [aiOpen, setAiOpen]               = useState(false);
   const [saved, setSaved]                 = useState(false);
 
+  const handleThemeChange = (next: Theme) => {
+    setLocalTheme(next);
+    themeCtx.setTheme(next);
+  };
+
   useEffect(() => {
     setTimezone(localStorage.getItem("pref_timezone") ?? "America/Mexico_City");
-    setTheme(localStorage.getItem("pref_theme") ?? "dark");
+    const raw = localStorage.getItem("pref_theme");
+    setLocalTheme((raw === "dark" || raw === "light" || raw === "system" ? raw : "dark") as Theme);
     setAiOpen(localStorage.getItem("pref_ai_panel") === "true");
   }, []);
 
   const handleSave = () => {
     localStorage.setItem("pref_timezone", timezone);
-    localStorage.setItem("pref_theme", theme);
     localStorage.setItem("pref_ai_panel", String(aiOpen));
-    const root = document.documentElement;
-    root.classList.remove("light", "dark");
-    if (theme !== "system") root.classList.add(theme);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
 
   const handleReset = () => {
     setTimezone("America/Mexico_City");
-    setTheme("dark");
+    handleThemeChange("dark");
     setAiOpen(false);
   };
 
@@ -260,11 +266,22 @@ function SettingsDetail({ sectionKey }: { sectionKey: SectionKey }) {
         {sectionKey === "appearance" && (
           <div>
             <label className={labelCls}>{t("theme")}</label>
-            <select value={theme} onChange={(e) => setTheme(e.target.value)} className={selectCls}>
-              <option value="dark">{t("themeOptions.dark")}</option>
-              <option value="light">{t("themeOptions.light")}</option>
-              <option value="system">{t("themeOptions.system")}</option>
-            </select>
+            <div className="flex gap-1 rounded border border-white/[0.08] bg-black/[0.15] p-1">
+              {(["dark", "light", "system"] as const).map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => handleThemeChange(opt)}
+                  className={`flex-1 rounded px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider transition-colors ${
+                    theme === opt
+                      ? "bg-indigo-600 text-white shadow-sm"
+                      : "text-white/40 hover:text-white/70"
+                  }`}
+                >
+                  {t(`themeOptions.${opt}` as Parameters<typeof t>[0])}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
