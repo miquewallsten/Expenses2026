@@ -290,8 +290,43 @@ function MapeoEngine({
   const [poliza, setPoliza] = useState<PolizaResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [realExpenses, setRealExpenses] = useState<typeof SAMPLE_EXPENSES | null>(null);
 
-  const sample = SAMPLE_EXPENSES[sampleIdx];
+  // Pull real expenses for the current company; fall back to SAMPLE_EXPENSES
+  // if the company has none yet (so the mapping editor still has something
+  // to demonstrate the póliza preview against).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `${API}/admin/coa/${companyId}/bulk-simulate?limit=24`,
+          { headers: getAuthHeaders() },
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        const rows = Array.isArray(data?.rows) ? data.rows : [];
+        if (cancelled) return;
+        const mapped = rows
+          .filter((r: any) => r?.category_code)
+          .map((r: any) => ({
+            category_code: r.category_code as string,
+            amount: Number(r.amount ?? 0),
+            description: (r.description as string) || "(sin descripción)",
+            vendor: (r.vendor as string) || (r.merchant as string) || "—",
+          }));
+        setRealExpenses(mapped.length > 0 ? mapped : null);
+      } catch {
+        // network glitch → fall back to SAMPLE_EXPENSES silently
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [companyId]);
+
+  const samplePool = realExpenses && realExpenses.length > 0 ? realExpenses : SAMPLE_EXPENSES;
+  const usingReal = realExpenses !== null && realExpenses.length > 0;
+  const safeIdx = sampleIdx % samplePool.length;
+  const sample = samplePool[safeIdx];
   const activeCategory = useMemo(
     () => categories.find(c => c.code === sample.category_code) ?? null,
     [categories, sample.category_code],
@@ -353,7 +388,19 @@ function MapeoEngine({
     <div className="grid grid-cols-12 gap-3">
       {/* COL 1 — sample expense ───────────────────────────────────── */}
       <div className="col-span-12 lg:col-span-3">
-        <SectionLabel>{t("mapeo.sampleHeader")}</SectionLabel>
+        <SectionLabel>
+          {t("mapeo.sampleHeader")}
+          <span
+            className={`ml-2 inline-flex items-center rounded px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest ${
+              usingReal
+                ? "bg-emerald-500/15 text-emerald-300/80"
+                : "bg-amber-500/15 text-amber-300/80"
+            }`}
+            title={usingReal ? t("mapeo.sourceLiveHint") : t("mapeo.sourceSampleHint")}
+          >
+            {usingReal ? t("mapeo.sourceLive") : t("mapeo.sourceSample")}
+          </span>
+        </SectionLabel>
         <div className="overflow-hidden rounded-lg border border-white/[0.07] bg-white/[0.02]">
           <div className="px-3 py-2.5">
             <div className="flex items-baseline justify-between">
@@ -369,16 +416,16 @@ function MapeoEngine({
           </div>
           <div className="flex border-t border-white/[0.07] divide-x divide-white/[0.05]">
             <button
-              onClick={() => setSampleIdx((i) => (i - 1 + SAMPLE_EXPENSES.length) % SAMPLE_EXPENSES.length)}
+              onClick={() => setSampleIdx((i) => (i - 1 + samplePool.length) % samplePool.length)}
               className="flex-1 py-1.5 text-[10px] text-white/55 hover:bg-white/[0.04]"
             >‹ {t("mapeo.prev")}</button>
             <button
-              onClick={() => setSampleIdx((i) => (i + 1) % SAMPLE_EXPENSES.length)}
+              onClick={() => setSampleIdx((i) => (i + 1) % samplePool.length)}
               className="flex-1 py-1.5 text-[10px] text-white/55 hover:bg-white/[0.04]"
             >{t("mapeo.next")} ›</button>
           </div>
           <p className="border-t border-white/[0.07] px-3 py-1.5 text-center text-[9px] text-white/30 tabular-nums">
-            {sampleIdx + 1} / {SAMPLE_EXPENSES.length}
+            {safeIdx + 1} / {samplePool.length}
           </p>
         </div>
       </div>
@@ -657,7 +704,7 @@ function AccountsEditor({
                 <th className="px-3 py-1.5 text-left">{t("cuentas.code")}</th>
                 <th className="px-3 py-1.5 text-left">{t("cuentas.name")}</th>
                 <th className="px-3 py-1.5 text-left">{t("cuentas.class")}</th>
-                <th className="px-3 py-1.5 text-left">Agrupador SAT</th>
+                <th className="px-3 py-1.5 text-left">{t("cuentas.satGroup")}</th>
                 <th className="px-3 py-1.5 text-left">{t("cuentas.split")}</th>
                 <th className="px-3 py-1.5"></th>
               </tr>
@@ -1710,12 +1757,12 @@ function BulkSimulatorPanel({ companyId }: { companyId: number }) {
               <thead className="bg-white/[0.03] text-[9px] uppercase tracking-widest text-white/30">
                 <tr>
                   <th className="px-2 py-1 text-left">#</th>
-                  <th className="px-2 py-1 text-left">Fecha</th>
-                  <th className="px-2 py-1 text-left">Descripción</th>
-                  <th className="px-2 py-1 text-left">Cat.</th>
-                  <th className="px-2 py-1 text-right">Monto</th>
+                  <th className="px-2 py-1 text-left">{t("pruebas.colDate")}</th>
+                  <th className="px-2 py-1 text-left">{t("pruebas.colDescription")}</th>
+                  <th className="px-2 py-1 text-left">{t("pruebas.colCategory")}</th>
+                  <th className="px-2 py-1 text-right">{t("pruebas.colAmount")}</th>
                   <th className="px-2 py-1 text-center">✓</th>
-                  <th className="px-2 py-1 text-left">Avisos</th>
+                  <th className="px-2 py-1 text-left">{t("pruebas.colWarnings")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/[0.04]">
@@ -1732,14 +1779,14 @@ function BulkSimulatorPanel({ companyId }: { companyId: number }) {
                         : <AlertTriangle className="inline h-3 w-3 text-rose-300" />}
                     </td>
                     <td className="px-2 py-1 text-amber-200/70" title={r.warnings.join(" · ")}>
-                      {r.warning_count > 0 ? `${r.warning_count} aviso(s)` : "—"}
+                      {r.warning_count > 0 ? t("pruebas.warningCount", { count: r.warning_count }) : "—"}
                     </td>
                   </tr>
                 ))}
               </tbody>
               <tfoot className="bg-white/[0.03]">
                 <tr>
-                  <td colSpan={4} className="px-2 py-1 text-right text-[9px] uppercase tracking-widest text-white/30">Totales</td>
+                  <td colSpan={4} className="px-2 py-1 text-right text-[9px] uppercase tracking-widest text-white/30">{t("pruebas.totals")}</td>
                   <td className="px-2 py-1 text-right font-mono tabular-nums text-emerald-300/90">{result.total_debit}</td>
                   <td colSpan={2} className="px-2 py-1 text-right font-mono tabular-nums text-rose-300/90">{result.total_credit}</td>
                 </tr>

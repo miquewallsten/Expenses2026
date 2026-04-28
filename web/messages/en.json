@@ -1184,6 +1184,7 @@
       "profileTypeLabel": "Type:",
       "suggestedChanges": "Suggested setup changes",
       "alsoForPolicy": "Also suggested for Expense Policy",
+      "alsoForPolicyHint": "Navigate to <accent>Expense Policy</accent> to review and apply these changes.",
       "recommendedEntities": "Recommended legal entities",
       "entityReimb": "Reimbursement",
       "entityInvoice": "Invoice receiver",
@@ -1265,6 +1266,10 @@
       },
       "mapeo": {
         "sampleHeader": "Sample expense",
+        "sourceLive": "Live",
+        "sourceSample": "Demo",
+        "sourceLiveHint": "These expenses come from your real data.",
+        "sourceSampleHint": "No real expenses yet — showing demo data.",
         "decisionsHeader": "Mapping decisions",
         "previewHeader": "Generated journal entry",
         "category": "Category",
@@ -1284,7 +1289,8 @@
         "code": "Code",
         "name": "Name",
         "class": "Class",
-        "split": "Split"
+        "split": "Split",
+        "satGroup": "SAT group"
       },
       "iva": {
         "empty": "No VAT rates yet.",
@@ -1301,7 +1307,14 @@
         "run": "Simulate",
         "bulkHeader": "Bulk simulation (last N expenses)",
         "bulkLimit": "Limit",
-        "bulkRun": "Run"
+        "bulkRun": "Run",
+        "colDate": "Date",
+        "colDescription": "Description",
+        "colCategory": "Cat.",
+        "colAmount": "Amount",
+        "colWarnings": "Warnings",
+        "totals": "Totals",
+        "warningCount": "{count, plural, one {# warning} other {# warnings}}"
       },
       "preview": {
         "empty": "Pick a category to see the journal entry.",
