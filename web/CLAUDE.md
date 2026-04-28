@@ -23,6 +23,7 @@ This app is a dark-mode-only financial ops UI. Follow these rules when creating 
 
 ### Rules
 - Never use `neutral-*` colors — use `zinc-*` or `white/opacity` instead
-- Never use `light:` or remove `dark:` — the app is dark-only; no light mode
+- The app supports light AND dark themes via CSS token override (`globals.css` `html.light {}`). Do NOT add `dark:` prefixes to existing classes — the token system handles theming automatically. For new classes needing light-mode variants, use `[html.light_&]:` (e.g. `[html.light_&]:text-black/50`).
 - Never use raw hex or `rgb()` values in className — use Tailwind utilities only
-- Prefer `white/[0.xx]` fractional opacity for fine-grained control over borders and text
+- Prefer `white/[0.xx]` fractional opacity for fine-grained control over borders and text. In light mode, `text-white/60` resolves to dark text at 60% opacity via `--color-white: #09090b`.
+- For SVG attributes (`stroke`, `fill`), use `currentColor` instead of hardcoded `"white"` so they follow the CSS color token.
