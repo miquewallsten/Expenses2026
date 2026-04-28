@@ -391,17 +391,16 @@ type AddOnStatus = "installed" | "available" | "premium";
 interface AddOnEntry {
   key: string;
   flag: string;
-  label: string;
-  desc: string;
+  i18nKey: string;
   premium: boolean;
 }
 
 const ADDONS: AddOnEntry[] = [
-  { key: "archive",            flag: "archive_module_enabled",               label: "Archivo",               desc: "Almacenamiento y exportación de comprobantes.",  premium: false },
-  { key: "time_allocation",    flag: "time_allocation_module_enabled",       label: "Distribución de tiempo", desc: "Seguimiento y distribución de tiempo.",          premium: false },
-  { key: "purchase_requests",  flag: "purchase_requests_module_enabled",     label: "Solicitudes de compra", desc: "Órdenes y solicitudes previas al gasto.",        premium: false },
-  { key: "amex_reconciliation", flag: "amex_reconciliation_module_enabled",  label: "Conciliación Amex",     desc: "Conciliación de estados de cuenta American Express con CFDIs.", premium: false },
-  { key: "subcontractor",      flag: "subcontractor_module_enabled",         label: "Subcontratistas",       desc: "Gestión de gastos y facturas de subcontratistas.", premium: true  },
+  { key: "archive",            flag: "archive_module_enabled",               i18nKey: "archive",           premium: false },
+  { key: "time_allocation",    flag: "time_allocation_module_enabled",       i18nKey: "timeAllocation",    premium: false },
+  { key: "purchase_requests",  flag: "purchase_requests_module_enabled",     i18nKey: "purchaseRequests",  premium: false },
+  { key: "amex_reconciliation", flag: "amex_reconciliation_module_enabled",  i18nKey: "amexReconciliation", premium: false },
+  { key: "subcontractor",      flag: "subcontractor_module_enabled",         i18nKey: "subcontractor",     premium: true  },
 ];
 
 function AddOnsTile({
@@ -411,6 +410,8 @@ function AddOnsTile({
   companySetup: Record<string, any>;
   onOpen: () => void;
 }) {
+  const tt = useTranslations("admin.overview.addOnsTile");
+  const tm = useTranslations("admin.modules.addons");
   const installedCount = ADDONS.filter((a) => !!companySetup?.[a.flag]).length;
   const premiumCount   = ADDONS.filter((a) => a.premium).length;
 
@@ -419,7 +420,7 @@ function AddOnsTile({
       <div className="flex items-center justify-between border-b border-white/[0.05] bg-black/20 px-4 py-2.5">
         <div className="flex items-center gap-2">
           <Puzzle className="h-3.5 w-3.5 text-white/30" />
-          <span className="text-[11px] font-semibold text-white/70">Add-ons</span>
+          <span className="text-[11px] font-semibold text-white/70">{tt("title")}</span>
           <span className="rounded border border-white/[0.08] bg-white/[0.04] px-1.5 py-0.5 font-mono text-[9.5px] text-white/35">
             {installedCount}/{ADDONS.length}
           </span>
@@ -429,7 +430,7 @@ function AddOnsTile({
           onClick={onOpen}
           className="text-[10px] font-medium text-white/30 transition-colors hover:text-white/60"
         >
-          Administrar →
+          {tt("manage")}
         </button>
       </div>
       <ul>
@@ -440,7 +441,7 @@ function AddOnsTile({
             <li key={a.key} className="flex items-center justify-between gap-3 border-b border-white/[0.03] px-4 py-2 last:border-0">
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] font-medium text-white/65">{a.label}</span>
+                  <span className="text-[11px] font-medium text-white/65">{tm(`${a.i18nKey}Name`)}</span>
                   {a.premium && (
                     <span className="inline-flex items-center gap-1 rounded border border-amber-500/25 bg-amber-500/[0.07] px-1 py-px text-[8.5px] font-bold uppercase tracking-widest text-amber-300/70">
                       <Sparkles className="h-2.5 w-2.5" />
@@ -448,7 +449,7 @@ function AddOnsTile({
                     </span>
                   )}
                 </div>
-                <p className="truncate text-[9.5px] text-white/28">{a.desc}</p>
+                <p className="truncate text-[9.5px] text-white/28">{tm(`${a.i18nKey}Desc`)}</p>
               </div>
               <AddOnStatusPill status={status} />
             </li>
@@ -459,7 +460,9 @@ function AddOnsTile({
         <div className="flex items-center gap-2 border-t border-white/[0.04] bg-amber-500/[0.02] px-4 py-1.5">
           <Lock className="h-3 w-3 text-amber-400/50" />
           <p className="text-[9.5px] text-amber-200/45">
-            Los add-ons <span className="text-amber-200/70">Premium</span> requieren contratación adicional antes de activarse.
+            {tt.rich("premiumNotice", {
+              accent: (chunks) => <span className="text-amber-200/70">{chunks}</span>,
+            })}
           </p>
         </div>
       )}
@@ -468,11 +471,12 @@ function AddOnsTile({
 }
 
 function AddOnStatusPill({ status }: { status: AddOnStatus }) {
+  const tt = useTranslations("admin.overview.addOnsTile");
   if (status === "installed") {
     return (
       <span className="inline-flex items-center gap-1 rounded border border-emerald-500/25 bg-emerald-500/[0.06] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-emerald-400/80">
         <CheckCircle2 className="h-2.5 w-2.5" />
-        Activo
+        {tt("installed")}
       </span>
     );
   }
@@ -480,13 +484,13 @@ function AddOnStatusPill({ status }: { status: AddOnStatus }) {
     return (
       <span className="inline-flex items-center gap-1 rounded border border-amber-500/25 bg-amber-500/[0.06] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-amber-300/70">
         <Lock className="h-2.5 w-2.5" />
-        Contratar
+        {tt("premium")}
       </span>
     );
   }
   return (
     <span className="rounded border border-white/[0.08] bg-white/[0.02] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-white/30">
-      Disponible
+      {tt("available")}
     </span>
   );
 }

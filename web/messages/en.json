@@ -879,7 +879,15 @@
       "statusConfigured": "Configured",
       "statusNeedsAttention": "Needs attention",
       "statusNotConfigured": "Not configured",
-      "unconfiguredCount": "{count, plural, one {# section not yet configured} other {# sections not yet configured}}"
+      "unconfiguredCount": "{count, plural, one {# section not yet configured} other {# sections not yet configured}}",
+      "addOnsTile": {
+        "title": "Add-ons",
+        "manage": "Manage →",
+        "installed": "Active",
+        "available": "Available",
+        "premium": "Contact sales",
+        "premiumNotice": "<accent>Premium</accent> add-ons require an additional contract before activation."
+      }
     },
     "modules": {
       "title": "Add-On Modules",

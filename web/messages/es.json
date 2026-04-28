@@ -879,7 +879,15 @@
       "statusConfigured": "Configurado",
       "statusNeedsAttention": "Requiere atención",
       "statusNotConfigured": "Sin configurar",
-      "unconfiguredCount": "{count, plural, one {# sección sin configurar} other {# secciones sin configurar}}"
+      "unconfiguredCount": "{count, plural, one {# sección sin configurar} other {# secciones sin configurar}}",
+      "addOnsTile": {
+        "title": "Add-ons",
+        "manage": "Administrar →",
+        "installed": "Activo",
+        "available": "Disponible",
+        "premium": "Contratar",
+        "premiumNotice": "Los add-ons <accent>Premium</accent> requieren contratación adicional antes de activarse."
+      }
     },
     "modules": {
       "title": "Módulos adicionales",
