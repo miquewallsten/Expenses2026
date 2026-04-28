@@ -151,6 +151,7 @@ interface Props {
   workflowSetup: any;
   onNavigate: (
     section:
+      | "Onboarding"
       | "Company Setup"
       | "Workflow"
       | "Accounting Setup"
@@ -350,7 +351,7 @@ export default function AdminOverviewPanel({
         {issueCount === 0 && unconfiguredCount > 0 && (
           <button
             type="button"
-            onClick={() => onNavigate("Company Setup")}
+            onClick={() => onNavigate("Onboarding")}
             className="text-[10px] font-semibold text-white/25 transition-colors hover:text-white/50"
           >
             {to("startSetup")}
