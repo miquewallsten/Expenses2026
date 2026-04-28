@@ -606,6 +606,7 @@ function WorkList({
   hasExportConfig,
   hasArchiveConfig,
   hasStorageConfig,
+  onboardingChecklist,
   conflictsCount,
   draftSections,
 }: {
@@ -623,6 +624,7 @@ function WorkList({
   hasExportConfig: boolean;
   hasArchiveConfig: boolean;
   hasStorageConfig: boolean;
+  onboardingChecklist: { passed: number; total: number; go_live_ready: boolean } | null;
   conflictsCount: number;
   draftSections: Set<string>;
 }) {
@@ -634,7 +636,9 @@ function WorkList({
 
   const counts: Record<WorklistItem, number | string> = {
     "Overview": conflictsCount > 0 ? conflictsCount : unconfiguredSetupCount > 0 ? unconfiguredSetupCount : "✓",
-    "Onboarding":       "→",
+    "Onboarding":       onboardingChecklist
+      ? (onboardingChecklist.go_live_ready ? "✓" : `${onboardingChecklist.passed}/${onboardingChecklist.total}`)
+      : "—",
     "Company Setup":    hasCompanySetup    ? "✓" : "—",
     "Policies":         hasExpensePolicy   ? "✓" : "—",
     "Accounting Setup": hasAccountingSetup ? "✓" : "—",
@@ -988,6 +992,7 @@ export default function AdminPage() {
   const [companyModules, setCompanyModules] = useState<CompanyModuleRead[]>([]);
   const [legalEntities, setLegalEntities]   = useState<any[]>([]);
   const [users, setUsers]               = useState<any[]>([]);
+  const [onboardingChecklist, setOnboardingChecklist] = useState<{ passed: number; total: number; go_live_ready: boolean } | null>(null);
 
   // ── Mutable edit states — seeded from portalConfig, updated on form save ────
   const [expensePolicy, setExpensePolicy]   = useState<any>(null);
@@ -1086,7 +1091,8 @@ export default function AdminPage() {
       fetch(`${API}/modules/company/${adminCompanyId}`,                                       { headers: h }).then((r) => r.ok ? r.json() : []),
       fetch(`${API}/admin/company-setup/${adminCompanyId}/legal-entities`,                    { headers: h }).then((r) => r.ok ? r.json() : []),
       fetch(`${API}/users/?company_id=${adminCompanyId}`,                                     { headers: h }).then((r) => r.ok ? r.json() : []),
-    ]).then(([r, p, s, t, m, entities, u]) => {
+      fetch(`${API}/admin/company-setup/${adminCompanyId}/checklist`,                         { headers: h }).then((r) => r.ok ? r.json() : null),
+    ]).then(([r, p, s, t, m, entities, u, checklist]) => {
       setRoles(r);
       setPermissions(p);
       setStages(s);
@@ -1094,6 +1100,7 @@ export default function AdminPage() {
       setCompanyModules(m);
       if (Array.isArray(entities)) setLegalEntities(entities);
       if (Array.isArray(u)) setUsers(u);
+      if (checklist && typeof checklist.passed === "number") setOnboardingChecklist(checklist);
     }).catch(() => {});
   }, []);
 
@@ -1458,6 +1465,7 @@ export default function AdminPage() {
           hasExportConfig={!!exportConfig}
           hasArchiveConfig={!!archiveConfig}
           hasStorageConfig={!!storageConfig}
+          onboardingChecklist={onboardingChecklist}
           conflictsCount={conflictsCount}
           draftSections={draftSections}
         />
