@@ -9,13 +9,12 @@ interface ThemeContextValue {
   setTheme: (theme: Theme) => void;
 }
 
-const ThemeContext = createContext<ThemeContextValue>({
-  theme: "dark",
-  setTheme: () => {},
-});
+const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function useTheme(): ThemeContextValue {
-  return useContext(ThemeContext);
+  const ctx = useContext(ThemeContext);
+  if (!ctx) throw new Error("useTheme must be used within a ThemeProvider");
+  return ctx;
 }
 
 function resolveClass(theme: Theme, systemDark: boolean): "dark" | "light" {
@@ -36,11 +35,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [systemDark, setSystemDark] = useState(false);
 
   useEffect(() => {
-    const stored = (localStorage.getItem("pref_theme") ?? "dark") as Theme;
+    const raw = localStorage.getItem("pref_theme");
+    const stored: Theme = raw === "dark" || raw === "light" || raw === "system" ? raw : "dark";
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     setSystemDark(mq.matches);
     setThemeState(stored);
-    applyThemeClass(resolveClass(stored, mq.matches));
 
     const handler = (e: MediaQueryListEvent) => setSystemDark(e.matches);
     mq.addEventListener("change", handler);

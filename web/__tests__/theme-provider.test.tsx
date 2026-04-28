@@ -83,4 +83,10 @@ describe("ThemeProvider", () => {
     });
     expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
+
+  it("throws when used outside ThemeProvider", () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(() => render(<Consumer />)).toThrow("useTheme must be used within a ThemeProvider");
+    consoleSpy.mockRestore();
+  });
 });

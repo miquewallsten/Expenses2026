@@ -1,4 +1,5 @@
 import "@testing-library/jest-dom";
+import { beforeEach } from "vitest";
 
 // Node 25 exposes a native localStorage (backed by --localstorage-file) that
 // lacks the full Storage interface (e.g. .clear() is missing).  Replace it with
@@ -20,6 +21,8 @@ Object.defineProperty(globalThis, "localStorage", {
   writable: true,
   configurable: true,
 });
+
+beforeEach(() => localStorage.clear());
 
 // Mock next/navigation
 vi.mock("next/navigation", () => ({
