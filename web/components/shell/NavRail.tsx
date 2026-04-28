@@ -189,11 +189,11 @@ export default function NavRail({ collapsed, onToggle, items, hideToggle = false
         <Link
           href="/help"
           title={collapsed ? t("help") : undefined}
-          className={`flex items-center gap-2.5 rounded text-[11px] font-medium text-white/28 transition-colors hover:bg-white/[0.04] hover:text-white/55 ${
+          className={`flex items-center gap-2.5 rounded text-[11px] font-medium text-white/35 transition-colors hover:bg-white/[0.04] hover:text-white/60 ${
             collapsed ? "justify-center px-2 py-1.5" : "px-3 py-1.5"
           }`}
         >
-          <HelpCircle className="h-3.5 w-3.5 shrink-0 text-white/25" />
+          <HelpCircle className="h-3.5 w-3.5 shrink-0 text-white/30" />
           {!collapsed && <span className="truncate">{t("help")}</span>}
         </Link>
       </div>
