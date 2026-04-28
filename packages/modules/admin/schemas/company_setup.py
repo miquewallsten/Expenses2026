@@ -23,7 +23,6 @@ class CompanySetupBase(BaseModel):
     expenses_module_enabled: bool = True
     time_allocation_module_enabled: bool = False
     subcontractor_module_enabled: bool = False
-    reimbursements_module_enabled: bool = True
     approvals_module_enabled: bool = True
     accounting_module_enabled: bool = True
     archive_module_enabled: bool = True
@@ -57,7 +56,6 @@ class CompanySetupUpdate(BaseModel):
     expenses_module_enabled: bool | None = None
     time_allocation_module_enabled: bool | None = None
     subcontractor_module_enabled: bool | None = None
-    reimbursements_module_enabled: bool | None = None
     approvals_module_enabled: bool | None = None
     accounting_module_enabled: bool | None = None
     archive_module_enabled: bool | None = None

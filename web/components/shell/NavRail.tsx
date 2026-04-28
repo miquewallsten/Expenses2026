@@ -126,11 +126,11 @@ export default function NavRail({ collapsed, onToggle, items, hideToggle = false
                     className="flex w-full items-center gap-1.5 px-4 py-1.5 text-left"
                   >
                     <ChevronDown
-                      className={`h-2.5 w-2.5 shrink-0 text-white/18 transition-transform ${
+                      className={`h-2.5 w-2.5 shrink-0 text-white/30 transition-transform ${
                         isOpen ? "" : "-rotate-90"
                       }`}
                     />
-                    <span className="truncate text-[9px] font-bold uppercase tracking-widest text-white/18">
+                    <span className="truncate text-[9px] font-bold uppercase tracking-widest text-white/30">
                       {groupLabel(group)}
                     </span>
                   </button>
@@ -148,14 +148,14 @@ export default function NavRail({ collapsed, onToggle, items, hideToggle = false
                           } ${
                             item.active
                               ? "bg-indigo-600/[0.18] text-white"
-                              : "text-white/38 hover:bg-white/[0.04] hover:text-white/65"
+                              : "text-white/45 hover:bg-white/[0.04] hover:text-white/70"
                           }`}
                         >
                           {item.active && (
                             <span className="absolute left-0 top-1/2 h-3.5 w-0.5 -translate-y-1/2 rounded-r-full bg-indigo-400/70" />
                           )}
                           <span
-                            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded text-[8px] font-bold uppercase tracking-wider transition-colors ${
+                            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded text-[9px] font-bold uppercase tracking-wider transition-colors ${
                               item.active
                                 ? "bg-indigo-500/25 text-indigo-200"
                                 : "bg-white/[0.04] text-white/30 group-hover:bg-white/[0.07] group-hover:text-white/50"
@@ -189,11 +189,11 @@ export default function NavRail({ collapsed, onToggle, items, hideToggle = false
         <Link
           href="/help"
           title={collapsed ? t("help") : undefined}
-          className={`flex items-center gap-2.5 rounded text-[11px] font-medium text-white/28 transition-colors hover:bg-white/[0.04] hover:text-white/55 ${
+          className={`flex items-center gap-2.5 rounded text-[11px] font-medium text-white/35 transition-colors hover:bg-white/[0.04] hover:text-white/60 ${
             collapsed ? "justify-center px-2 py-1.5" : "px-3 py-1.5"
           }`}
         >
-          <HelpCircle className="h-3.5 w-3.5 shrink-0 text-white/25" />
+          <HelpCircle className="h-3.5 w-3.5 shrink-0 text-white/30" />
           {!collapsed && <span className="truncate">{t("help")}</span>}
         </Link>
       </div>

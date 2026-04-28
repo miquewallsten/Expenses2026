@@ -451,6 +451,16 @@
   },
   "admin": {
     "title": "Administrador",
+    "exportConfig": {
+      "title": "Configuración de exportación",
+      "bundleNamePattern": "Patrón de nombre de paquete",
+      "exportFormat": "Formato de exportación"
+    },
+    "archiveConfig": {
+      "title": "Configuración de archivo",
+      "filePattern": "Patrón de archivo",
+      "folderPattern": "Patrón de carpeta"
+    },
     "categoryMemory": {
       "title": "Memoria de categorización",
       "subtitle": "Correcciones aprendidas para sugerir categorías",
@@ -1184,6 +1194,7 @@
       "profileTypeLabel": "Tipo:",
       "suggestedChanges": "Cambios de configuración sugeridos",
       "alsoForPolicy": "También sugerido para Política de gastos",
+      "alsoForPolicyHint": "Ve a <accent>Política de gastos</accent> para revisar y aplicar estos cambios.",
       "recommendedEntities": "Entidades legales recomendadas",
       "entityReimb": "Reembolso",
       "entityInvoice": "Receptor de facturas",
@@ -1265,6 +1276,10 @@
       },
       "mapeo": {
         "sampleHeader": "Gasto de ejemplo",
+        "sourceLive": "En vivo",
+        "sourceSample": "Demo",
+        "sourceLiveHint": "Estos gastos provienen de tus datos reales.",
+        "sourceSampleHint": "Aún no hay gastos reales — mostrando datos de demostración.",
         "decisionsHeader": "Decisiones de mapeo",
         "previewHeader": "Póliza generada",
         "category": "Categoría",
@@ -1284,7 +1299,8 @@
         "code": "Código",
         "name": "Nombre",
         "class": "Clase",
-        "split": "Split"
+        "split": "Split",
+        "satGroup": "Agrupador SAT"
       },
       "iva": {
         "empty": "Aún no hay tasas de IVA.",
@@ -1301,7 +1317,14 @@
         "run": "Simular",
         "bulkHeader": "Simulación masiva (últimos N gastos)",
         "bulkLimit": "Límite",
-        "bulkRun": "Ejecutar"
+        "bulkRun": "Ejecutar",
+        "colDate": "Fecha",
+        "colDescription": "Descripción",
+        "colCategory": "Cat.",
+        "colAmount": "Monto",
+        "colWarnings": "Avisos",
+        "totals": "Totales",
+        "warningCount": "{count, plural, one {# aviso} other {# avisos}}"
       },
       "preview": {
         "empty": "Selecciona una categoría para ver la póliza.",

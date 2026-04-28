@@ -75,7 +75,7 @@ export default function TopBar({ title, portal, onMenuOpen, onAiOpen }: TopBarPr
           <input
             type="search"
             placeholder={tc("search")}
-            className="h-[26px] w-full rounded border border-white/[0.09] bg-white/[0.04] pl-7 pr-3 text-[11px] text-white/70 placeholder-white/22 outline-none transition-all focus:border-indigo-500/40 focus:bg-indigo-950/15 focus:ring-1 focus:ring-indigo-500/15"
+            className="h-[30px] w-full rounded border border-white/[0.09] bg-white/[0.04] pl-7 pr-3 text-[11px] text-white/70 placeholder-white/28 outline-none transition-all focus:border-indigo-500/40 focus:bg-indigo-950/15 focus:ring-1 focus:ring-indigo-500/15"
           />
         </div>
       </div>

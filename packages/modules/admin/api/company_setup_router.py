@@ -25,6 +25,10 @@ from packages.modules.admin.service.company_setup_service import (
     update_legal_entity,
     upsert_company_setup,
 )
+from packages.modules.admin.service.onboarding_service import (
+    compute_checklist,
+    set_onboarding_step,
+)
 
 _UPLOADS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "uploads", "logos")
 _ALLOWED_MIME = {
@@ -149,3 +153,25 @@ def delete_legal_entity_route(entity_id: int, db: Session = Depends(get_db)):
     if not deleted:
         raise HTTPException(status_code=404, detail="Legal entity not found")
     return DeleteResponse(success=True)
+
+
+# ── Phase 4.6 — onboarding checklist & step advancement ─────────────────────
+class OnboardingStepUpdate(BaseModel):
+    onboarding_step: int
+
+
+@router.get("/{company_id}/checklist")
+def get_onboarding_checklist_route(company_id: int, db: Session = Depends(get_db)):
+    return compute_checklist(db, company_id)
+
+
+@router.patch("/{company_id}/onboarding-step", response_model=CompanySetupRead)
+def patch_onboarding_step_route(
+    company_id: int,
+    data: OnboardingStepUpdate,
+    db: Session = Depends(get_db),
+):
+    try:
+        return set_onboarding_step(db, company_id, data.onboarding_step)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc

@@ -569,7 +569,11 @@ export default function AdminCompanySetupCopilot({
               </div>
               <div className="border-t border-sky-500/[0.06] px-3 py-1.5">
                 <p className="text-[9px] text-white/20">
-                  Navigate to <span className="text-sky-300/40">Expense Policy</span> to review and apply these changes.
+                  {t.rich("alsoForPolicyHint", {
+                    accent: (chunks) => (
+                      <span className="text-sky-300/40">{chunks}</span>
+                    ),
+                  })}
                 </p>
               </div>
             </div>
