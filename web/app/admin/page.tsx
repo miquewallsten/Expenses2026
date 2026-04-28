@@ -1033,6 +1033,16 @@ export default function AdminPage() {
   }, []);
   const [accountingSubtab, setAccountingSubtab] = useState<AccountingTab | undefined>(initialAccountingTab);
 
+  type WorkflowTab = "approval" | "workflow";
+  const initialWorkflowTab = useMemo<WorkflowTab | undefined>(() => {
+    if (typeof window === "undefined") return undefined;
+    const p = new URLSearchParams(window.location.search).get("panel")?.toLowerCase();
+    if (p === "workflow" || p === "workflow_setup") return "workflow";
+    if (p === "approval_setup" || p === "approval_policy") return "approval";
+    return undefined;
+  }, []);
+  const [workflowSubtab, setWorkflowSubtab] = useState<WorkflowTab | undefined>(initialWorkflowTab);
+
   // Keep ?panel= in sync with the active section so refresh / share works
   // and so the deep-link reader above stays accurate. replaceState avoids
   // polluting browser history.
@@ -1334,6 +1344,7 @@ export default function AdminPage() {
               };
               const target = map[panel] ?? "Overview";
               if (panel === "chart_of_accounts") setAccountingSubtab("chart");
+              if (panel === "approval_setup") setWorkflowSubtab("approval");
               setActiveSection(target);
             }}
           />
@@ -1388,6 +1399,7 @@ export default function AdminPage() {
             onWorkflowSaved={setWorkflowSetup}
             approvalDraftPatch={approvalSetupDraftPatch}
             workflowDraftPatch={workflowSetupDraftPatch}
+            initialTab={workflowSubtab}
           />
         );
 

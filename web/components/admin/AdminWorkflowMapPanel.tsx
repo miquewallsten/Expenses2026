@@ -148,6 +148,7 @@ interface Props {
   onWorkflowSaved: (s: any) => void;
   approvalDraftPatch?: Partial<any>;
   workflowDraftPatch?: Partial<any>;
+  initialTab?: RightTab;
 }
 
 export default function AdminWorkflowMapPanel({
@@ -161,13 +162,15 @@ export default function AdminWorkflowMapPanel({
   onWorkflowSaved,
   approvalDraftPatch,
   workflowDraftPatch,
+  initialTab,
 }: Props) {
   const tw = useTranslations("admin.workflowMap");
   const [stages, setStages]               = useState<Stage[]>([]);
   const [transitions, setTransitions]     = useState<Transition[]>([]);
   const [selectedStage, setSelectedStage] = useState<Stage | null>(null);
   const [selectedTx, setSelectedTx]       = useState<Transition | null>(null);
-  const [tab, setTab]                     = useState<RightTab>("approval");
+  const [tab, setTab]                     = useState<RightTab>(initialTab ?? "approval");
+  useEffect(() => { if (initialTab) setTab(initialTab); }, [initialTab]);
   const [canvasWidth, setCanvasWidth]     = useState(700);
   const [applyingPreset, setApplyingPreset] = useState(false);
   const canvasWrapRef = useRef<HTMLDivElement>(null);
