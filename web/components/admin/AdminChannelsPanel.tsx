@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { getAuthHeaders } from "@/lib/session";
 import {
   MessageSquare, Mail, CheckCircle2, XCircle, AlertTriangle,
@@ -84,13 +85,14 @@ function IntentBadge({ intent }: { intent: string | null }) {
 }
 
 function CopyButton({ value }: { value: string }) {
+  const t = useTranslations("admin.channels");
   const [copied, setCopied] = useState(false);
   return (
     <button
       type="button"
       onClick={() => { navigator.clipboard.writeText(value); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
       className="ml-1 text-white/22 hover:text-white/50 transition-colors"
-      title="Copy"
+      title={t("copy")}
     >
       {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
     </button>
@@ -103,6 +105,7 @@ function SecretField({ label, value, isSet, onChange }: {
   isSet: boolean;
   onChange: (v: string) => void;
 }) {
+  const t = useTranslations("admin.channels");
   const [show, setShow] = useState(false);
   return (
     <div>
@@ -112,7 +115,7 @@ function SecretField({ label, value, isSet, onChange }: {
           type={show ? "text" : "password"}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={isSet ? "••••••••  (stored — leave blank to keep)" : "Enter value…"}
+          placeholder={isSet ? t("secretStored") : t("secretEnter")}
           className="flex-1 rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-[11px] text-white/75 outline-none placeholder:text-white/18 focus:border-indigo-500/50"
         />
         <button type="button" onClick={() => setShow(!show)} className="text-white/22 hover:text-white/50">
@@ -142,6 +145,8 @@ function WhatsAppSettingsForm({
     wa_webhook_verify_token: settings.wa_webhook_verify_token ?? "",
     wa_display_name:         settings.wa_display_name ?? "",
   });
+  const t = useTranslations("admin.channels");
+  const tw = useTranslations("admin.channels.whatsapp");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [testRecipient, setTestRecipient] = useState("");
@@ -165,7 +170,7 @@ function WhatsAppSettingsForm({
       if (!r.ok) throw new Error(await r.text());
       onSaved(await r.json());
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Save failed");
+      setError(e instanceof Error ? e.message : t("saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -182,9 +187,9 @@ function WhatsAppSettingsForm({
         body: JSON.stringify({ recipient: testRecipient }),
       });
       const d = await r.json();
-      setTestResult(r.ok ? "✓ Message sent successfully" : d.detail ?? "Failed");
+      setTestResult(r.ok ? tw("testSent") : d.detail ?? tw("testFailed"));
     } catch {
-      setTestResult("Connection error");
+      setTestResult(t("connectionError"));
     } finally {
       setTesting(false);
     }
@@ -199,8 +204,8 @@ function WhatsAppSettingsForm({
       {/* Enable toggle */}
       <div className="flex items-center justify-between rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
         <div>
-          <p className="text-[11px] font-semibold text-white/75">WhatsApp Channel</p>
-          <p className="text-[10px] text-white/35">Receive expenses and answer queries via WhatsApp Business</p>
+          <p className="text-[11px] font-semibold text-white/75">{tw("title")}</p>
+          <p className="text-[10px] text-white/35">{tw("subtitle")}</p>
         </div>
         <button
           type="button"
@@ -214,29 +219,29 @@ function WhatsAppSettingsForm({
       {/* Credentials */}
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="mb-0.5 block text-[10px] font-medium text-white/40">Phone Number ID</label>
+          <label className="mb-0.5 block text-[10px] font-medium text-white/40">{tw("phoneNumberId")}</label>
           <input value={form.wa_phone_number_id} onChange={field("wa_phone_number_id")}
-            placeholder="From Meta App Dashboard"
+            placeholder={tw("phoneNumberIdPlaceholder")}
             className="w-full rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-[11px] text-white/75 outline-none placeholder:text-white/18 focus:border-indigo-500/50"
           />
         </div>
         <div>
-          <label className="mb-0.5 block text-[10px] font-medium text-white/40">WABA ID</label>
+          <label className="mb-0.5 block text-[10px] font-medium text-white/40">{tw("wabaId")}</label>
           <input value={form.wa_waba_id} onChange={field("wa_waba_id")}
-            placeholder="WhatsApp Business Account ID"
+            placeholder={tw("wabaIdPlaceholder")}
             className="w-full rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-[11px] text-white/75 outline-none placeholder:text-white/18 focus:border-indigo-500/50"
           />
         </div>
         <div className="col-span-2">
-          <label className="mb-0.5 block text-[10px] font-medium text-white/40">Display Name</label>
+          <label className="mb-0.5 block text-[10px] font-medium text-white/40">{tw("displayName")}</label>
           <input value={form.wa_display_name} onChange={field("wa_display_name")}
-            placeholder="e.g. Acme Corp Expenses"
+            placeholder={tw("displayNamePlaceholder")}
             className="w-full rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-[11px] text-white/75 outline-none placeholder:text-white/18 focus:border-indigo-500/50"
           />
         </div>
         <div className="col-span-2">
           <SecretField
-            label="System User Access Token"
+            label={tw("accessToken")}
             value={form.wa_access_token}
             isSet={settings.wa_access_token_set}
             onChange={(v) => setForm((f) => ({ ...f, wa_access_token: v }))}
@@ -246,28 +251,30 @@ function WhatsAppSettingsForm({
 
       {/* Webhook info */}
       <div className="rounded border border-indigo-500/15 bg-indigo-500/[0.04] p-3 space-y-2">
-        <p className="text-[10px] font-semibold text-indigo-300/70 uppercase tracking-wide">Webhook Configuration (Meta App Dashboard)</p>
+        <p className="text-[10px] font-semibold text-indigo-300/70 uppercase tracking-wide">{tw("webhookSection")}</p>
         <div>
-          <p className="text-[10px] text-white/35 mb-0.5">Webhook URL</p>
+          <p className="text-[10px] text-white/35 mb-0.5">{tw("webhookUrl")}</p>
           <div className="flex items-center gap-1">
             <code className="flex-1 rounded bg-white/[0.04] px-2 py-1 text-[10px] text-white/60 font-mono truncate">{webhookUrl}</code>
             <CopyButton value={webhookUrl} />
           </div>
         </div>
         <div>
-          <p className="text-[10px] text-white/35 mb-0.5">Verify Token</p>
+          <p className="text-[10px] text-white/35 mb-0.5">{tw("verifyToken")}</p>
           <div className="flex items-center gap-1">
             <input
               value={form.wa_webhook_verify_token}
               onChange={field("wa_webhook_verify_token")}
-              placeholder="Auto-generated on save if blank"
+              placeholder={tw("verifyTokenPlaceholder")}
               className="flex-1 rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1 text-[10px] font-mono text-white/60 outline-none focus:border-indigo-500/50"
             />
             {form.wa_webhook_verify_token && <CopyButton value={form.wa_webhook_verify_token} />}
           </div>
         </div>
         <p className="text-[9.5px] text-white/25 leading-relaxed">
-          Subscribe to the <strong className="text-white/40">messages</strong> field under Webhooks in your Meta App Dashboard. Use the URL and verify token above.
+          {tw.rich("webhookHelp", {
+            strong: (chunks) => <strong className="text-white/40">{chunks}</strong>,
+          })}
         </p>
       </div>
 
@@ -277,18 +284,18 @@ function WhatsAppSettingsForm({
         <button onClick={save} disabled={saving}
           className="flex items-center gap-1.5 rounded bg-indigo-600/70 px-3 py-1.5 text-[11px] font-medium text-white/90 hover:bg-indigo-600/90 disabled:opacity-50">
           {saving && <Loader2 className="h-3 w-3 animate-spin" />}
-          Save Settings
+          {t("saveSettings")}
         </button>
 
         <div className="ml-auto flex items-center gap-1.5">
           <input value={testRecipient} onChange={(e) => setTestRecipient(e.target.value)}
-            placeholder="+521234567890"
+            placeholder={tw("testPlaceholder")}
             className="w-32 rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-[11px] text-white/75 outline-none placeholder:text-white/18"
           />
           <button onClick={sendTest} disabled={testing || !testRecipient.trim()}
             className="flex items-center gap-1 rounded border border-white/10 px-2.5 py-1.5 text-[11px] text-white/50 hover:bg-white/[0.04] disabled:opacity-40">
             {testing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-            Test
+            {t("test")}
           </button>
         </div>
       </div>
@@ -321,6 +328,8 @@ function EmailSettingsForm({
     email_smtp_password:   "",
     email_smtp_from:       settings.email_smtp_from ?? "",
   });
+  const t = useTranslations("admin.channels");
+  const te = useTranslations("admin.channels.email");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [testRecipient, setTestRecipient] = useState("");
@@ -348,7 +357,7 @@ function EmailSettingsForm({
       if (!r.ok) throw new Error(await r.text());
       onSaved(await r.json());
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Save failed");
+      setError(e instanceof Error ? e.message : t("saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -365,9 +374,9 @@ function EmailSettingsForm({
         body: JSON.stringify({ recipient: testRecipient }),
       });
       const d = await r.json();
-      setTestResult(r.ok ? "✓ Email sent successfully" : d.detail ?? "Failed");
+      setTestResult(r.ok ? te("testSent") : d.detail ?? te("testFailed"));
     } catch {
-      setTestResult("Connection error");
+      setTestResult(t("connectionError"));
     } finally {
       setTesting(false);
     }
@@ -382,8 +391,8 @@ function EmailSettingsForm({
       {/* Enable toggle */}
       <div className="flex items-center justify-between rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
         <div>
-          <p className="text-[11px] font-semibold text-white/75">Email Channel</p>
-          <p className="text-[10px] text-white/35">Receive expense documents forwarded to a corporate email address</p>
+          <p className="text-[11px] font-semibold text-white/75">{te("title")}</p>
+          <p className="text-[10px] text-white/35">{te("subtitle")}</p>
         </div>
         <button
           type="button"
@@ -396,31 +405,32 @@ function EmailSettingsForm({
 
       {/* Inbound address */}
       <div>
-        <label className="mb-0.5 block text-[10px] font-medium text-white/40">Corporate Inbound Address</label>
+        <label className="mb-0.5 block text-[10px] font-medium text-white/40">{te("inboundAddress")}</label>
         <input value={form.email_inbound_address} onChange={field("email_inbound_address")}
-          placeholder="gastos@yourcompany.com"
+          placeholder={te("inboundPlaceholder")}
           className="w-full rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-[11px] text-white/75 outline-none placeholder:text-white/18 focus:border-indigo-500/50"
         />
-        <p className="mt-0.5 text-[9.5px] text-white/25">Employees forward invoices to this address. Set up routing in your email provider to POST to the webhook below.</p>
+        <p className="mt-0.5 text-[9.5px] text-white/25">{te("inboundHelp")}</p>
       </div>
 
       {/* Webhook info */}
       <div className="rounded border border-indigo-500/15 bg-indigo-500/[0.04] p-3 space-y-2">
-        <p className="text-[10px] font-semibold text-indigo-300/70 uppercase tracking-wide">Email Provider Webhook</p>
+        <p className="text-[10px] font-semibold text-indigo-300/70 uppercase tracking-wide">{te("webhookSection")}</p>
         <div>
-          <p className="text-[10px] text-white/35 mb-0.5">Inbound Webhook URL</p>
+          <p className="text-[10px] text-white/35 mb-0.5">{te("webhookUrl")}</p>
           <div className="flex items-center gap-1">
             <code className="flex-1 rounded bg-white/[0.04] px-2 py-1 text-[10px] text-white/60 font-mono truncate">{inboundWebhook}</code>
             <CopyButton value={inboundWebhook} />
           </div>
         </div>
         <p className="text-[9.5px] text-white/25 leading-relaxed">
-          Supports SendGrid Inbound Parse, Postmark Inbound, and Mailgun Routes.
-          Append <code className="text-white/40">?provider=postmark</code> or <code className="text-white/40">?provider=mailgun</code> as needed.
+          {te.rich("webhookHelp", {
+            code: (chunks) => <code className="text-white/40">{chunks}</code>,
+          })}
         </p>
         <div className="col-span-2">
           <SecretField
-            label="Webhook Signature Secret (optional)"
+            label={te("webhookSecret")}
             value={form.email_webhook_secret}
             isSet={settings.email_webhook_secret_set}
             onChange={(v) => setForm((f) => ({ ...f, email_webhook_secret: v }))}
@@ -430,39 +440,39 @@ function EmailSettingsForm({
 
       {/* SMTP */}
       <div>
-        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-white/35">SMTP — Outbound Replies</p>
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-white/35">{te("smtpSection")}</p>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-0.5 block text-[10px] font-medium text-white/40">SMTP Host</label>
+            <label className="mb-0.5 block text-[10px] font-medium text-white/40">{te("smtpHost")}</label>
             <input value={form.email_smtp_host} onChange={field("email_smtp_host")}
-              placeholder="smtp.sendgrid.net"
+              placeholder={te("smtpHostPlaceholder")}
               className="w-full rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-[11px] text-white/75 outline-none placeholder:text-white/18 focus:border-indigo-500/50"
             />
           </div>
           <div>
-            <label className="mb-0.5 block text-[10px] font-medium text-white/40">SMTP Port</label>
+            <label className="mb-0.5 block text-[10px] font-medium text-white/40">{te("smtpPort")}</label>
             <input value={form.email_smtp_port} onChange={field("email_smtp_port")}
               placeholder="587"
               className="w-full rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-[11px] text-white/75 outline-none placeholder:text-white/18 focus:border-indigo-500/50"
             />
           </div>
           <div>
-            <label className="mb-0.5 block text-[10px] font-medium text-white/40">SMTP User</label>
+            <label className="mb-0.5 block text-[10px] font-medium text-white/40">{te("smtpUser")}</label>
             <input value={form.email_smtp_user} onChange={field("email_smtp_user")}
-              placeholder="apikey"
+              placeholder={te("smtpUserPlaceholder")}
               className="w-full rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-[11px] text-white/75 outline-none placeholder:text-white/18 focus:border-indigo-500/50"
             />
           </div>
           <div>
-            <label className="mb-0.5 block text-[10px] font-medium text-white/40">From Address</label>
+            <label className="mb-0.5 block text-[10px] font-medium text-white/40">{te("smtpFrom")}</label>
             <input value={form.email_smtp_from} onChange={field("email_smtp_from")}
-              placeholder="gastos@yourcompany.com"
+              placeholder={te("smtpFromPlaceholder")}
               className="w-full rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-[11px] text-white/75 outline-none placeholder:text-white/18 focus:border-indigo-500/50"
             />
           </div>
           <div className="col-span-2">
             <SecretField
-              label="SMTP Password / API Key"
+              label={te("smtpPassword")}
               value={form.email_smtp_password}
               isSet={settings.email_smtp_password_set}
               onChange={(v) => setForm((f) => ({ ...f, email_smtp_password: v }))}
@@ -477,18 +487,18 @@ function EmailSettingsForm({
         <button onClick={save} disabled={saving}
           className="flex items-center gap-1.5 rounded bg-indigo-600/70 px-3 py-1.5 text-[11px] font-medium text-white/90 hover:bg-indigo-600/90 disabled:opacity-50">
           {saving && <Loader2 className="h-3 w-3 animate-spin" />}
-          Save Settings
+          {t("saveSettings")}
         </button>
 
         <div className="ml-auto flex items-center gap-1.5">
           <input value={testRecipient} onChange={(e) => setTestRecipient(e.target.value)}
-            placeholder="test@example.com"
+            placeholder={te("testPlaceholder")}
             className="w-40 rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-[11px] text-white/75 outline-none placeholder:text-white/18"
           />
           <button onClick={sendTest} disabled={testing || !testRecipient.trim()}
             className="flex items-center gap-1 rounded border border-white/10 px-2.5 py-1.5 text-[11px] text-white/50 hover:bg-white/[0.04] disabled:opacity-40">
             {testing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-            Test
+            {t("test")}
           </button>
         </div>
       </div>
@@ -503,6 +513,8 @@ function EmailSettingsForm({
 // ── Message log ────────────────────────────────────────────────────────────────
 
 function MessageLog({ channel, companyId }: { channel: ChannelTab | "all"; companyId: number }) {
+  const t = useTranslations("admin.channels");
+  const tl = useTranslations("admin.channels.log");
   const [messages, setMessages] = useState<ChannelMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<number | null>(null);
@@ -524,20 +536,20 @@ function MessageLog({ channel, companyId }: { channel: ChannelTab | "all"; compa
 
   if (loading) return (
     <div className="flex items-center gap-2 py-8 text-white/28">
-      <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+      <Loader2 className="h-4 w-4 animate-spin" /> {t("loading")}
     </div>
   );
 
   if (!messages.length) return (
-    <p className="py-8 text-center text-[11px] text-white/25">No messages yet.</p>
+    <p className="py-8 text-center text-[11px] text-white/25">{tl("empty")}</p>
   );
 
   return (
     <div className="space-y-0">
       <div className="flex items-center justify-between pb-2">
-        <span className="text-[10px] text-white/30">{messages.length} messages (newest first)</span>
+        <span className="text-[10px] text-white/30">{tl("countNewest", { n: messages.length })}</span>
         <button onClick={load} className="flex items-center gap-1 text-[10px] text-white/30 hover:text-white/55">
-          <RefreshCw className="h-3 w-3" /> Refresh
+          <RefreshCw className="h-3 w-3" /> {t("refresh")}
         </button>
       </div>
       {messages.map((msg) => {
@@ -565,17 +577,17 @@ function MessageLog({ channel, companyId }: { channel: ChannelTab | "all"; compa
                     {new Date(msg.created_at).toLocaleString()}
                   </span>
                 </div>
-                <p className="mt-0.5 truncate text-[10px] text-white/35">{msg.body || "(no text)"}</p>
+                <p className="mt-0.5 truncate text-[10px] text-white/35">{msg.body || tl("noText")}</p>
               </div>
               <ChevronRight className={`mt-0.5 h-3 w-3 shrink-0 text-white/20 transition-transform ${isExp ? "rotate-90" : ""}`} />
             </button>
             {isExp && (
               <div className="mb-2 ml-6 rounded border border-white/[0.06] bg-white/[0.02] p-2.5 text-[10px] text-white/45 space-y-1">
-                <p><span className="text-white/25">ID:</span> {msg.id}</p>
-                <p><span className="text-white/25">Thread:</span> {msg.thread_id ?? "—"}</p>
-                <p><span className="text-white/25">User ID:</span> {msg.user_id ?? "—"}</p>
-                {msg.body && <p className="whitespace-pre-wrap"><span className="text-white/25">Body:</span> {msg.body}</p>}
-                {msg.error_detail && <p className="text-red-400"><span className="text-white/25">Error:</span> {msg.error_detail}</p>}
+                <p><span className="text-white/25">{tl("detailId")}</span> {msg.id}</p>
+                <p><span className="text-white/25">{tl("detailThread")}</span> {msg.thread_id ?? "—"}</p>
+                <p><span className="text-white/25">{tl("detailUserId")}</span> {msg.user_id ?? "—"}</p>
+                {msg.body && <p className="whitespace-pre-wrap"><span className="text-white/25">{tl("detailBody")}</span> {msg.body}</p>}
+                {msg.error_detail && <p className="text-red-400"><span className="text-white/25">{tl("detailError")}</span> {msg.error_detail}</p>}
               </div>
             )}
           </div>
@@ -603,6 +615,8 @@ interface DispatchRow {
 }
 
 function DispatchLog({ channel, companyId }: { channel: ChannelTab; companyId: number }) {
+  const t = useTranslations("admin.channels");
+  const td = useTranslations("admin.channels.dispatch");
   const [rows, setRows] = useState<DispatchRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "sent" | "failed">("all");
@@ -637,17 +651,20 @@ function DispatchLog({ channel, companyId }: { channel: ChannelTab; companyId: n
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1">
-          {(["all", "pending", "sent", "failed"] as const).map((s) => (
+          {((["all", "pending", "sent", "failed"] as const).map((s) => {
+            const labelKey = s === "all" ? "filterAll" : s === "pending" ? "filterPending" : s === "sent" ? "filterSent" : "filterFailed";
+            return (
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
-              className={`rounded px-2 py-0.5 text-[10px] capitalize transition-colors ${
+              className={`rounded px-2 py-0.5 text-[10px] transition-colors ${
                 statusFilter === s ? "bg-white/[0.10] text-white/80" : "text-white/35 hover:bg-white/[0.04] hover:text-white/60"
               }`}
             >
-              {s}
+              {td(labelKey)}
             </button>
-          ))}
+            );
+          }))}
         </div>
         <button
           type="button"
@@ -656,7 +673,7 @@ function DispatchLog({ channel, companyId }: { channel: ChannelTab; companyId: n
           className="flex items-center gap-1 rounded border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] text-white/60 transition hover:border-white/20 hover:text-white/80 disabled:opacity-50"
         >
           {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-          Refresh
+          {t("refresh")}
         </button>
       </div>
 
@@ -668,22 +685,22 @@ function DispatchLog({ channel, companyId }: { channel: ChannelTab; companyId: n
 
       {loading ? (
         <div className="flex items-center gap-2 py-6 text-[11px] text-white/30">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("loading")}
         </div>
       ) : rows.length === 0 ? (
         <div className="rounded border border-white/[0.07] bg-white/[0.02] py-8 text-center text-[11px] text-white/35">
-          No dispatches.
+          {td("empty")}
         </div>
       ) : (
         <div className="overflow-hidden rounded border border-white/[0.07]">
           <table className="w-full text-[10.5px]">
             <thead>
               <tr className="border-b border-white/[0.07] bg-white/[0.02] text-left text-[9.5px] uppercase tracking-wide text-white/35">
-                <th className="px-2 py-1.5 font-medium">Event</th>
-                <th className="px-2 py-1.5 font-medium">Recipient</th>
-                <th className="px-2 py-1.5 font-medium">Status</th>
-                <th className="px-2 py-1.5 font-medium">Attempts</th>
-                <th className="px-2 py-1.5 font-medium">Created</th>
+                <th className="px-2 py-1.5 font-medium">{td("colEvent")}</th>
+                <th className="px-2 py-1.5 font-medium">{td("colRecipient")}</th>
+                <th className="px-2 py-1.5 font-medium">{td("colStatus")}</th>
+                <th className="px-2 py-1.5 font-medium">{td("colAttempts")}</th>
+                <th className="px-2 py-1.5 font-medium">{td("colCreated")}</th>
               </tr>
             </thead>
             <tbody>
@@ -731,11 +748,12 @@ function DispatchLog({ channel, companyId }: { channel: ChannelTab; companyId: n
 // ── Stats bar ──────────────────────────────────────────────────────────────────
 
 function StatsBar({ stats }: { stats: ChannelStats | null }) {
+  const t = useTranslations("admin.channels.stats");
   if (!stats) return null;
   return (
     <div className="flex items-center gap-4 border-b border-white/[0.06] px-4 py-2">
       <div className="text-center">
-        <p className="text-[10px] text-white/30">Total</p>
+        <p className="text-[10px] text-white/30">{t("total")}</p>
         <p className="text-[13px] font-semibold text-white/70">{stats.total_messages}</p>
       </div>
       <div className="h-8 w-px bg-white/[0.07]" />
@@ -749,7 +767,7 @@ function StatsBar({ stats }: { stats: ChannelStats | null }) {
         <>
           <div className="h-8 w-px bg-white/[0.07]" />
           <div className="text-center">
-            <p className="text-[10px] text-red-400/60">Errors</p>
+            <p className="text-[10px] text-red-400/60">{t("errors")}</p>
             <p className="text-[13px] font-semibold text-red-400">{stats.errors}</p>
           </div>
         </>
@@ -761,6 +779,7 @@ function StatsBar({ stats }: { stats: ChannelStats | null }) {
 // ── Main panel ─────────────────────────────────────────────────────────────────
 
 export default function AdminChannelsPanel({ companyId }: { companyId: number }) {
+  const t = useTranslations("admin.channels");
   const [channelTab, setChannelTab] = useState<ChannelTab>("whatsapp");
   const [subTab, setSubTab] = useState<SubTab>("settings");
   const [settings, setSettings] = useState<ChannelSettings[] | null>(null);
