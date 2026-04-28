@@ -42,6 +42,8 @@ html.light {
   --color-zinc-800: #e4e4e7;
   --color-zinc-700: #d4d4d8;
   --color-zinc-600: #a1a1aa;
+  /* zinc-500 intentionally omitted — it sits at the scale midpoint and
+     reads as muted text on both dark and light surfaces unchanged. */
   --color-white:    #09090b;
 }
 
@@ -134,6 +136,4 @@ html.light .skeleton {
     rgba(0, 0, 0, 0.08) 50%,
     rgba(0, 0, 0, 0.04) 75%
   );
-  background-size: 200% 100%;
-  animation: shimmer 1.6s ease-in-out infinite;
 }
