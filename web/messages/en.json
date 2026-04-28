@@ -451,6 +451,16 @@
   },
   "admin": {
     "title": "Admin",
+    "exportConfig": {
+      "title": "Export configuration",
+      "bundleNamePattern": "Bundle name pattern",
+      "exportFormat": "Export format"
+    },
+    "archiveConfig": {
+      "title": "Archive configuration",
+      "filePattern": "File pattern",
+      "folderPattern": "Folder pattern"
+    },
     "categoryMemory": {
       "title": "Category memory",
       "subtitle": "Learned corrections used to suggest categories",

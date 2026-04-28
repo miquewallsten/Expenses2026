@@ -451,6 +451,16 @@
   },
   "admin": {
     "title": "Administrador",
+    "exportConfig": {
+      "title": "Configuración de exportación",
+      "bundleNamePattern": "Patrón de nombre de paquete",
+      "exportFormat": "Formato de exportación"
+    },
+    "archiveConfig": {
+      "title": "Configuración de archivo",
+      "filePattern": "Patrón de archivo",
+      "folderPattern": "Patrón de carpeta"
+    },
     "categoryMemory": {
       "title": "Memoria de categorización",
       "subtitle": "Correcciones aprendidas para sugerir categorías",
