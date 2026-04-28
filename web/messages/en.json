@@ -2512,50 +2512,6 @@
     "analyzing": "Analyzing…",
     "askPlaceholder": "Ask about your expenses…"
   },
-  "archive": {
-    "title": "Archive",
-    "empty": "No archived files.",
-    "portalPolicy": {
-      "modules": "Modules: {names}",
-      "managerAccounting": "Manager + Accounting flow",
-      "managerFlow": "Manager flow",
-      "accountingFlow": "Accounting flow only",
-      "modeManagerOnly": "Manager only",
-      "modeManagerThenAccounting": "Manager → Accounting",
-      "modeAccountingOnly": "Accounting only",
-      "modeThresholdBased": "Threshold-based routing",
-      "modeAutoApprove": "Auto-approve",
-      "reviewAll": "Review: all expenses",
-      "reviewThreshold": "Review: above threshold",
-      "accountCodeRequired": "Account code required",
-      "costCenterRequired": "Cost center required",
-      "polizaRequired": "Póliza required",
-      "finalReviewRequired": "Final review before export",
-      "allocationSingle": "Allocation: {dim} only",
-      "allocationMultiple": "Allocation: {dims}",
-      "splitAllocations": "Split allocations",
-      "xmlRequired": "XML required",
-      "xmlForMxn": "XML for MXN",
-      "cfdiPdfRequired": "CFDI PDF required",
-      "internationalExpenses": "International expenses",
-      "ticketsDisabled": "Tickets disabled",
-      "workflowManagerThenAccounting": "Workflow: Manager → Accounting",
-      "workflowManagerOnly": "Workflow: Manager only",
-      "workflowAccountingOnly": "Workflow: Accounting only",
-      "workflowAutoApprove": "Workflow: Auto-approve",
-      "blockOnValidation": "Blocks on validation",
-      "dimProject": "Project",
-      "dimClient": "Client",
-      "dimCostCenter": "Cost Center",
-      "moduleExpenses": "Expenses",
-      "moduleTime": "Time",
-      "moduleSubcontractors": "Subcontractors",
-      "moduleApprovals": "Approvals",
-      "moduleAccounting": "Accounting",
-      "moduleArchive": "Archive",
-      "moduleAiCopilot": "AI Copilot"
-    }
-  },
   "timeAdmin": {
     "pageTitle": "Time Tracking Setup",
     "tabProjects": "Projects",
@@ -2766,24 +2722,6 @@
         "overviewStartLabel": "Start setup",
         "overviewStartText": "Walk me step by step through finishing the initial company setup."
       }
-    },
-    "employee": {
-      "greeting": "Hi. I can review your expenses, explain the status of each report, and suggest next steps.",
-      "pendingLabel": "Pending send",
-      "pendingText": "Show my draft expenses that are pending to send.",
-      "rejectedLabel": "Rejected",
-      "rejectedText": "List my rejected expenses and explain each rejection reason.",
-      "nextActionLabel": "Next step",
-      "nextActionText": "What is the next step for my in-flight reports?"
-    },
-    "procurement": {
-      "greeting": "Hi. I can help you create purchase requests, check their status, and summarize what's outstanding.",
-      "createLabel": "New request",
-      "createText": "Help me draft a purchase request for 3 Dell Latitude 5440 laptops for project Alpha.",
-      "statusLabel": "Current status",
-      "statusText": "What is the status of my open purchase requests?",
-      "summaryLabel": "Month summary",
-      "summaryText": "Summarize approved and rejected purchase requests from this month."
     }
   },
   "amex": {

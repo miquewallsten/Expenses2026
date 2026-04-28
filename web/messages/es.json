@@ -2512,50 +2512,6 @@
     "analyzing": "Analizando…",
     "askPlaceholder": "Pregunta sobre tus gastos…"
   },
-  "archive": {
-    "title": "Archivo",
-    "empty": "Sin archivos en el archivo.",
-    "portalPolicy": {
-      "modules": "Módulos: {names}",
-      "managerAccounting": "Flujo Gerente + Contabilidad",
-      "managerFlow": "Flujo de gerente",
-      "accountingFlow": "Solo flujo contable",
-      "modeManagerOnly": "Solo gerente",
-      "modeManagerThenAccounting": "Gerente → Contabilidad",
-      "modeAccountingOnly": "Solo contabilidad",
-      "modeThresholdBased": "Enrutamiento por umbral",
-      "modeAutoApprove": "Aprobación automática",
-      "reviewAll": "Revisión: todos los gastos",
-      "reviewThreshold": "Revisión: sobre el umbral",
-      "accountCodeRequired": "Cuenta contable obligatoria",
-      "costCenterRequired": "Centro de costos obligatorio",
-      "polizaRequired": "Póliza obligatoria",
-      "finalReviewRequired": "Revisión final antes de exportar",
-      "allocationSingle": "Distribución: solo {dim}",
-      "allocationMultiple": "Distribución: {dims}",
-      "splitAllocations": "Distribución dividida",
-      "xmlRequired": "XML obligatorio",
-      "xmlForMxn": "XML para MXN",
-      "cfdiPdfRequired": "PDF de CFDI obligatorio",
-      "internationalExpenses": "Gastos internacionales",
-      "ticketsDisabled": "Tickets deshabilitados",
-      "workflowManagerThenAccounting": "Flujo: Gerente → Contabilidad",
-      "workflowManagerOnly": "Flujo: Solo gerente",
-      "workflowAccountingOnly": "Flujo: Solo contabilidad",
-      "workflowAutoApprove": "Flujo: Aprobación automática",
-      "blockOnValidation": "Bloquea en validación",
-      "dimProject": "Proyecto",
-      "dimClient": "Cliente",
-      "dimCostCenter": "Centro de costos",
-      "moduleExpenses": "Gastos",
-      "moduleTime": "Tiempo",
-      "moduleSubcontractors": "Subcontratistas",
-      "moduleApprovals": "Aprobaciones",
-      "moduleAccounting": "Contabilidad",
-      "moduleArchive": "Archivo",
-      "moduleAiCopilot": "Copiloto IA"
-    }
-  },
   "timeAdmin": {
     "pageTitle": "Configuración de seguimiento de tiempo",
     "tabProjects": "Proyectos",
@@ -2766,24 +2722,6 @@
         "overviewStartLabel": "Empezar configuración",
         "overviewStartText": "Guíame paso a paso para terminar la configuración inicial de la empresa."
       }
-    },
-    "employee": {
-      "greeting": "Hola. Puedo revisar tus gastos, explicarte el estado de cada reporte y sugerir próximos pasos.",
-      "pendingLabel": "Pendientes de envío",
-      "pendingText": "Muéstrame mis gastos en borrador pendientes de enviar.",
-      "rejectedLabel": "Rechazados",
-      "rejectedText": "Lista mis gastos rechazados y explica la razón de cada uno.",
-      "nextActionLabel": "Siguiente paso",
-      "nextActionText": "¿Cuál es el siguiente paso para mis reportes en curso?"
-    },
-    "procurement": {
-      "greeting": "Hola. Puedo ayudarte a crear solicitudes de compra, revisar su estado y resumir lo pendiente.",
-      "createLabel": "Nueva solicitud",
-      "createText": "Ayúdame a crear una solicitud de compra de 3 laptops Dell Latitude 5440 para el proyecto Alpha.",
-      "statusLabel": "Estado actual",
-      "statusText": "¿En qué estado están mis solicitudes abiertas?",
-      "summaryLabel": "Resumen del mes",
-      "summaryText": "Resume las solicitudes de compra aprobadas y rechazadas este mes."
     }
   },
   "amex": {
