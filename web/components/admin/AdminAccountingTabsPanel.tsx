@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import AdminAccountingSetupStudio from "./AdminAccountingSetupStudio";
 import AdminChartOfAccountsStudio from "./AdminChartOfAccountsStudio";
@@ -15,6 +15,7 @@ interface Props {
   expensePolicy?: any;
   onSaved: (s: any) => void;
   draftPatch?: Partial<any>;
+  initialTab?: AccountingTab;
 }
 
 export default function AdminAccountingTabsPanel({
@@ -24,9 +25,17 @@ export default function AdminAccountingTabsPanel({
   expensePolicy,
   onSaved,
   draftPatch,
+  initialTab,
 }: Props) {
   const t = useTranslations("admin.accountingTabs");
-  const [tab, setTab] = useState<AccountingTab>("setup");
+  const [tab, setTab] = useState<AccountingTab>(initialTab ?? "setup");
+
+  // React when the parent passes a new initialTab (e.g. when the Onboarding
+  // step buttons re-target Chart of Accounts or Dimensions while the panel
+  // is already mounted).
+  useEffect(() => {
+    if (initialTab) setTab(initialTab);
+  }, [initialTab]);
 
   const tabs: { key: AccountingTab; label: string }[] = [
     { key: "setup",      label: t("setup")      },

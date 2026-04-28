@@ -1021,6 +1021,18 @@ export default function AdminPage() {
     setActiveSection(initialSection);
   }, [initialSection]);
 
+  // Sub-tab state for sections with internal tabs (Accounting Setup).
+  // Driven by ?panel= on initial mount and by Onboarding step navigation.
+  type AccountingTab = "setup" | "chart" | "dimensions";
+  const initialAccountingTab = useMemo<AccountingTab | undefined>(() => {
+    if (typeof window === "undefined") return undefined;
+    const p = new URLSearchParams(window.location.search).get("panel")?.toLowerCase();
+    if (p === "chart_of_accounts") return "chart";
+    if (p === "dimensions") return "dimensions";
+    return undefined;
+  }, []);
+  const [accountingSubtab, setAccountingSubtab] = useState<AccountingTab | undefined>(initialAccountingTab);
+
   // Keep ?panel= in sync with the active section so refresh / share works
   // and so the deep-link reader above stays accurate. replaceState avoids
   // polluting browser history.
@@ -1321,6 +1333,7 @@ export default function AdminPage() {
                 users: "Users",
               };
               const target = map[panel] ?? "Overview";
+              if (panel === "chart_of_accounts") setAccountingSubtab("chart");
               setActiveSection(target);
             }}
           />
@@ -1358,6 +1371,7 @@ export default function AdminPage() {
             expensePolicy={expensePolicy}
             onSaved={setAccountingSetup}
             draftPatch={accountingSetupDraftPatch}
+            initialTab={accountingSubtab}
           />
         );
 
