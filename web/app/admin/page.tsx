@@ -1020,6 +1020,40 @@ export default function AdminPage() {
   useEffect(() => {
     setActiveSection(initialSection);
   }, [initialSection]);
+
+  // Keep ?panel= in sync with the active section so refresh / share works
+  // and so the deep-link reader above stays accurate. replaceState avoids
+  // polluting browser history.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const slug: Record<WorklistItem, string> = {
+      "Overview": "overview",
+      "Onboarding": "onboarding",
+      "Company Setup": "company",
+      "Policies": "policies",
+      "Accounting Setup": "accounting",
+      "Workflow": "workflow",
+      "Report Cycle": "report_cycle",
+      "Export Config": "export",
+      "Archive Config": "archive",
+      "Storage Config": "storage",
+      "Channels": "channels",
+      "Users": "users",
+      "Roles": "roles",
+      "Permissions": "permissions",
+      "Add-Ons": "addons",
+      "Authentication": "authentication",
+    };
+    const url = new URL(window.location.href);
+    const next = slug[activeSection];
+    if (url.searchParams.get("panel") === next) return;
+    if (activeSection === "Overview") {
+      url.searchParams.delete("panel");
+    } else {
+      url.searchParams.set("panel", next);
+    }
+    window.history.replaceState({}, "", url.toString());
+  }, [activeSection]);
   const adminCompanyId = Number(getCurrentCompanyId() ?? 1);
 
   // ── Lists not covered by portal config ──────────────────────────────────────
