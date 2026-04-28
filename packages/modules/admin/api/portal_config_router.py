@@ -81,12 +81,11 @@ def _compute_enabled_modules(cs: Any) -> list[str]:
         "expenses": cs.expenses_module_enabled,
         "time_allocation": cs.time_allocation_module_enabled,
         "subcontractor": cs.subcontractor_module_enabled,
-        "reimbursements": cs.reimbursements_module_enabled,
         "approvals": cs.approvals_module_enabled,
         "accounting": cs.accounting_module_enabled,
         "archive": cs.archive_module_enabled,
-        "ai_copilot": cs.ai_copilot_enabled,
         "purchase_requests": cs.purchase_requests_module_enabled,
+        "amex_reconciliation": getattr(cs, "amex_reconciliation_module_enabled", False),
     }
     return [name for name, enabled in mapping.items() if enabled]
 
