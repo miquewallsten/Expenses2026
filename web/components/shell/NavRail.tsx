@@ -126,11 +126,11 @@ export default function NavRail({ collapsed, onToggle, items, hideToggle = false
                     className="flex w-full items-center gap-1.5 px-4 py-1.5 text-left"
                   >
                     <ChevronDown
-                      className={`h-2.5 w-2.5 shrink-0 text-white/18 transition-transform ${
+                      className={`h-2.5 w-2.5 shrink-0 text-white/30 transition-transform ${
                         isOpen ? "" : "-rotate-90"
                       }`}
                     />
-                    <span className="truncate text-[9px] font-bold uppercase tracking-widest text-white/18">
+                    <span className="truncate text-[9px] font-bold uppercase tracking-widest text-white/30">
                       {groupLabel(group)}
                     </span>
                   </button>
