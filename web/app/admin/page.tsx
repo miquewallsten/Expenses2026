@@ -191,7 +191,6 @@ function AdminExportConfigPanel({
   const tc = useTranslations("common");
   return (
     <div className="max-w-lg">
-      <SectionHeader title={t("exportConfig.title")} />
       <div className="overflow-hidden rounded-lg border border-white/[0.07]">
         <div className="border-b border-white/[0.05] px-4 py-3">
           <div className="mb-1 flex items-baseline justify-between">
@@ -317,7 +316,6 @@ function AdminArchiveConfigPanel({
 
   return (
     <div className="max-w-lg">
-      <SectionHeader title={ta("archiveConfig.title")} />
       <div className="overflow-hidden rounded-lg border border-white/[0.07]">
         {fields.map(({ label, value, set, tokens }) => (
           <div key={label} className="border-b border-white/[0.05] px-4 py-3 last:border-0">
@@ -431,9 +429,7 @@ function AdminStorageConfigPanel({
   const inputCls = "w-full rounded border border-white/[0.07] bg-black/20 px-2.5 py-1.5 text-[11px] text-white/70 outline-none focus:border-white/20";
 
   return (
-    <div className="max-w-lg space-y-5">
-      <SectionHeader title={ta("storageConfig.title")} />
-
+    <div className="max-w-lg space-y-4">
       {/* Backend selector */}
       <div className="overflow-hidden rounded-lg border border-white/[0.07]">
         <div className="border-b border-white/[0.05] px-4 py-3">
