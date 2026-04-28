@@ -102,7 +102,7 @@ export default function NavRail({ collapsed, onToggle, items, hideToggle = false
             type="button"
             onClick={onToggle}
             title={collapsed ? t("expandNav") : t("collapseNav")}
-            className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-white/22 transition-colors hover:bg-white/[0.05] hover:text-white/50"
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-white/22 transition-colors hover:bg-white/[0.05] hover:text-white/50 [html.light_&]:text-black/28 [html.light_&]:hover:bg-black/[0.05] [html.light_&]:hover:text-black/55"
           >
             {collapsed
               ? <ChevronRight className="h-3 w-3" />
@@ -126,11 +126,11 @@ export default function NavRail({ collapsed, onToggle, items, hideToggle = false
                     className="flex w-full items-center gap-1.5 px-4 py-1.5 text-left"
                   >
                     <ChevronDown
-                      className={`h-2.5 w-2.5 shrink-0 text-white/30 transition-transform ${
+                      className={`h-2.5 w-2.5 shrink-0 text-white/30 [html.light_&]:text-black/35 transition-transform ${
                         isOpen ? "" : "-rotate-90"
                       }`}
                     />
-                    <span className="truncate text-[9px] font-bold uppercase tracking-widest text-white/30">
+                    <span className="truncate text-[9px] font-bold uppercase tracking-widest text-white/30 [html.light_&]:text-black/35">
                       {groupLabel(group)}
                     </span>
                   </button>
@@ -148,7 +148,7 @@ export default function NavRail({ collapsed, onToggle, items, hideToggle = false
                           } ${
                             item.active
                               ? "bg-indigo-600/[0.18] text-white"
-                              : "text-white/45 hover:bg-white/[0.04] hover:text-white/70"
+                              : "text-white/45 hover:bg-white/[0.04] hover:text-white/70 [html.light_&]:text-black/50 [html.light_&]:hover:bg-black/[0.05] [html.light_&]:hover:text-black/70"
                           }`}
                         >
                           {item.active && (
@@ -158,7 +158,7 @@ export default function NavRail({ collapsed, onToggle, items, hideToggle = false
                             className={`flex h-5 w-5 shrink-0 items-center justify-center rounded text-[9px] font-bold uppercase tracking-wider transition-colors ${
                               item.active
                                 ? "bg-indigo-500/25 text-indigo-200"
-                                : "bg-white/[0.04] text-white/30 group-hover:bg-white/[0.07] group-hover:text-white/50"
+                                : "bg-white/[0.04] text-white/30 group-hover:bg-white/[0.07] group-hover:text-white/50 [html.light_&]:bg-black/[0.06] [html.light_&]:text-black/35 [html.light_&]:group-hover:bg-black/[0.09] [html.light_&]:group-hover:text-black/55"
                             }`}
                           >
                             {initials(itemLabel(item))}
