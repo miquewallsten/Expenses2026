@@ -29,6 +29,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   minimumScale: 1,
   viewportFit: "cover",
+  themeColor: "#09090b",
 };
 
 // ── Metadata ─────────────────────────────────────────────────────────────────
