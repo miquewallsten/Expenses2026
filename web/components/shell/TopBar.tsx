@@ -122,7 +122,7 @@ export default function TopBar({ title, portal, onMenuOpen, onAiOpen }: TopBarPr
             href="/super-admin"
             title="Super Admin"
             aria-label="Super Admin"
-            className="hidden items-center gap-1.5 border-r border-white/[0.05] px-3 text-rose-300/70 transition-colors hover:bg-rose-500/[0.08] hover:text-rose-200 md:flex"
+            className="hidden items-center gap-1.5 border-r border-white/[0.05] px-3 text-rose-300/70 [html.light_&]:text-rose-600/80 transition-colors hover:bg-rose-500/[0.08] hover:text-rose-200 [html.light_&]:hover:text-rose-700 md:flex"
           >
             <Shield className="h-3.5 w-3.5" />
             <span className="text-[9px] font-bold uppercase tracking-widest">Super</span>
@@ -131,7 +131,7 @@ export default function TopBar({ title, portal, onMenuOpen, onAiOpen }: TopBarPr
 
         {role && (
           <div className="hidden items-center px-3 md:flex">
-            <span className="rounded border border-indigo-500/25 bg-indigo-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-indigo-300/65">
+            <span className="rounded border border-indigo-500/25 bg-indigo-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-indigo-300/65 [html.light_&]:text-indigo-700/80 [html.light_&]:bg-indigo-100 [html.light_&]:border-indigo-300/50">
               {role}
             </span>
           </div>
