@@ -6,7 +6,7 @@ import AppShell from "@/components/shell/AppShell";
 import AdminCompanySetupStudio from "@/components/admin/AdminCompanySetupStudio";
 import AdminCompanySetupCopilot from "@/components/admin/AdminCompanySetupCopilot";
 import AdminOnboardingPanel from "@/components/admin/AdminOnboardingPanel";
-import AdminPoliciesPanel from "@/components/admin/AdminPoliciesPanel";
+import AdminRulesStudio from "@/components/admin/AdminRulesStudio";
 import AdminWorkflowMapPanel from "@/components/admin/AdminWorkflowMapPanel";
 import AdminAccountingTabsPanel from "@/components/admin/AdminAccountingTabsPanel";
 import AdminAccountingCopilot from "@/components/admin/AdminAccountingCopilot";
@@ -19,6 +19,7 @@ import AdminUsersPanel from "@/components/admin/AdminUsersPanel";
 import AdminAuthSettingsPanel from "@/components/admin/AdminAuthSettingsPanel";
 import AdminChannelsPanel from "@/components/admin/AdminChannelsPanel";
 import AdminReportCyclePanel from "@/components/admin/AdminReportCyclePanel";
+import AdminAgentManagementPanel from "@/components/admin/AdminAgentManagementPanel";
 import {
   Building2, FileText, GitBranch, ShieldCheck, Puzzle, Lock,
   Calculator, Bot, Save, Loader2, FolderOutput, Users, Radio, CalendarClock, Sparkles,
@@ -34,7 +35,7 @@ const WORKLIST_ITEMS = [
   "Overview",
   "Onboarding",
   "Company Setup",
-  "Policies",
+  "Rules",
   "Accounting Setup",
   "Workflow",
   "Report Cycle",
@@ -44,14 +45,15 @@ const WORKLIST_ITEMS = [
   "Access Control",
   "Add-Ons",
   "Authentication",
+  "Agent Management",
 ] as const;
 type WorklistItem = typeof WORKLIST_ITEMS[number];
 
 const WORKLIST_GROUPS: { label: string; items: WorklistItem[] }[] = [
-  { label: "Setup", items: ["Overview", "Onboarding", "Company Setup", "Policies", "Accounting Setup", "Workflow", "Report Cycle"] },
+  { label: "Setup", items: ["Overview", "Onboarding", "Company Setup", "Rules", "Accounting Setup", "Workflow", "Report Cycle"] },
   { label: "Intake & Notifications", items: ["Channels"] },
   { label: "Data Out", items: ["Data Out"] },
-  { label: "Administration", items: ["Users", "Access Control", "Add-Ons", "Authentication"] },
+  { label: "Administration", items: ["Users", "Access Control", "Add-Ons", "Authentication", "Agent Management"] },
 ];
 
 type DataOutTab = "export" | "archive" | "storage";
@@ -543,7 +545,7 @@ const ITEM_MENU_KEY: Record<WorklistItem, string> = {
   "Overview": "overview",
   "Onboarding": "onboarding",
   "Company Setup": "companySetup",
-  "Policies": "policies",
+  "Rules": "rules",
   "Accounting Setup": "accountingSetup",
   "Workflow": "workflow",
   "Report Cycle": "reportCycle",
@@ -568,7 +570,7 @@ const WORKLIST_ICONS: Record<WorklistItem, React.ReactNode> = {
   "Overview": <Bot className="h-3.5 w-3.5" />,
   "Onboarding":       <Sparkles className="h-3.5 w-3.5" />,
   "Company Setup":    <Building2 className="h-3.5 w-3.5" />,
-  "Policies":         <FileText className="h-3.5 w-3.5" />,
+  "Rules":            <FileText className="h-3.5 w-3.5" />,
   "Accounting Setup": <Calculator className="h-3.5 w-3.5" />,
   "Workflow":         <GitBranch className="h-3.5 w-3.5" />,
   "Report Cycle":     <CalendarClock className="h-3.5 w-3.5" />,
@@ -630,7 +632,7 @@ function WorkList({
       ? (onboardingChecklist.go_live_ready ? "✓" : `${onboardingChecklist.passed}/${onboardingChecklist.total}`)
       : "—",
     "Company Setup":    hasCompanySetup    ? "✓" : "—",
-    "Policies":         hasExpensePolicy   ? "✓" : "—",
+    "Rules":            hasExpensePolicy   ? "✓" : "—",
     "Accounting Setup": hasAccountingSetup ? "✓" : "—",
     "Workflow":         (hasApprovalSetup && hasWorkflowSetup) ? "✓" : "—",
     "Report Cycle":     "→",
@@ -803,14 +805,15 @@ export default function AdminPage() {
       company: "Company Setup",
       company_setup: "Company Setup",
       legal_entities: "Company Setup",
-      policies: "Policies",
-      expense_policy: "Policies",
+      policies: "Rules",
+      rules: "Rules",
+      expense_policy: "Rules",
       accounting: "Accounting Setup",
       accounting_setup: "Accounting Setup",
       chart_of_accounts: "Accounting Setup",
       workflow: "Workflow",
-      approval_setup: "Workflow",
-      approval_policy: "Workflow",
+      approval_setup: "Rules",
+      approval_policy: "Rules",
       report_cycle: "Report Cycle",
       export: "Data Out",
       export_config: "Data Out",
@@ -847,12 +850,11 @@ export default function AdminPage() {
   }, []);
   const [accountingSubtab, setAccountingSubtab] = useState<AccountingTab | undefined>(initialAccountingTab);
 
-  type WorkflowTab = "approval" | "workflow";
+  type WorkflowTab = "workflow";
   const initialWorkflowTab = useMemo<WorkflowTab | undefined>(() => {
     if (typeof window === "undefined") return undefined;
     const p = new URLSearchParams(window.location.search).get("panel")?.toLowerCase();
     if (p === "workflow" || p === "workflow_setup") return "workflow";
-    if (p === "approval_setup" || p === "approval_policy") return "approval";
     return undefined;
   }, []);
   const [workflowSubtab, setWorkflowSubtab] = useState<WorkflowTab | undefined>(initialWorkflowTab);
@@ -886,7 +888,7 @@ export default function AdminPage() {
       "Overview": "overview",
       "Onboarding": "onboarding",
       "Company Setup": "company",
-      "Policies": "policies",
+      "Rules": "rules",
       "Accounting Setup": "accounting",
       "Workflow": "workflow",
       "Report Cycle": "report_cycle",
@@ -905,7 +907,7 @@ export default function AdminPage() {
       if (accountingSubtab === "chart") next = "chart_of_accounts";
       else if (accountingSubtab === "dimensions") next = "dimensions";
     } else if (activeSection === "Workflow") {
-      if (workflowSubtab === "approval") next = "approval_setup";
+      next = "workflow";
     } else if (activeSection === "Data Out") {
       next = dataOutTab; // "export" | "archive" | "storage"
     } else if (activeSection === "Access Control") {
@@ -1134,7 +1136,7 @@ export default function AdminPage() {
   // ── Pending-draft set — drives worklist dot indicators ───────────────────────
   const draftSections = new Set<string>([
     ...(companySetupDraftPatch    && Object.keys(companySetupDraftPatch).length    > 0 ? ["Company Setup"]    : []),
-    ...(expensePolicyDraftPatch   && Object.keys(expensePolicyDraftPatch).length   > 0 ? ["Policies"]         : []),
+    ...(expensePolicyDraftPatch   && Object.keys(expensePolicyDraftPatch).length   > 0 ? ["Rules"]         : []),
     ...(accountingSetupDraftPatch && Object.keys(accountingSetupDraftPatch).length > 0 ? ["Accounting Setup"] : []),
     ...((approvalSetupDraftPatch   && Object.keys(approvalSetupDraftPatch).length   > 0) ||
         (workflowSetupDraftPatch   && Object.keys(workflowSetupDraftPatch).length   > 0) ? ["Workflow"] : []),
@@ -1167,7 +1169,7 @@ export default function AdminPage() {
               accountingSetup={accountingSetup}
               approvalSetup={approvalSetup}
               workflowSetup={workflowSetup}
-              onNavigate={setActiveSection}
+              onNavigate={(section) => setActiveSection(section)}
             />
           </div>
         );
@@ -1182,12 +1184,11 @@ export default function AdminPage() {
                 company: "Company Setup",
                 legal_entities: "Company Setup",
                 chart_of_accounts: "Accounting Setup",
-                approval_setup: "Workflow",
+                approval_setup: "Rules",
                 users: "Users",
               };
               const target = map[panel] ?? "Overview";
               if (panel === "chart_of_accounts") setAccountingSubtab("chart");
-              if (panel === "approval_setup") setWorkflowSubtab("approval");
               setActiveSection(target);
             }}
           />
@@ -1206,13 +1207,18 @@ export default function AdminPage() {
           />
         );
 
-      case "Policies":
+      case "Rules":
         return (
-          <AdminPoliciesPanel
+          <AdminRulesStudio
             companyId={adminCompanyId}
+            companySetup={companySetup ?? {}}
             expensePolicy={expensePolicy ?? {}}
+            approvalSetup={approvalSetup ?? {}}
+            accountingSetup={accountingSetup ?? {}}
             onExpensePolicySaved={setExpensePolicy}
-            draftPatch={expensePolicyDraftPatch}
+            onApprovalSetupSaved={setApprovalSetup}
+            expensePolicyDraftPatch={expensePolicyDraftPatch}
+            approvalDraftPatch={approvalSetupDraftPatch}
           />
         );
 

@@ -35,7 +35,9 @@
     "noResults": "No results.",
     "dismiss": "Dismiss",
     "refresh": "Refresh",
-    "delete": "Delete"
+    "delete": "Delete",
+    "yes": "Yes",
+    "no": "No"
   },
   "shell": {
     "openNavigation": "Open navigation",
@@ -714,6 +716,12 @@
         "stepOf": "Step {current} of {total}"
       },
       "steps": {
+        "profile": {
+          "label": "Profile",
+          "title": "Company Profile",
+          "body": "Answer 6 questions so the system knows which sections to show.",
+          "cta": "Start"
+        },
         "company": {
           "label": "Company",
           "title": "Company profile",
@@ -774,7 +782,8 @@
       "addOns": "Add-Ons",
       "authentication": "Authentication",
       "policies": "Policies",
-      "workflow": "Workflow",
+      "rules": "Rules",
+      "workflow": "Workflow Map",
       "onboarding": "Onboarding"
     },
     "groups": {
@@ -1643,6 +1652,37 @@
         "sunday": "Sunday"
       }
     },
+    "profileInterview": {
+      "title": "Company Profile",
+      "subtitle": "6 quick questions. Your answers decide which sections appear in Rules and other screens.",
+      "q1": "Does your team approve expenses before payment?",
+      "q1Help": "If NO, the entire approvals module is hidden.",
+      "q2": "Do you have managers who approve their team's expenses?",
+      "q2Help": "Enables direct-manager routing.",
+      "q3": "Do you have an accounting team that reviews expenses?",
+      "q3Help": "Enables accounting review and auto-escalation.",
+      "q4": "Do you operate in more than one country?",
+      "q4Help": "Enables international expenses and FX rules.",
+      "q5": "Do you issue CFDI (Mexico)?",
+      "q5Help": "Enables XML requirement and SAT validation.",
+      "q6": "Do you need custom rules beyond the basics?",
+      "q6Help": "Shows section D (AI Rules) on the Rules screen.",
+      "answerAll": "Answer all 6 questions to save.",
+      "readyToSave": "Ready to save.",
+      "saveProfile": "Save profile"
+    },
+    "rules": {
+      "title": "Rules",
+      "subtitle": "How expenses are captured, approved, and escalated. Sections hide themselves based on your company setup.",
+      "sectionA": "A — Capture",
+      "sectionB": "B — Approval",
+      "sectionC": "C — Escalation",
+      "sectionD": "D — AI Rules",
+      "sectionDDesc": "Natural-language rules that apply on top of the settings above. Useful for amount, vendor, or category-specific cases.",
+      "saveRules": "Save rules",
+      "approvalsDisabledNotice": "Approvals are disabled in Add-Ons. Enable the module to configure routing.",
+      "aiDraftedNotice": "Draft proposed by AI. Review before saving."
+    },
     "policies": {
       "rulesLabel": "AI Rules",
       "newRule": "New rule",
@@ -1943,6 +1983,22 @@
       "slash": {
         "ariaLabel": "Quick commands",
         "empty": "No matching commands.",
+        "newExpense": {
+          "label": "New expense",
+          "description": "Quickly register a new expense."
+        },
+        "myExpenses": {
+          "label": "My expenses",
+          "description": "Check the status of your expenses and pending reimbursements."
+        },
+        "approveExpenses": {
+          "label": "Approve expenses",
+          "description": "List expenses pending your approval."
+        },
+        "setupAccounts": {
+          "label": "Setup accounts",
+          "description": "Help configuring accounting categories and chart of accounts."
+        },
         "missingReceipts": {
           "label": "Missing receipts",
           "description": "List approved expenses without an attached receipt."

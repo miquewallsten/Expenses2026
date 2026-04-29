@@ -27,6 +27,27 @@ export interface SlashCommand {
 
 export const SLASH_COMMANDS: ReadonlyArray<SlashCommand> = [
   {
+    id:       "nuevo-gasto",
+    labelKey: "newExpense.label",
+    descKey:  "newExpense.description",
+    prompt:   "Quiero registrar un nuevo gasto. ¿Cuánto fue y en qué lo gastaste?",
+    personas: ["admin", "employee"],
+  },
+  {
+    id:       "mis-gastos",
+    labelKey: "myExpenses.label",
+    descKey:  "myExpenses.description",
+    prompt:   "Muestra el estado de mis gastos y reembolsos pendientes.",
+    personas: ["admin", "employee"],
+  },
+  {
+    id:       "aprobar-gastos",
+    labelKey: "approveExpenses.label",
+    descKey:  "approveExpenses.description",
+    prompt:   "Lista los gastos pendientes de mi aprobación.",
+    personas: ["admin", "manager", "finance_manager"],
+  },
+  {
     id:       "recibos-faltantes",
     labelKey: "missingReceipts.label",
     descKey:  "missingReceipts.description",
@@ -54,6 +75,13 @@ export const SLASH_COMMANDS: ReadonlyArray<SlashCommand> = [
     descKey:  "monthEnd.description",
     prompt:   "Ejecuta el cierre mensual y dame un resumen ejecutivo.",
     personas: ["admin", "finance_manager"],
+  },
+  {
+    id:       "configurar-cuentas",
+    labelKey: "setupAccounts.label",
+    descKey:  "setupAccounts.description",
+    prompt:   "Ayúdame a configurar las categorías contables y el catálogo de cuentas.",
+    personas: ["admin"],
   },
 ];
 

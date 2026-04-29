@@ -21,7 +21,7 @@ import asyncio
 import json
 import os
 import secrets
-from typing import Any, Literal
+from typing import Any, Dict, Literal
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
@@ -39,6 +39,7 @@ from ..core.appliers import get_applier
 from ..core.audit import list_for_company as list_audit
 from ..core.context import AgentContext, Persona
 from ..core.engine import run_turn
+from ..core.orchestrator import ORCHESTRATOR, AgentOrchestrator
 from ..insights import run_scanners
 from ..models import (
     AgentInsight,
@@ -695,6 +696,59 @@ def delete_memory(
     db.delete(row)
     db.commit()
     return {"ok": True, "id": mem_id}
+
+
+# ── Super Admin Agent Management Endpoints ─────────────────────────────────
+
+class AgentTeamStatus(BaseModel):
+    name: str
+    description: str
+    active: bool
+    request_count: int
+    success_rate: float
+
+
+class AgentPerformanceReport(BaseModel):
+    teams: Dict[str, Dict[str, Any]]
+    total_requests: int
+    success_rate: float
+
+
+@router.get("/admin/status/{cid}", response_model=Dict[str, AgentTeamStatus])
+def get_agent_status(
+    cid: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin),
+):
+    """Get status of all agent teams for Super Admin."""
+    require_same_company(cid, current_user)
+    return ORCHESTRATOR.get_team_status()
+
+
+@router.get("/admin/performance/{cid}", response_model=AgentPerformanceReport)
+def get_agent_performance(
+    cid: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin),
+):
+    """Get performance report for Super Admin."""
+    require_same_company(cid, current_user)
+    return ORCHESTRATOR.get_performance_report()
+
+
+@router.post("/admin/reset/{cid}")
+def reset_agent_metrics(
+    cid: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin),
+):
+    """Reset agent performance metrics for Super Admin."""
+    require_same_company(cid, current_user)
+    # For now, we'll recreate the orchestrator to reset metrics
+    # In production, this would have proper reset methods
+    global ORCHESTRATOR
+    ORCHESTRATOR = AgentOrchestrator()
+    return {"ok": True, "message": "Agent metrics reset successfully"}
 
 
 # ── Usage ───────────────────────────────────────────────────────────────────

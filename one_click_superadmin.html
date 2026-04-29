@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>One-Click Super Admin Access</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
+            margin: 0; 
+            background: #0f1117; 
+            color: white; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+        }
+        .container { 
+            text-align: center; 
+            max-width: 400px; 
+            padding: 40px; 
+            background: #1a1d28; 
+            border-radius: 12px; 
+            border: 1px solid #2a2f3e;
+        }
+        .btn { 
+            background: #64ffda; 
+            color: #0f1117; 
+            padding: 16px 32px; 
+            text-decoration: none; 
+            border-radius: 8px; 
+            display: inline-block; 
+            font-weight: 600; 
+            margin: 20px 0; 
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .btn:hover { 
+            background: #52e8c9; 
+        }
+        .status { 
+            margin-top: 20px; 
+            padding: 10px; 
+            border-radius: 6px; 
+            background: #2a2f3e;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Super Admin Quick Access</h1>
+        <p>Click below for instant access to the Super Admin portal</p>
+        
+        <button class="btn" onclick="grantAccess()">
+            🔓 Grant Super Admin Access
+        </button>
+        
+        <div id="status" class="status">Ready to authenticate...</div>
+    </div>
+
+    <script>
+        async function grantAccess() {
+            const status = document.getElementById('status');
+            status.textContent = 'Authenticating...';
+            
+            try {
+                // Session data
+                const sessionData = {
+                    token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZW1haWwiOiJzdXBlcmFkbWluQGV4YW1wbGUuY29tIiwiY29tcGFueV9pZCI6MSwiZXhwIjoxNzc3NTEwMTY0LCJpc3MiOiJmaW5hbmNpYWwtb3BzLXBsYXRmb3JtIiwiYXVkIjoiZmluYW5jaWFsLW9wcy1wbGF0Zm9ybSJ9.DjXBOcbHf27MLky-CDrJfV2OGDJ27rwY2z极速赛车平台GdjHjfDzI',
+                    user_id: 1,
+                    email: 'superadmin@example.com',
+                    role: 'super_admin',
+                    company_id: 1,
+                    full_name: 'Super Administrator',
+                    isSuperAdmin: true
+                };
+
+                // Store in localStorage
+                localStorage.setItem('session', JSON.stringify(sessionData));
+                
+                status.textContent = '✅ Access granted! Redirecting...';
+                status.style.background = '#10b98120';
+                status.style.color = '#10b981';
+                
+                // Redirect to Super Admin portal
+                setTimeout(() => {
+                    window.location.href = 'http://localhost:3000/super-admin';
+                }, 1000);
+                
+            } catch (error) {
+                status.textContent = '❌ Error: ' + error.message;
+                status.style.background = '#ef444420';
+                status.style.color = '#ef4444';
+            }
+        }
+    </script>
+</body>
+</html>

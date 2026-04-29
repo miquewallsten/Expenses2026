@@ -16,6 +16,7 @@ from packages.core.platform.models_accounting_category import AccountingCategory
 from packages.core.platform.models_company_setup import CompanySetup
 from packages.core.platform.models_legal_entity import LegalEntity
 from packages.core.platform.models_user import User
+from packages.core.platform.service.tenant_validator import VALIDATOR
 from packages.modules.admin.service.company_setup_service import (
     get_or_create_company_setup,
 )
@@ -95,18 +96,33 @@ def compute_checklist(db: Session, company_id: int) -> dict[str, Any]:
         "users": _check_users(db, company_id),
     }
     passed = sum(1 for it in items.values() if it["ok"])
+
+    # Enrich with validator report for module-level blockers
+    report = VALIDATOR.validate_company(db, company_id)
+    blockers = report.blockers
+
     return {
         "company_id": company_id,
         "items": items,
         "passed": passed,
         "total": len(items),
-        "go_live_ready": passed == len(items),
+        "go_live_ready": passed == len(items) and report.ok,
         "onboarding_step": setup.onboarding_step,
         "onboarding_completed_at": (
             setup.onboarding_completed_at.isoformat() + "Z"
             if setup.onboarding_completed_at
             else None
         ),
+        "blockers": [
+            {
+                "module": g.module,
+                "kind": g.kind,
+                "target": g.target,
+                "message": g.message,
+                "wizard_step": g.wizard_step,
+            }
+            for g in blockers
+        ],
     }
 
 
@@ -115,6 +131,17 @@ def set_onboarding_step(
 ) -> CompanySetup:
     if step < 0 or step > _TOTAL_STEPS:
         raise ValueError(f"step must be 0..{_TOTAL_STEPS}")
+
+    # Guard: cannot complete onboarding (step >= 6) while blockers exist
+    if step >= _TOTAL_STEPS:
+        report = VALIDATOR.validate_company(db, company_id)
+        if not report.ok:
+            names = ", ".join({g.wizard_step or g.module for g in report.blockers})
+            raise ValueError(
+                f"Cannot complete onboarding: missing required configuration for {names}. "
+                f"Resolve all blockers before proceeding."
+            )
+
     setup = get_or_create_company_setup(db, company_id)
     setup.onboarding_step = step
     if step >= _TOTAL_STEPS and setup.onboarding_completed_at is None:

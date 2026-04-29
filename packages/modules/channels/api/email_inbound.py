@@ -43,7 +43,7 @@ from apps.api.config import settings as app_settings
 from apps.api.deps import get_db
 from packages.modules.channels.models import ChannelSettings
 from packages.modules.channels.schemas import InboundAttachment, NormalizedMessage
-from packages.modules.channels.service import agent
+from packages.modules.agent.core.channel_dispatcher import CHANNEL_DISPATCHER
 
 log = logging.getLogger(__name__)
 
@@ -253,7 +253,15 @@ def _process_email(parsed: dict[str, Any], db: Session) -> None:
         except Exception:
             log.exception("inbound CFDI draft creation crashed")
 
-        agent.process_message(db, norm)
+        # Dispatch to autonomous agent
+        CHANNEL_DISPATCHER.dispatch(
+            db=db,
+            channel_type="email",
+            user=norm.sender_ref, # Using email as user_id for now (engine handles it)
+            company_id=company_id,
+            message=norm.body,
+            confidence=1.0,
+        )
 
     except Exception as exc:
         log.error("Error processing inbound email: %s", exc, exc_info=True)

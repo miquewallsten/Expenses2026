@@ -8,7 +8,7 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..core.context import AgentContext
-from ..core.knowledge import search_knowledge, get_chunk
+from ..core.knowledge import get_chunk, hybrid_search_knowledge
 from ..core.registry import REGISTRY, ToolResult, ToolSpec
 
 
@@ -41,7 +41,7 @@ class HowToInput(BaseModel):
 
 
 def _handle_how_to(ctx: AgentContext, args: HowToInput) -> ToolResult:
-    chunks = search_knowledge(args.question, k=3)
+    chunks = hybrid_search_knowledge(ctx.db, ctx.company_id, args.question, k=3)
     if not chunks:
         return ToolResult(
             ok=True,
@@ -82,7 +82,7 @@ class SearchKnowledgeInput(BaseModel):
 
 
 def _handle_search_knowledge(ctx: AgentContext, args: SearchKnowledgeInput) -> ToolResult:
-    chunks = search_knowledge(args.query, k=args.k)
+    chunks = hybrid_search_knowledge(ctx.db, ctx.company_id, args.query, k=args.k)
     return ToolResult(
         ok=True,
         summary=f"{len(chunks)} chunks",

@@ -256,12 +256,15 @@ def notify_magic_link(
     link: str,
     ttl_minutes: int,
     token_id: int,
-) -> None:
-    """Send a magic-link email through the unified Notifier."""
+) -> list:
+    """Send a magic-link email through the unified Notifier.
+    
+    Returns list of NotificationDispatch rows that were created/sent.
+    """
     try:
         ctx = {"user": user, "link": link, "ttl_minutes": ttl_minutes}
         msg = render_email("magic_link", _locale_for(user), ctx)
-        send(
+        return send(
             db,
             NotifyRequest(
                 company_id=user.company_id,
@@ -275,6 +278,7 @@ def notify_magic_link(
         )
     except Exception:  # pragma: no cover — defensive
         log.exception("event_router: failed to send magic-link email")
+        return []
 
 
 # ── Locale helper ────────────────────────────────────────────────────────────

@@ -38,6 +38,12 @@ const GROUPS: { label: string; tiles: Tile[] }[] = [
         icon: <Activity className="h-3.5 w-3.5" />,
       },
       {
+        href: "/super-admin/agent-management",
+        title: "Agent Management",
+        subtitle: "Team coordination · performance · configuration",
+        icon: <Activity className="h-3.5 w-3.5" />,
+      },
+      {
         href: "/super-admin/insights",
         title: "Daily Insights Digest",
         subtitle: "Cross-tenant scanner · digest dispatch",

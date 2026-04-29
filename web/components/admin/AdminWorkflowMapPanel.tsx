@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { GitBranch } from "lucide-react";
 import { getAuthHeaders } from "@/lib/session";
-import AdminApprovalSetupStudio from "./AdminApprovalSetupStudio";
 import AdminWorkflowSetupStudio from "./AdminWorkflowSetupStudio";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -31,7 +30,7 @@ interface Transition {
   created_at: string;
 }
 
-type RightTab = "approval" | "workflow";
+type RightTab = "workflow";
 
 // ── Stage color scheme ─────────────────────────────────────────────────────
 
@@ -139,15 +138,16 @@ function edgePath(from: NodePos, to: NodePos): string {
 
 interface Props {
   companyId: number;
-  approvalSetup: any;
+  approvalSetup?: any;
   workflowSetup: any;
   companySetup?: any;
   expensePolicy?: any;
   accountingSetup?: any;
-  onApprovalSaved: (s: any) => void;
   onWorkflowSaved: (s: any) => void;
-  approvalDraftPatch?: Partial<any>;
   workflowDraftPatch?: Partial<any>;
+  // Legacy props kept for call-site compatibility; no longer consumed.
+  onApprovalSaved?: (s: any) => void;
+  approvalDraftPatch?: Partial<any>;
   initialTab?: RightTab;
   onTabChange?: (tab: RightTab) => void;
 }
@@ -159,24 +159,14 @@ export default function AdminWorkflowMapPanel({
   companySetup,
   expensePolicy,
   accountingSetup,
-  onApprovalSaved,
   onWorkflowSaved,
-  approvalDraftPatch,
   workflowDraftPatch,
-  initialTab,
-  onTabChange,
 }: Props) {
   const tw = useTranslations("admin.workflowMap");
   const [stages, setStages]               = useState<Stage[]>([]);
   const [transitions, setTransitions]     = useState<Transition[]>([]);
   const [selectedStage, setSelectedStage] = useState<Stage | null>(null);
   const [selectedTx, setSelectedTx]       = useState<Transition | null>(null);
-  const [tab, setTabState]                = useState<RightTab>(initialTab ?? "approval");
-  useEffect(() => { if (initialTab) setTabState(initialTab); }, [initialTab]);
-  const setTab = (next: RightTab) => {
-    setTabState(next);
-    onTabChange?.(next);
-  };
   const [canvasWidth, setCanvasWidth]     = useState(700);
   const [applyingPreset, setApplyingPreset] = useState(false);
   const canvasWrapRef = useRef<HTMLDivElement>(null);
@@ -379,47 +369,18 @@ export default function AdminWorkflowMapPanel({
         )}
       </div>
 
-      {/* ── Settings tabs ──────────────────────────────────────────────────── */}
+      {/* ── Workflow setup form ───────────────────────────────────────────── */}
       <div>
-        <div className="mb-3 flex items-center border-b border-white/[0.07]">
-          {(["approval", "workflow"] as RightTab[]).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`px-3 pb-2 text-[11px] font-medium transition-colors ${
-                tab === t
-                  ? "border-b-2 border-indigo-400/60 text-white/80"
-                  : "text-white/35 hover:text-white/60"
-              }`}
-            >
-              {t === "approval" ? tw("tabApproval") : tw("tabWorkflow")}
-            </button>
-          ))}
-        </div>
-
-        {tab === "approval" && (
-          <AdminApprovalSetupStudio
-            companyId={companyId}
-            setup={approvalSetup ?? {}}
-            companySetup={companySetup}
-            accountingSetup={accountingSetup}
-            expensePolicy={expensePolicy}
-            onSaved={onApprovalSaved}
-            draftPatch={approvalDraftPatch}
-          />
-        )}
-        {tab === "workflow" && (
-          <AdminWorkflowSetupStudio
-            companyId={companyId}
-            setup={workflowSetup ?? {}}
-            companySetup={companySetup}
-            expensePolicy={expensePolicy}
-            accountingSetup={accountingSetup}
-            approvalSetup={approvalSetup}
-            onSaved={onWorkflowSaved}
-            draftPatch={workflowDraftPatch}
-          />
-        )}
+        <AdminWorkflowSetupStudio
+          companyId={companyId}
+          setup={workflowSetup ?? {}}
+          companySetup={companySetup}
+          expensePolicy={expensePolicy}
+          accountingSetup={accountingSetup}
+          approvalSetup={approvalSetup}
+          onSaved={onWorkflowSaved}
+          draftPatch={workflowDraftPatch}
+        />
       </div>
     </div>
   );

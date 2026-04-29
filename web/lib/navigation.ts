@@ -65,6 +65,17 @@ export function buildGlobalNav(context: NavigationContext): GlobalNavItem[] {
     });
   }
 
+  // ── Super Admin — system-wide administration ──────────────────────────────
+  if (role === "admin" && hasPermission("super_admin_access")) {
+    items.push({
+      key: "super-admin",
+      label: "Super Admin",
+      href: "/super-admin",
+      group: "Administration",
+      active: currentPortal === ("super-admin" as never),
+    });
+  }
+
   return items;
 }
 

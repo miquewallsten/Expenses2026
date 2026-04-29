@@ -35,7 +35,9 @@
     "noResults": "Sin resultados.",
     "dismiss": "Cerrar",
     "refresh": "Actualizar",
-    "delete": "Eliminar"
+    "delete": "Eliminar",
+    "yes": "Sí",
+    "no": "No"
   },
   "shell": {
     "openNavigation": "Abrir navegación",
@@ -714,6 +716,12 @@
         "stepOf": "Paso {current} de {total}"
       },
       "steps": {
+        "profile": {
+          "label": "Perfil",
+          "title": "Perfil de la compañía",
+          "body": "Responde 6 preguntas para que el sistema sepa qué secciones mostrar.",
+          "cta": "Comenzar"
+        },
         "company": {
           "label": "Compañía",
           "title": "Perfil de la compañía",
@@ -774,7 +782,8 @@
       "addOns": "Módulos adicionales",
       "authentication": "Autenticación",
       "policies": "Políticas",
-      "workflow": "Flujo de trabajo",
+      "rules": "Reglas",
+      "workflow": "Mapa de flujo",
       "onboarding": "Asistente de inicio"
     },
     "groups": {
@@ -1643,6 +1652,37 @@
         "sunday": "Domingo"
       }
     },
+    "profileInterview": {
+      "title": "Perfil de la compañía",
+      "subtitle": "6 preguntas rápidas. Las respuestas determinan qué secciones aparecen en Reglas y demás pantallas.",
+      "q1": "¿Tu equipo aprueba los gastos antes del pago?",
+      "q1Help": "Si dices NO, se omite el módulo de aprobaciones por completo.",
+      "q2": "¿Tienes gerentes que aprueban gastos de su equipo?",
+      "q2Help": "Activa el modo “gerente directo” en el enrutamiento.",
+      "q3": "¿Tienes un equipo de contabilidad que revisa los gastos?",
+      "q3Help": "Activa la revisión contable y la escalación automática.",
+      "q4": "¿Operas en más de un país?",
+      "q4Help": "Habilita gastos internacionales y reglas de FX.",
+      "q5": "¿Emites CFDI (México)?",
+      "q5Help": "Activa la exigencia de XML y la validación SAT.",
+      "q6": "¿Necesitas reglas personalizadas más allá de lo básico?",
+      "q6Help": "Muestra la sección D (Reglas de IA) en la pantalla Reglas.",
+      "answerAll": "Responde las 6 preguntas para guardar.",
+      "readyToSave": "Todo listo para guardar.",
+      "saveProfile": "Guardar perfil"
+    },
+    "rules": {
+      "title": "Reglas",
+      "subtitle": "Cómo se capturan, aprueban y escalan los gastos. Las secciones se ocultan automáticamente según la configuración de tu empresa.",
+      "sectionA": "A — Captura",
+      "sectionB": "B — Aprobación",
+      "sectionC": "C — Escalación",
+      "sectionD": "D — Reglas de IA",
+      "sectionDDesc": "Reglas en lenguaje natural que se aplican además de los ajustes anteriores. Útil para casos específicos por monto, proveedor o categoría.",
+      "saveRules": "Guardar reglas",
+      "approvalsDisabledNotice": "Las aprobaciones están desactivadas en Módulos adicionales. Activa el módulo para configurar el enrutamiento.",
+      "aiDraftedNotice": "Borrador propuesto por la IA. Revisa antes de guardar."
+    },
     "policies": {
       "rulesLabel": "Reglas IA",
       "newRule": "Nueva regla",
@@ -1943,6 +1983,22 @@
       "slash": {
         "ariaLabel": "Comandos rápidos",
         "empty": "Sin comandos coincidentes.",
+        "newExpense": {
+          "label": "Nuevo gasto",
+          "description": "Registra un nuevo gasto rápidamente."
+        },
+        "myExpenses": {
+          "label": "Mis gastos",
+          "description": "Consulta el estado de tus gastos y reembolsos pendientes."
+        },
+        "approveExpenses": {
+          "label": "Aprobar gastos",
+          "description": "Lista los gastos pendientes de tu aprobación."
+        },
+        "setupAccounts": {
+          "label": "Configurar cuentas",
+          "description": "Ayuda para configurar categorías contables y catálogo de cuentas."
+        },
         "missingReceipts": {
           "label": "Recibos faltantes",
           "description": "Lista gastos aprobados sin recibo adjunto."

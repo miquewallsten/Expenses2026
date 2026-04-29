@@ -1,0 +1,4 @@
+#!/bin/bash
+# Quick Super Admin Access
+cd /Users/mikaelwallsten/Projects/financial-ops-platform
+python3 superadmin_cli.py "$@"

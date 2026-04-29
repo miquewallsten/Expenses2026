@@ -27,7 +27,7 @@ from packages.core.platform.models_user import User
 from ..models import AgentSession
 from .audit import record as audit_record
 from .context import AgentContext, Persona
-from .knowledge import render_for_prompt, search_knowledge
+from .knowledge import hybrid_search_knowledge, render_for_prompt
 from .memory import list_memories_for_prompt
 from .registry import REGISTRY, ToolResult
 from .routing import scoped_model, select_model
@@ -119,6 +119,21 @@ _SYSTEM_PROMPT_ES: dict[Persona, str] = {
         " - Si el usuario pregunta por algún dato fiscal o de configuración ya existente,\n"
         "   llama primero a la herramienta de lectura correspondiente y responde con el valor real.\n"
         "\n"
+        "FLUJO DE GASTOS (lo más importante de la plataforma):\n"
+        " - Empleado crea gasto → create_expense (draft).\n"
+        " - Empleado pregunta estado → check_reimbursement_status.\n"
+        " - Manager revisa pendientes → list_pending_approvals.\n"
+        " - Manager aprueba/rechaza → approve_expense / reject_expense (con recibo de confirmación).\n"
+        " - Contador genera póliza → generate_poliza_preview.\n"
+        " - Fin de mes → run_month_end para resumen ejecutivo.\n"
+        "\n"
+        "VALIDACIÓN DE TENANT (usa antes de decir 'está listo'):\n"
+        " - Antes de decir que algo está configurado o listo, llama check_tenant_readiness.\n"
+        " - Si un módulo está activo pero incompleto, explica exactamente qué falta\n"
+        "   y en qué paso del asistente se arregla.\n"
+        " - Usa explain_module_requirements si el admin pregunta '¿qué necesita X?'.\n"
+        " - Usa suggest_next_configuration_step para guiar al admin al siguiente ajuste prioritario.\n"
+        "\n"
         "CÓMO CREAR COSAS (usa la vía inline por defecto — pide CSV solo si el admin lo menciona):\n"
         " - Una sola categoría contable → create_accounting_category (code, name, cuentas, tax_behavior).\n"
         " - Varias categorías dictadas o pegadas en el chat → bulk_create_accounting_categories con la lista inline.\n"
@@ -150,6 +165,11 @@ _SYSTEM_PROMPT_ES: dict[Persona, str] = {
         "Eres el asistente del portal de empleado. Ayudas a capturar gastos, consultar estados y reportes.\n"
         "No tienes permiso para modificar configuración del sistema ni datos de otras personas.\n"
         "\n"
+        "FLUJO PRINCIPAL:\n"
+        " - Crear gasto: create_expense (monto + descripción).\n"
+        " - Ver mis gastos: check_reimbursement_status.\n"
+        " - Ver pendientes de aprobación: list_pending_approvals.\n"
+        "\n"
         "ESTILO: respuestas muy breves, en español claro. Sin preludios ni resuménes. Una pregunta\n"
         "por turno si falta información. 'Listo.' cuando la tarea termine."
     ),
@@ -180,7 +200,7 @@ def _system_prompt(
         ),
     ]
     # Inject top-k relevant knowledge chunks based on the current user turn.
-    chunks = search_knowledge(user_message, k=5) if user_message else []
+    chunks = hybrid_search_knowledge(db, company_id, user_message, k=5) if user_message else []
     if chunks:
         parts.append(render_for_prompt(chunks))
     # Inject recent memories (facts/preferences/decisions) for this company.
@@ -203,6 +223,7 @@ def run_turn(
     session_id: str | None = None,
     locale: str = "es",
     hard_mode: bool = False,
+    agent_definition: Any | None = None,
 ) -> dict[str, Any]:
     """Run one user turn through the agent loop and return the final result.
 
@@ -221,7 +242,9 @@ def run_turn(
     if session_id:
         session = _load_session(db, company_id, session_id)
     if session is None:
-        session = _new_session(db, company_id=company_id, persona=persona, user_id=user.id)
+        # Resolve user object if only ID was passed
+        u_id = user.id if hasattr(user, "id") else user
+        session = _new_session(db, company_id=company_id, persona=persona, user_id=u_id)
     else:
         # Tenant lock: reject crossing companies even if session_id guessed.
         if session.company_id != company_id or session.persona != persona:
@@ -237,9 +260,9 @@ def run_turn(
     ctx = AgentContext(
         db=db,
         company_id=company_id,
-        user_id=user.id,
-        user_email=user.email,
-        user_role=user.role,
+        user_id=u_id,
+        user_email=getattr(user, "email", "unknown@example.com"),
+        user_role=getattr(user, "role", "employee"),
         persona=persona,
         locale=locale,
         session_id=session.session_id,
@@ -295,7 +318,29 @@ def run_turn(
     history = _read_turns(session)
     history.append({"role": "user", "content": user_message})
 
-    tools = REGISTRY.to_ollama_tools(persona)
+    # Resolve tools and prompt
+    if agent_definition:
+        # DB-driven override
+        system_prompt = agent_definition.system_prompt
+        allowed_tools_json = agent_definition.allowed_tools
+        
+        # Handle cases where allowed_tools might be a MagicMock or not a string (e.g. in tests)
+        if isinstance(allowed_tools_json, str):
+            tools_list = json.loads(allowed_tools_json) if allowed_tools_json else []
+        else:
+            tools_list = []
+        
+        # Filter registry for these specific tools
+        tools = [REGISTRY.get(t) for t in tools_list if REGISTRY.get(t)]
+        # Convert to Ollama format
+        tools = [t.to_ollama_tool() for t in tools]
+    else:
+        # Legacy persona-based defaults
+        tools = REGISTRY.to_ollama_tools(persona)
+        system_prompt = _system_prompt(
+            persona, user, company_id, user_message=user_message, db=db,
+        )
+
     provider, chosen_model = select_model(tool_count=len(tools), hard_mode=hard_mode)
 
     # Inline history into the user prompt — ``chat_with_tools`` takes a single
@@ -312,9 +357,7 @@ def run_turn(
     turn_started = time.monotonic()
     with scoped_model(chosen_model):
         result = chat_with_tools(
-            system_prompt=_system_prompt(
-                persona, user, company_id, user_message=user_message, db=db,
-            ),
+            system_prompt=system_prompt,
             user_prompt=prompt,
             tools=tools,
             tool_executor=executor,

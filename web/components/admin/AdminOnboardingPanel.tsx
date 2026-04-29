@@ -24,6 +24,7 @@ import {
   Bot,
 } from "lucide-react";
 import { getAuthHeaders } from "@/lib/session";
+import AdminProfileInterview from "./AdminProfileInterview";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -45,6 +46,7 @@ interface ChecklistResponse {
 }
 
 const STEP_KEYS = [
+  "profile",
   "company",
   "legal_entities",
   "chart_of_accounts",
@@ -54,18 +56,20 @@ const STEP_KEYS = [
 type StepKey = (typeof STEP_KEYS)[number];
 
 const STEP_LINKS: Record<StepKey, string> = {
+  profile: "/admin?panel=onboarding",
   company: "/admin?panel=company",
   legal_entities: "/admin?panel=legal_entities",
   chart_of_accounts: "/admin?panel=chart_of_accounts",
-  approval_policy: "/admin?panel=approval_setup",
+  approval_policy: "/admin?panel=rules",
   users: "/admin?panel=users",
 };
 
 const STEP_PANEL_KEY: Record<StepKey, string> = {
+  profile: "onboarding",
   company: "company",
   legal_entities: "legal_entities",
   chart_of_accounts: "chart_of_accounts",
-  approval_policy: "approval_setup",
+  approval_policy: "rules",
   users: "users",
 };
 
@@ -92,6 +96,19 @@ export default function AdminOnboardingPanel({ companyId, onNavigate }: Props) {
       });
       if (!r.ok) throw new Error(`${r.status}`);
       const body: ChecklistResponse = await r.json();
+      // Hydrate client-side completion for the profile step (no backend support).
+      const profileDone = typeof window !== "undefined" &&
+        window.localStorage.getItem(`profile_complete:${companyId}`) === "1";
+      body.items = {
+        ...body.items,
+        profile: {
+          ok: profileDone,
+          label: t("steps.profile.label"),
+          detail: null,
+        },
+      };
+      if (profileDone) body.passed = (body.passed ?? 0) + 1;
+      body.total = (body.total ?? 0) + 1;
       setData(body);
       const firstIncomplete = STEP_KEYS.findIndex((k) => !body.items[k]?.ok);
       setActiveStep(firstIncomplete === -1 ? STEP_KEYS.length : firstIncomplete);
@@ -181,7 +198,7 @@ export default function AdminOnboardingPanel({ companyId, onNavigate }: Props) {
         />
       </div>
 
-      <ol className="mt-5 grid grid-cols-6 gap-1.5">
+      <ol className="mt-5 grid grid-cols-7 gap-1.5">
         {STEP_KEYS.map((key, i) => {
           const item = data.items[key];
           const isActive = i === activeStep;
@@ -245,6 +262,16 @@ export default function AdminOnboardingPanel({ companyId, onNavigate }: Props) {
       <section className="mt-6 rounded-md border border-white/[0.06] bg-white/[0.015]">
         {isGoLive ? (
           <GoLivePanel data={data} t={t} />
+        ) : currentKey === "profile" ? (
+          <AdminProfileInterview
+            companyId={companyId ?? 0}
+            onCompleted={() => {
+              if (typeof window !== "undefined" && companyId != null) {
+                window.localStorage.setItem(`profile_complete:${companyId}`, "1");
+              }
+              void load();
+            }}
+          />
         ) : currentItem && currentKey ? (
           <StepPanel
             stepKey={currentKey}

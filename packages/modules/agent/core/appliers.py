@@ -35,3 +35,11 @@ def get_applier(tool_name: str) -> Applier | None:
 
 def all_appliers() -> dict[str, Applier]:
     return dict(_APPLIERS)
+
+
+# ── Expense operations appliers ───────────────────────────────────────────────
+# Imported here to avoid circular deps; registration runs at module load time.
+from packages.modules.agent.tools.expense_ops import _apply_approve, _apply_reject  # noqa: E402
+
+register_applier("approve_expense", _apply_approve)
+register_applier("reject_expense", _apply_reject)

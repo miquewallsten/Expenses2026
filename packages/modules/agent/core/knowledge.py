@@ -205,6 +205,46 @@ def search_knowledge(query: str, k: int = 5) -> list[dict[str, Any]]:
     return [c for _, c in scored[:max(1, k)]]
 
 
+def hybrid_search_knowledge(
+    db: Any,
+    company_id: int,
+    query: str,
+    k: int = 5,
+) -> list[dict[str, Any]]:
+    """Try vector search first; fall back to static YAML keyword matching."""
+    if not query or not query.strip():
+        return []
+
+    if db is not None:
+        try:
+            from packages.modules.agent.service.knowledge_service import (
+                search_knowledge as _vec_search,
+            )
+            vec_results = _vec_search(
+                db,
+                company_id=company_id,
+                query_text=query,
+                k=k,
+                min_score=0.55,
+            )
+            if vec_results:
+                out: list[dict[str, Any]] = []
+                for r in vec_results:
+                    out.append({
+                        "source": r.get("source_type") or "vector",
+                        "key": str(r.get("id", "")),
+                        "title": r.get("title", ""),
+                        "body": r.get("body", ""),
+                        "tags": [],
+                        "score": r.get("score", 0),
+                    })
+                return out
+        except Exception:
+            pass
+
+    return search_knowledge(query, k=k)
+
+
 def get_chunk(key: str) -> dict[str, Any] | None:
     for c in _all_chunks():
         if c["key"] == key:

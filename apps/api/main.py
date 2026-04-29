@@ -60,6 +60,8 @@ from packages.modules.expenses.models_routing import ApprovalRoutingRule  # noqa
 from packages.modules.admin.api.ai_policy_router import router as ai_policy_router
 from packages.modules.admin.api.ai_governance_router import router as ai_governance_router
 from packages.modules.admin.api.portal_config_router import router as portal_config_router
+from packages.modules.admin.api.readiness_router import router as readiness_router
+# from packages.modules.admin.api.setup_orchestrator_router import router as setup_orchestrator_router  # Module does not exist
 from packages.modules.admin.api.accounting_category_router import router as accounting_category_router
 from packages.modules.admin.api.accounting_category_apply_router import router as accounting_category_apply_router
 from packages.modules.admin.api.accounting_learning_router import router as accounting_learning_router
@@ -98,7 +100,7 @@ from packages.modules.channels.models import (  # noqa: F401 — registers chann
 from packages.modules.channels.api.whatsapp_webhook import router as whatsapp_webhook_router
 from packages.modules.channels.api.email_inbound import router as email_inbound_router
 from packages.modules.channels.api.admin_router import router as channels_admin_router
-from packages.modules.channels.api.action_links_router import router as action_links_router
+from apps.api.routes.super_admin_agents import router as super_admin_agents_router
 from packages.core.platform.models_purchase_request import PurchaseRequest as _PurchaseRequestModel  # noqa: F401
 from packages.core.platform.models_request_attachment import RequestAttachment as _RequestAttachmentModel  # noqa: F401
 from packages.modules.requests.router import router as purchase_requests_router
@@ -114,7 +116,9 @@ from packages.modules.agent.models import (  # noqa: F401 — registers agent_* 
     AgentSession, AgentToolCall, AgentPendingAction, AgentUpload,
     AgentMemory, AgentInsight, AgentUsage,
 )
+from packages.modules.agent.models_knowledge_chunk import KnowledgeChunk  # noqa: F401 — registers agent_knowledge_chunks table
 from packages.modules.agent.api.agent_router import router as agent_router
+from apps.api.routes.super_admin import router as super_admin_router
 from packages.modules.amex.models import (  # noqa: F401 — registers amex_* tables
     AmexStatement, AmexStatementLine, AmexCfdiDocument,
 )
@@ -247,8 +251,26 @@ app.include_router(company_setup_router)
 app.include_router(accounting_setup_router)
 app.include_router(coa_router)
 app.include_router(approval_setup_router)
-app.include_router(dimensions_router)
-app.include_router(portal_config_router)
+app.include_router(readiness_router)
+app.include_router(super_admin_agents_router)
+
+def _seed_agent_defaults() -> None:
+    import logging
+    _seed_log = logging.getLogger(__name__)
+    try:
+        from apps.api.db import SessionLocal
+        from packages.modules.agent.core.agent_definition_service import AGENT_DEF_SERVICE
+        from packages.modules.agent.tools import registry_all  # noqa: F401
+        db = SessionLocal()
+        AGENT_DEF_SERVICE.seed_defaults(db)
+        _seed_log.info("Agent defaults seeded.")
+    except Exception:
+        _seed_log.exception("Agent seed failed — startup unaffected")
+    finally:
+        db.close()
+
+_seed_agent_defaults()
+
 app.include_router(accounting_category_router)
 app.include_router(accounting_category_apply_router)
 app.include_router(accounting_learning_router)
@@ -274,11 +296,14 @@ app.include_router(auth_settings_router)
 app.include_router(whatsapp_webhook_router)
 app.include_router(email_inbound_router)
 app.include_router(channels_admin_router)
-app.include_router(action_links_router)
 from packages.modules.channels.api.preferences_router import (  # noqa: E402
     router as preferences_router,
 )
 app.include_router(preferences_router)
+from packages.modules.channels.api.action_links_router import (  # noqa: E402
+    router as action_links_router,
+)
+app.include_router(action_links_router)
 app.include_router(purchase_requests_router)
 app.include_router(time_tracking_router)
 app.include_router(report_cycle_router)
@@ -302,6 +327,7 @@ from packages.modules.admin.api.routing_rules_router import (  # noqa: E402
 )
 app.include_router(routing_rules_router)
 app.include_router(agent_router)
+app.include_router(super_admin_router)
 app.include_router(amex_router)
 app.include_router(integrations_router)
 app.include_router(public_api_router)

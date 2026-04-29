@@ -106,6 +106,9 @@ from packages.modules.integrations.models_public_api import (  # noqa: F401
     PlatformApiKey, WebhookSubscription, WebhookDelivery,
 )
 
+# Agent knowledge chunks (vector RAG)
+from packages.modules.agent.models_knowledge_chunk import KnowledgeChunk  # noqa: F401
+
 # Agent definitions and LLM config
 from packages.modules.agent.models_definitions import (  # noqa: F401
     AgentDefinition, ChannelAgentConfig, LLMProviderConfig,
