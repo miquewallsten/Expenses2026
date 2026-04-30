@@ -623,6 +623,8 @@ function WorkList({
 }) {
   const t = useTranslations("admin");
   const tc = useTranslations("common");
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const unconfiguredSetupCount = [
     hasCompanySetup, hasExpensePolicy, hasAccountingSetup, hasApprovalSetup, hasWorkflowSetup,
   ].filter((v) => !v).length;
@@ -677,11 +679,11 @@ function WorkList({
                     isActive ? "bg-indigo-400/60" : "bg-transparent"
                   }`}
                 />
-                <span className={isActive ? "text-white/60" : "text-white/22"} suppressHydrationWarning>
-                  {(() => {
+                <span className={isActive ? "text-white/60" : "text-white/22"}>
+                  {mounted ? (() => {
                     const IconComponent = WORKLIST_ICON_COMPONENTS[item];
                     return <IconComponent className="h-3.5 w-3.5" />;
-                  })()}
+                  })() : <span className="inline-block h-3.5 w-3.5" />}
                 </span>
                 <span className="flex-1 truncate text-[11px] font-medium tracking-[-0.01em]">{t(`menu.${ITEM_MENU_KEY[item]}`)}</span>
                 {hasDraft && (
