@@ -677,7 +677,7 @@ function WorkList({
                     isActive ? "bg-indigo-400/60" : "bg-transparent"
                   }`}
                 />
-                <span className={isActive ? "text-white/60" : "text-white/22"}>
+                <span className={isActive ? "text-white/60" : "text-white/22"} suppressHydrationWarning>
                   {(() => {
                     const IconComponent = WORKLIST_ICON_COMPONENTS[item];
                     return <IconComponent className="h-3.5 w-3.5" />;
