@@ -46,3 +46,6 @@ storage/
 .claude/settings.json
 .claude/settings.local.json
 .superpowers/
+
+# Git worktrees
+.worktrees/
