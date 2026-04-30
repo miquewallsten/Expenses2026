@@ -445,3 +445,63 @@ def diagnose_config(request: ChatRequest) -> dict:
         user_prompt = f"Current platform configuration:\n{request.context}\n\nRequest:\n{request.prompt}"
 
     return chat_with_ollama(system, user_prompt, temperature=0.2)
+
+
+# ── LLM Config Assistant ──────────────────────────────────────────────────────
+
+class LLMConfigAssistantRequest(BaseModel):
+    prompt: str
+    current_provider: str | None = None
+    current_model: str | None = None
+    history: list[dict] | None = None
+
+
+@router.post("/llm-config-assistant")
+def llm_config_assistant(request: LLMConfigAssistantRequest) -> dict:
+    """
+    AI assistant that helps Super Admins choose and configure LLM models.
+    Understands provider differences, model capabilities, and setup requirements.
+    """
+    system = (
+        "You are an expert LLM infrastructure consultant embedded in the Financial Ops platform. "
+        "Your job is to help administrators choose, configure, and troubleshoot AI models.\n\n"
+        "Providers supported:\n"
+        "  • Ollama (local) — free, private, requires local GPU. Best for: cost-sensitive, "
+        "    data-privacy-critical deployments. Models: llama3.2, llama3.1, mistral, etc.\n"
+        "  • Anthropic (cloud) — Claude models. Best for: reasoning, long context, reliability. "
+        "    Models: claude-sonnet-4-6, claude-opus-4-7, claude-haiku-4-5. Requires ANTHROPIC_API_KEY.\n"
+        "  • OpenAI (cloud) — GPT models. Best for: general purpose, broad ecosystem. "
+        "    Models: gpt-4o, gpt-4o-mini. Requires OPENAI_API_KEY.\n\n"
+        "Rules:\n"
+        "- Be concise. Maximum 3 sentences per recommendation.\n"
+        "- When recommending a model, explain WHY for this specific use case.\n"
+        "- If the user asks about setup, give exact env var names and where to set them.\n"
+        "- If the user asks about cost, give rough per-token estimates when known.\n"
+        "- If the user asks about privacy, emphasize local vs cloud tradeoffs.\n"
+        "- Never recommend a model you don't know is real.\n"
+        "- Respond in the same language the user writes in."
+    )
+
+    ctx_parts: list[str] = []
+    if request.current_provider:
+        ctx_parts.append(f"Current provider: {request.current_provider}")
+    if request.current_model:
+        ctx_parts.append(f"Current model: {request.current_model}")
+    ctx = "\n".join(ctx_parts)
+
+    if request.history:
+        messages: list[dict] = [{"role": "system", "content": system}]
+        for turn in request.history:
+            if turn.get("role") in ("user", "assistant"):
+                messages.append({"role": turn["role"], "content": turn["content"]})
+        user_content = request.prompt
+        if ctx:
+            user_content = f"Context:\n{ctx}\n\nQuestion:\n{request.prompt}"
+        messages.append({"role": "user", "content": user_content})
+        from apps.api.ai.ollama_client import chat_with_messages
+        return chat_with_messages(messages, temperature=0.4)
+
+    user_prompt = request.prompt
+    if ctx:
+        user_prompt = f"Context:\n{ctx}\n\nQuestion:\n{request.prompt}"
+    return chat_with_ollama(system, user_prompt, temperature=0.4)

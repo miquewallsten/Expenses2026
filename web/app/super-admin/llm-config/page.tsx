@@ -6,6 +6,7 @@ import { Check, Loader2, X, Zap } from "lucide-react";
 import {
   listLLMConfigs, upsertLLMConfig, deleteLLMConfig, testLLMConnection, LLMConfig,
 } from "@/lib/api/llm-config";
+import LLMConfigAssistant from "@/components/super-admin/LLMConfigAssistant";
 
 const PROVIDERS = [
   { key: "ollama", label: "Ollama (Local)", hint: "Runs on your machine. No API cost." },
@@ -28,8 +29,12 @@ export default function LLMConfigPage() {
   }, []);
 
   useEffect(() => {
-    if (globalConfig) setEditing({ ...globalConfig });
-  }, [configs.length]);
+    if (globalConfig) {
+      // Defer to avoid setState-during-render warning
+      const id = setTimeout(() => setEditing({ ...globalConfig }), 0);
+      return () => clearTimeout(id);
+    }
+  }, [globalConfig]);
 
   async function handleTest() {
     setTesting(true);
@@ -145,6 +150,11 @@ export default function LLMConfigPage() {
           </div>
         </div>
       )}
+
+      <LLMConfigAssistant
+        currentProvider={editing.provider}
+        currentModel={editing.model_name}
+      />
     </div>
   );
 }

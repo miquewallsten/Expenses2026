@@ -21,13 +21,14 @@ import secrets
 import time
 from typing import Any
 
-from apps.api.ai.ollama_client import chat_with_tools
+from apps.api.ai.ollama_client import chat_with_tools, chat_with_tools_dynamic, provider_from_config
 from packages.core.platform.models_user import User
 
 from ..models import AgentSession
 from .audit import record as audit_record
 from .context import AgentContext, Persona
 from .knowledge import hybrid_search_knowledge, render_for_prompt
+from .llm_provider_service import LLM_PROVIDER_SERVICE
 from .memory import list_memories_for_prompt
 from .registry import REGISTRY, ToolResult
 from .routing import scoped_model, select_model
@@ -211,6 +212,24 @@ def _system_prompt(
     return "\n\n".join(parts)
 
 
+def _resolve_provider(db, company_id: int) -> Any | None:
+    """Resolve LLM provider from DB config, or None to fall back to env vars."""
+    try:
+        config = LLM_PROVIDER_SERVICE.resolve_provider(db, company_id=company_id)
+        # Only use DB config if it has an id (real row) rather than the hardcoded fallback
+        if config and getattr(config, "id", None) is not None:
+            return provider_from_config({
+                "provider": config.provider,
+                "model_name": config.model_name,
+                "base_url": config.base_url,
+                "api_key_env_ref": LLM_PROVIDER_SERVICE.resolve_api_key(config),
+                "num_ctx": getattr(config, "num_ctx", None),
+            })
+    except Exception as exc:
+        _log.warning("Failed to resolve LLM provider from DB: %s", exc)
+    return None
+
+
 # ── Public entry point ──────────────────────────────────────────────────────
 
 def run_turn(
@@ -341,7 +360,9 @@ def run_turn(
             persona, user, company_id, user_message=user_message, db=db,
         )
 
-    provider, chosen_model = select_model(tool_count=len(tools), hard_mode=hard_mode)
+    # Resolve provider: DB config first, env fallback second
+    resolved_provider = _resolve_provider(db, company_id)
+    provider_name, chosen_model = select_model(tool_count=len(tools), hard_mode=hard_mode)
 
     # Inline history into the user prompt — ``chat_with_tools`` takes a single
     # system+user pair. For multi-turn context we fold history into the user
@@ -355,15 +376,30 @@ def run_turn(
         prompt = user_message
 
     turn_started = time.monotonic()
-    with scoped_model(chosen_model):
-        result = chat_with_tools(
+    if resolved_provider is not None:
+        # Model-agnostic path: use the configured provider directly
+        result = chat_with_tools_dynamic(
             system_prompt=system_prompt,
             user_prompt=prompt,
             tools=tools,
             tool_executor=executor,
+            provider=resolved_provider,
             temperature=0.2,
             max_iterations=MAX_ITERATIONS,
         )
+        chosen_model = resolved_provider.model
+        provider_name = resolved_provider.kind
+    else:
+        # Legacy env-var path
+        with scoped_model(chosen_model):
+            result = chat_with_tools(
+                system_prompt=system_prompt,
+                user_prompt=prompt,
+                tools=tools,
+                tool_executor=executor,
+                temperature=0.2,
+                max_iterations=MAX_ITERATIONS,
+            )
     turn_ms = int((time.monotonic() - turn_started) * 1000)
 
     content = (result or {}).get("content", "") or ""
@@ -381,7 +417,7 @@ def run_turn(
         user_id=user.id,
         persona=persona,
         model=(result or {}).get("model") or chosen_model,
-        provider=provider,
+        provider=provider_name,
         tool_count=len(tools),
         iterations=int((result or {}).get("iterations", 0) or 0),
         duration_ms=turn_ms,

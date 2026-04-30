@@ -1,8 +1,9 @@
 """
 LLM client — transport layer for all chat calls.
 
-Supports two backends with automatic failover:
+Supports three backends with automatic failover:
   - OpenAI-compatible Chat Completions (NVIDIA NIM, OpenAI, Together, Groq)
+  - Anthropic Messages API (Claude models)
   - Ollama native (`/api/chat`) for local fallback
 
 Selection is driven by env vars. Primary provider is configured via LLM_*;
@@ -21,14 +22,14 @@ All callsites receive a normalised result dict:
     { "ok": bool, "model": str | None, "content": str, "error": str | None }
 
 Env vars:
-    LLM_PROVIDER             "openai" (default) | "ollama"
+    LLM_PROVIDER             "openai" (default) | "ollama" | "anthropic"
     LLM_BASE_URL             e.g. https://integrate.api.nvidia.com/v1
-    LLM_API_KEY              bearer token (openai-compatible only)
+    LLM_API_KEY              bearer token (openai-compatible or anthropic)
     LLM_MODEL                model id
     LLM_NUM_CTX              context size (ollama option)
     LLM_MAX_OUTPUT_TOKENS    output cap for openai-compatible (default 16384)
 
-    LLM_FALLBACK_PROVIDER    "ollama" | "openai" — enables failover when set
+    LLM_FALLBACK_PROVIDER    "ollama" | "openai" | "anthropic" — enables failover when set
     LLM_FALLBACK_BASE_URL    fallback base URL
     LLM_FALLBACK_API_KEY     fallback bearer token
     LLM_FALLBACK_MODEL       fallback model id
@@ -55,10 +56,10 @@ log = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class Provider:
-    kind: str            # "openai" or "ollama"
+    kind: str            # "openai" | "ollama" | "anthropic"
     base_url: str        # base URL, no trailing slash
     model: str           # model id
-    api_key: str = ""    # bearer (openai only)
+    api_key: str = ""    # bearer (openai / anthropic)
     num_ctx: int = 32768 # ollama option
 
 
@@ -71,6 +72,17 @@ def _build_primary() -> Provider | None:
             return None
         return Provider(
             kind="openai",
+            base_url=base,
+            model=model,
+            api_key=os.getenv("LLM_API_KEY") or "",
+        )
+    if kind == "anthropic":
+        base = (os.getenv("LLM_BASE_URL") or "https://api.anthropic.com").rstrip("/")
+        model = os.getenv("LLM_MODEL") or ""
+        if not model:
+            return None
+        return Provider(
+            kind="anthropic",
             base_url=base,
             model=model,
             api_key=os.getenv("LLM_API_KEY") or "",
@@ -98,6 +110,17 @@ def _build_fallback() -> Provider | None:
             return None
         return Provider(
             kind="openai",
+            base_url=base,
+            model=model,
+            api_key=os.getenv("LLM_FALLBACK_API_KEY") or "",
+        )
+    if kind == "anthropic":
+        base = (os.getenv("LLM_FALLBACK_BASE_URL") or "https://api.anthropic.com").rstrip("/")
+        model = os.getenv("LLM_FALLBACK_MODEL") or ""
+        if not model:
+            return None
+        return Provider(
+            kind="anthropic",
             base_url=base,
             model=model,
             api_key=os.getenv("LLM_FALLBACK_API_KEY") or "",
@@ -135,6 +158,10 @@ def _chat_url(p: Provider) -> str:
         if p.base_url.endswith("/chat/completions") or p.base_url.endswith("/responses"):
             return p.base_url
         return f"{p.base_url}/chat/completions"
+    if p.kind == "anthropic":
+        if p.base_url.endswith("/v1/messages"):
+            return p.base_url
+        return f"{p.base_url}/v1/messages"
     return f"{p.base_url}/api/chat"
 
 
@@ -147,7 +174,29 @@ def _headers(p: Provider, stream: bool) -> dict[str, str]:
         if p.api_key:
             h["Authorization"] = f"Bearer {p.api_key}"
         return h
+    if p.kind == "anthropic":
+        h = {
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream" if stream else "application/json",
+            "anthropic-version": "2023-06-01",
+        }
+        if p.api_key:
+            h["x-api-key"] = p.api_key
+        return h
     return {"Content-Type": "application/json"}
+
+
+def _openai_tools_to_anthropic(tools: list[dict]) -> list[dict]:
+    """Convert OpenAI-style tool definitions to Anthropic format."""
+    out: list[dict] = []
+    for t in tools:
+        fn = t.get("function", {}) if t.get("type") == "function" else t
+        out.append({
+            "name": fn.get("name", ""),
+            "description": fn.get("description", ""),
+            "input_schema": fn.get("parameters", {"type": "object", "properties": {}}),
+        })
+    return out
 
 
 def _build_payload(
@@ -173,6 +222,31 @@ def _build_payload(
         if tools:
             payload["tools"] = tools
         return payload
+    if p.kind == "anthropic":
+        # Anthropic requires system as top-level param, not in messages
+        system_msg = ""
+        chat_msgs: list[dict] = []
+        for m in messages:
+            if m.get("role") == "system":
+                system_msg = m.get("content", "")
+            else:
+                chat_msgs.append(m)
+        payload = {
+            "model": p.model,
+            "messages": chat_msgs,
+            "max_tokens": int(os.getenv("LLM_MAX_OUTPUT_TOKENS", "4096")),
+            "stream": stream,
+        }
+        if system_msg:
+            payload["system"] = system_msg
+        if temperature is not None:
+            payload["temperature"] = temperature
+        if top_p is not None:
+            payload["top_p"] = top_p
+        if tools:
+            payload["tools"] = _openai_tools_to_anthropic(tools)
+            payload["tool_choice"] = {"type": "auto"}
+        return payload
     options: dict[str, Any] = {
         "temperature": temperature,
         "num_ctx": num_ctx or p.num_ctx,
@@ -190,7 +264,33 @@ def _build_payload(
     return payload
 
 
+def _anthropic_normalize(data: dict) -> dict:
+    """Convert Anthropic response to OpenAI-style dict for uniform handling."""
+    content_blocks = data.get("content") or []
+    text_parts: list[str] = []
+    tool_calls: list[dict] = []
+    for block in content_blocks:
+        if block.get("type") == "text":
+            text_parts.append(block.get("text", ""))
+        elif block.get("type") == "tool_use":
+            tool_calls.append({
+                "id": block.get("id", ""),
+                "type": "function",
+                "function": {
+                    "name": block.get("name", ""),
+                    "arguments": json.dumps(block.get("input", {})),
+                },
+            })
+    return {
+        "content": "\n".join(text_parts),
+        "tool_calls": tool_calls if tool_calls else None,
+    }
+
+
 def _extract_content(data: dict) -> str:
+    # Anthropic native format
+    if data.get("type") == "message" and "content" in data:
+        return _anthropic_normalize(data).get("content", "")
     choices = data.get("choices")
     if isinstance(choices, list) and choices:
         msg = choices[0].get("message", {}) or {}
@@ -199,6 +299,9 @@ def _extract_content(data: dict) -> str:
 
 
 def _extract_message(data: dict) -> dict:
+    # Anthropic native format
+    if data.get("type") == "message" and "content" in data:
+        return _anthropic_normalize(data)
     choices = data.get("choices")
     if isinstance(choices, list) and choices:
         return choices[0].get("message", {}) or {}
@@ -234,6 +337,35 @@ def _iter_stream_text(p: Provider, resp: requests.Response) -> Generator[str, No
                 return
         return
 
+    if p.kind == "anthropic":
+        for raw in resp.iter_lines(decode_unicode=True):
+            if not raw:
+                continue
+            line = raw.strip()
+            if line.startswith("event:"):
+                continue
+            if not line.startswith("data:"):
+                continue
+            payload = line[5:].strip()
+            if not payload:
+                continue
+            try:
+                chunk = json.loads(payload)
+            except json.JSONDecodeError:
+                continue
+            if chunk.get("type") == "content_block_delta":
+                delta = chunk.get("delta", {})
+                if delta.get("type") == "text_delta":
+                    text = delta.get("text", "")
+                    if text:
+                        yield text
+            elif chunk.get("type") == "message_delta":
+                if chunk.get("delta", {}).get("stop_reason"):
+                    return
+            elif chunk.get("type") == "message_stop":
+                return
+        return
+
     for raw in resp.iter_lines():
         if not raw:
             continue
@@ -264,6 +396,16 @@ def list_models() -> list[str]:
             response.raise_for_status()
             data = response.json()
             return [m["id"] for m in data.get("data", []) if isinstance(m, dict) and "id" in m]
+        if p.kind == "anthropic":
+            # Anthropic does not expose a public models list endpoint; return known models
+            return [
+                "claude-sonnet-4-6",
+                "claude-opus-4-7",
+                "claude-haiku-4-5-20251001",
+                "claude-3-5-sonnet-20241022",
+                "claude-3-opus-20240229",
+                "claude-3-haiku-20240307",
+            ]
         response = requests.get(f"{p.base_url}/api/tags", timeout=5)
         response.raise_for_status()
         data = response.json()
@@ -546,3 +688,103 @@ def stream_chat_with_messages_sse(
     yield from _stream_with_failover(
         messages=messages, temperature=temperature, num_ctx=num_ctx,
     )
+
+
+# ── Dynamic provider config (model-agnostic agent platform) ───────────────────
+
+def provider_from_config(config: dict) -> Provider | None:
+    """Build a Provider from an LLMProviderConfig dict."""
+    kind = config.get("provider", "ollama").strip().lower()
+    model = config.get("model_name", "")
+    if not model:
+        return None
+    return Provider(
+        kind=kind,
+        base_url=(config.get("base_url") or "").rstrip("/") or "http://127.0.0.1:11434",
+        model=model,
+        api_key=config.get("api_key_env_ref", ""),
+        num_ctx=int(config.get("num_ctx") or 32768),
+    )
+
+
+def chat_with_tools_dynamic(
+    system_prompt: str,
+    user_prompt: str,
+    tools: list[dict],
+    tool_executor: Any,
+    provider: Provider,
+    temperature: float = 0.3,
+    num_ctx: int | None = None,
+    max_iterations: int = 6,
+) -> dict:
+    """Agentic tool-use loop against an explicit provider (no env vars)."""
+    messages: list[dict] = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
+    try:
+        for _ in range(max_iterations):
+            payload = _build_payload(
+                provider, messages=messages, temperature=temperature,
+                num_ctx=num_ctx, stream=False, tools=tools,
+            )
+            response = requests.post(
+                _chat_url(provider), json=payload, headers=_headers(provider, False), timeout=300,
+            )
+            response.raise_for_status()
+            data = response.json()
+            msg = _extract_message(data)
+
+            tool_calls = msg.get("tool_calls") or []
+            content = msg.get("content", "") or ""
+
+            if not tool_calls:
+                return {"ok": True, "model": provider.model, "content": content, "error": None}
+
+            messages.append({"role": "assistant", "content": content, "tool_calls": tool_calls})
+
+            for tc in tool_calls:
+                fn = tc.get("function", {})
+                name = fn.get("name", "")
+                args = fn.get("arguments", {})
+                if isinstance(args, str):
+                    try:
+                        args = json.loads(args)
+                    except Exception:
+                        args = {}
+                try:
+                    result = tool_executor(name, args)
+                except Exception as exc:
+                    result = f"Tool error: {exc}"
+                    log.warning("Tool '%s' raised: %s", name, exc)
+                messages.append({"role": "tool", "content": str(result)})
+
+        messages.append({
+            "role": "user",
+            "content": "Based on everything gathered, provide your final answer now.",
+        })
+        data = _post_chat(
+            provider, messages=messages, temperature=temperature, top_p=None, num_ctx=num_ctx,
+        )
+        return {"ok": True, "model": provider.model, "content": _extract_content(data), "error": None}
+    except Exception as exc:
+        log.warning("LLM tool loop on '%s' (%s) failed: %s", provider.kind, provider.model, exc)
+        return _error_result(provider.model, exc)
+
+
+def chat_with_messages_dynamic(
+    messages: list[dict],
+    provider: Provider,
+    temperature: float = 0.5,
+    top_p: float | None = None,
+    num_ctx: int | None = None,
+) -> dict:
+    """Multi-turn chat against an explicit provider (no env vars)."""
+    try:
+        data = _post_chat(
+            provider, messages=messages, temperature=temperature, top_p=top_p, num_ctx=num_ctx,
+        )
+        return {"ok": True, "model": provider.model, "content": _extract_content(data), "error": None}
+    except Exception as exc:
+        log.warning("LLM chat on '%s' (%s) failed: %s", provider.kind, provider.model, exc)
+        return _error_result(provider.model, exc)
