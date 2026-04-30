@@ -5,13 +5,125 @@
   --font-mono: "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
-/*
- * Safe-area CSS variables
- * ─────────────────────────────────────────────────────────────────────────────
- * Expose env() insets as reusable vars so any component can reference them
- * without repeating the env() fallback syntax.  On devices without a notch or
- * home indicator all four values resolve to 0 px.
+/* ── Apple Design System Color Tokens ───────────────────────────────────────────
+ *
+ *  Maps Tailwind's zinc / indigo / emerald scales to Apple iOS/macOS system colors
+ *  so every existing component (bg-zinc-950, text-white/60, border-white/[0.07],
+ *  text-indigo-300/80, bg-emerald-500/70, …) renders natively on both themes
+ *  without touching a single component file.
+ *
+ *  Dark mode  → iOS Dark Appearance  (systemBackground = black, labels = white)
+ *  Light mode → iOS Light Appearance (systemBackground = white, labels = black)
  */
+
+:root {
+  /* ── Zinc → Apple Gray (Dark) ───────────────────────────────────────────── */
+  --color-zinc-950: #000000;
+  --color-zinc-900: #1C1C1E;
+  --color-zinc-800: #2C2C2E;
+  --color-zinc-700: #3A3A3C;
+  --color-zinc-600: #48484A;
+  --color-zinc-500: #636366;
+  --color-zinc-400: #8E8E93;
+  --color-zinc-300: #A0A0A5;
+  --color-zinc-200: #C7C7CC;
+  --color-zinc-100: #E5E5EA;
+  --color-zinc-50:  #F2F2F7;
+
+  /* White remapping — dark mode primary label */
+  --color-white: #FFFFFF;
+
+  /* ── Indigo → Apple SF Blue ──────────────────────────────────────────────── */
+  --color-indigo-50:  #EBF8FF;
+  --color-indigo-100: #D6F0FF;
+  --color-indigo-200: #B3E5FF;
+  --color-indigo-300: #7DD4FF;
+  --color-indigo-400: #5AC8FA;
+  --color-indigo-500: #0A84FF;
+  --color-indigo-600: #0077E6;
+  --color-indigo-700: #005EBF;
+  --color-indigo-800: #004697;
+  --color-indigo-900: #002E6F;
+  --color-indigo-950: #001D47;
+
+  /* ── Emerald → Apple System Green ─────────────────────────────────────────── */
+  --color-emerald-50:  #E8FCEB;
+  --color-emerald-100: #D1F9D7;
+  --color-emerald-200: #A8F0B5;
+  --color-emerald-300: #74E38B;
+  --color-emerald-400: #3DD262;
+  --color-emerald-500: #34C759;
+  --color-emerald-600: #2DB14E;
+  --color-emerald-700: #248F3F;
+  --color-emerald-800: #1B6D30;
+  --color-emerald-900: #124B21;
+  --color-emerald-950: #092A12;
+}
+
+html.light {
+  /* ── Zinc → Apple Gray (Light) ───────────────────────────────────────────── */
+  --color-zinc-950: #F2F2F7;
+  --color-zinc-900: #FFFFFF;
+  --color-zinc-800: #E5E5EA;
+  --color-zinc-700: #D1D1D6;
+  --color-zinc-600: #C7C7CC;
+  --color-zinc-500: #8E8E93;
+  --color-zinc-400: #636366;
+  --color-zinc-300: #48484A;
+  --color-zinc-200: #3A3A3C;
+  --color-zinc-100: #2C2C2E;
+  --color-zinc-50:  #1C1C1E;
+
+  /* White remapping — light mode primary label */
+  --color-white: #000000;
+
+  /* ── Indigo → Apple SF Blue (Light variant) ────────────────────────────── */
+  --color-indigo-500: #007AFF;
+}
+
+/* ── Selection & Focus ─────────────────────────────────────────────────────── */
+::selection {
+  background-color: rgba(10, 132, 255, 0.30);
+  color: inherit;
+}
+
+html.light ::selection {
+  background-color: rgba(0, 122, 255, 0.20);
+}
+
+:focus-visible {
+  outline: 2px solid #0A84FF;
+  outline-offset: 1px;
+}
+
+html.light :focus-visible {
+  outline-color: #007AFF;
+}
+
+/* ── Scrollbars (Apple-style thin overlay) ─────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(120, 120, 128, 0.24);
+  border-radius: 99px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(120, 120, 128, 0.36);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+/* ── Safe-area CSS variables ───────────────────────────────────────────────── */
 :root {
   --sai-t: env(safe-area-inset-top,    0px);
   --sai-b: env(safe-area-inset-bottom, 0px);
@@ -19,58 +131,34 @@
   --sai-r: env(safe-area-inset-right,  0px);
 }
 
-/* ── Theme transition ─────────────────────────────────────────────────────── */
-
+/* ── Theme transition ───────────────────────────────────────────────────────── */
 html {
-  transition: background-color 200ms ease, color 200ms ease;
+  transition: background-color 180ms ease, color 180ms ease;
 }
 
-/* ── Light-mode token overrides ──────────────────────────────────────────── */
-/*
- * Tailwind v4 compiles every color utility through CSS custom properties.
- * Overriding these inside html.light propagates automatically to all
- * components that use bg-zinc-950, text-white/60, border-white/[0.07], etc.
- * — no component files need to change.
- *
- * Mapping: zinc scale inverts.  --color-white flips to near-black so that
- * text-white/X and border-white/X become dark text/borders at X% opacity.
- * Indigo accent stays unchanged — it reads well on both themes.
- */
-html.light {
-  --color-zinc-950: #fafafa;
-  --color-zinc-900: #f4f4f5;
-  --color-zinc-800: #e4e4e7;
-  --color-zinc-700: #d4d4d8;
-  --color-zinc-600: #a1a1aa;
-  /* zinc-500 intentionally omitted — it sits at the scale midpoint and
-     reads as muted text on both dark and light surfaces unchanged. */
-  --color-white:    #09090b;
-}
-
-html.light,
-html.light body {
-  background-color: #fafafa;
-  color: #09090b;
-}
-
-/*
- * Viewport containment
- * ─────────────────────────────────────────────────────────────────────────────
- * The app shell owns 100 % of the viewport.  html and body must not scroll;
- * all scrolling is managed by overflow-y-auto containers inside the shell.
- *
- * overscroll-behavior: none prevents the iOS "elastic bounce" effect from
- * propagating through overlay panes to the root document.
- */
+/* ── Viewport containment ───────────────────────────────────────────────────── */
 html,
 body {
   height: 100%;
   overflow: hidden;
   overscroll-behavior: none;
-  /* Stable dark baseline — eliminates white flash during navigation */
-  background-color: #09090b; /* zinc-950 */
-  color: #fafafa;            /* zinc-50  */
+  background-color: var(--color-zinc-950);
+  color: var(--color-white);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Form elements ───────────────────────────────────────────────────────────── */
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-zinc-500);
+}
+
+input,
+textarea,
+select {
+  caret-color: var(--color-indigo-500);
 }
 
 /* ── Motion keyframes ───────────────────────────────────────────────────────── */
@@ -121,9 +209,9 @@ body {
 .skeleton {
   background: linear-gradient(
     90deg,
-    rgba(255,255,255,0.04) 25%,
-    rgba(255,255,255,0.08) 50%,
-    rgba(255,255,255,0.04) 75%
+    rgba(120,120,128,0.08) 25%,
+    rgba(120,120,128,0.16) 50%,
+    rgba(120,120,128,0.08) 75%
   );
   background-size: 200% 100%;
   animation: shimmer 1.6s ease-in-out infinite;
@@ -132,8 +220,8 @@ body {
 html.light .skeleton {
   background: linear-gradient(
     90deg,
-    rgba(0, 0, 0, 0.04) 25%,
-    rgba(0, 0, 0, 0.08) 50%,
-    rgba(0, 0, 0, 0.04) 75%
+    rgba(120,120,128,0.06) 25%,
+    rgba(120,120,128,0.12) 50%,
+    rgba(120,120,128,0.06) 75%
   );
 }

@@ -27,7 +27,7 @@ function applyThemeClass(cls: "dark" | "light") {
   root.classList.remove("dark", "light");
   root.classList.add(cls);
   const metaTag = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
-  if (metaTag) metaTag.content = cls === "dark" ? "#09090b" : "#fafafa";
+  if (metaTag) metaTag.content = cls === "dark" ? "#000000" : "#F2F2F7";
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
