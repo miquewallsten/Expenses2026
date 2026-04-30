@@ -5,7 +5,7 @@ import { getAuthHeaders } from "@/lib/session";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-export type AgentPersona = "admin" | "employee" | "procurement" | "finance_manager";
+export type AgentPersona = "admin" | "employee" | "procurement" | "finance_manager" | "manager";
 
 export interface AgentToolCall {
   tool:    string;

@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { LocaleProvider } from "@/context/LocaleContext";
 import DevLoginCheat from "@/components/dev/DevLoginCheat";
@@ -8,16 +7,6 @@ import { ToastProvider } from "@/components/ui/Toast";
 import CopilotLauncher from "@/components/agent/CopilotLauncher";
 import PwaBootstrap from "@/components/pwa/PwaBootstrap";
 import { ThemeProvider } from "@/components/shell/ThemeProvider";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 // ── Viewport ─────────────────────────────────────────────────────────────────
 //
@@ -54,11 +43,8 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className="antialiased"
-      style={{
-        '--font-geist-sans': geistSans.variable,
-        '--font-geist-mono': geistMono.variable,
-      } as React.CSSProperties}
+      className="antialiased dark"
+      suppressHydrationWarning
     >
       {/* Blocking script: reads pref_theme from localStorage before React hydrates
           to prevent flash-of-wrong-theme on page load. */}

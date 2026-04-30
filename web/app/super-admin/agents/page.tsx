@@ -318,7 +318,7 @@ export default function AgentBuilderPage() {
                 <textarea value={newAgent.system_prompt} onChange={e => setNewAgent(p => ({ ...p, system_prompt: e.target.value }))}
                   rows={4} className="w-full rounded border border-white/[0.07] bg-white/[0.02] px-2.5 py-1.5 text-[11px] text-white/80 font-mono focus:outline-none focus:border-indigo-500/40 resize-none" />
               </div>
-            </div}
+            </div>
             {error && <div className="mt-2 text-[10px] text-rose-400/80">{error}</div>}
             <div className="flex gap-2 mt-4">
               <button onClick={handleCreate}

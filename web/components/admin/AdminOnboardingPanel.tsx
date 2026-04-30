@@ -25,7 +25,6 @@ import {
 } from "lucide-react";
 import { getAuthHeaders } from "@/lib/session";
 import AdminProfileInterview from "./AdminProfileInterview";
-
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 interface ChecklistItem {

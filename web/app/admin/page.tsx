@@ -555,6 +555,7 @@ const ITEM_MENU_KEY: Record<WorklistItem, string> = {
   "Access Control": "accessControl",
   "Add-Ons": "addOns",
   "Authentication": "authentication",
+  "Agent Management": "agentManagement",
 };
 
 const GROUP_KEY: Record<string, string> = {
@@ -580,6 +581,7 @@ const WORKLIST_ICONS: Record<WorklistItem, React.ReactNode> = {
   "Access Control":   <ShieldCheck className="h-3.5 w-3.5" />,
   "Add-Ons":          <Puzzle className="h-3.5 w-3.5" />,
   Authentication:     <Lock className="h-3.5 w-3.5" />,
+  "Agent Management": <Bot className="h-3.5 w-3.5" />,
 };
 
 function WorkList({
@@ -642,6 +644,7 @@ function WorkList({
     "Access Control":   `${roles.length}/${permissions.length}`,
     "Add-Ons":          enabledModulesCount,
     Authentication:     "✓",
+    "Agent Management": "→",
   };
 
   return (
@@ -898,6 +901,7 @@ export default function AdminPage() {
       "Access Control": "access_control",
       "Add-Ons": "addons",
       "Authentication": "authentication",
+      "Agent Management": "agent_management",
     };
     const url = new URL(window.location.href);
     let next = slug[activeSection];
@@ -1353,6 +1357,9 @@ export default function AdminPage() {
 
       case "Authentication":
         return <AdminAuthSettingsPanel companyId={adminCompanyId} />;
+
+      case "Agent Management":
+        return <AdminAgentManagementPanel />;
     }
   })();
 

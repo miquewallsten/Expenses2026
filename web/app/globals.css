@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 @theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 /*
@@ -70,7 +70,7 @@ body {
   /* Stable dark baseline — eliminates white flash during navigation */
   background-color: #09090b; /* zinc-950 */
   color: #fafafa;            /* zinc-50  */
-  font-family: var(--font-geist-sans, Arial, Helvetica, sans-serif);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 /* ── Motion keyframes ───────────────────────────────────────────────────────── */
