@@ -407,3 +407,46 @@ REGISTRY.register(ToolSpec(
     required_permission="agent.tool.admin",
     destructive=True,
 ))
+
+
+# ── reactivate_user ────────────────────────────────────────────────────────────
+
+class ReactivateUserArgs(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    user_id: int
+
+
+def _handle_reactivate_user(ctx: AgentContext, args: ReactivateUserArgs) -> ToolResult:
+    if ctx.user_role != "admin":
+        return ToolResult(ok=False, summary="reactivate_user requires admin role", error="forbidden")
+
+    user = (
+        ctx.db.query(User)
+        .filter(User.id == args.user_id, User.company_id == ctx.company_id)
+        .one_or_none()
+    )
+    if not user:
+        return ToolResult(ok=False, summary=f"User {args.user_id} not found", error="not_found")
+
+    if user.is_active:
+        return ToolResult(ok=False, summary=f"User {user.email} is already active", error="already_active")
+
+    user.is_active = True
+    ctx.db.commit()
+    return ToolResult(
+        ok=True,
+        summary=f"Reactivated user {user.email}",
+        data={"user_id": user.id, "email": user.email},
+    )
+
+
+REGISTRY.register(ToolSpec(
+    name="reactivate_user",
+    description="Reactiva un usuario previamente desactivado.",
+    category="config",
+    input_schema=ReactivateUserArgs,
+    handler=_handle_reactivate_user,
+    personas=frozenset({"admin"}),
+    required_permission="agent.tool.admin",
+    destructive=True,
+))

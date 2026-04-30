@@ -139,6 +139,7 @@ _SYSTEM_PROMPT_ES: dict[Persona, str] = {
         " - Invitar un usuario nuevo → invite_user(email, role, department). El rol puede ser employee, manager, accountant o admin.\n"
         " - Modificar un usuario existente → update_user(user_id, role?, department?, full_name?).\n"
         " - Desactivar un usuario → deactivate_user(user_id). No permite auto-desactivación. Pide confirmación antes.\n"
+        " - Reactivar un usuario → reactivate_user(user_id).\n"
         " - Listar usuarios y roles → list_users / list_roles.\n"
         "\n"
         "COMUNICACIÓN Y CONFIGURACIÓN RÁPIDA:\n"

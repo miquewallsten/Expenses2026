@@ -131,3 +131,104 @@ class TestUpdateWorkflowTool:
         res = REGISTRY.dispatch("update_workflow", {"approval_mode": "none"}, ctx)
         assert res.ok is False
         assert "forbidden" in (res.error or "")
+
+
+class TestUpdateUserTool:
+    def test_update_user_success(self, db_session, test_company):
+        ctx = _ctx(db_session, test_company)
+        # Create a user first
+        REGISTRY.dispatch("invite_user", {"email": "updateme@example.com", "role": "employee"}, ctx)
+        user = db_session.query(User).filter(User.email == "updateme@example.com").first()
+        res = REGISTRY.dispatch("update_user", {"user_id": user.id, "role": "manager", "department": "Sales"}, ctx)
+        assert res.ok is True
+        assert res.data["changes"]["role"] == "manager"
+        assert res.data["changes"]["department"] == "Sales"
+        db_session.refresh(user)
+        assert user.role == "manager"
+        assert user.department == "Sales"
+
+    def test_update_user_empty_patch(self, db_session, test_company):
+        ctx = _ctx(db_session, test_company)
+        REGISTRY.dispatch("invite_user", {"email": "noop@example.com"}, ctx)
+        user = db_session.query(User).filter(User.email == "noop@example.com").first()
+        res = REGISTRY.dispatch("update_user", {"user_id": user.id}, ctx)
+        assert res.ok is False
+        assert "empty_patch" in (res.error or "")
+
+    def test_update_user_not_found(self, db_session, test_company):
+        ctx = _ctx(db_session, test_company)
+        res = REGISTRY.dispatch("update_user", {"user_id": 99999, "role": "manager"}, ctx)
+        assert res.ok is False
+        assert "not_found" in (res.error or "")
+
+    def test_update_user_permission_denied(self, db_session, test_company):
+        ctx = _ctx(db_session, test_company, role="employee")
+        res = REGISTRY.dispatch("update_user", {"user_id": 1, "role": "manager"}, ctx)
+        assert res.ok is False
+        assert "forbidden" in (res.error or "")
+
+
+class TestDeactivateUserTool:
+    def test_deactivate_user_success(self, db_session, test_company):
+        ctx = _ctx(db_session, test_company)
+        REGISTRY.dispatch("invite_user", {"email": "deactivate@example.com"}, ctx)
+        user = db_session.query(User).filter(User.email == "deactivate@example.com").first()
+        res = REGISTRY.dispatch("deactivate_user", {"user_id": user.id}, ctx)
+        assert res.ok is True
+        db_session.refresh(user)
+        assert user.is_active is False
+
+    def test_deactivate_user_self(self, db_session, test_company):
+        ctx = _ctx(db_session, test_company, user_id=42)
+        # Create a user with id 42
+        user = User(email="self@example.com", full_name="Self User", company_id=test_company.id, role="admin", id=42)
+        db_session.add(user)
+        db_session.commit()
+        res = REGISTRY.dispatch("deactivate_user", {"user_id": 42}, ctx)
+        assert res.ok is False
+        assert "self_deactivation" in (res.error or "")
+
+    def test_deactivate_user_not_found(self, db_session, test_company):
+        ctx = _ctx(db_session, test_company)
+        res = REGISTRY.dispatch("deactivate_user", {"user_id": 99999}, ctx)
+        assert res.ok is False
+        assert "not_found" in (res.error or "")
+
+    def test_deactivate_user_permission_denied(self, db_session, test_company):
+        ctx = _ctx(db_session, test_company, role="employee")
+        res = REGISTRY.dispatch("deactivate_user", {"user_id": 1}, ctx)
+        assert res.ok is False
+        assert "forbidden" in (res.error or "")
+
+
+class TestReactivateUserTool:
+    def test_reactivate_user_success(self, db_session, test_company):
+        ctx = _ctx(db_session, test_company)
+        REGISTRY.dispatch("invite_user", {"email": "reactivate@example.com"}, ctx)
+        user = db_session.query(User).filter(User.email == "reactivate@example.com").first()
+        user.is_active = False
+        db_session.commit()
+        res = REGISTRY.dispatch("reactivate_user", {"user_id": user.id}, ctx)
+        assert res.ok is True
+        db_session.refresh(user)
+        assert user.is_active is True
+
+    def test_reactivate_user_already_active(self, db_session, test_company):
+        ctx = _ctx(db_session, test_company)
+        REGISTRY.dispatch("invite_user", {"email": "already@example.com"}, ctx)
+        user = db_session.query(User).filter(User.email == "already@example.com").first()
+        res = REGISTRY.dispatch("reactivate_user", {"user_id": user.id}, ctx)
+        assert res.ok is False
+        assert "already_active" in (res.error or "")
+
+    def test_reactivate_user_not_found(self, db_session, test_company):
+        ctx = _ctx(db_session, test_company)
+        res = REGISTRY.dispatch("reactivate_user", {"user_id": 99999}, ctx)
+        assert res.ok is False
+        assert "not_found" in (res.error or "")
+
+    def test_reactivate_user_permission_denied(self, db_session, test_company):
+        ctx = _ctx(db_session, test_company, role="employee")
+        res = REGISTRY.dispatch("reactivate_user", {"user_id": 1}, ctx)
+        assert res.ok is False
+        assert "forbidden" in (res.error or "")
