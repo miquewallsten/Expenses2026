@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Bot, ChevronRight, ChevronLeft, Zap } from "lucide-react";
+import { Bot, ChevronRight, Zap } from "lucide-react";
 import type { PermissionManifest } from "@/types/mywork";
 import CopilotChat from "@/components/agent/CopilotChat";
 import ProactiveNotification from "@/components/agent/ProactiveNotification";
 import { useCopilot, type CopilotNotification } from "@/hooks/useCopilot";
+import { executeAction } from "@/lib/mywork/actions";
 
 interface CopilotRailProps {
   manifest: PermissionManifest | null;
@@ -13,15 +14,49 @@ interface CopilotRailProps {
 
 export default function CopilotRail({ manifest }: CopilotRailProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const [notifications, setNotifications] = useState<CopilotNotification[]>([]);
   const userName = manifest?.user?.fullName;
   const allowedTools = manifest?.copilot?.allowedTools || [];
 
-  const { suggestions, loading } = useCopilot();
+  const { suggestions, notifications, dismissNotification } = useCopilot();
 
-  const handleDismiss = useCallback((id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-  }, []);
+  const handleDismiss = useCallback(
+    (id: string) => {
+      dismissNotification(id);
+    },
+    [dismissNotification]
+  );
+
+  const handleAction = useCallback(
+    async (notif: CopilotNotification) => {
+      if (!notif.actionId) return;
+      try {
+        await executeAction(notif.actionId, "agent", { notificationId: notif.id });
+      } catch {
+        // Best-effort action execution
+      }
+    },
+    []
+  );
+
+  const handleQuickAction = useCallback(
+    async (tool: string) => {
+      // Map tool names to action IDs
+      const actionMap: Record<string, string> = {
+        "Create expense": "expenses:create",
+        "Review pending approvals": "approvals:approve",
+        "Invite user": "users:invite",
+        "Update policy": "policy:update",
+      };
+      const actionId = actionMap[tool];
+      if (!actionId) return;
+      try {
+        await executeAction(actionId, "agent", {});
+      } catch {
+        // Best-effort action execution
+      }
+    },
+    []
+  );
 
   if (collapsed) {
     return (
@@ -72,6 +107,7 @@ export default function CopilotRail({ manifest }: CopilotRailProps) {
               <button
                 key={tool}
                 type="button"
+                onClick={() => handleQuickAction(tool)}
                 className="inline-flex items-center gap-1 rounded border border-white/[0.07] bg-zinc-950 px-2 py-1 text-[9px] font-medium text-white/45 transition-colors hover:bg-white/[0.04] hover:text-white/70"
               >
                 <Zap className="h-2.5 w-2.5" />
@@ -93,6 +129,7 @@ export default function CopilotRail({ manifest }: CopilotRailProps) {
               title={n.title}
               message={n.message}
               actionLabel={n.actionLabel}
+              onAction={() => handleAction(n)}
               onDismiss={handleDismiss}
             />
           ))}

@@ -118,6 +118,7 @@ from packages.modules.agent.models import (  # noqa: F401 — registers agent_* 
 )
 from packages.modules.agent.models_knowledge_chunk import KnowledgeChunk  # noqa: F401 — registers agent_knowledge_chunks table
 from packages.modules.agent.api.agent_router import router as agent_router
+from packages.modules.agent.api.agent_push_router import router as agent_push_router
 from packages.modules.mywork.api.mywork_router import router as mywork_router
 from apps.api.routes.super_admin import router as super_admin_router
 from packages.modules.amex.models import (  # noqa: F401 — registers amex_* tables
@@ -328,6 +329,7 @@ from packages.modules.admin.api.routing_rules_router import (  # noqa: E402
 )
 app.include_router(routing_rules_router)
 app.include_router(agent_router)
+app.include_router(agent_push_router)
 app.include_router(mywork_router)
 app.include_router(super_admin_router)
 app.include_router(amex_router)

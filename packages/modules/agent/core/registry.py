@@ -161,6 +161,7 @@ _ROLE_PERMISSIONS: dict[str, set[str]] = {
         "agent.tool.ai_policy",
         "agent.tool.infra",
         "agent.tool.finance_copilot",
+        "agent.tool.admin",
     },
     "finance_manager": {
         "agent.tool.finance_copilot",
