@@ -567,21 +567,21 @@ const GROUP_KEY: Record<string, string> = {
 
 // ── WorkList ──────────────────────────────────────────────────────────────────
 
-const WORKLIST_ICONS: Record<WorklistItem, React.ReactNode> = {
-  "Overview": <Bot className="h-3.5 w-3.5" />,
-  "Onboarding":       <Sparkles className="h-3.5 w-3.5" />,
-  "Company Setup":    <Building2 className="h-3.5 w-3.5" />,
-  "Rules":            <FileText className="h-3.5 w-3.5" />,
-  "Accounting Setup": <Calculator className="h-3.5 w-3.5" />,
-  "Workflow":         <GitBranch className="h-3.5 w-3.5" />,
-  "Report Cycle":     <CalendarClock className="h-3.5 w-3.5" />,
-  "Data Out":         <FolderOutput className="h-3.5 w-3.5" />,
-  "Channels":         <Radio className="h-3.5 w-3.5" />,
-  Users:              <Users className="h-3.5 w-3.5" />,
-  "Access Control":   <ShieldCheck className="h-3.5 w-3.5" />,
-  "Add-Ons":          <Puzzle className="h-3.5 w-3.5" />,
-  Authentication:     <Lock className="h-3.5 w-3.5" />,
-  "Agent Management": <Bot className="h-3.5 w-3.5" />,
+const WORKLIST_ICON_COMPONENTS: Record<WorklistItem, React.ComponentType<{ className?: string }>> = {
+  "Overview": Bot,
+  "Onboarding": Sparkles,
+  "Company Setup": Building2,
+  "Rules": FileText,
+  "Accounting Setup": Calculator,
+  "Workflow": GitBranch,
+  "Report Cycle": CalendarClock,
+  "Data Out": FolderOutput,
+  "Channels": Radio,
+  Users,
+  "Access Control": ShieldCheck,
+  "Add-Ons": Puzzle,
+  Authentication: Lock,
+  "Agent Management": Bot,
 };
 
 function WorkList({
@@ -678,7 +678,10 @@ function WorkList({
                   }`}
                 />
                 <span className={isActive ? "text-white/60" : "text-white/22"}>
-                  {WORKLIST_ICONS[item]}
+                  {(() => {
+                    const IconComponent = WORKLIST_ICON_COMPONENTS[item];
+                    return <IconComponent className="h-3.5 w-3.5" />;
+                  })()}
                 </span>
                 <span className="flex-1 truncate text-[11px] font-medium tracking-[-0.01em]">{t(`menu.${ITEM_MENU_KEY[item]}`)}</span>
                 {hasDraft && (
