@@ -27,6 +27,13 @@ export interface ProactiveTrigger {
   frequency: ProactiveFrequency;
 }
 
+export interface ManifestModule {
+  id: string;
+  label: string;
+  name?: string;
+  icon?: string;
+}
+
 export interface PermissionManifest {
   user: {
     id: number;
@@ -36,17 +43,19 @@ export interface PermissionManifest {
     isSuperAdmin: boolean;
   };
   permissions: string[];
-  modules: ModulePermission[];
+  modules: ManifestModule[];
   copilot: {
-    enabled: boolean;
+    enabled?: boolean;
     agentId: string;
-    proactiveNotifications: boolean;
+    proactiveNotifications?: boolean;
     allowedTools: string[];
   };
   tenant: {
-    id: number;
-    name: string;
-    config: Record<string, unknown>;
+    id?: number;
+    name?: string;
+    companyId?: number;
+    companyName?: string | null;
+    config?: Record<string, unknown>;
   };
 }
 
