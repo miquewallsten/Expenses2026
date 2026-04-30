@@ -1,3 +1,7 @@
+"use client";
+
+import AccountingReviewModule from "@/modules/accounting-review/AccountingReviewModule";
+
 export default function AccountingModule() {
-  return (<div data-testid="accounting-module">Accounting Module</div>);
+  return <AccountingReviewModule />;
 }
