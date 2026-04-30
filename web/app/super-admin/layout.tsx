@@ -24,7 +24,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
       return;
     }
     if (!s.isSuperAdmin) {
-      router.replace("/admin");
+      router.replace("/mywork");
       return;
     }
     setOk(true);

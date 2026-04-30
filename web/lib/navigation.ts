@@ -35,36 +35,6 @@ export function buildGlobalNav(context: NavigationContext): GlobalNavItem[] {
     });
   }
 
-  // ── Admin ──────────────────────────────────────────────────────────────────
-  if (
-    role === "admin" ||
-    hasPermission("configure_rules") ||
-    hasPermission("activate_modules")
-  ) {
-    items.push({
-      key: "admin",
-      label: "Admin",
-      href: "/admin",
-      group: "Administration",
-      active: currentPortal === "admin",
-    });
-  }
-
-  // ── Time Setup — project & activity catalog (admin tool) ───────────────────
-  if (
-    role === "admin" ||
-    hasPermission("configure_rules") ||
-    hasPermission("manage_projects")
-  ) {
-    items.push({
-      key: "time-admin",
-      label: "Time Setup",
-      href: "/time-admin",
-      group: "Administration",
-      active: currentPortal === ("time-admin" as never),
-    });
-  }
-
   // ── Super Admin — system-wide administration ──────────────────────────────
   if (role === "admin" && hasPermission("super_admin_access")) {
     items.push({
