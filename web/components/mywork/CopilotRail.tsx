@@ -1,12 +1,16 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { Bot, ChevronRight, Zap } from "lucide-react";
 import type { PermissionManifest } from "@/types/mywork";
+import dynamic from "next/dynamic";
 import CopilotChat from "@/components/agent/CopilotChat";
 import ProactiveNotification from "@/components/agent/ProactiveNotification";
 import { useCopilot, type CopilotNotification } from "@/hooks/useCopilot";
 import { executeAction } from "@/lib/mywork/actions";
+
+const AdminAgentChat = dynamic(() => import("@/components/agent/AdminAgentChat"), { ssr: false });
 
 interface CopilotRailProps {
   manifest: PermissionManifest | null;
@@ -16,6 +20,10 @@ export default function CopilotRail({ manifest }: CopilotRailProps) {
   const [collapsed, setCollapsed] = useState(false);
   const userName = manifest?.user?.fullName;
   const allowedTools = manifest?.copilot?.allowedTools || [];
+  const searchParams = useSearchParams();
+  const activeModule = searchParams.get("module") || "";
+  const companyId = manifest?.tenant?.companyId;
+  const isAdminContext = activeModule === "admin";
 
   const { suggestions, notifications, dismissNotification } = useCopilot();
 
@@ -152,8 +160,12 @@ export default function CopilotRail({ manifest }: CopilotRailProps) {
         </div>
       )}
 
-      {/* Chat */}
-      <CopilotChat userName={userName} />
+      {/* Chat — admin gets the full agent; everyone else gets the placeholder */}
+      {isAdminContext && companyId ? (
+        <AdminAgentChat companyId={companyId} variant="rail" />
+      ) : (
+        <CopilotChat userName={userName} />
+      )}
     </aside>
   );
 }

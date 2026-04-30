@@ -308,3 +308,102 @@ REGISTRY.register(ToolSpec(
     personas=frozenset({"admin"}),
     required_permission="agent.tool.admin",
 ))
+
+
+# ── update_user ──────────────────────────────────────────────────────────────
+
+class UpdateUserArgs(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    user_id:    int
+    role:       str | None = Field(default=None, pattern=r"^(employee|manager|accountant|admin)$")
+    department: str | None = Field(default=None, max_length=100)
+    full_name:  str | None = Field(default=None, max_length=255)
+
+
+def _handle_update_user(ctx: AgentContext, args: UpdateUserArgs) -> ToolResult:
+    if ctx.user_role != "admin":
+        return ToolResult(ok=False, summary="update_user requires admin role", error="forbidden")
+
+    user = (
+        ctx.db.query(User)
+        .filter(User.id == args.user_id, User.company_id == ctx.company_id)
+        .one_or_none()
+    )
+    if not user:
+        return ToolResult(ok=False, summary=f"User {args.user_id} not found", error="not_found")
+
+    changes: dict[str, Any] = {}
+    if args.role is not None:
+        user.role = args.role
+        changes["role"] = args.role
+    if args.department is not None:
+        user.department = args.department
+        changes["department"] = args.department
+    if args.full_name is not None:
+        user.full_name = args.full_name
+        changes["full_name"] = args.full_name
+
+    if not changes:
+        return ToolResult(ok=False, summary="No changes provided", error="empty_patch")
+
+    ctx.db.commit()
+    return ToolResult(
+        ok=True,
+        summary=f"Updated user {user.email}: {', '.join(changes.keys())}",
+        data={"user_id": user.id, "changes": changes},
+    )
+
+
+REGISTRY.register(ToolSpec(
+    name="update_user",
+    description="Modifica el rol, departamento o nombre de un usuario existente.",
+    category="config",
+    input_schema=UpdateUserArgs,
+    handler=_handle_update_user,
+    personas=frozenset({"admin"}),
+    required_permission="agent.tool.admin",
+))
+
+
+# ── deactivate_user ────────────────────────────────────────────────────────────
+
+class DeactivateUserArgs(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    user_id: int
+
+
+def _handle_deactivate_user(ctx: AgentContext, args: DeactivateUserArgs) -> ToolResult:
+    if ctx.user_role != "admin":
+        return ToolResult(ok=False, summary="deactivate_user requires admin role", error="forbidden")
+
+    user = (
+        ctx.db.query(User)
+        .filter(User.id == args.user_id, User.company_id == ctx.company_id)
+        .one_or_none()
+    )
+    if not user:
+        return ToolResult(ok=False, summary=f"User {args.user_id} not found", error="not_found")
+
+    # Prevent self-deactivation
+    if user.id == ctx.user_id:
+        return ToolResult(ok=False, summary="Cannot deactivate yourself", error="self_deactivation")
+
+    user.is_active = False
+    ctx.db.commit()
+    return ToolResult(
+        ok=True,
+        summary=f"Deactivated user {user.email}",
+        data={"user_id": user.id, "email": user.email},
+    )
+
+
+REGISTRY.register(ToolSpec(
+    name="deactivate_user",
+    description="Desactiva un usuario (no elimina datos históricos).",
+    category="config",
+    input_schema=DeactivateUserArgs,
+    handler=_handle_deactivate_user,
+    personas=frozenset({"admin"}),
+    required_permission="agent.tool.admin",
+    destructive=True,
+))
