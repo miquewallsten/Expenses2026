@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Brain, Activity, Users, Settings, BarChart3, Zap } from "lucide-react";
+import { Users, Settings, BarChart3, Zap } from "lucide-react";
 import { getAgentMetrics, getActiveRequests, getTeamPerformance, getGlobalAgentStatus } from "@/lib/api/super-admin";
 
 interface AgentTeam {
@@ -28,11 +28,23 @@ export default function AgentManagementPage() {
   const [performance, setPerformance] = useState<AgentPerformance[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
 
+  const getTeamDescription = (teamId: string): string => {
+    const descriptions: Record<string, string> = {
+      "config": "Company settings, module management, and system configuration",
+      "expense": "Expense intake, validation, approval workflows, and receipt processing",
+      "accounting": "Bookkeeping, tax compliance, financial reporting, and accounting integration",
+      "integration": "API integrations, webhook management, and third-party connectivity",
+      "compliance": "Regulatory compliance, audit trails, and security enforcement",
+      "superadmin": "System-wide configuration, orchestration, and multi-tenant management"
+    };
+    return descriptions[teamId] || "Specialized AI agent team";
+  };
+
   useEffect(() => {
     async function fetchAgentData() {
       try {
         // Fetch real agent data from the API
-        const [teamPerformance, globalStatus, agentMetrics, activeRequests] = await Promise.all([
+        const [teamPerformance, globalStatus, , activeRequests] = await Promise.all([
           getTeamPerformance(),
           getGlobalAgentStatus(),
           getAgentMetrics(),
@@ -41,7 +53,7 @@ export default function AgentManagementPage() {
 
         // Transform API data to match the frontend interface
         const realTeams: AgentTeam[] = Object.entries(teamPerformance).map(([teamId, perf]) => {
-          const statusInfo = globalStatus.find(s => s.team === teamId);
+          globalStatus.find(s => s.team === teamId);
           const activeReq = activeRequests.find(req => req.team === teamId);
           
           return {
@@ -152,18 +164,6 @@ export default function AgentManagementPage() {
 
     fetchAgentData();
   }, []);
-
-  const getTeamDescription = (teamId: string): string => {
-    const descriptions: Record<string, string> = {
-      "config": "Company settings, module management, and system configuration",
-      "expense": "Expense intake, validation, approval workflows, and receipt processing",
-      "accounting": "Bookkeeping, tax compliance, financial reporting, and accounting integration",
-      "integration": "API integrations, webhook management, and third-party connectivity",
-      "compliance": "Regulatory compliance, audit trails, and security enforcement",
-      "superadmin": "System-wide configuration, orchestration, and multi-tenant management"
-    };
-    return descriptions[teamId] || "Specialized AI agent team";
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
