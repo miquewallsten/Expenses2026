@@ -254,6 +254,7 @@ app.include_router(accounting_setup_router)
 app.include_router(coa_router)
 app.include_router(approval_setup_router)
 app.include_router(readiness_router)
+app.include_router(portal_config_router)
 app.include_router(super_admin_agents_router)
 
 def _seed_agent_defaults() -> None:
