@@ -24,9 +24,7 @@ import {
   FileText,
   ArrowRight,
 } from "lucide-react";
-import { getAuthHeaders } from "@/lib/session";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { apiPost } from "@/lib/api/client";
 
 interface Message {
   role: "assistant" | "user";
@@ -102,24 +100,22 @@ export default function AdminOnboardingCopilot({ companyId, onComplete, onSkip }
       setLoading(true);
 
       try {
-        // Call the AI onboarding endpoint
-        const res = await fetch(`${API}/agent/chat/${companyId}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-          body: JSON.stringify({
+        // Call the AI onboarding endpoint using centralized API client
+        const data = await apiPost<{ content: string; error?: string }>(
+          `/agent/chat/${companyId}`,
+          {
             message: value,
             persona: "admin",
             session_id: `onboarding-${companyId}`,
-          }),
-        });
+          }
+        );
 
-        if (!res.ok) {
+        if (data.error) {
           sendAssistant(t("errorTryAgain"));
           setLoading(false);
           return;
         }
 
-        const data = await res.json();
         const content = data.content || t("thinking");
 
         // Update progress based on backend state

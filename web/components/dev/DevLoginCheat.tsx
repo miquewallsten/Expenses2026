@@ -117,14 +117,18 @@ function DevLoginPanel() {
     setLoginError(null);
     try {
       // Dev-mode: API accepts X-User-Id header — no JWT/magic-link needed.
-      // Write identity to localStorage using the legacy keys that UserContext reads,
-      // then clear any stale JWT session so the header-auth path is used.
+      // Clear ALL session data first, then set fresh identity.
       localStorage.removeItem("session");
-      localStorage.setItem("currentUserId",    String(user.id));
-      localStorage.setItem("currentUserRole",  user.role);
+      localStorage.removeItem("currentUserId");
+      localStorage.removeItem("currentUserRole");
+      localStorage.removeItem("currentCompanyId");
+
+      // Set fresh identity
+      localStorage.setItem("currentUserId", String(user.id));
+      localStorage.setItem("currentUserRole", user.role);
       localStorage.setItem("currentCompanyId", String(user.company_id ?? 1));
 
-      const dest = user.role === "admin" ? "/admin" : "/mywork";
+      const dest = user.role === "admin" || user.role === "super_admin" ? "/mywork?module=admin" : "/mywork";
 
       // Hard navigate so the new localStorage identity is picked up by all
       // context providers (they read localStorage on mount, not on every render).
