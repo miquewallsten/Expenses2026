@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Brain, Circle, Pencil, Plus, Trash2, Zap, Mail, MessageCircle } from "lucide-react";
+import { Circle, Plus, Trash2, Mail, MessageCircle } from "lucide-react";
 import {
   listAgentDefinitions, updateAgentDefinition, createAgentDefinition,
   deleteAgentDefinition, toggleAgent, listChannelConfigs, updateChannelConfig,
@@ -62,8 +62,8 @@ export default function AgentBuilderPage() {
       setAgents(prev => prev.map(a => a.key === updated.key ? updated : a));
       setSelected(updated);
       setEditing({ ...updated });
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setSaving(false);
     }
@@ -90,8 +90,8 @@ export default function AgentBuilderPage() {
       setShowNew(false);
       setNewAgent({ key: "", name: "", description: "", persona: "admin", system_prompt: "" });
       selectAgent(agent);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -174,8 +174,8 @@ export default function AgentBuilderPage() {
 
             {/* Tabs */}
             <div className="flex gap-0 border-b border-white/[0.06] mb-4">
-              {(["identity", "prompt", "tools", ...(isChannelAgent(selected) ? ["channel"] : [])] as const).map(tab => (
-                <button key={tab} onClick={() => setActiveTab(tab as any)}
+              {(["identity", "prompt", "tools", ...(isChannelAgent(selected) ? ["channel" as const] : [])] as const).map(tab => (
+                <button key={tab} onClick={() => setActiveTab(tab)}
                   className={`px-3 py-1.5 text-[10px] font-medium transition-colors ${activeTab === tab ? "text-indigo-300/80 border-b-2 border-indigo-500/50 -mb-px" : "text-white/40 hover:text-white/60"}`}>
                   {tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </button>
@@ -308,7 +308,7 @@ export default function AgentBuilderPage() {
               {([["key", "Key (slug)"], ["name", "Display Name"], ["description", "Description"]] as const).map(([field, label]) => (
                 <div key={field}>
                   <label className="text-[9px] uppercase tracking-widest font-bold text-white/30 block mb-1">{label}</label>
-                  <input value={(newAgent as any)[field]}
+                  <input value={newAgent[field as keyof typeof newAgent]}
                     onChange={e => setNewAgent(p => ({ ...p, [field]: e.target.value }))}
                     className="w-full rounded border border-white/[0.07] bg-white/[0.02] px-2.5 py-1.5 text-[11px] text-white/80 focus:outline-none focus:border-indigo-500/40" />
                 </div>

@@ -20,9 +20,8 @@ import {
   Pause,
   RefreshCw
 } from "lucide-react";
-import { getAuthHeaders, getCurrentCompanyId } from "@/lib/session";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { getCurrentCompanyId } from "@/lib/session";
+import { apiCall, apiPatch } from "@/lib/api/client";
 
 interface AgentConfig {
   agent_v2_enabled: boolean;
@@ -136,24 +135,13 @@ export default function AdminAgentManagementPanel() {
       const companyId = getCurrentCompanyId();
       if (!companyId) return;
 
-      const [configRes, statsRes] = await Promise.all([
-        fetch(`${API}/admin/company-setup/${companyId}`, {
-          headers: getAuthHeaders()
-        }),
-        fetch(`${API}/admin/agent/stats/${companyId}`, {
-          headers: getAuthHeaders()
-        })
+      const [configData, statsData] = await Promise.all([
+        apiCall<AgentConfig>(`/admin/company-setup/${companyId}`),
+        apiCall<AgentStats>(`/admin/agent/stats/${companyId}`)
       ]);
 
-      if (configRes.ok) {
-        const configData = await configRes.json();
-        setConfig(configData);
-      }
-
-      if (statsRes.ok) {
-        const statsData = await statsRes.json();
-        setStats(statsData);
-      }
+      setConfig(configData);
+      setStats(statsData);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load data");
     } finally {
@@ -169,20 +157,7 @@ export default function AdminAgentManagementPanel() {
       const companyId = getCurrentCompanyId();
       if (!companyId) return;
 
-      const response = await fetch(`${API}/admin/company-setup/${companyId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeaders()
-        },
-        body: JSON.stringify({ [moduleKey]: enabled })
-      });
-
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-
-      const updated = await response.json();
+      const updated = await apiPatch<AgentConfig>(`/admin/company-setup/${companyId}`, { [moduleKey]: enabled });
       setConfig(updated);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update setting");

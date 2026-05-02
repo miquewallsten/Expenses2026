@@ -4,26 +4,22 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Download, X } from "lucide-react";
 import { drainUploadQueue, type QueuedUpload } from "@/lib/offline/uploadQueue";
-import { getAuthHeaders } from "@/lib/session";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { apiCall, HttpError } from "@/lib/api/client";
 
 async function uploadOne(row: QueuedUpload): Promise<boolean> {
-  if (!API) return false;
   try {
     const form = new FormData();
     form.append("company_id", String(row.companyId));
     form.append("file", row.blob, row.filename);
-    const res = await fetch(`${API}/expenses/documents/upload`, {
+    await apiCall("/expenses/documents/upload", {
       method: "POST",
-      headers: { ...getAuthHeaders() },
       body: form,
     });
+    return true;
+  } catch (e) {
     // 4xx is a permanent failure (auth / validation / wrong company). Drop
     // the row so we don't loop forever; the user can re-capture if needed.
-    if (res.status >= 400 && res.status < 500) return true;
-    return res.ok;
-  } catch {
+    if (e instanceof HttpError && e.status >= 400 && e.status < 500) return true;
     return false;
   }
 }

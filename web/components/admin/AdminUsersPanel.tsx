@@ -6,9 +6,7 @@ import {
   Users, Plus, Trash2, Loader2, Check, ChevronRight,
   ToggleLeft, ToggleRight, ArrowLeft,
 } from "lucide-react";
-import { getAuthHeaders } from "@/lib/session";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { apiCall, apiPost, apiPatch, apiDelete } from "@/lib/api/client";
 
 const ROLES = ["employee", "manager", "accounting", "admin", "executive", "secretary"] as const;
 type RoleOption = (typeof ROLES)[number];
@@ -157,32 +155,23 @@ function UserDetailPanel({
   const handleSave = async () => {
     setSaving(true); setError(null);
     try {
-      const res = await fetch(`${API}/users/${user.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({
-          full_name: fullName,
-          role,
-          is_active: isActive,
-          department: department || null,
-          job_title: jobTitle || null,
-          phone: phone || null,
-          legal_entity_id: legalEntityId ? Number(legalEntityId) : null,
-          delegates_for_user_id: delegatesForId ? Number(delegatesForId) : null,
-          can_create_expenses: canExpenses,
-          can_create_corporate_expenses: canCorp,
-          can_invoice_corporation: canInvoice,
-          is_amex_reconciler: isAmex,
-          requires_time_tracking: timeTracking,
-          has_executive_reporting: execReporting,
-          project_ids: projectIds,
-        }),
+      const updated = await apiPatch<UserFull>(`/users/${user.id}`, {
+        full_name: fullName,
+        role,
+        is_active: isActive,
+        department: department || null,
+        job_title: jobTitle || null,
+        phone: phone || null,
+        legal_entity_id: legalEntityId ? Number(legalEntityId) : null,
+        delegates_for_user_id: delegatesForId ? Number(delegatesForId) : null,
+        can_create_expenses: canExpenses,
+        can_create_corporate_expenses: canCorp,
+        can_invoice_corporation: canInvoice,
+        is_amex_reconciler: isAmex,
+        requires_time_tracking: timeTracking,
+        has_executive_reporting: execReporting,
+        project_ids: projectIds,
       });
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        throw new Error(d.detail ?? `${res.status}`);
-      }
-      const updated = await res.json();
       onSaved(updated);
     } catch (e: any) {
       setError(e?.message ?? tu("saveFailed"));
@@ -195,8 +184,7 @@ function UserDetailPanel({
     if (!confirmDel) { setConfirmDel(true); return; }
     setDeleting(true);
     try {
-      const res = await fetch(`${API}/users/${user.id}`, { method: "DELETE", headers: getAuthHeaders() });
-      if (!res.ok) throw new Error(`${res.status}`);
+      await apiDelete(`/users/${user.id}`);
       onDeleted(user.id);
     } finally { setDeleting(false); }
   };
@@ -388,22 +376,17 @@ function InviteForm({
     if (!email.trim() || !fullName.trim()) { setError(tu("inviteErrorRequired")); return; }
     setSaving(true); setError(null);
     try {
-      const res = await fetch(`${API}/users/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({
-          company_id: companyId,
-          email: email.trim(),
-          full_name: fullName.trim(),
-          role,
-          job_title: jobTitle || null,
-          legal_entity_id: entityId ? Number(entityId) : null,
-          delegates_for_user_id: delegatesForId ? Number(delegatesForId) : null,
-          send_invite: sendInvite,
-        }),
+      const created = await apiPost<UserFull>("/users/", {
+        company_id: companyId,
+        email: email.trim(),
+        full_name: fullName.trim(),
+        role,
+        job_title: jobTitle || null,
+        legal_entity_id: entityId ? Number(entityId) : null,
+        delegates_for_user_id: delegatesForId ? Number(delegatesForId) : null,
+        send_invite: sendInvite,
       });
-      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail ?? `${res.status}`); }
-      onCreated(await res.json());
+      onCreated(created);
     } catch (e: any) {
       setError(e?.message ?? tu("inviteErrorCreate"));
     } finally { setSaving(false); }
@@ -471,8 +454,8 @@ export default function AdminUsersPanel({ companyId, users, onUsersChanged, comp
 
   useEffect(() => {
     Promise.all([
-      fetch(`${API}/projects/?company_id=${companyId}`, { headers: getAuthHeaders() }).then((r) => r.ok ? r.json() : []).catch(() => []),
-      fetch(`${API}/admin/company-setup/${companyId}/legal-entities`, { headers: getAuthHeaders() }).then((r) => r.ok ? r.json() : []).catch(() => []),
+      apiCall<Project[]>(`/projects/?company_id=${companyId}`).catch(() => []),
+      apiCall<LegalEntity[]>(`/admin/company-setup/${companyId}/legal-entities`).catch(() => []),
     ]).then(([p, e]) => {
       if (Array.isArray(p)) setProjects(p);
       if (Array.isArray(e)) setLegalEntities(e);

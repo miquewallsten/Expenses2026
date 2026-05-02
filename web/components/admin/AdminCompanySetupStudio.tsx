@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { getAuthHeaders } from "@/lib/session";
+import { apiCall, apiPost, apiPut, apiDelete } from "@/lib/api/client";
 import {
   Save, Loader2, CheckCircle2, AlertCircle, Sparkles,
   Building2, Plus, Pencil, Trash2, X, ImagePlus,
@@ -268,20 +269,14 @@ function LegalEntityForm({
     setSaving(true);
     setError(null);
     try {
-      const url = isEdit
-        ? `${API}/admin/company-setup/legal-entities/${initial.id}`
-        : `${API}/admin/company-setup/${companyId}/legal-entities`;
-      const method = isEdit ? "PUT" : "POST";
-      const body   = isEdit
-        ? (() => { const { company_id: _, ...rest } = form; return rest; })()
-        : form;
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error(`${res.status}`);
-      onSaved(await res.json());
+      let data: any;
+      if (isEdit) {
+        const { company_id: _, ...rest } = form;
+        data = await apiPut(`/admin/company-setup/legal-entities/${initial.id}`, rest);
+      } else {
+        data = await apiPost(`/admin/company-setup/${companyId}/legal-entities`, form);
+      }
+      onSaved(data);
     } catch (e: any) {
       setError(e?.message ?? tc("save"));
     } finally {
@@ -537,13 +532,7 @@ export default function AdminCompanySetupStudio({
     setError(null);
     setSaved(false);
     try {
-      const res = await fetch(`${API}/admin/company-setup/${companyId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify(form),
-      });
-      if (!res.ok) throw new Error(`${res.status}`);
-      const updated = await res.json();
+      const updated = await apiPut(`/admin/company-setup/${companyId}`, form);
       setDirty(false);
       setSaved(true);
       setAiDrafted(false);
@@ -568,10 +557,7 @@ export default function AdminCompanySetupStudio({
   const handleDeleteEntity = async (id: number) => {
     setDeletingId(id);
     try {
-      await fetch(`${API}/admin/company-setup/legal-entities/${id}`, {
-        method: "DELETE",
-        headers: getAuthHeaders(),
-      });
+      await apiDelete(`/admin/company-setup/legal-entities/${id}`);
       const next = entities.filter((e) => e.id !== id);
       setEntities(next);
       onLegalEntitiesChanged?.(next);

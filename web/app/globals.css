@@ -17,6 +17,28 @@
  */
 
 :root {
+  /* ── Surface Levels (Dark) ──────────────────────────────────────────────── */
+  --surface-0: #050505;
+  --surface-1: #0A0A0A;
+  --surface-2: #111112;
+  --surface-3: #1A1A1C;
+
+  /* ── Border Tokens (Dark) ──────────────────────────────────────────────── */
+  --border-hairline: rgba(255, 255, 255, 0.04);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-standard: rgba(255, 255, 255, 0.10);
+  --border-active: rgba(10, 132, 255, 0.35);
+
+  /* ── Shadow Tokens ─────────────────────────────────────────────────────── */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-2: 0 2px 8px rgba(0, 0, 0, 0.25);
+  --shadow-3: 0 4px 16px rgba(0, 0, 0, 0.3);
+  --shadow-4: 0 8px 32px rgba(0, 0, 0, 0.4);
+
+  /* ── Easing Tokens ─────────────────────────────────────────────────────── */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+
   /* ── Zinc → Apple Gray (Dark) ───────────────────────────────────────────── */
   --color-zinc-950: #000000;
   --color-zinc-900: #1C1C1E;
@@ -61,6 +83,24 @@
 }
 
 html.light {
+  /* ── Surface Levels (Light) ──────────────────────────────────────────────── */
+  --surface-0: #F2F2F7;
+  --surface-1: #FFFFFF;
+  --surface-2: #E5E5EA;
+  --surface-3: #D1D1D6;
+
+  /* ── Border Tokens (Light) ──────────────────────────────────────────────── */
+  --border-hairline: rgba(0, 0, 0, 0.04);
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-standard: rgba(0, 0, 0, 0.10);
+  --border-active: rgba(0, 122, 255, 0.35);
+
+  /* ── Shadow Tokens (Light) ──────────────────────────────────────────────── */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --shadow-2: 0 2px 8px rgba(0, 0, 0, 0.12);
+  --shadow-3: 0 4px 16px rgba(0, 0, 0, 0.16);
+  --shadow-4: 0 8px 32px rgba(0, 0, 0, 0.20);
+
   /* ── Zinc → Apple Gray (Light) ───────────────────────────────────────────── */
   --color-zinc-950: #F2F2F7;
   --color-zinc-900: #FFFFFF;
@@ -204,6 +244,39 @@ select {
 .animate-slide-up       { animation: slide-up        0.20s cubic-bezier(0.25,0.46,0.45,0.94) both; }
 .animate-slide-up-sheet { animation: slide-up-sheet  0.28s cubic-bezier(0.25,0.46,0.45,0.94) both; }
 .animate-scale-in       { animation: scale-in        0.18s cubic-bezier(0.25,0.46,0.45,0.94) both; }
+
+/* ── Enterprise Animation Utilities (using easing tokens) ──────────────────── */
+
+@keyframes anim-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes anim-slide-up {
+  from { transform: translateY(8px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+@keyframes anim-slide-down {
+  from { transform: translateY(-8px); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+
+@keyframes anim-scale-in {
+  from { transform: scale(0.95); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+@keyframes anim-slide-in-right {
+  from { transform: translateX(16px); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+
+.anim-fade           { animation: anim-fade           150ms var(--ease-out-quart) both; }
+.anim-slide-up       { animation: anim-slide-up       200ms var(--ease-out-quart) both; }
+.anim-slide-down     { animation: anim-slide-down     200ms var(--ease-out-quart) both; }
+.anim-scale-in       { animation: anim-scale-in       180ms var(--ease-out-quart) both; }
+.anim-slide-in-right { animation: anim-slide-in-right 250ms var(--ease-out-quint) both; }
 
 /* Skeleton shimmer */
 .skeleton {

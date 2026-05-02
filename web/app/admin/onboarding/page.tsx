@@ -1,27 +1,24 @@
 "use client";
 
 /**
- * Standalone /admin/onboarding route — thin wrapper around AdminOnboardingPanel.
+ * Standalone /admin/onboarding route — thin wrapper around OnboardingWizard.
  * Embedded version lives in /admin worklist as case "Onboarding".
  */
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { ChevronLeft, Sparkles } from "lucide-react";
-import AdminOnboardingPanel from "@/components/admin/AdminOnboardingPanel";
-import { getCurrentCompanyId } from "@/lib/session";
+import { OnboardingWizard } from "@/components/onboarding";
 
 export default function OnboardingPage() {
   const t = useTranslations("admin.onboarding");
-  const [companyId, setCompanyId] = useState<number | null>(null);
 
-  useEffect(() => {
-    const cid = getCurrentCompanyId();
-    setCompanyId(cid ? Number(cid) : null);
-  }, []);
+  const handleComplete = () => {
+    // TODO: Navigate to admin dashboard or show success message
+    window.location.href = "/admin";
+  };
 
   return (
     <div className="min-h-screen bg-zinc-950">
@@ -41,8 +38,8 @@ export default function OnboardingPage() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-5xl px-6 py-6">
-        <AdminOnboardingPanel companyId={companyId} />
+      <div className="mx-auto max-w-5xl px-6 py-8">
+        <OnboardingWizard onComplete={handleComplete} />
       </div>
     </div>
   );

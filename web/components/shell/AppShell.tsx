@@ -226,11 +226,11 @@ export default function AppShell({
     return (
       /*
        * pt / pb absorb env(safe-area-inset-*) so the shell never renders content
-       * behind the iOS status bar or home indicator.  bg-zinc-950 fills those
+       * behind the iOS status bar or home indicator.  bg-[var(--surface-0)] fills those
        * dead zones so the UI looks intentional rather than clipped.
        */
       <div
-        className="flex h-[100dvh] flex-col overflow-hidden bg-zinc-950 text-white"
+        className="flex h-[100dvh] flex-col overflow-hidden bg-[var(--surface-0)] text-white"
         style={{ paddingTop: "var(--sai-t)", paddingBottom: "var(--sai-b)" }}
       >
 
@@ -258,10 +258,10 @@ export default function AppShell({
              * pb-[var(--sai-b)] — scrollable content clears the home indicator.
              */}
             <div
-              className="animate-slide-in-left fixed inset-y-0 left-0 z-50 flex w-[min(280px,85vw)] flex-col overflow-hidden bg-zinc-950 shadow-2xl"
+              className="animate-slide-in-left fixed inset-y-0 left-0 z-50 flex w-[min(280px,85vw)] flex-col overflow-hidden bg-[var(--surface-1)] shadow-[var(--shadow-3)]"
               style={{ paddingTop: "var(--sai-t)", paddingBottom: "var(--sai-b)" }}
             >
-              <div className="flex h-11 shrink-0 items-center justify-between border-b border-white/[0.07] px-4">
+              <div className="flex h-9 shrink-0 items-center justify-between border-b border-[var(--border-subtle)] px-4">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-white/45">
                   {workListTitle}
                 </span>
@@ -294,7 +294,7 @@ export default function AppShell({
              * is never hidden under the iOS home indicator.
              */}
             <div
-              className="animate-slide-up-sheet fixed inset-x-0 bottom-0 z-50 flex max-h-[75dvh] flex-col rounded-t-2xl bg-zinc-900 shadow-2xl ring-1 ring-white/[0.08]"
+              className="animate-slide-up-sheet fixed inset-x-0 bottom-0 z-50 flex max-h-[75dvh] flex-col rounded-t-2xl bg-[var(--surface-2)] shadow-[var(--shadow-3)] ring-1 ring-[var(--border-subtle)]"
               style={{ paddingBottom: "var(--sai-b)" }}
             >
               {/* Drag-handle pill */}
@@ -317,7 +317,7 @@ export default function AppShell({
                   <X className="h-3.5 w-3.5" />
                 </button>
               </div>
-              <div className="min-h-0 flex-1 overflow-y-auto border-t border-white/[0.07]">
+              <div className="min-h-0 flex-1 overflow-y-auto border-t border-[var(--border-subtle)]">
                 {aiPanel}
               </div>
             </div>
@@ -339,7 +339,7 @@ export default function AppShell({
 
     return (
       <div
-        className="flex h-[100dvh] flex-col overflow-hidden bg-zinc-950 text-white"
+        className="flex h-[100dvh] flex-col overflow-hidden bg-[var(--surface-0)] text-white"
         style={{ paddingTop: "var(--sai-t)", paddingBottom: "var(--sai-b)" }}
       >
 
@@ -362,9 +362,9 @@ export default function AppShell({
           {/* Left pane — fixed width, no drag handle */}
           <div
             style={{ width: tabletLeftW }}
-            className="flex shrink-0 flex-col overflow-hidden border-r border-white/[0.07] bg-zinc-950"
+            className="flex shrink-0 flex-col overflow-hidden border-r border-[var(--border-subtle)] bg-[var(--surface-1)]"
           >
-            <div className="flex h-9 shrink-0 items-center border-b border-white/[0.07] px-3">
+            <div className="flex h-9 shrink-0 items-center border-b border-[var(--border-subtle)] px-3">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
                 {workListTitle}
               </span>
@@ -375,7 +375,7 @@ export default function AppShell({
           </div>
 
           {/* Detail / workspace */}
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-zinc-950">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--surface-0)]">
             {detailContent}
           </div>
 
@@ -383,7 +383,7 @@ export default function AppShell({
           {aiPanel && (
             <div
               style={{ width: AI_COLLAPSED_W }}
-              className="flex shrink-0 flex-col items-center border-l border-white/[0.07] bg-zinc-950 pt-2"
+              className="flex shrink-0 flex-col items-center border-l border-[var(--border-subtle)] bg-[var(--surface-1)] pt-2"
             >
               <button
                 type="button"
@@ -407,8 +407,8 @@ export default function AppShell({
               onClick={() => setAiSheetOpen(false)}
               aria-hidden="true"
             />
-            <div className="animate-slide-in-right fixed inset-y-0 right-0 z-50 flex w-80 flex-col overflow-hidden bg-zinc-900 shadow-2xl ring-1 ring-white/[0.08]">
-              <div className="flex h-9 shrink-0 items-center justify-between border-b border-white/[0.07] px-4">
+            <div className="animate-slide-in-right fixed inset-y-0 right-0 z-50 flex w-80 flex-col overflow-hidden bg-[var(--surface-2)] shadow-[var(--shadow-3)] ring-1 ring-[var(--border-subtle)]">
+              <div className="flex h-9 shrink-0 items-center justify-between border-b border-[var(--border-subtle)] px-4">
                 <div className="flex items-center gap-2">
                   <Bot className="h-3 w-3 text-indigo-300/60" />
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">
@@ -441,7 +441,7 @@ export default function AppShell({
   // h-[100dvh] instead of h-screen for consistent behaviour across all breakpoints.
 
   return (
-    <div className="flex h-[100dvh] flex-col overflow-hidden bg-zinc-950 text-white">
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-[var(--surface-0)] text-white">
 
       <TopBar title={title} />
 
@@ -452,7 +452,7 @@ export default function AppShell({
           /* Merged mode: NavRail + WorkList in one draggable column */
           <div
             style={{ width: workListWidth, minWidth: leftMin, maxWidth: leftMax, willChange: "width" }}
-            className="flex shrink-0 flex-col overflow-hidden border-r border-white/[0.07] bg-zinc-950"
+            className="flex shrink-0 flex-col overflow-hidden border-r border-[var(--border-subtle)] bg-[var(--surface-1)]"
           >
             <NavRail
               collapsed={false}
@@ -477,9 +477,9 @@ export default function AppShell({
             {/* ── Left pane (worklist in queue mode; module nav in nav mode) ── */}
             <div
               style={{ width: workListWidth, minWidth: leftMin, maxWidth: leftMax, willChange: "width" }}
-              className="flex shrink-0 flex-col overflow-hidden border-r border-white/[0.07] bg-zinc-950"
+              className="flex shrink-0 flex-col overflow-hidden border-r border-[var(--border-subtle)] bg-[var(--surface-1)]"
             >
-              <div className="flex h-9 shrink-0 items-center border-b border-white/[0.07] px-3">
+              <div className="flex h-9 shrink-0 items-center border-b border-[var(--border-subtle)] px-3">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
                   {workListTitle}
                 </span>
@@ -504,7 +504,7 @@ export default function AppShell({
         {/* ── Detail / workspace pane ───────────────────────────────── */}
         <div
           style={{ minWidth: detailMinW }}
-          className="flex flex-1 flex-col overflow-hidden bg-zinc-950"
+          className="flex flex-1 flex-col overflow-hidden bg-[var(--surface-0)]"
         >
           {detailContent}
         </div>
@@ -527,7 +527,7 @@ export default function AppShell({
             /* Collapsed strip */
             <div
               style={{ width: AI_COLLAPSED_W }}
-              className="flex shrink-0 flex-col items-center border-l border-white/[0.07] bg-zinc-950 pt-2"
+              className="flex shrink-0 flex-col items-center border-l border-[var(--border-subtle)] bg-[var(--surface-1)] pt-2"
             >
               <button
                 type="button"
@@ -542,7 +542,7 @@ export default function AppShell({
             /* Expanded rail */
             <div
               style={{ width: aiWidth, minWidth: AI_MIN, maxWidth: AI_MAX, willChange: "width" }}
-              className="relative flex shrink-0 flex-col overflow-hidden border-l border-white/[0.07] bg-zinc-950"
+              className="relative flex shrink-0 flex-col overflow-hidden border-l border-[var(--border-subtle)] bg-[var(--surface-1)]"
             >
               {/* Collapse toggle */}
               <div className="absolute right-1.5 top-1.5 z-20">

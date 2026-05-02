@@ -6,10 +6,9 @@ import {
   ShoppingCart, Users, CreditCard, ChevronRight, AlertTriangle, Loader2,
   ExternalLink, Package, PackageCheck, PackageX,
 } from "lucide-react";
-import { getCurrentCompanyId, getAuthHeaders } from "@/lib/session";
+import { getCurrentCompanyId } from "@/lib/session";
+import { apiPatch } from "@/lib/api/client";
 import { useTranslations } from "next-intl";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 // ── Module catalogue ──────────────────────────────────────────────────────────
 
@@ -316,13 +315,7 @@ export default function AdminModulesPanel({ companySetup, onSetupChanged, onNavi
 
   async function setFlag(flag: string, value: boolean) {
     const companyId = getCurrentCompanyId() ?? "1";
-    const res = await fetch(`${API}/admin/company-setup/${companyId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-      body: JSON.stringify({ [flag]: value }),
-    });
-    if (!res.ok) throw new Error(await res.text());
-    const updated = await res.json();
+    const updated = await apiPatch<Record<string, unknown>>(`/admin/company-setup/${companyId}`, { [flag]: value });
     onSetupChanged(updated);
   }
 

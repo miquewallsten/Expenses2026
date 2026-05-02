@@ -13,77 +13,10 @@
  */
 
 import React from "react";
+import type { ModuleVisibilityContext, MyWorkModule } from "@/types";
 
-// ── Visibility context ─────────────────────────────────────────────────────────
-//
-// Passed by the host shell into isVisible().  Keep this type in sync with
-// what the portal config API returns (apps/api/routes/ derived block) and
-// the session helpers in lib/session.ts.
-
-export interface ModuleVisibilityContext {
-  /** Role string from session storage ("employee" | "manager" | "accounting" | "admin" | "executive" | "secretary" | null) — "secretary" displays as "Executive Assistant" */
-  role: string | null;
-  /** Flat list of permission_keys from /roles/user-permissions/:id */
-  permissionKeys: string[];
-  /** Derived block from /admin/portal-config/:company_id — null while loading */
-  derived: {
-    enabled_modules: string[];
-    manager_flow_enabled: boolean;
-    accounting_flow_enabled: boolean;
-    allocation_dimensions: string[];
-    allow_split_allocations: boolean;
-    tickets_allowed: boolean;
-    international_expenses_allowed: boolean;
-    xml_required_mode: string;
-    pdf_pair_required_for_cfdi: boolean;
-    workflow_mode: string;
-  } | null;
-  /**
-   * Per-user capability flags set by admin in the Users panel.
-   * Null while user profile is loading.
-   */
-  capabilities: {
-    can_create_expenses: boolean;
-    can_create_corporate_expenses: boolean;
-    can_invoice_corporation: boolean;
-    is_amex_reconciler: boolean;
-    requires_time_tracking: boolean;
-    has_executive_reporting: boolean;
-    delegates_for_user_id: number | null;
-    delegates_for_user_name: string | null;
-  } | null;
-}
-
-// ── Module type ────────────────────────────────────────────────────────────────
-
-export interface MyWorkModule {
-  /** Stable identifier used as a key and for URL-fragment routing */
-  id: string;
-  /** Human-readable label shown in the module nav */
-  label: string;
-  /**
-   * Lucide icon name (string reference so this file stays free of React
-   * icon imports).  The host nav component resolves the icon by name.
-   */
-  icon?: string;
-  /**
-   * Pure function — must return true when this module should appear for a
-   * given user/company context.  Called on every context change; keep it
-   * cheap (no side-effects, no async).
-   */
-  isVisible: (ctx: ModuleVisibilityContext) => boolean;
-  /**
-   * The workspace component rendered in the detail area when this module is
-   * active.  Use React.lazy() for large modules so their code is only
-   * fetched when the user navigates to them.
-   *
-   * The shell passes `Record<string, unknown>` props at minimum; each module
-   * component should define its own prop interface and cast or default-handle
-   * any extras.
-   */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  component: React.ComponentType<any>;
-}
+// Re-export types for backward compatibility
+export type { ModuleVisibilityContext, MyWorkModule } from "@/types";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 

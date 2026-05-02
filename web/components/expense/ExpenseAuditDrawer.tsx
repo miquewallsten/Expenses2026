@@ -3,16 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { History, X } from "lucide-react";
-import { getAuthHeaders } from "@/lib/session";
+import { apiCall } from "@/lib/api/client";
 
 // Phase 4.9 — Per-expense audit drawer. Backend: GET /audit/expense/{id}.
 // Cursor-paginated, newest-first. Trigger button + slide-in right drawer.
 // Self-contained: any expense detail page can drop in <ExpenseAuditDrawer
 // expenseId={id} /> in its header action area.
-
-const API_BASE =
-  (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_BASE) ||
-  "http://localhost:8000";
 
 type AuditEntry = {
   id: number;
@@ -53,12 +49,10 @@ export default function ExpenseAuditDrawer({ expenseId, variant = "icon" }: Prop
       setLoading(true);
       setError(null);
       try {
-        const url = new URL(`${API_BASE}/audit/expense/${expenseId}`);
-        url.searchParams.set("limit", "50");
-        if (afterCursor != null) url.searchParams.set("cursor", String(afterCursor));
-        const r = await fetch(url.toString(), { headers: getAuthHeaders() });
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const page = (await r.json()) as Page;
+        const params = new URLSearchParams();
+        params.set("limit", "50");
+        if (afterCursor != null) params.set("cursor", String(afterCursor));
+        const page = await apiCall<Page>(`/audit/expense/${expenseId}?${params.toString()}`);
         setItems((prev) => (afterCursor == null ? page.items : [...prev, ...page.items]));
         setCursor(page.next_cursor);
         if (page.next_cursor == null) setExhausted(true);

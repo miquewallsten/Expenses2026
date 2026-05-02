@@ -29,6 +29,47 @@ describe("Button", () => {
     render(<Button loading>Submit</Button>);
     expect(screen.getByRole("button")).toBeDisabled();
   });
+
+  it("shows loading spinner when loading", () => {
+    const { container } = render(<Button loading>Submit</Button>);
+    const spinner = container.querySelector(".animate-spin");
+    expect(spinner).toBeInTheDocument();
+  });
+
+  it("applies variant classes correctly", () => {
+    const { rerender } = render(<Button variant="primary">Primary</Button>);
+    expect(screen.getByRole("button")).toHaveClass("bg-indigo-600/85");
+
+    rerender(<Button variant="secondary">Secondary</Button>);
+    expect(screen.getByRole("button")).toHaveClass("bg-white/[0.04]");
+
+    rerender(<Button variant="ghost">Ghost</Button>);
+    expect(screen.getByRole("button")).toHaveClass("bg-transparent");
+
+    rerender(<Button variant="danger">Danger</Button>);
+    expect(screen.getByRole("button")).toHaveClass("bg-red-600/80");
+  });
+
+  it("applies size classes correctly", () => {
+    const { rerender } = render(<Button size="xs">XS</Button>);
+    expect(screen.getByRole("button")).toHaveClass("h-6");
+
+    rerender(<Button size="sm">SM</Button>);
+    expect(screen.getByRole("button")).toHaveClass("h-7");
+
+    rerender(<Button size="md">MD</Button>);
+    expect(screen.getByRole("button")).toHaveClass("h-8");
+  });
+
+  it("has active press state scale", () => {
+    render(<Button>Press</Button>);
+    expect(screen.getByRole("button")).toHaveClass("active:scale-[0.97]");
+  });
+
+  it("has focus ring styles", () => {
+    render(<Button>Focus</Button>);
+    expect(screen.getByRole("button")).toHaveClass("focus-visible:ring-2");
+  });
 });
 
 describe("Input", () => {
@@ -47,6 +88,22 @@ describe("Input", () => {
       "aria-invalid",
       "true",
     );
+  });
+
+  it("has focus ring styles", () => {
+    render(<Input placeholder="focus" />);
+    expect(screen.getByPlaceholderText("focus")).toHaveClass("focus:ring-2");
+    expect(screen.getByPlaceholderText("focus")).toHaveClass("focus:ring-indigo-400/20");
+  });
+
+  it("has invalid focus ring styles", () => {
+    render(<Input invalid placeholder="invalid" />);
+    expect(screen.getByPlaceholderText("invalid")).toHaveClass("focus:ring-red-400/20");
+  });
+
+  it("has transition styles", () => {
+    render(<Input placeholder="trans" />);
+    expect(screen.getByPlaceholderText("trans")).toHaveClass("transition-colors");
   });
 });
 

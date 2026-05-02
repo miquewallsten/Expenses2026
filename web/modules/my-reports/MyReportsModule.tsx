@@ -7,9 +7,7 @@ import {
   FileText, Filter, Search, Send, SlidersHorizontal, TrendingUp, X,
 } from "lucide-react";
 import { useUserContext } from "@/context/UserContext";
-import { getAuthHeaders } from "@/lib/session";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { apiCall, apiPost } from "@/lib/api/client";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -198,7 +196,9 @@ function AiInsightPanel({ expenses, visible, onClose }: {
   const tr = useTranslations("reports");
 
   useEffect(() => {
-    fetch(`${API}/ai/status`, { headers: getAuthHeaders() }).then((r) => r.json()).then((d) => setAiAvail(d.available)).catch(() => setAiAvail(false));
+    apiCall<{ available?: boolean }>(`/ai/status`)
+      .then((d) => setAiAvail(d.available ?? false))
+      .catch(() => setAiAvail(false));
   }, []);
 
   useEffect(() => {
@@ -227,12 +227,10 @@ function AiInsightPanel({ expenses, visible, onClose }: {
     setPrompt("");
     setBusy(true);
     try {
-      const r = await fetch(`${API}/ai/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: q, context: buildContext() }),
+      const d = await apiPost<{ response?: string; message?: string }>(`/ai/chat`, {
+        prompt: q,
+        context: buildContext(),
       });
-      const d = await r.json();
       setMessages((m) => [...m, { role: "assistant", text: d.response ?? d.message ?? "No response." }]);
     } catch {
       setMessages((m) => [...m, { role: "assistant", text: "AI unavailable right now." }]);
@@ -354,9 +352,7 @@ export default function MyReportsModule() {
     const load = async () => {
       setLoading(true); setError(null);
       try {
-        const r = await fetch(`${API}/expenses/`, { headers: { ...getAuthHeaders() } });
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const data = await r.json();
+        const data = await apiCall<Expense[]>(`/expenses/`);
         setExpenses(data);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load");

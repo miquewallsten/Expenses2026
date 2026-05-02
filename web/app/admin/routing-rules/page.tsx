@@ -33,9 +33,8 @@ import {
   Sparkles,
   Trash2,
 } from "lucide-react";
-import { getCurrentCompanyId, getAuthHeaders } from "@/lib/session";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { getCurrentCompanyId } from "@/lib/session";
+import { apiCall, apiDelete } from "@/lib/api/client";
 
 interface Rule {
   id: number;
@@ -68,7 +67,10 @@ const NEW_RULE_TEMPLATE = {
 
 export default function RoutingRulesPage() {
   const t = useTranslations("admin.routingRules");
-  const [companyId, setCompanyId] = useState<number | null>(null);
+  const [companyId] = useState<number | null>(() => {
+    const cid = getCurrentCompanyId();
+    return cid ? Number(cid) : null;
+  });
   const [rules, setRules] = useState<Rule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -93,20 +95,11 @@ export default function RoutingRulesPage() {
   const [probeError, setProbeError] = useState<string | null>(null);
   const [probing, setProbing] = useState(false);
 
-  useEffect(() => {
-    const cid = getCurrentCompanyId();
-    if (cid) setCompanyId(Number(cid));
-  }, []);
-
   const load = useCallback(async (cid: number) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API}/admin/routing-rules/${cid}`, {
-        headers: { ...getAuthHeaders() },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const items: Rule[] = await res.json();
+      const items = await apiCall<Rule[]>(`/admin/routing-rules/${cid}`);
       setRules(items);
     } catch (e) {
       setError(e instanceof Error ? e.message : "load_failed");
@@ -162,18 +155,12 @@ export default function RoutingRulesPage() {
     try {
       const isCreate = selectedId === "new";
       const url = isCreate
-        ? `${API}/admin/routing-rules/${companyId}`
-        : `${API}/admin/routing-rules/${companyId}/${selectedId}`;
-      const res = await fetch(url, {
+        ? `/admin/routing-rules/${companyId}`
+        : `/admin/routing-rules/${companyId}/${selectedId}`;
+      const saved = await apiCall<Rule>(url, {
         method: isCreate ? "POST" : "PATCH",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify(parsed),
+        json: parsed,
       });
-      if (!res.ok) {
-        const detail = await res.json().catch(() => ({}));
-        throw new Error(detail?.detail ?? `HTTP ${res.status}`);
-      }
-      const saved: Rule = await res.json();
       await load(companyId);
       setSelectedId(saved.id);
     } catch (e) {
@@ -188,13 +175,7 @@ export default function RoutingRulesPage() {
     if (!window.confirm(t("confirmDelete"))) return;
     setSaving(true);
     try {
-      const res = await fetch(
-        `${API}/admin/routing-rules/${companyId}/${selectedId}`,
-        { method: "DELETE", headers: { ...getAuthHeaders() } },
-      );
-      if (!res.ok && res.status !== 204) {
-        throw new Error(`HTTP ${res.status}`);
-      }
+      await apiDelete(`/admin/routing-rules/${companyId}/${selectedId}`);
       setSelectedId(null);
       await load(companyId);
     } catch (e) {
@@ -207,15 +188,10 @@ export default function RoutingRulesPage() {
   const handleToggle = async (rule: Rule) => {
     if (companyId == null) return;
     try {
-      const res = await fetch(
-        `${API}/admin/routing-rules/${companyId}/${rule.id}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-          body: JSON.stringify({ is_enabled: !rule.is_enabled }),
-        },
-      );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await apiCall(`/admin/routing-rules/${companyId}/${rule.id}`, {
+        method: "PATCH",
+        json: { is_enabled: !rule.is_enabled },
+      });
       await load(companyId);
     } catch (e) {
       setError(e instanceof Error ? e.message : "toggle_failed");
@@ -235,16 +211,18 @@ export default function RoutingRulesPage() {
     setProbeError(null);
     setProbing(true);
     try {
-      const res = await fetch(
-        `${API}/admin/routing-rules/${companyId}/preview`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-          body: JSON.stringify({ context: parsed }),
-        },
-      );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setProbeResult(await res.json());
+      const result = await apiCall<{
+        matched_rule_id: string | null;
+        approver_user_ids: number[];
+        approver_roles: string[];
+        sla_hours: number | null;
+        escalation_role: string | null;
+        rules_evaluated: number;
+      } | null>(`/admin/routing-rules/${companyId}/preview`, {
+        method: "POST",
+        json: { context: parsed },
+      });
+      setProbeResult(result);
     } catch (e) {
       setProbeError(e instanceof Error ? e.message : "probe_failed");
       setProbeResult(null);

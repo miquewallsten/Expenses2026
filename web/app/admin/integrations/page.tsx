@@ -31,9 +31,7 @@ import {
   Plug,
   RefreshCw,
 } from "lucide-react";
-import { getAuthHeaders } from "@/lib/session";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { apiCall, apiPost } from "@/lib/api/client";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -110,11 +108,7 @@ export default function AdminIntegrationsPage() {
     setLoading(true);
     setError(null);
     try {
-      const r = await fetch(`${API}/integrations`, {
-        headers: getAuthHeaders(),
-      });
-      if (!r.ok) throw new Error(`${r.status}`);
-      const rows: Integration[] = await r.json();
+      const rows = await apiCall<Integration[]>("/integrations");
       setIntegrations(rows);
       if (rows.length && activeId == null) setActiveId(rows[0].id);
     } catch (e) {
@@ -135,16 +129,12 @@ export default function AdminIntegrationsPage() {
     async (id: number) => {
       setDetailLoading(true);
       try {
-        const [eR, rR] = await Promise.all([
-          fetch(`${API}/integrations/${id}/endpoints`, {
-            headers: getAuthHeaders(),
-          }),
-          fetch(`${API}/integrations/${id}/runs?limit=50`, {
-            headers: getAuthHeaders(),
-          }),
+        const [e, r] = await Promise.all([
+          apiCall<IntegrationEndpoint[]>(`/integrations/${id}/endpoints`),
+          apiCall<SyncRun[]>(`/integrations/${id}/runs?limit=50`),
         ]);
-        if (eR.ok) setEndpoints(await eR.json());
-        if (rR.ok) setRuns(await rR.json());
+        setEndpoints(e);
+        setRuns(r);
       } finally {
         setDetailLoading(false);
       }
@@ -161,17 +151,8 @@ export default function AdminIntegrationsPage() {
       if (activeId == null) return;
       setRunning(endpoint);
       try {
-        const r = await fetch(`${API}/integrations/${activeId}/run`, {
-          method: "POST",
-          headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
-          body: JSON.stringify({ endpoint }),
-        });
-        if (!r.ok) {
-          const msg = await r.text();
-          setError(msg || `${r.status}`);
-        } else {
-          await loadDetail(activeId);
-        }
+        await apiPost(`/integrations/${activeId}/run`, { endpoint });
+        await loadDetail(activeId);
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       } finally {

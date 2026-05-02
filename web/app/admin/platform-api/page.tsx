@@ -29,9 +29,8 @@ import {
   Check,
   AlertTriangle,
 } from "lucide-react";
-import { getCurrentCompanyId, getAuthHeaders } from "@/lib/session";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { getCurrentCompanyId } from "@/lib/session";
+import { apiCall, apiPost, apiPatch, apiDelete } from "@/lib/api/client";
 
 interface ApiKeyRow {
   id: number;
@@ -71,7 +70,10 @@ const EVENT_PRESETS = [
 
 export default function PlatformApiPage() {
   const t = useTranslations("admin.platformApi");
-  const [companyId, setCompanyId] = useState<number | null>(null);
+  const [companyId] = useState<number | null>(() => {
+    const cid = getCurrentCompanyId();
+    return cid ? Number(cid) : null;
+  });
 
   const [keys, setKeys] = useState<ApiKeyRow[]>([]);
   const [keysLoading, setKeysLoading] = useState(true);
@@ -93,19 +95,11 @@ export default function PlatformApiPage() {
   const [hookUrl, setHookUrl] = useState("");
   const [hookDesc, setHookDesc] = useState("");
 
-  useEffect(() => {
-    const cid = getCurrentCompanyId();
-    if (cid) setCompanyId(Number(cid));
-  }, []);
-
   const loadKeys = useCallback(async (cid: number) => {
     setKeysLoading(true);
     try {
-      const res = await fetch(`${API}/admin/platform-api/${cid}/keys`, {
-        headers: { ...getAuthHeaders() },
-      });
-      if (!res.ok) throw new Error((await res.text()) || `${res.status}`);
-      setKeys(await res.json());
+      const data = await apiCall<ApiKeyRow[]>(`/admin/platform-api/${cid}/keys`);
+      setKeys(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
     } finally {
@@ -116,11 +110,8 @@ export default function PlatformApiPage() {
   const loadHooks = useCallback(async (cid: number) => {
     setHooksLoading(true);
     try {
-      const res = await fetch(`${API}/admin/platform-api/${cid}/webhooks`, {
-        headers: { ...getAuthHeaders() },
-      });
-      if (!res.ok) throw new Error((await res.text()) || `${res.status}`);
-      setHooks(await res.json());
+      const data = await apiCall<WebhookRow[]>(`/admin/platform-api/${cid}/webhooks`);
+      setHooks(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
     } finally {
@@ -144,13 +135,10 @@ export default function PlatformApiPage() {
     setBusyId("new-key");
     setError(null);
     try {
-      const res = await fetch(`${API}/admin/platform-api/${companyId}/keys`, {
-        method: "POST",
-        headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ name: keyName.trim(), scopes: keyScopes }),
-      });
-      if (!res.ok) throw new Error((await res.text()) || `${res.status}`);
-      const body = (await res.json()) as { row: ApiKeyRow; plaintext: string };
+      const body = await apiPost<{ row: ApiKeyRow; plaintext: string }>(
+        `/admin/platform-api/${companyId}/keys`,
+        { name: keyName.trim(), scopes: keyScopes },
+      );
       setKeys((prev) => [body.row, ...prev]);
       setRevealedKey(body.plaintext);
       setKeyName("");
@@ -169,11 +157,7 @@ export default function PlatformApiPage() {
       setBusyId(`key-${row.id}`);
       setError(null);
       try {
-        const res = await fetch(
-          `${API}/admin/platform-api/${companyId}/keys/${row.id}`,
-          { method: "DELETE", headers: { ...getAuthHeaders() } },
-        );
-        if (!res.ok) throw new Error((await res.text()) || `${res.status}`);
+        await apiDelete(`/admin/platform-api/${companyId}/keys/${row.id}`);
         setKeys((prev) =>
           prev.map((k) =>
             k.id === row.id ? { ...k, revoked_at: new Date().toISOString() } : k,
@@ -193,20 +177,14 @@ export default function PlatformApiPage() {
     setBusyId("new-hook");
     setError(null);
     try {
-      const res = await fetch(
-        `${API}/admin/platform-api/${companyId}/webhooks`,
+      const body = await apiPost<{ row: WebhookRow; secret: string }>(
+        `/admin/platform-api/${companyId}/webhooks`,
         {
-          method: "POST",
-          headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
-          body: JSON.stringify({
-            event_type: hookEvent.trim(),
-            target_url: hookUrl.trim(),
-            description: hookDesc.trim() || null,
-          }),
+          event_type: hookEvent.trim(),
+          target_url: hookUrl.trim(),
+          description: hookDesc.trim() || null,
         },
       );
-      if (!res.ok) throw new Error((await res.text()) || `${res.status}`);
-      const body = (await res.json()) as { row: WebhookRow; secret: string };
       setHooks((prev) => [body.row, ...prev]);
       setRevealedSecret(body.secret);
       setHookUrl("");
@@ -224,16 +202,10 @@ export default function PlatformApiPage() {
       setBusyId(`hook-${row.id}`);
       setError(null);
       try {
-        const res = await fetch(
-          `${API}/admin/platform-api/${companyId}/webhooks/${row.id}`,
-          {
-            method: "PATCH",
-            headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
-            body: JSON.stringify({ is_enabled: !row.is_enabled }),
-          },
+        const updated = await apiPatch<WebhookRow>(
+          `/admin/platform-api/${companyId}/webhooks/${row.id}`,
+          { is_enabled: !row.is_enabled },
         );
-        if (!res.ok) throw new Error((await res.text()) || `${res.status}`);
-        const updated = (await res.json()) as WebhookRow;
         setHooks((prev) => prev.map((h) => (h.id === row.id ? updated : h)));
       } catch (e) {
         setError(e instanceof Error ? e.message : "Error");
@@ -251,11 +223,7 @@ export default function PlatformApiPage() {
       setBusyId(`hook-${row.id}`);
       setError(null);
       try {
-        const res = await fetch(
-          `${API}/admin/platform-api/${companyId}/webhooks/${row.id}`,
-          { method: "DELETE", headers: { ...getAuthHeaders() } },
-        );
-        if (!res.ok) throw new Error((await res.text()) || `${res.status}`);
+        await apiDelete(`/admin/platform-api/${companyId}/webhooks/${row.id}`);
         setHooks((prev) => prev.filter((h) => h.id !== row.id));
       } catch (e) {
         setError(e instanceof Error ? e.message : "Error");

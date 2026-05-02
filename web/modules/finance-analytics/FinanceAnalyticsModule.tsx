@@ -13,9 +13,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { BarChart2, Clock, TrendingUp, AlertTriangle } from "lucide-react";
-import { getAuthHeaders } from "@/lib/session";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { apiCall } from "@/lib/api/client";
 
 // ── Types matching backend response models ───────────────────────────────────
 
@@ -75,16 +73,13 @@ export default function FinanceAnalyticsModule() {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    const headers = getAuthHeaders();
     Promise.all([
-      fetch(`${API}/analytics/finance/spend-by-month?months=12`, { headers }),
-      fetch(`${API}/analytics/finance/spend-by-category`, { headers }),
-      fetch(`${API}/analytics/finance/approval-funnel`, { headers }),
-      fetch(`${API}/analytics/finance/approval-sla`, { headers }),
+      apiCall<{ items: MonthlyBucket[] }>("/analytics/finance/spend-by-month?months=12"),
+      apiCall<{ items: CategoryBucket[] }>("/analytics/finance/spend-by-category"),
+      apiCall<{ items: FunnelBucket[] }>("/analytics/finance/approval-funnel"),
+      apiCall<SlaResponse>("/analytics/finance/approval-sla"),
     ])
-      .then(async ([rm, rc, rf, rs]) => {
-        if (!rm.ok || !rc.ok || !rf.ok || !rs.ok) throw new Error("fetch_failed");
-        const [m, c, f, s] = await Promise.all([rm.json(), rc.json(), rf.json(), rs.json()]);
+      .then(([m, c, f, s]) => {
         if (cancelled) return;
         setMonthly(m.items ?? []);
         setCategories(c.items ?? []);

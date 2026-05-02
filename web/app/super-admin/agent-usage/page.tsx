@@ -20,9 +20,8 @@ import {
   AlertTriangle,
   RefreshCw,
 } from "lucide-react";
-import { getCurrentCompanyId, getAuthHeaders } from "@/lib/session";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { getCurrentCompanyId } from "@/lib/session";
+import { apiCall } from "@/lib/api/client";
 
 interface RollupRow<K extends string> {
   count: number;
@@ -30,7 +29,6 @@ interface RollupRow<K extends string> {
   [k: string]: number | string | undefined;
   // discriminating field — typed via generics on render-time
   // (k=K is the dimension column).
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }
 
 interface Rollup {
@@ -52,31 +50,22 @@ const DAY_PRESETS = [1, 7, 30, 90] as const;
 
 export default function AgentUsagePage() {
   const t = useTranslations("admin.agentUsage");
-  const [companyId, setCompanyId] = useState<number | null>(null);
+  const [companyId] = useState<number | null>(() => {
+    const cid = getCurrentCompanyId();
+    return cid ? Number(cid) : null;
+  });
   const [days, setDays] = useState<number>(30);
   const [data, setData] = useState<Rollup | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const cid = getCurrentCompanyId();
-    setCompanyId(cid ? Number(cid) : null);
-  }, []);
 
   const load = useCallback(async () => {
     if (companyId == null) return;
     setLoading(true);
     setError(null);
     try {
-      const r = await fetch(
-        `${API}/agent/usage/${companyId}/rollup?days=${days}`,
-        { headers: getAuthHeaders() },
-      );
-      if (!r.ok) {
-        const body = await r.json().catch(() => ({}));
-        throw new Error((body as { detail?: string })?.detail ?? `HTTP ${r.status}`);
-      }
-      setData(await r.json());
+      const data = await apiCall<Rollup>(`/agent/usage/${companyId}/rollup?days=${days}`);
+      setData(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -85,7 +74,7 @@ export default function AgentUsagePage() {
   }, [companyId, days]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   const okPct = useMemo(

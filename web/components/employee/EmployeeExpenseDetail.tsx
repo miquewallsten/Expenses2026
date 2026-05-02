@@ -15,6 +15,7 @@ import XmlDetailModal from "@/components/employee/XmlDetailModal";
 import ExpenseAuditDrawer from "@/components/expense/ExpenseAuditDrawer";
 import AnomalyBanner from "@/components/expense/AnomalyBanner";
 import { getAuthHeaders } from "@/lib/session";
+import { apiCall, apiPost, apiPatch, apiDelete } from "@/lib/api/client";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -482,13 +483,12 @@ export default function EmployeeExpenseDetail({
 
   // ── Fetch org units + predefined tags ─────────────────────────────────────
   useEffect(() => {
-    const h = getAuthHeaders();
     Promise.all([
-      fetch(`${API}/expenses/projects?company_id=1`,     { headers: h }).then((r) => r.ok ? r.json() : []),
-      fetch(`${API}/expenses/clients?company_id=1`,      { headers: h }).then((r) => r.ok ? r.json() : []),
-      fetch(`${API}/expenses/cost-centers?company_id=1`, { headers: h }).then((r) => r.ok ? r.json() : []),
-      fetch(`${API}/expenses/tags?company_id=1`,         { headers: h }).then((r) => r.ok ? r.json() : []),
-      fetch(`${API}/admin/accounting-categories/1`,      { headers: h }).then((r) => r.ok ? r.json() : []),
+      apiCall<OrgUnit[]>("/expenses/projects?company_id=1").catch(() => []),
+      apiCall<OrgUnit[]>("/expenses/clients?company_id=1").catch(() => []),
+      apiCall<OrgUnit[]>("/expenses/cost-centers?company_id=1").catch(() => []),
+      apiCall<PredefinedTag[]>("/expenses/tags?company_id=1").catch(() => []),
+      apiCall<AccountingCategoryRow[]>("/admin/accounting-categories/1").catch(() => []),
     ]).then(([p, c, cc, t, cats]) => {
       setProjects(p); setClients(c); setCostCenters(cc); setPredefinedTags(t);
       setCategories(Array.isArray(cats) ? cats : []);
@@ -499,8 +499,7 @@ export default function EmployeeExpenseDetail({
   useEffect(() => {
     if (!expenseId) { setExpense(null); return; }
     setLoadingExpense(true);
-    fetch(`${API}/expenses/${expenseId}`, { headers: getAuthHeaders() })
-      .then((r) => r.ok ? r.json() : null)
+    apiCall<Expense>(`/expenses/${expenseId}`)
       .then((data) => {
         setExpense(data);
         setNotes(data?.notes ?? "");
@@ -512,12 +511,11 @@ export default function EmployeeExpenseDetail({
 
   // ── Fetch allocations ──────────────────────────────────────────────────────
   const loadAllocations = useCallback(async (id: number) => {
-    const [r, sr] = await Promise.all([
-      fetch(`${API}/expenses/allocations/${id}`,         { headers: getAuthHeaders() }),
-      fetch(`${API}/expenses/allocations-summary/${id}`, { headers: getAuthHeaders() }),
+    const [data, summary] = await Promise.all([
+      apiCall<AllocationRead[]>(`/expenses/allocations/${id}`).catch(() => null),
+      apiCall<AllocationSummaryResult>(`/expenses/allocations-summary/${id}`).catch(() => null),
     ]);
-    if (r.ok) {
-      const data: AllocationRead[] = await r.json();
+    if (data) {
       setAllocations(data);
       if (data.length > 0) {
         setAllocationRows(data.map((a) => ({
@@ -528,7 +526,7 @@ export default function EmployeeExpenseDetail({
         setAllocationRows([{ project_id: null, client_id: null, cost_center_id: null, percent: "100" }]);
       }
     }
-    if (sr.ok) setAllocationSummary(await sr.json());
+    if (summary) setAllocationSummary(summary);
   }, []);
 
   useEffect(() => {
@@ -540,11 +538,11 @@ export default function EmployeeExpenseDetail({
   useEffect(() => {
     if (!expenseId) { setEmployeeActions(null); setExpenseBlockers(null); return; }
     Promise.all([
-      fetch(`${API}/expenses/actions/${expenseId}?portal_role=employee`, { headers: getAuthHeaders() }),
-      fetch(`${API}/expenses/blockers/${expenseId}`, { headers: getAuthHeaders() }),
-    ]).then(async ([ar, br]) => {
-      if (ar.ok) { const d = await ar.json(); setEmployeeActions(d?.actions ?? null); }
-      if (br.ok) setExpenseBlockers(await br.json());
+      apiCall<{ actions?: EmployeeActions | null }>(`/expenses/actions/${expenseId}?portal_role=employee`).catch(() => null),
+      apiCall<BlockersResult>(`/expenses/blockers/${expenseId}`).catch(() => null),
+    ]).then(([ar, br]) => {
+      if (ar) setEmployeeActions(ar.actions ?? null);
+      if (br) setExpenseBlockers(br);
     }).catch(() => {});
   }, [expenseId, expense?.status, checksRefreshNonce]);
 
@@ -552,10 +550,9 @@ export default function EmployeeExpenseDetail({
   useEffect(() => {
     if (!expenseId) { setValidations([]); setPolicyChecks([]); return; }
     setLoadingVals(true);
-    const h = getAuthHeaders();
     Promise.all([
-      fetch(`${API}/expenses/${expenseId}/validations`,   { headers: h }).then((r) => r.ok ? r.json() : []),
-      fetch(`${API}/expenses/${expenseId}/policy-checks`, { headers: h }).then((r) => r.ok ? r.json() : []),
+      apiCall<ValidationResultRow[]>(`/expenses/${expenseId}/validations`).catch(() => []),
+      apiCall<PolicyCheckRow[]>(`/expenses/${expenseId}/policy-checks`).catch(() => []),
     ])
       .then(([v, pc]) => { setValidations(Array.isArray(v) ? v : []); setPolicyChecks(Array.isArray(pc) ? pc : []); })
       .catch(() => { setValidations([]); setPolicyChecks([]); })
@@ -567,11 +564,8 @@ export default function EmployeeExpenseDetail({
     if (!expense || !titleDraft.trim()) { setEditingTitle(false); return; }
     setSavingTitle(true);
     try {
-      const r = await fetch(`${API}/expenses/${expense.id}`, {
-        method: "PATCH", headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ description: titleDraft.trim() }),
-      });
-      if (r.ok) { const u = await r.json(); setExpense(u); onExpenseUpdated?.(u); }
+      const u = await apiPatch<Expense>(`/expenses/${expense.id}`, { description: titleDraft.trim() });
+      setExpense(u); onExpenseUpdated?.(u);
     } finally { setSavingTitle(false); setEditingTitle(false); }
   };
 
@@ -580,11 +574,8 @@ export default function EmployeeExpenseDetail({
     if (!expense) return;
     setSavingNotes(true);
     try {
-      const r = await fetch(`${API}/expenses/${expense.id}`, {
-        method: "PATCH", headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ notes }),
-      });
-      if (r.ok) { const u = await r.json(); setExpense(u); onExpenseUpdated?.(u); }
+      const u = await apiPatch<Expense>(`/expenses/${expense.id}`, { notes });
+      setExpense(u); onExpenseUpdated?.(u);
     } finally { setSavingNotes(false); }
   };
 
@@ -593,11 +584,8 @@ export default function EmployeeExpenseDetail({
     if (!expense) return;
     setSavingCategory(true);
     try {
-      const r = await fetch(`${API}/expenses/${expense.id}`, {
-        method: "PATCH", headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ category_code: code || null }),
-      });
-      if (r.ok) { const u = await r.json(); setExpense(u); onExpenseUpdated?.(u); }
+      const u = await apiPatch<Expense>(`/expenses/${expense.id}`, { category_code: code || null });
+      setExpense(u); onExpenseUpdated?.(u);
     } finally { setSavingCategory(false); }
   };
 
@@ -605,16 +593,12 @@ export default function EmployeeExpenseDetail({
   const deleteDocument = async (docId: number) => {
     setDeletingDocId(docId);
     try {
-      const r = await fetch(`${API}/expenses/documents/${docId}`, {
-        method: "DELETE", headers: getAuthHeaders(),
-      });
-      if (r.ok) {
-        setConfirmDeleteDocId(null);
-        onDocRefreshNeeded();
-        // refresh validations (some may reference deleted doc)
-        const vr = await fetch(`${API}/expenses/${expenseId}/validations`, { headers: getAuthHeaders() });
-        if (vr.ok) setValidations(await vr.json());
-      }
+      await apiDelete(`/expenses/documents/${docId}`);
+      setConfirmDeleteDocId(null);
+      onDocRefreshNeeded();
+      // refresh validations (some may reference deleted doc)
+      const vr = await apiCall<ValidationResultRow[]>(`/expenses/${expenseId}/validations`).catch(() => []);
+      setValidations(vr);
     } finally { setDeletingDocId(null); }
   };
 
@@ -622,10 +606,7 @@ export default function EmployeeExpenseDetail({
   const saveTags = async (newTags: string[]) => {
     if (!expense) return;
     setActiveTags(newTags);
-    await fetch(`${API}/expenses/${expense.id}`, {
-      method: "PATCH", headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-      body: JSON.stringify({ tags: JSON.stringify(newTags) }),
-    });
+    await apiPatch(`/expenses/${expense.id}`, { tags: JSON.stringify(newTags) });
   };
 
   const addTag = (name: string) => {
@@ -664,10 +645,10 @@ export default function EmployeeExpenseDetail({
       }
     }));
     onDocRefreshNeeded();
-    const er = await fetch(`${API}/expenses/${expenseId}`, { headers: getAuthHeaders() });
-    if (er.ok) { const u: Expense = await er.json(); setExpense(u); onExpenseUpdated?.(u); }
-    const br = await fetch(`${API}/expenses/blockers/${expenseId}`, { headers: getAuthHeaders() });
-    if (br.ok) setExpenseBlockers(await br.json());
+    const u = await apiCall<Expense>(`/expenses/${expenseId}`).catch(() => null);
+    if (u) { setExpense(u); onExpenseUpdated?.(u); }
+    const br = await apiCall<BlockersResult>(`/expenses/blockers/${expenseId}`).catch(() => null);
+    if (br) setExpenseBlockers(br);
     setTimeout(() => setUploadQueue((prev) => prev.filter((e) => e.status !== "done")), 1500);
   };
 
@@ -681,18 +662,19 @@ export default function EmployeeExpenseDetail({
         .filter((row) => row.project_id || row.client_id || row.cost_center_id)
         .map((row) => ({ project_id: row.project_id, client_id: row.client_id, cost_center_id: row.cost_center_id, percent: parseFloat(row.percent) || 100 }));
       if (!items.length) return; // nothing selected yet, skip silently
-      const r = await fetch(`${API}/expenses/allocation-edit/${expenseId}`, {
-        method: "PUT", headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ items }),
-      });
-      if (!r.ok) { const b = await r.json().catch(() => ({})); setAllocSaveError(b?.detail ?? `Save failed (${r.status}).`); return; }
+      try {
+        await apiCall(`/expenses/allocation-edit/${expenseId}`, { method: "PUT", json: { items } });
+      } catch (e: any) {
+        setAllocSaveError(e?.body?.detail ?? e?.message ?? "Save failed.");
+        return;
+      }
       await loadAllocations(expenseId);
       const [br, ar] = await Promise.all([
-        fetch(`${API}/expenses/blockers/${expenseId}`, { headers: getAuthHeaders() }),
-        fetch(`${API}/expenses/actions/${expenseId}?portal_role=employee`, { headers: getAuthHeaders() }),
+        apiCall<BlockersResult>(`/expenses/blockers/${expenseId}`).catch(() => null),
+        apiCall<{ actions?: EmployeeActions | null }>(`/expenses/actions/${expenseId}?portal_role=employee`).catch(() => null),
       ]);
-      if (br.ok) setExpenseBlockers(await br.json());
-      if (ar.ok) { const d = await ar.json(); setEmployeeActions(d?.actions ?? null); }
+      if (br) setExpenseBlockers(br);
+      if (ar) setEmployeeActions(ar.actions ?? null);
     } finally { setSavingAllocation(false); }
   };
 
@@ -713,8 +695,8 @@ export default function EmployeeExpenseDetail({
     if (!expense) return;
     setDeletingDraft(true);
     try {
-      const r = await fetch(`${API}/expenses/${expense.id}`, { method: "DELETE", headers: getAuthHeaders() });
-      if (r.ok) onDeleted?.();
+      await apiDelete(`/expenses/${expense.id}`);
+      onDeleted?.();
     } catch { /* silent */ } finally { setDeletingDraft(false); }
   };
 
@@ -723,17 +705,13 @@ export default function EmployeeExpenseDetail({
     if (!expense) return;
     setSubmittingExpense(true); setSubmitError(null);
     try {
-      const r = await fetch(`${API}/expenses/review-actions/${expense.id}/submit`, { method: "POST", headers: getAuthHeaders() });
-      if (r.ok) {
-        const u = await r.json(); setExpense(u); onExpenseUpdated?.(u);
-        const ar = await fetch(`${API}/expenses/actions/${expense.id}?portal_role=employee`, { headers: getAuthHeaders() });
-        if (ar.ok) { const d = await ar.json(); setEmployeeActions(d?.actions ?? null); }
-      } else {
-        const b = await r.json().catch(() => ({}));
-        setSubmitError(b?.detail ?? `Submission failed (${r.status}).`);
-      }
-    } catch { setSubmitError(td("serverError")); }
-    finally { setSubmittingExpense(false); }
+      const u = await apiPost<Expense>(`/expenses/review-actions/${expense.id}/submit`);
+      setExpense(u); onExpenseUpdated?.(u);
+      const ar = await apiCall<{ actions?: EmployeeActions | null }>(`/expenses/actions/${expense.id}?portal_role=employee`).catch(() => null);
+      if (ar) setEmployeeActions(ar.actions ?? null);
+    } catch (e: any) {
+      setSubmitError(e?.body?.detail ?? e?.message ?? td("serverError"));
+    } finally { setSubmittingExpense(false); }
   };
 
   // ── Derived ────────────────────────────────────────────────────────────────
@@ -1410,16 +1388,10 @@ export default function EmployeeExpenseDetail({
                   if (!note || !expenseId) return;
                   setSavingNote(true);
                   try {
-                    const r = await fetch(`${API}/expenses/${expenseId}/policy-overrides`, {
-                      method: "POST",
-                      headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
-                      body: JSON.stringify({ rule_code: c.code, note }),
-                    });
-                    if (r.ok) {
-                      setEditingNote(false);
-                      setNoteDraft("");
-                      refreshChecks();
-                    }
+                    await apiPost(`/expenses/${expenseId}/policy-overrides`, { rule_code: c.code, note });
+                    setEditingNote(false);
+                    setNoteDraft("");
+                    refreshChecks();
                   } finally {
                     setSavingNote(false);
                   }
@@ -1427,11 +1399,8 @@ export default function EmployeeExpenseDetail({
 
                 const removeOverride = async () => {
                   if (!expenseId) return;
-                  const r = await fetch(
-                    `${API}/expenses/${expenseId}/policy-overrides/${encodeURIComponent(c.code)}`,
-                    { method: "DELETE", headers: getAuthHeaders() }
-                  );
-                  if (r.ok) refreshChecks();
+                  await apiDelete(`/expenses/${expenseId}/policy-overrides/${encodeURIComponent(c.code)}`);
+                  refreshChecks();
                 };
 
                 return (

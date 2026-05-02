@@ -6,7 +6,9 @@ import { cn } from "@/lib/cn";
 const BASE = cn(
   "w-full rounded-md border bg-white/[0.03] text-white/85",
   "border-white/10 placeholder:text-white/30",
-  "focus:outline-none focus:border-indigo-400/45 focus:bg-white/[0.05]",
+  "focus:outline-none focus:border-indigo-400/50 focus:bg-white/[0.05]",
+  "focus:ring-2 focus:ring-indigo-400/20 focus:ring-offset-0",
+  "transition-colors duration-150",
   "disabled:opacity-60 disabled:cursor-not-allowed",
 );
 
@@ -27,7 +29,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       className={cn(
         BASE,
         SIZE,
-        invalid && "border-red-500/50 focus:border-red-400/65",
+        invalid && "border-red-500/50 focus:border-red-400/65 focus:ring-red-400/20",
         className,
       )}
       {...rest}

@@ -3,13 +3,11 @@
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Bot, Zap, Loader2, AlertTriangle, AlertCircle, CheckCircle2 } from "lucide-react";
-import { getAuthHeaders } from "@/lib/session";
+import { apiPost } from "@/lib/api/client";
 import {
   getPortalConfigConflicts,
   type PortalConfigConflict,
 } from "@/lib/portal-config-conflicts";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 const COMPANY_SETUP_CODES = new Set([
   "MANAGER_FLOW_NO_MANAGERS",
@@ -303,20 +301,13 @@ export default function AdminCompanySetupCopilot({
     setApplied(false);
 
     try {
-      const res = await fetch(`${API}/ai/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({
-          system_prompt: buildSystemPrompt(text, setup, legalEntities, portalConfig),
-          prompt:        text,
-          context:       `company_id:${companyId}`,
-          locale,
-        }),
+      const data = await apiPost<{ content?: string }>(`/ai/chat`, {
+        system_prompt: buildSystemPrompt(text, setup, legalEntities, portalConfig),
+        prompt:        text,
+        context:       `company_id:${companyId}`,
+        locale,
       });
 
-      if (!res.ok) { setOffline(true); return; }
-
-      const data = await res.json();
       const raw: string = typeof data?.content === "string" ? data.content : "";
 
       const jsonStr = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();

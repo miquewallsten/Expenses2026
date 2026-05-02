@@ -6,13 +6,11 @@ import {
   Bot, Zap, Loader2, CheckCircle2,
   AlertTriangle, AlertCircle, HelpCircle, ChevronDown, ChevronRight, UserPlus,
 } from "lucide-react";
-import { getAuthHeaders } from "@/lib/session";
+import { apiCall, apiPost, HttpError } from "@/lib/api/client";
 import {
   getPortalConfigConflicts,
   type PortalConfigConflict,
 } from "@/lib/portal-config-conflicts";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -432,11 +430,8 @@ export default function AdminSetupOrchestratorPanel({
   // Fetch legal entities once on mount
   useEffect(() => {
     if (!companyId) return;
-    fetch(`${API}/admin/company-setup/${companyId}/legal-entities`, { headers: getAuthHeaders() })
-      .then((r) => r.ok ? r.json() : [])
-      .then((data: { id: number; entity_name: string; rfc?: string | null }[]) => {
-        if (Array.isArray(data)) setLegalEntities(data);
-      })
+    apiCall<{ id: number; entity_name: string; rfc?: string | null }[]>(`/admin/company-setup/${companyId}/legal-entities`)
+      .then((data) => { if (Array.isArray(data)) setLegalEntities(data); })
       .catch(() => {});
   }, [companyId]);
 
@@ -445,14 +440,12 @@ export default function AdminSetupOrchestratorPanel({
     if (!portalConfig || !companyId) return;
     const derived = portalConfig?.derived;
     if (derived?.manager_flow_enabled) {
-      fetch(`${API}/manager/queue/${companyId}`, { headers: getAuthHeaders() })
-        .then((r) => r.ok ? r.json() : null)
+      apiCall<{ summary?: { total_count?: number } }>(`/manager/queue/${companyId}`)
         .then((d) => { if (d?.summary?.total_count != null) setManagerQueueCount(d.summary.total_count); })
         .catch(() => {});
     }
     if (derived?.accounting_flow_enabled) {
-      fetch(`${API}/accounting/queue/${companyId}`, { headers: getAuthHeaders() })
-        .then((r) => r.ok ? r.json() : null)
+      apiCall<{ summary?: { total_count?: number } }>(`/accounting/queue/${companyId}`)
         .then((d) => { if (d?.summary?.total_count != null) setAccountingQueueCount(d.summary.total_count); })
         .catch(() => {});
     }
@@ -476,12 +469,10 @@ export default function AdminSetupOrchestratorPanel({
     const mergedAction = { ...action, params: mergedParams };
     updateMsg(msgId, (m) => ({ ...m, executions: { ...m.executions, [action.action_id]: { status: "running" } } }));
     try {
-      const res = await fetch(`${API}/admin/setup-orchestrator/execute/${companyId}`, {
-        method:  "POST",
-        headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
-        body:    JSON.stringify({ action: mergedAction }),
-      });
-      const data = await res.json();
+      const data = await apiPost<{ ok?: boolean; result?: any; error?: string }>(
+        `/admin/setup-orchestrator/execute/${companyId}`,
+        { action: mergedAction },
+      );
       updateMsg(msgId, (m) => ({
         ...m,
         executions: {
@@ -502,19 +493,12 @@ export default function AdminSetupOrchestratorPanel({
   async function handleApplyCategories(msgId: string, cats: GeneratedCategory[]) {
     updateMsg(msgId, (m) => ({ ...m, categoriesApplying: true, categoriesError: null }));
     try {
-      const res = await fetch(`${API}/admin/accounting-categories/apply/${companyId}`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body:    JSON.stringify({ items: cats }),
-      });
-      if (!res.ok) {
-        updateMsg(msgId, (m) => ({ ...m, categoriesApplying: false, categoriesError: `Apply failed (${res.status})` }));
-      } else {
-        updateMsg(msgId, (m) => ({ ...m, categoriesApplying: false, categoriesApplied: true }));
-        onRefreshPortalConfig?.();
-      }
-    } catch {
-      updateMsg(msgId, (m) => ({ ...m, categoriesApplying: false, categoriesError: "Could not reach server." }));
+      await apiPost(`/admin/accounting-categories/apply/${companyId}`, { items: cats });
+      updateMsg(msgId, (m) => ({ ...m, categoriesApplying: false, categoriesApplied: true }));
+      onRefreshPortalConfig?.();
+    } catch (err: any) {
+      const msg = err instanceof HttpError ? `Apply failed (${err.status})` : "Could not reach server.";
+      updateMsg(msgId, (m) => ({ ...m, categoriesApplying: false, categoriesError: msg }));
     }
   }
 
@@ -543,18 +527,14 @@ export default function AdminSetupOrchestratorPanel({
   async function handleSaveSummary(msgId: string, summary: string, notes: string) {
     updateMsg(msgId, (m) => ({ ...m, saving: true, saveError: null, saved: false }));
     try {
-      const res = await fetch(`${API}/admin/company-setup/${companyId}`, {
-        method:  "PUT",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body:    JSON.stringify({ ai_setup_last_summary: summary, ai_setup_notes: notes.trim() || null }),
+      await apiCall(`/admin/company-setup/${companyId}`, {
+        method: "PUT",
+        json: { ai_setup_last_summary: summary, ai_setup_notes: notes.trim() || null },
       });
-      if (!res.ok) {
-        updateMsg(msgId, (m) => ({ ...m, saving: false, saveError: `Save failed (${res.status})` }));
-      } else {
-        updateMsg(msgId, (m) => ({ ...m, saving: false, saved: true }));
-      }
-    } catch {
-      updateMsg(msgId, (m) => ({ ...m, saving: false, saveError: "Could not reach server." }));
+      updateMsg(msgId, (m) => ({ ...m, saving: false, saved: true }));
+    } catch (err: any) {
+      const msg = err instanceof HttpError ? `Save failed (${err.status})` : "Could not reach server.";
+      updateMsg(msgId, (m) => ({ ...m, saving: false, saveError: msg }));
     }
   }
 
@@ -586,14 +566,7 @@ export default function AdminSetupOrchestratorPanel({
       if (sessionId) body.session_id = sessionId;
       if (portalConfig && Object.keys(portalConfig).length > 0) body.current_portal_config = portalConfig;
 
-      const res = await fetch(`${API}/admin/setup-orchestrator/analyze/${companyId}`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body:    JSON.stringify(body),
-      });
-      if (!res.ok) { setApiError(`Server returned ${res.status}`); return; }
-
-      const data: AnalyzeResponse = await res.json();
+      const data: AnalyzeResponse = await apiPost(`/admin/setup-orchestrator/analyze/${companyId}`, body);
       if (data.session_id) setSessionId(data.session_id);
 
       const drafts: Record<string, Record<string, any>> = {};
@@ -601,8 +574,9 @@ export default function AdminSetupOrchestratorPanel({
 
       setMessages((prev) => [...prev, blankMsg({ role: "assistant", result: data, drafts })]);
       onAnalysisResult?.(data);
-    } catch {
-      setApiError("Could not reach the server.");
+    } catch (err: any) {
+      const msg = err instanceof HttpError ? `Server returned ${err.status}` : "Could not reach the server.";
+      setApiError(msg);
     } finally {
       setLoading(false);
     }

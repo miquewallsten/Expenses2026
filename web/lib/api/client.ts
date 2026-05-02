@@ -246,6 +246,15 @@ export function apiPost<T = unknown>(
   return apiCall<T>(path, { ...opts, method: "POST", json });
 }
 
+/** Convenience wrapper for typed JSON PUT. */
+export function apiPut<T = unknown>(
+  path: string,
+  json?: unknown,
+  opts: Omit<ApiCallOptions, "method" | "json"> = {},
+): Promise<T> {
+  return apiCall<T>(path, { ...opts, method: "PUT", json });
+}
+
 /** Convenience wrapper for typed JSON PATCH. */
 export function apiPatch<T = unknown>(
   path: string,

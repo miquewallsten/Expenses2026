@@ -5,7 +5,8 @@ export const dynamic = "force-dynamic";
 import { useCallback, useMemo, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useTranslations } from "next-intl";
-import { getAuthHeaders, getStoredSession } from "@/lib/session";
+import { apiCall, apiPost } from "@/lib/api/client";
+import { getStoredSession } from "@/lib/session";
 
 type ValidationResult = {
   id?: number;
@@ -84,8 +85,6 @@ function parseXmlExtracted(contentText: string): ExtractedData | undefined {
   };
 }
 
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
-
 async function getFileContent(file: File): Promise<string> {
   const lowerName = file.name.toLowerCase();
 
@@ -140,40 +139,21 @@ export default function EmployeeUploadPage() {
         const form = new FormData();
         form.append("company_id", "1");
         form.append("file", file, file.name);
-        const uploadRes = await fetch(`${API}/expenses/documents/upload`, {
+        const uploadedDoc = await apiCall<{ id: number }>("/expenses/documents/upload", {
           method: "POST",
-          headers: { ...getAuthHeaders() },
           body: form,
         });
-        if (!uploadRes.ok) {
-          const txt = await uploadRes.text();
-          throw new Error(`Upload failed: ${txt}`);
-        }
-        const uploadedDoc = await uploadRes.json();
 
         updateFile(localId, { id: uploadedDoc.id, status: "validating" });
 
         // Fetch document to parse XML extracted block
         let extractedData: ExtractedData | undefined;
-        const docRes = await fetch(`${API}/expenses/documents/${uploadedDoc.id}`, {
-          headers: { ...getAuthHeaders() },
-        });
-        if (docRes.ok) {
-          const doc = await docRes.json();
-          if (typeof doc.content_text === "string") {
-            extractedData = parseXmlExtracted(doc.content_text);
-          }
+        const doc = await apiCall<{ content_text?: string } | null>(`/expenses/documents/${uploadedDoc.id}`).catch(() => null);
+        if (doc && typeof doc.content_text === "string") {
+          extractedData = parseXmlExtracted(doc.content_text);
         }
 
-        const validationRes = await fetch(
-          `${API}/expenses/documents/${uploadedDoc.id}/validation-results`,
-          { headers: { ...getAuthHeaders() } }
-        );
-        if (!validationRes.ok) {
-          const txt = await validationRes.text();
-          throw new Error(`Validation lookup failed: ${txt}`);
-        }
-        const validationResults = await validationRes.json();
+        const validationResults = await apiCall<ValidationResult[]>(`/expenses/documents/${uploadedDoc.id}/validation-results`);
         const finalStatus = computeOverallStatus(validationResults);
 
         updateFile(localId, {
@@ -208,13 +188,10 @@ export default function EmployeeUploadPage() {
     if (!documentIds.length || submitting) return;
     setSubmitting(true);
     try {
-      const res = await fetch(`${API}/expenses/submissions/from-documents`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ company_id: getStoredSession()?.companyId, document_ids: documentIds }),
+      const data = await apiPost<{ report_id: number; documents_linked: number }>("/expenses/submissions/from-documents", {
+        company_id: getStoredSession()?.companyId,
+        document_ids: documentIds,
       });
-      if (!res.ok) throw new Error("Submission failed");
-      const data = await res.json();
       setSubmissionSuccess({ report_id: data.report_id, documents_linked: data.documents_linked });
       setFiles([]);
     } catch {

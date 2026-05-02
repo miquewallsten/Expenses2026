@@ -7,6 +7,7 @@ import {
   Sparkles, AlertCircle, FileSpreadsheet, Lock,
 } from "lucide-react";
 import { getAuthHeaders } from "@/lib/session";
+import { apiCall, apiPost, apiPatch, apiDelete } from "@/lib/api/client";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -47,39 +48,20 @@ function isKindActive(kind: Kind, raw: string | null | undefined): boolean {
 
 async function listDim(kind: Kind, companyId: number): Promise<DimensionRow[]> {
   const base = kind === "projects" ? "projects" : kind === "clients" ? "clients" : "cost-centers";
-  const res = await fetch(`${API}/expenses/${base}?company_id=${companyId}`, {
-    headers: getAuthHeaders(),
-  });
-  if (!res.ok) throw new Error(`${res.status}`);
-  return res.json();
+  return apiCall<DimensionRow[]>(`/expenses/${base}?company_id=${companyId}`);
 }
 
 async function createDim(kind: Kind, companyId: number, name: string, code: string): Promise<DimensionRow> {
   const base = kind === "projects" ? "projects" : kind === "clients" ? "clients" : "cost-centers";
-  const res = await fetch(`${API}/expenses/${base}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-    body: JSON.stringify({ company_id: companyId, name, code }),
-  });
-  if (!res.ok) throw new Error(`${res.status}`);
-  return res.json();
+  return apiPost<DimensionRow>(`/expenses/${base}`, { company_id: companyId, name, code });
 }
 
 async function patchDim(kind: Kind, id: number, data: Partial<DimensionRow>): Promise<void> {
-  const res = await fetch(`${API}/admin/dimensions/${kind}/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error(`${res.status}`);
+  await apiPatch(`/admin/dimensions/${kind}/${id}`, data);
 }
 
 async function deleteDim(kind: Kind, id: number): Promise<void> {
-  const res = await fetch(`${API}/admin/dimensions/${kind}/${id}`, {
-    method: "DELETE",
-    headers: getAuthHeaders(),
-  });
-  if (!res.ok && res.status !== 204) throw new Error(`${res.status}`);
+  await apiDelete(`/admin/dimensions/${kind}/${id}`);
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
@@ -498,13 +480,10 @@ function ImportDialog({
         .map((r) => ({ name: r.name ?? "", code: r.code ?? "" }))
         .filter((r) => r.name && r.code);
 
-      const commitRes = await fetch(`${API}/admin/dimensions/${kind}/import/commit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ company_id: companyId, rows }),
-      });
-      const body = await commitRes.json();
-      if (!commitRes.ok) throw new Error(body.detail ?? "commit failed");
+      const body = await apiPost<{ inserted: number; skipped_duplicates: number; errors: string[] }>(
+        `/admin/dimensions/${kind}/import/commit`,
+        { company_id: companyId, rows },
+      );
       setResult(body);
     } catch (e: any) {
       setErr(e?.message ?? "commit failed");

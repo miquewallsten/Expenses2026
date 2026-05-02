@@ -6,9 +6,8 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { ChevronLeft, Sparkles, Loader2, Check, AlertTriangle } from "lucide-react";
-import { getCurrentCompanyId, getAuthHeaders } from "@/lib/session";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { getCurrentCompanyId } from "@/lib/session";
+import { apiCall, apiPatch } from "@/lib/api/client";
 
 interface PolicyShape {
   company_id: number;
@@ -24,7 +23,10 @@ const PII_LEVELS = ["strict", "standard", "off"] as const;
 
 export default function AiPolicyPage() {
   const t = useTranslations("copilot.aiPolicy");
-  const [companyId, setCompanyId] = useState<number | null>(null);
+  const [companyId] = useState<number | null>(() => {
+    const cid = getCurrentCompanyId();
+    return cid ? Number(cid) : null;
+  });
   const [policy, setPolicy] = useState<PolicyShape | null>(null);
   const [draft, setDraft] = useState<Partial<PolicyShape>>({});
   const [loading, setLoading] = useState(true);
@@ -32,21 +34,12 @@ export default function AiPolicyPage() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const cid = getCurrentCompanyId();
-    setCompanyId(cid ? Number(cid) : null);
-  }, []);
-
   const load = useCallback(async () => {
     if (companyId == null) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API}/admin/ai-policy/${companyId}`, {
-        headers: { ...getAuthHeaders() },
-      });
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-      const body: PolicyShape = await res.json();
+      const body = await apiCall<PolicyShape>(`/admin/ai-policy/${companyId}`);
       setPolicy(body);
       setDraft({});
     } catch (e) {
@@ -56,7 +49,7 @@ export default function AiPolicyPage() {
     }
   }, [companyId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void load(); }, [load]);
 
   const merged: PolicyShape | null = policy
     ? { ...policy, ...draft } as PolicyShape
@@ -69,20 +62,7 @@ export default function AiPolicyPage() {
     setSaved(false);
     setError(null);
     try {
-      const res = await fetch(`${API}/admin/ai-policy/${companyId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify(draft),
-      });
-      if (!res.ok) {
-        let detail = res.statusText;
-        try {
-          const body = await res.json();
-          detail = typeof body?.detail === "string" ? body.detail : JSON.stringify(body);
-        } catch { /* keep statusText */ }
-        throw new Error(`${res.status} ${detail}`);
-      }
-      const body: PolicyShape = await res.json();
+      const body = await apiPatch<PolicyShape>(`/admin/ai-policy/${companyId}`, draft);
       setPolicy(body);
       setDraft({});
       setSaved(true);

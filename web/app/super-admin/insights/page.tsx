@@ -25,9 +25,8 @@ import {
   X,
   Mail,
 } from "lucide-react";
-import { getCurrentCompanyId, getAuthHeaders } from "@/lib/session";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { getCurrentCompanyId } from "@/lib/session";
+import { apiCall, apiPost } from "@/lib/api/client";
 
 interface Insight {
   id: number;
@@ -62,13 +61,8 @@ export default function InsightsPage() {
       setError(null);
       setLoading(true);
       try {
-        const url = `${API}/agent/insights/${cid}${refresh ? "?refresh=true" : ""}`;
-        const res = await fetch(url, { headers: { ...getAuthHeaders() } });
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(text || `${res.status}`);
-        }
-        const json = (await res.json()) as Insight[];
+        const url = `/agent/insights/${cid}${refresh ? "?refresh=true" : ""}`;
+        const json = await apiCall<Insight[]>(url);
         setRows(json);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Error");
@@ -89,14 +83,7 @@ export default function InsightsPage() {
       setRunning(true);
       setError(null);
       try {
-        const res = await fetch(
-          `${API}/agent/insights/run${sendDigest ? "?send_digest=true" : ""}`,
-          { method: "POST", headers: { ...getAuthHeaders() } },
-        );
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(text || `${res.status}`);
-        }
+        await apiPost(`/agent/insights/run${sendDigest ? "?send_digest=true" : ""}`);
         await load(companyId);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Error");
@@ -113,18 +100,7 @@ export default function InsightsPage() {
       setBusyId(insight.id);
       setError(null);
       try {
-        const res = await fetch(
-          `${API}/agent/insights/${companyId}/${insight.id}/status`,
-          {
-            method: "POST",
-            headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
-            body: JSON.stringify({ status }),
-          },
-        );
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(text || `${res.status}`);
-        }
+        await apiPost(`/agent/insights/${companyId}/${insight.id}/status`, { status });
         // remove from open list — backend filters status='open'
         setRows((prev) => prev.filter((r) => r.id !== insight.id));
       } catch (e) {

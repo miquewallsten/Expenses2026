@@ -38,9 +38,7 @@ import {
   X,
 } from "lucide-react";
 import { useUserContext } from "@/context/UserContext";
-import { getAuthHeaders } from "@/lib/session";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { apiCall, apiPost, apiPatch, apiDelete } from "@/lib/api/client";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -152,16 +150,12 @@ export default function AmexReconciliationModule() {
   const csvInputRef = useRef<HTMLInputElement>(null);
   const docsInputRef = useRef<HTMLInputElement>(null);
 
-  const headers = useMemo(() => ({ ...getAuthHeaders() }), []);
-
   // ── Fetchers ────────────────────────────────────────────────────────────────
 
   const loadStatements = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API}/amex/${companyId}/statements`, { headers });
-      if (!res.ok) throw new Error(await res.text());
-      const data: Statement[] = await res.json();
+      const data = await apiCall<Statement[]>(`/amex/${companyId}/statements`);
       setStatements(data);
       if (selectedId === null && data.length > 0) setSelectedId(data[0].id);
     } catch (e) {
@@ -169,41 +163,32 @@ export default function AmexReconciliationModule() {
     } finally {
       setLoading(false);
     }
-  }, [companyId, headers, selectedId]);
+  }, [companyId, selectedId]);
 
   const loadDetail = useCallback(
     async (id: number) => {
       try {
-        const res = await fetch(
-          `${API}/amex/${companyId}/statements/${id}`,
-          { headers },
-        );
-        if (!res.ok) throw new Error(await res.text());
-        const data: StatementDetail = await res.json();
+        const data = await apiCall<StatementDetail>(`/amex/${companyId}/statements/${id}`);
         setDetail(data);
       } catch (e) {
         setError(humanError(e));
       }
     },
-    [companyId, headers],
+    [companyId],
   );
 
   const loadAux = useCallback(async () => {
     try {
       const [pr, cg] = await Promise.all([
-        fetch(`${API}/projects/?company_id=${companyId}`, { headers }).then((r) =>
-          r.ok ? r.json() : [],
-        ),
-        fetch(`${API}/admin/accounting-categories/${companyId}`, { headers })
-          .then((r) => (r.ok ? r.json() : []))
-          .catch(() => []),
+        apiCall<Project[]>(`/projects/?company_id=${companyId}`).catch(() => []),
+        apiCall<Category[] | { items: Category[] }>(`/admin/accounting-categories/${companyId}`).catch(() => []),
       ]);
       setProjects(Array.isArray(pr) ? pr : []);
-      setCategories(Array.isArray(cg) ? cg : Array.isArray(cg?.items) ? cg.items : []);
+      setCategories(Array.isArray(cg) ? cg : Array.isArray((cg as { items?: Category[] })?.items) ? (cg as { items: Category[] }).items : []);
     } catch {
       // Silent — aux data is not critical
     }
-  }, [companyId, headers]);
+  }, [companyId]);
 
   useEffect(() => {
     loadStatements();
@@ -227,13 +212,10 @@ export default function AmexReconciliationModule() {
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await fetch(`${API}/amex/${companyId}/statements`, {
+      const created = await apiCall<Statement>(`/amex/${companyId}/statements`, {
         method: "POST",
-        headers,
         body: fd,
       });
-      if (!res.ok) throw new Error(await res.text());
-      const created: Statement = await res.json();
       await loadStatements();
       setSelectedId(created.id);
     } catch (e) {
@@ -250,11 +232,10 @@ export default function AmexReconciliationModule() {
     try {
       const fd = new FormData();
       Array.from(files).forEach((f) => fd.append("files", f));
-      const res = await fetch(
-        `${API}/amex/${companyId}/statements/${selectedId}/documents`,
-        { method: "POST", headers, body: fd },
-      );
-      if (!res.ok) throw new Error(await res.text());
+      await apiCall(`/amex/${companyId}/statements/${selectedId}/documents`, {
+        method: "POST",
+        body: fd,
+      });
       await loadDetail(selectedId);
       await loadStatements();
     } catch (e) {
@@ -269,11 +250,7 @@ export default function AmexReconciliationModule() {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(
-        `${API}/amex/${companyId}/statements/${selectedId}/auto-match`,
-        { method: "POST", headers },
-      );
-      if (!res.ok) throw new Error(await res.text());
+      await apiPost(`/amex/${companyId}/statements/${selectedId}/auto-match`);
       await loadDetail(selectedId);
       await loadStatements();
     } catch (e) {
@@ -286,15 +263,9 @@ export default function AmexReconciliationModule() {
   const manualMatch = async (lineId: number, documentId: number) => {
     if (!selectedId) return;
     try {
-      const res = await fetch(
-        `${API}/amex/${companyId}/statements/${selectedId}/lines/${lineId}/match`,
-        {
-          method: "POST",
-          headers: { ...headers, "Content-Type": "application/json" },
-          body: JSON.stringify({ document_id: documentId }),
-        },
-      );
-      if (!res.ok) throw new Error(await res.text());
+      await apiPost(`/amex/${companyId}/statements/${selectedId}/lines/${lineId}/match`, {
+        document_id: documentId,
+      });
       await loadDetail(selectedId);
       await loadStatements();
     } catch (e) {
@@ -305,11 +276,7 @@ export default function AmexReconciliationModule() {
   const unmatch = async (lineId: number) => {
     if (!selectedId) return;
     try {
-      const res = await fetch(
-        `${API}/amex/${companyId}/statements/${selectedId}/lines/${lineId}/unmatch`,
-        { method: "POST", headers },
-      );
-      if (!res.ok) throw new Error(await res.text());
+      await apiPost(`/amex/${companyId}/statements/${selectedId}/lines/${lineId}/unmatch`);
       await loadDetail(selectedId);
       await loadStatements();
     } catch (e) {
@@ -320,15 +287,7 @@ export default function AmexReconciliationModule() {
   const patchLine = async (lineId: number, patch: Partial<Line>) => {
     if (!selectedId) return;
     try {
-      const res = await fetch(
-        `${API}/amex/${companyId}/statements/${selectedId}/lines/${lineId}`,
-        {
-          method: "PATCH",
-          headers: { ...headers, "Content-Type": "application/json" },
-          body: JSON.stringify(patch),
-        },
-      );
-      if (!res.ok) throw new Error(await res.text());
+      await apiPatch(`/amex/${companyId}/statements/${selectedId}/lines/${lineId}`, patch);
       await loadDetail(selectedId);
       await loadStatements();
     } catch (e) {
@@ -339,18 +298,10 @@ export default function AmexReconciliationModule() {
   const bulkAssign = async (fields: Partial<Line>) => {
     if (!selectedId || selectedLines.size === 0) return;
     try {
-      const res = await fetch(
-        `${API}/amex/${companyId}/statements/${selectedId}/lines/bulk-assign`,
-        {
-          method: "POST",
-          headers: { ...headers, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            line_ids: Array.from(selectedLines),
-            ...fields,
-          }),
-        },
-      );
-      if (!res.ok) throw new Error(await res.text());
+      await apiPost(`/amex/${companyId}/statements/${selectedId}/lines/bulk-assign`, {
+        line_ids: Array.from(selectedLines),
+        ...fields,
+      });
       setSelectedLines(new Set());
       await loadDetail(selectedId);
       await loadStatements();
@@ -364,11 +315,7 @@ export default function AmexReconciliationModule() {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(
-        `${API}/amex/${companyId}/statements/${selectedId}/submit`,
-        { method: "POST", headers },
-      );
-      if (!res.ok) throw new Error(await res.text());
+      await apiPost(`/amex/${companyId}/statements/${selectedId}/submit`);
       await loadDetail(selectedId);
       await loadStatements();
     } catch (e) {
@@ -381,11 +328,7 @@ export default function AmexReconciliationModule() {
   const deleteDocument = async (docId: number) => {
     if (!selectedId) return;
     try {
-      const res = await fetch(
-        `${API}/amex/${companyId}/statements/${selectedId}/documents/${docId}`,
-        { method: "DELETE", headers },
-      );
-      if (!res.ok) throw new Error(await res.text());
+      await apiDelete(`/amex/${companyId}/statements/${selectedId}/documents/${docId}`);
       await loadDetail(selectedId);
       await loadStatements();
     } catch (e) {

@@ -2,9 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Send, Bot, X, Loader2 } from "lucide-react";
-import { getAuthHeaders } from "@/lib/session";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { apiPost } from "@/lib/api/client";
 
 interface Message {
   role: "user" | "assistant";
@@ -43,17 +41,12 @@ export default function LLMConfigAssistant({ currentProvider, currentModel }: LL
     setLoading(true);
 
     try {
-      const res = await fetch(`${API}/ai/llm-config-assistant`, {
-        method: "POST",
-        headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt: userMsg,
-          current_provider: currentProvider,
-          current_model: currentModel,
-          history: messages.map((m) => ({ role: m.role, content: m.content })),
-        }),
+      const data = await apiPost<{ content?: string }>(`/ai/llm-config-assistant`, {
+        prompt: userMsg,
+        current_provider: currentProvider,
+        current_model: currentModel,
+        history: messages.map((m) => ({ role: m.role, content: m.content })),
       });
-      const data = await res.json();
       const reply = data.content || "Sorry, I couldn't process that.";
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
     } catch (_err) {

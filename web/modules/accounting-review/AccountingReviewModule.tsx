@@ -25,7 +25,7 @@ import {
 import ReviewActionBar from "@/components/review/ReviewActionBar";
 import { useMyWorkContext } from "@/context/MyWorkContext";
 import { useUserContext } from "@/context/UserContext";
-import { getAuthHeaders } from "@/lib/session";
+import { apiCall, apiPost } from "@/lib/api/client";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
 import {
   MODULE_IDS,
@@ -33,8 +33,6 @@ import {
   type ExpenseDecision,
 } from "@/lib/my-work/expenseDecision";
 import StatusNextAction from "@/components/my-work/StatusNextAction";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 // ---------------------------------------- Types 
 interface Expense {
@@ -716,15 +714,12 @@ export default function AccountingReviewModule() {
     },
   }), [selected, actions, blockers, effectiveConfig, as, allocationPresence]);
 
-  // ---------------------------------------- Load queue 
+  // ---------------------------------------- Load queue
   const loadQueue = useCallback(async () => {
     setListLoading(true);
     try {
-      const data = await fetch(`${API}/accounting/queue/${cid}`, {
-        headers: { ...getAuthHeaders() },
-      })
-        .then((r) => r.ok ? r.json() : { items: [], summary: null })
-        .catch(() => ({ items: [], summary: null })) as { items: Expense[]; summary: QueueSummary };
+      const data = await apiCall<{ items: Expense[]; summary: QueueSummary | null }>(`/accounting/queue/${cid}`)
+        .catch(() => ({ items: [], summary: null }));
 
       const items: Expense[] = data.items ?? [];
       setExpenses(items);
@@ -743,7 +738,7 @@ export default function AccountingReviewModule() {
     }
   }, [effectiveConfig, loadQueue]);
 
-  // ---------------------------------------- Per-selection side-effects 
+  // ---------------------------------------- Per-selection side-effects
   useEffect(() => {
     if (!selected) {
       setActions(null);
@@ -763,12 +758,9 @@ export default function AccountingReviewModule() {
     let cancelled = false;
 
     Promise.all([
-      fetch(`${API}/expenses/actions/${selected.id}?portal_role=accounting`, { headers: { ...getAuthHeaders() } })
-        .then((r) => r.ok ? r.json() : null).catch(() => null),
-      fetch(`${API}/expenses/blockers/${selected.id}`, { headers: { ...getAuthHeaders() } })
-        .then((r) => r.ok ? r.json() : null).catch(() => null),
-      fetch(`${API}/expenses/allocations-summary/${selected.id}`, { headers: { ...getAuthHeaders() } })
-        .then((r) => r.ok ? r.json() : null).catch(() => null),
+      apiCall<{ actions: AccountingActions } | null>(`/expenses/actions/${selected.id}?portal_role=accounting`).catch(() => null),
+      apiCall<BlockersResult | null>(`/expenses/blockers/${selected.id}`).catch(() => null),
+      apiCall<{ presence: AllocationPresence } | null>(`/expenses/allocations-summary/${selected.id}`).catch(() => null),
     ]).then(([a, b, alloc]) => {
       if (cancelled) return;
       setActions(a?.actions ?? null);
@@ -779,15 +771,12 @@ export default function AccountingReviewModule() {
     return () => { cancelled = true; };
   }, [selected?.id]);
 
-  // ---------------------------------------- Post-action refresh 
+  // ---------------------------------------- Post-action refresh
   const postActionRefresh = useCallback(async (actedId: number) => {
     setListLoading(true);
     try {
-      const data = await fetch(`${API}/accounting/queue/${cid}`, {
-        headers: { ...getAuthHeaders() },
-      })
-        .then((r) => r.ok ? r.json() : { items: [], summary: null })
-        .catch(() => ({ items: [], summary: null })) as { items: Expense[]; summary: QueueSummary };
+      const data = await apiCall<{ items: Expense[]; summary: QueueSummary | null }>(`/accounting/queue/${cid}`)
+        .catch(() => ({ items: [], summary: null }));
 
       const items: Expense[] = data.items ?? [];
       setExpenses(items);
@@ -797,21 +786,21 @@ export default function AccountingReviewModule() {
 
       if (items.some((e) => e.id === actedId)) {
         setSelected(items.find((e) => e.id === actedId)!);
-        const ar = await fetch(`${API}/expenses/actions/${actedId}?portal_role=accounting`, { headers: { ...getAuthHeaders() } });
-        if (ar.ok) { const ad = await ar.json(); setActions(ad?.actions ?? null); }
+        const ad = await apiCall<{ actions: AccountingActions } | null>(`/expenses/actions/${actedId}?portal_role=accounting`).catch(() => null);
+        setActions(ad?.actions ?? null);
       } else {
         const oldIdx = expensesRef.current.findIndex((e) => e.id === actedId);
         const next   = items[oldIdx] ?? items[Math.max(0, oldIdx - 1)] ?? items[0];
         setSelected(next);
-        const ar = await fetch(`${API}/expenses/actions/${next.id}?portal_role=accounting`, { headers: { ...getAuthHeaders() } });
-        if (ar.ok) { const ad = await ar.json(); setActions(ad?.actions ?? null); }
+        const ad = await apiCall<{ actions: AccountingActions } | null>(`/expenses/actions/${next.id}?portal_role=accounting`).catch(() => null);
+        setActions(ad?.actions ?? null);
       }
     } finally {
       setListLoading(false);
     }
   }, [cid]);
 
-  // ---------------------------------------- Actions 
+  // ---------------------------------------- Actions
   const handleAction = useCallback(async (endpoint: string, label: string) => {
     if (!selected) return;
     // Phase 4.5: prompt for a rejection/return comment so the reviewer's
@@ -831,44 +820,30 @@ export default function AccountingReviewModule() {
     setActing(true);
     setActionError(null);
     try {
-      const r = await fetch(`${API}/expenses/review-actions/${selected.id}/${endpoint}`, {
-        method: "POST",
-        headers: comment != null
-          ? { ...getAuthHeaders(), "Content-Type": "application/json" }
-          : { ...getAuthHeaders() },
-        body: comment != null ? JSON.stringify({ comment }) : undefined,
-      });
-      if (r.ok) {
-        await postActionRefresh(selected.id);
+      if (comment != null) {
+        await apiPost(`/expenses/review-actions/${selected.id}/${endpoint}`, { comment });
       } else {
-        const body = await r.json().catch(() => ({}));
-        setActionError((body as { detail?: string })?.detail ?? `${label} failed (${r.status}).`);
+        await apiPost(`/expenses/review-actions/${selected.id}/${endpoint}`);
       }
-    } catch {
-      setActionError(tm("serverError"));
+      await postActionRefresh(selected.id);
+    } catch (e) {
+      const err = e as { body?: { detail?: string }; message?: string };
+      setActionError(err?.body?.detail ?? err?.message ?? `${label} failed.`);
     } finally {
       setActing(false);
     }
-  }, [selected, postActionRefresh]);
+  }, [selected, postActionRefresh, tm]);
 
   const handleSaveAccountCode = useCallback(async () => {
     if (!selected) return;
     setCodesSaving(true);
     setCodesError(null);
     try {
-      const r = await fetch(`${API}/accounting/work/${selected.id}/assign-account-code`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body:    JSON.stringify({ account_code: accountCodeDraft }),
-      });
-      if (r.ok) {
-        await postActionRefresh(selected.id);
-      } else {
-        const body = await r.json().catch(() => ({}));
-        setCodesError((body as { detail?: string })?.detail ?? `Save failed (${r.status}).`);
-      }
-    } catch {
-      setCodesError(tm("serverError"));
+      await apiPost(`/accounting/work/${selected.id}/assign-account-code`, { account_code: accountCodeDraft });
+      await postActionRefresh(selected.id);
+    } catch (e) {
+      const err = e as { body?: { detail?: string }; message?: string };
+      setCodesError(err?.body?.detail ?? err?.message ?? "Save failed.");
     } finally {
       setCodesSaving(false);
     }
@@ -879,18 +854,12 @@ export default function AccountingReviewModule() {
     setCodesSaving(true);
     setCodesError(null);
     try {
-      const r = await fetch(`${API}/accounting/work/${selected.id}/clear-account-code`, {
-        method: "POST", headers: { ...getAuthHeaders() },
-      });
-      if (r.ok) {
-        setAccountCodeDraft("");
-        await postActionRefresh(selected.id);
-      } else {
-        const body = await r.json().catch(() => ({}));
-        setCodesError((body as { detail?: string })?.detail ?? `Clear failed (${r.status}).`);
-      }
-    } catch {
-      setCodesError(tm("serverError"));
+      await apiPost(`/accounting/work/${selected.id}/clear-account-code`);
+      setAccountCodeDraft("");
+      await postActionRefresh(selected.id);
+    } catch (e) {
+      const err = e as { body?: { detail?: string }; message?: string };
+      setCodesError(err?.body?.detail ?? err?.message ?? "Clear failed.");
     } finally {
       setCodesSaving(false);
     }
@@ -902,17 +871,11 @@ export default function AccountingReviewModule() {
     setPolizaResult(null);
     setPolizaError(null);
     try {
-      const r = await fetch(`${API}/accounting/work/${selected.id}/generate-poliza`, {
-        method: "POST", headers: { ...getAuthHeaders() },
-      });
-      if (r.ok) {
-        setPolizaResult(await r.json());
-      } else {
-        const body = await r.json().catch(() => ({}));
-        setPolizaError((body as { detail?: string })?.detail ?? `Generation failed (${r.status}).`);
-      }
-    } catch {
-      setPolizaError(tm("serverError"));
+      const result = await apiPost<PolizaResult>(`/accounting/work/${selected.id}/generate-poliza`);
+      setPolizaResult(result);
+    } catch (e) {
+      const err = e as { body?: { detail?: string }; message?: string };
+      setPolizaError(err?.body?.detail ?? err?.message ?? "Generation failed.");
     } finally {
       setPolizaGenerating(false);
     }
