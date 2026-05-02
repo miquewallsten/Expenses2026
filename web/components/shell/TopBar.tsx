@@ -36,7 +36,7 @@ export default function TopBar({ title, portal, onMenuOpen, onAiOpen }: TopBarPr
   };
 
   return (
-    <header className="relative flex h-11 shrink-0 items-stretch border-b border-white/[0.07] bg-gradient-to-b from-zinc-900 to-zinc-950 md:h-9">
+    <header className="relative flex h-11 shrink-0 items-stretch border-b border-[var(--border-subtle)] bg-[var(--surface-1)] md:h-9">
 
       {onMenuOpen && (
         <button
@@ -44,13 +44,13 @@ export default function TopBar({ title, portal, onMenuOpen, onAiOpen }: TopBarPr
           onClick={onMenuOpen}
           title={t("openNavigation")}
           aria-label={t("openNavigation")}
-          className="flex w-11 items-center justify-center border-r border-white/[0.05] text-white/40 transition-colors hover:bg-white/[0.05] hover:text-white/65 md:hidden"
+          className="flex w-11 items-center justify-center border-r border-[var(--border-hairline)] text-white/40 transition-colors hover:bg-white/[0.05] hover:text-white/65 md:hidden"
         >
           <Menu className="h-4 w-4" />
         </button>
       )}
 
-      <div className="hidden w-48 shrink-0 flex-col justify-center border-r border-white/[0.05] px-3.5 md:flex">
+      <div className="hidden w-48 shrink-0 flex-col justify-center border-r border-[var(--border-hairline)] px-3.5 md:flex">
         <span className="truncate text-[10px] font-bold uppercase tracking-widest text-white/60">
           {title}
         </span>
@@ -75,14 +75,14 @@ export default function TopBar({ title, portal, onMenuOpen, onAiOpen }: TopBarPr
           <input
             type="search"
             placeholder={tc("search")}
-            className="h-[30px] w-full rounded border border-white/[0.09] bg-white/[0.04] pl-7 pr-3 text-[11px] text-white/70 placeholder-white/28 outline-none transition-all focus:border-indigo-500/40 focus:bg-indigo-950/15 focus:ring-1 focus:ring-indigo-500/15"
+            className="h-[30px] w-full rounded border border-[var(--border-standard)] bg-[var(--surface-2)] pl-7 pr-3 text-[11px] text-white/70 placeholder-white/28 outline-none transition-all focus:border-indigo-500/40 focus:bg-indigo-950/15 focus:ring-1 focus:ring-indigo-500/15"
           />
         </div>
       </div>
 
       <div className="flex-1 md:hidden" />
 
-      <div className="flex items-stretch border-l border-white/[0.05]">
+      <div className="flex items-stretch border-l border-[var(--border-hairline)]">
 
         {onAiOpen && (
           <button
@@ -90,7 +90,7 @@ export default function TopBar({ title, portal, onMenuOpen, onAiOpen }: TopBarPr
             onClick={onAiOpen}
             title={t("openAI")}
             aria-label={t("openAI")}
-            className="flex w-10 items-center justify-center border-r border-white/[0.05] text-white/28 transition-colors hover:bg-white/[0.04] hover:text-indigo-300/70 lg:hidden"
+            className="flex w-10 items-center justify-center border-r border-[var(--border-hairline)] text-white/28 transition-colors hover:bg-white/[0.04] hover:text-indigo-300/70 lg:hidden"
           >
             <Bot className="h-3.5 w-3.5" />
           </button>
@@ -101,7 +101,7 @@ export default function TopBar({ title, portal, onMenuOpen, onAiOpen }: TopBarPr
           onClick={() => setSettingsOpen(true)}
           title={tn("settings")}
           aria-label={tn("settings")}
-          className="hidden w-8 items-center justify-center border-r border-white/[0.05] text-white/28 transition-colors hover:bg-white/[0.04] hover:text-white/55 md:flex"
+          className="hidden w-8 items-center justify-center border-r border-[var(--border-hairline)] text-white/28 transition-colors hover:bg-white/[0.04] hover:text-white/55 md:flex"
         >
           <Settings className="h-3.5 w-3.5" />
         </button>
@@ -112,7 +112,7 @@ export default function TopBar({ title, portal, onMenuOpen, onAiOpen }: TopBarPr
           onClick={handleLogout}
           title={t("logOut")}
           aria-label={t("logOut")}
-          className="flex w-10 items-center justify-center border-r border-white/[0.05] text-white/28 transition-colors hover:bg-white/[0.04] hover:text-white/55 md:w-8"
+          className="flex w-10 items-center justify-center border-r border-[var(--border-hairline)] text-white/28 transition-colors hover:bg-white/[0.04] hover:text-white/55 md:w-8"
         >
           <LogOut className="h-3.5 w-3.5" />
         </button>
@@ -122,7 +122,7 @@ export default function TopBar({ title, portal, onMenuOpen, onAiOpen }: TopBarPr
             href="/super-admin"
             title="Super Admin"
             aria-label="Super Admin"
-            className="hidden items-center gap-1.5 border-r border-white/[0.05] px-3 text-rose-300/70 [html.light_&]:text-rose-600/80 transition-colors hover:bg-rose-500/[0.08] [html.light_&]:hover:bg-rose-500/[0.12] hover:text-rose-200 [html.light_&]:hover:text-rose-700 md:flex"
+            className="hidden items-center gap-1.5 border-r border-[var(--border-hairline)] px-3 text-rose-300/70 [html.light_&]:text-rose-600/80 transition-colors hover:bg-rose-500/[0.08] [html.light_&]:hover:bg-rose-500/[0.12] hover:text-rose-200 [html.light_&]:hover:text-rose-700 md:flex"
           >
             <Shield className="h-3.5 w-3.5" />
             <span className="text-[9px] font-bold uppercase tracking-widest">Super</span>

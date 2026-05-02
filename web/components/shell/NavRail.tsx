@@ -73,15 +73,15 @@ export default function NavRail({ collapsed, onToggle, items, hideToggle = false
 
   return (
     <nav
-      className={`flex shrink-0 flex-col overflow-hidden bg-zinc-950 ${
+      className={`flex shrink-0 flex-col overflow-hidden bg-[var(--surface-1)] ${
         fullWidth
           ? "w-full"
-          : `border-r border-white/[0.06] transition-[width] duration-200 ${collapsed ? "w-[72px]" : "w-[260px]"}`
+          : `border-r border-[var(--border-subtle)] transition-[width] duration-200 ${collapsed ? "w-[56px]" : "w-[200px]"}`
       }`}
     >
       {/* Header bar — hidden when fullWidth and no portal items */}
       {!(fullWidth && groups.length === 0) && (
-      <div className="flex h-10 shrink-0 items-center gap-1.5 border-b border-white/[0.06] px-2">
+      <div className="flex h-9 shrink-0 items-center gap-1.5 border-b border-[var(--border-subtle)] px-2">
         {!collapsed && (
           logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -177,7 +177,7 @@ export default function NavRail({ collapsed, onToggle, items, hideToggle = false
         </div>
         {footerSlot && (
           <>
-            {groups.length > 0 && <div className="mx-2 shrink-0 border-t border-white/[0.06]" />}
+            {groups.length > 0 && <div className="mx-2 shrink-0 border-t border-[var(--border-subtle)]" />}
             <div className="min-h-0 flex-1 overflow-y-auto">{footerSlot}</div>
           </>
         )}
@@ -185,7 +185,7 @@ export default function NavRail({ collapsed, onToggle, items, hideToggle = false
 
       {/* Settings/help footer — hidden when fullWidth and no portal items */}
       {!(fullWidth && groups.length === 0) && (
-      <div className={`shrink-0 space-y-px border-t border-white/[0.05] py-3 ${collapsed ? "px-2" : "px-2.5"}`}>
+      <div className={`shrink-0 space-y-px border-t border-[var(--border-hairline)] py-3 ${collapsed ? "px-2" : "px-2.5"}`}>
         <Link
           href="/help"
           title={collapsed ? t("help") : undefined}
