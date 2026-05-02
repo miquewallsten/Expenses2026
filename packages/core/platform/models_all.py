@@ -10,6 +10,9 @@ conftest anymore — import this module instead.
 
 # Core platform
 from packages.core.platform.models import Company  # noqa: F401
+from packages.core.platform.models_platform import (  # noqa: F401
+    PlatformTenant, PlatformLLMProvider, PlatformAgentDefinition, PlatformUsageLog,
+)
 from packages.core.platform.models_user import User, MagicLinkToken  # noqa: F401
 from packages.core.platform.models_user_notification_pref import (  # noqa: F401
     UserNotificationPreference,
