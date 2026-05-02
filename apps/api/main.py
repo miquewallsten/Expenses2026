@@ -331,6 +331,10 @@ from packages.modules.admin.api.routing_rules_router import (  # noqa: E402
 app.include_router(routing_rules_router)
 app.include_router(agent_router)
 app.include_router(agent_push_router)
+from packages.modules.agent.api.platform_router import (  # noqa: E402
+    router as agent_platform_router,
+)
+app.include_router(agent_platform_router)
 app.include_router(mywork_router)
 app.include_router(super_admin_router)
 app.include_router(amex_router)
