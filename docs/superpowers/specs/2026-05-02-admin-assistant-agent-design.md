@@ -305,16 +305,16 @@ Each agent has a restricted tool set defined in `platform_agent_definitions.allo
 
 ### Tenant-Scoped Keys
 
-Memory keys are namespaced by company_id to prevent cross-tenant access:
+Memory rows are isolated by `company_id` column with unique constraint on `(company_id, agent_key, key)`. The key field does NOT need a company_id prefix — the database enforces isolation:
 
 ```python
-# Correct: scoped to company
-key = f"company:{company_id}:preferred_account_for_{category}"
+# Key is simple — company_id is a separate column
+key = f"preferred_account_for_{category}"
 value = "601-01-000"
-memory.save(company_id, agent_key, key, value)
+memory.save(company_id=company_id, agent_key="accountant_work", key=key, value=value)
 
-# Incorrect: global (forbidden)
-key = "preferred_account_for_office_supplies"  # Cross-tenant leak risk
+# Query automatically scopes by company_id
+memory.get(company_id=company_id, agent_key="accountant_work", key=key)
 ```
 
 ### Memory Categories
