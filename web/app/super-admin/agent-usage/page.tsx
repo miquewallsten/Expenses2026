@@ -20,9 +20,8 @@ import {
   AlertTriangle,
   RefreshCw,
 } from "lucide-react";
-import { getCurrentCompanyId, getAuthHeaders } from "@/lib/session";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { getCurrentCompanyId } from "@/lib/session";
+import { apiCall } from "@/lib/api/client";
 
 interface RollupRow<K extends string> {
   count: number;
@@ -68,15 +67,8 @@ export default function AgentUsagePage() {
     setLoading(true);
     setError(null);
     try {
-      const r = await fetch(
-        `${API}/agent/usage/${companyId}/rollup?days=${days}`,
-        { headers: getAuthHeaders() },
-      );
-      if (!r.ok) {
-        const body = await r.json().catch(() => ({}));
-        throw new Error((body as { detail?: string })?.detail ?? `HTTP ${r.status}`);
-      }
-      setData(await r.json());
+      const data = await apiCall<Rollup>(`/agent/usage/${companyId}/rollup?days=${days}`);
+      setData(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {

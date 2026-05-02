@@ -4,10 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useLocale, type Locale } from "@/context/LocaleContext";
-import { getAuthHeaders } from "@/lib/session";
+import { apiCall, apiPatch } from "@/lib/api/client";
 import { useTheme, type Theme } from "@/components/shell/ThemeProvider";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 const NOTIFICATION_EVENT_TYPES = [
   "expense.submitted",
@@ -39,11 +37,7 @@ function NotificationPreferences() {
     let cancelled = false;
     void (async () => {
       try {
-        const res = await fetch(`${API}/me/notification-preferences`, {
-          headers: { ...getAuthHeaders() },
-        });
-        if (!res.ok) throw new Error(await res.text());
-        const data = (await res.json()) as NotificationPreference[];
+        const data = await apiCall<NotificationPreference[]>("/me/notification-preferences");
         if (cancelled) return;
         const map: Record<string, NotificationPreference> = {};
         for (const r of data) map[r.event_type] = r;
@@ -74,13 +68,10 @@ function NotificationPreferences() {
       setBusy(`${event_type}:${field}`);
       setError(null);
       try {
-        const res = await fetch(`${API}/me/notification-preferences`, {
-          method: "PATCH",
-          headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
-          body: JSON.stringify({ event_type, [field]: next[field] }),
-        });
-        if (!res.ok) throw new Error(await res.text());
-        const saved = (await res.json()) as NotificationPreference;
+        const saved = await apiPatch<NotificationPreference>(
+          "/me/notification-preferences",
+          { event_type, [field]: next[field] },
+        );
         setRows((prev) => ({ ...prev, [event_type]: saved }));
       } catch (e) {
         setError(e instanceof Error ? e.message : "Error");

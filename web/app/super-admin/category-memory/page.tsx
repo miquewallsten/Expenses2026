@@ -22,9 +22,8 @@ import {
   Trash2,
   Wand2,
 } from "lucide-react";
-import { getCurrentCompanyId, getAuthHeaders } from "@/lib/session";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { getCurrentCompanyId } from "@/lib/session";
+import { apiCall, apiPost, apiDelete } from "@/lib/api/client";
 
 interface FeedbackRow {
   id: number;
@@ -70,11 +69,8 @@ export default function CategoryMemoryPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API}/admin/category-memory/${cid}?limit=100`, {
-        headers: { ...getAuthHeaders() },
-      });
-      if (!res.ok) throw new Error((await res.text()) || `${res.status}`);
-      setData((await res.json()) as ListResponse);
+      const data = await apiCall<ListResponse>(`/admin/category-memory/${cid}?limit=100`);
+      setData(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
     } finally {
@@ -93,11 +89,7 @@ export default function CategoryMemoryPage() {
       setBusyId(row.id);
       setError(null);
       try {
-        const res = await fetch(
-          `${API}/admin/category-memory/${companyId}/${row.id}`,
-          { method: "DELETE", headers: { ...getAuthHeaders() } },
-        );
-        if (!res.ok) throw new Error((await res.text()) || `${res.status}`);
+        await apiDelete(`/admin/category-memory/${companyId}/${row.id}`);
         setData((prev) =>
           prev
             ? {
@@ -122,16 +114,10 @@ export default function CategoryMemoryPage() {
     setError(null);
     setSuggestion(undefined);
     try {
-      const res = await fetch(
-        `${API}/admin/category-memory/${companyId}/suggest`,
-        {
-          method: "POST",
-          headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
-          body: JSON.stringify({ description: probeText.trim() }),
-        },
+      const body = await apiPost<{ suggestion: Suggestion | null }>(
+        `/admin/category-memory/${companyId}/suggest`,
+        { description: probeText.trim() },
       );
-      if (!res.ok) throw new Error((await res.text()) || `${res.status}`);
-      const body = (await res.json()) as { suggestion: Suggestion | null };
       setSuggestion(body.suggestion);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");

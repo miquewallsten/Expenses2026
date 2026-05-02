@@ -3,13 +3,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Save, Loader2, CheckCircle2, Sparkles, AlertTriangle, AlertCircle } from "lucide-react";
-import { getAuthHeaders } from "@/lib/session";
+import { apiCall } from "@/lib/api/client";
 import {
   getPortalConfigConflicts,
   type PortalConfigConflict,
 } from "@/lib/portal-config-conflicts";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 interface Props {
   companyId: number;
@@ -267,13 +265,10 @@ export default function AdminApprovalSetupStudio({
     setError(null);
     setSaved(false);
     try {
-      const res = await fetch(`${API}/admin/approval-setup/${companyId}`, {
+      const updated = await apiCall(`/admin/approval-setup/${companyId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify(form),
+        json: form,
       });
-      if (!res.ok) throw new Error(`${res.status}`);
-      const updated = await res.json();
       setDirty(false);
       setSaved(true);
       setAiDrafted(false);

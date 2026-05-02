@@ -24,9 +24,9 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
-import { getCurrentCompanyId, getAuthHeaders } from "@/lib/session";
+import { getCurrentCompanyId } from "@/lib/session";
+import { apiCall } from "@/lib/api/client";
 
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 const PAGE_SIZE = 50;
 
 interface AuditRow {
@@ -76,11 +76,8 @@ export default function AuditLogPage() {
 
   const loadActions = useCallback(async (cid: number) => {
     try {
-      const res = await fetch(`${API}/admin/audit-log/${cid}/actions`, {
-        headers: { ...getAuthHeaders() },
-      });
-      if (!res.ok) return;
-      setActions(await res.json());
+      const data = await apiCall<string[]>(`/admin/audit-log/${cid}/actions`);
+      setActions(data);
     } catch {
       // non-fatal — pills just render empty
     }
@@ -96,11 +93,7 @@ export default function AuditLogPage() {
         qs.set("limit", String(PAGE_SIZE));
         if (opts.cursor) qs.set("cursor", String(opts.cursor));
         if (opts.filter) qs.set("action", opts.filter);
-        const res = await fetch(`${API}/admin/audit-log/${cid}?${qs.toString()}`, {
-          headers: { ...getAuthHeaders() },
-        });
-        if (!res.ok) throw new Error((await res.text()) || `${res.status}`);
-        const body = (await res.json()) as AuditPage;
+        const body = await apiCall<AuditPage>(`/admin/audit-log/${cid}?${qs.toString()}`);
         setRows((prev) => (opts.append ? [...prev, ...body.rows] : body.rows));
         setCursor(body.next_cursor);
         setHasMore(body.next_cursor !== null);

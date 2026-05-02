@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Bot, CheckCircle2, Send, TriangleAlert } from "lucide-react";
 import { useMyWorkContext } from "@/context/MyWorkContext";
+import { apiCall } from "@/lib/api/client";
 import { getAuthHeaders } from "@/lib/session";
 import {
   MODULE_IDS,
@@ -315,12 +316,11 @@ export default function MyWorkAssistant() {
 
   // AI status (once on mount)
   useEffect(() => {
-    fetch(`${API}/ai/status`, { headers: getAuthHeaders() })
-      .then((r) => r.ok ? r.json() : null)
-      .then((d) => setAiStatus(d
-        ? { available: d.available, active_model: d.active_model ?? null }
-        : { available: false, active_model: null }
-      ))
+    apiCall<{ available: boolean; active_model?: string | null }>("/ai/status")
+      .then((d) => setAiStatus({
+        available: d.available,
+        active_model: d.active_model ?? null,
+      }))
       .catch(() => setAiStatus({ available: false, active_model: null }));
   }, []);
 
@@ -400,15 +400,15 @@ export default function MyWorkAssistant() {
       };
 
       Promise.all([
-        fetch(`${API}/ai/review-expense`, {
-          method: "POST", headers, signal: ctrl.signal,
-          body: JSON.stringify({ ...payload, locale }),
-        }).then((r) => r.ok ? r.json() : null).catch(() => null),
+        apiCall<{ response?: string; content?: string; message?: string } | null>(
+          "/ai/review-expense",
+          { method: "POST", json: { ...payload, locale }, signal: ctrl.signal },
+        ).catch(() => null),
 
-        fetch(`${API}/ai/next-action`, {
-          method: "POST", headers, signal: ctrl.signal,
-          body: JSON.stringify({ ...payload, locale }),
-        }).then((r) => r.ok ? r.json() : null).catch(() => null),
+        apiCall<{ response?: string; content?: string; message?: string } | null>(
+          "/ai/next-action",
+          { method: "POST", json: { ...payload, locale }, signal: ctrl.signal },
+        ).catch(() => null),
       ])
         .then(([rev, nxt]) => {
           if (ctrl.signal.aborted) return;

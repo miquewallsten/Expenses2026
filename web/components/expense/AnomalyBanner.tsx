@@ -11,9 +11,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { AlertTriangle, Info } from "lucide-react";
-import { getAuthHeaders } from "@/lib/session";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { apiPost } from "@/lib/api/client";
 
 interface AnomalyFlag {
   kind: string;
@@ -43,18 +41,13 @@ export default function AnomalyBanner({
   useEffect(() => {
     if (!expenseId || !amount || amount <= 0) return;
     let cancelled = false;
-    fetch(`${API}/expenses/anomalies/check`, {
-      method: "POST",
-      headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        expense_id: expenseId,
-        amount,
-        category_code: categoryCode,
-        expense_date: expenseDate,
-      }),
+    apiPost<{ flags: AnomalyFlag[]; has_alert: boolean }>("/expenses/anomalies/check", {
+      expense_id: expenseId,
+      amount,
+      category_code: categoryCode,
+      expense_date: expenseDate,
     })
-      .then((r) => (r.ok ? r.json() : { flags: [], has_alert: false }))
-      .then((d: { flags: AnomalyFlag[]; has_alert: boolean }) => {
+      .then((d) => {
         if (cancelled) return;
         setFlags(d.flags ?? []);
         setHasAlert(Boolean(d.has_alert));

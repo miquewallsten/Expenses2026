@@ -23,9 +23,7 @@ import {
   Coins,
   PlayCircle,
 } from "lucide-react";
-import { getAuthHeaders } from "@/lib/session";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { apiCall, apiPost } from "@/lib/api/client";
 
 interface CancelledRow {
   id: number;
@@ -56,14 +54,8 @@ export default function CfdiWatcherPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API}/expenses/cfdi/cancelled`, {
-        headers: { ...getAuthHeaders() },
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || `${res.status}`);
-      }
-      setRows((await res.json()) as CancelledRow[]);
+      const data = await apiCall<CancelledRow[]>("/expenses/cfdi/cancelled");
+      setRows(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
     } finally {
@@ -80,18 +72,10 @@ export default function CfdiWatcherPage() {
       setBusyId(row.id);
       setError(null);
       try {
-        const res = await fetch(`${API}/expenses/cfdi/recheck/${row.id}`, {
-          method: "POST",
-          headers: { ...getAuthHeaders() },
-        });
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(text || `${res.status}`);
-        }
-        const body = (await res.json()) as {
+        const body = await apiPost<{
           cfdi_status: string;
           cfdi_last_checked_at: string;
-        };
+        }>(`/expenses/cfdi/recheck/${row.id}`);
         // If still Cancelado, just refresh timestamp; else drop from list.
         if (body.cfdi_status === "Cancelado") {
           setRows((prev) =>
@@ -118,19 +102,11 @@ export default function CfdiWatcherPage() {
     setBatchSummary(null);
     setError(null);
     try {
-      const res = await fetch(`${API}/expenses/cfdi/recheck-pending`, {
-        method: "POST",
-        headers: { ...getAuthHeaders() },
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || `${res.status}`);
-      }
-      const body = (await res.json()) as {
+      const body = await apiPost<{
         checked: number;
         flipped: number;
         skipped: number;
-      };
+      }>("/expenses/cfdi/recheck-pending");
       setBatchSummary({
         checked: body.checked,
         flipped: body.flipped,
