@@ -394,11 +394,6 @@ export default function MyWorkAssistant() {
 
       const payload = buildInsightPayload(dec.assistantContext, extra);
 
-      const headers = {
-        "Content-Type": "application/json",
-        ...getAuthHeaders(),
-      };
-
       Promise.all([
         apiCall<{ response?: string; content?: string; message?: string } | null>(
           "/ai/review-expense",
