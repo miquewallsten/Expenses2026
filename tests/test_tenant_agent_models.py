@@ -4,6 +4,7 @@
 import json
 import pytest
 from datetime import datetime
+from sqlalchemy.exc import IntegrityError
 
 from packages.modules.agent.models_tenant import (
     TenantAgentSession,
@@ -91,8 +92,9 @@ def test_tenant_memory_unique_key(db_session):
     )
     db_session.add(memory3)
 
-    with pytest.raises(Exception):  # Will raise IntegrityError
+    with pytest.raises(IntegrityError):
         db_session.commit()
+    db_session.rollback()
 
 
 def test_create_workflow_progress(db_session):
@@ -119,3 +121,84 @@ def test_create_workflow_progress(db_session):
     assert loaded_context["requester_id"] == 42
     assert progress.created_at is not None
     assert progress.updated_at is not None
+
+
+def test_tenant_session_unique_constraint(db_session):
+    """Test that unique constraint on company_id + session_id is enforced."""
+    # Create first session
+    session1 = TenantAgentSession(
+        company_id=1,
+        agent_key="admin_copilot",
+        user_id=42,
+        session_id="sess-unique-123",
+    )
+    db_session.add(session1)
+    db_session.commit()
+
+    # Same session_id for different company should work
+    session2 = TenantAgentSession(
+        company_id=2,
+        agent_key="admin_copilot",
+        user_id=43,
+        session_id="sess-unique-123",
+    )
+    db_session.add(session2)
+    db_session.commit()
+
+    assert session2.id is not None
+    assert session2.company_id == 2
+
+    # Same session_id within same company should fail
+    session3 = TenantAgentSession(
+        company_id=1,
+        agent_key="admin_copilot",
+        user_id=44,
+        session_id="sess-unique-123",  # Duplicate session_id within same company
+    )
+    db_session.add(session3)
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+    db_session.rollback()
+
+
+def test_workflow_progress_unique_constraint(db_session):
+    """Test that unique constraint on company_id + workflow_key is enforced."""
+    # Create first workflow progress
+    progress1 = TenantWorkflowProgress(
+        company_id=1,
+        workflow_key="expense_approval_wf",
+        current_step="step1",
+        total_steps=3,
+        completed_steps=0,
+    )
+    db_session.add(progress1)
+    db_session.commit()
+
+    # Same workflow_key for different company should work
+    progress2 = TenantWorkflowProgress(
+        company_id=2,
+        workflow_key="expense_approval_wf",
+        current_step="step2",
+        total_steps=3,
+        completed_steps=1,
+    )
+    db_session.add(progress2)
+    db_session.commit()
+
+    assert progress2.id is not None
+    assert progress2.company_id == 2
+
+    # Same workflow_key within same company should fail
+    progress3 = TenantWorkflowProgress(
+        company_id=1,
+        workflow_key="expense_approval_wf",  # Duplicate workflow_key within same company
+        current_step="step3",
+        total_steps=3,
+        completed_steps=2,
+    )
+    db_session.add(progress3)
+
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+    db_session.rollback()
