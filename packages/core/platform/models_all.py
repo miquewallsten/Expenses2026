@@ -116,3 +116,8 @@ from packages.modules.agent.models_knowledge_chunk import KnowledgeChunk  # noqa
 from packages.modules.agent.models_definitions import (  # noqa: F401
     AgentDefinition, ChannelAgentConfig, LLMProviderConfig,
 )
+
+# Tenant-scoped agent models
+from packages.modules.agent.models_tenant import (  # noqa: F401
+    TenantAgentSession, TenantAgentMemory, TenantWorkflowProgress,
+)
