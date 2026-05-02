@@ -10,6 +10,14 @@ import AdminUsersPanel from "@/components/admin/AdminUsersPanel";
 import AdminPoliciesPanel from "@/components/admin/AdminPoliciesPanel";
 import AdminAccountingSetupStudio from "@/components/admin/AdminAccountingSetupStudio";
 import AdminWorkflowMapPanel from "@/components/admin/AdminWorkflowMapPanel";
+import AdminAgentChat from "@/components/agent/AdminAgentChat";
+import AdminOnboardingCopilot from "@/components/admin/AdminOnboardingCopilot";
+import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
+import AuditLogSection from "@/components/admin/sections/AuditLogSection";
+import CfdiWatcherSection from "@/components/admin/sections/CfdiWatcherSection";
+import IntegrationsSection from "@/components/admin/sections/IntegrationsSection";
+import PlatformApiSection from "@/components/admin/sections/PlatformApiSection";
+import RoutingRulesSection from "@/components/admin/sections/RoutingRulesSection";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 interface AdminData {
@@ -44,6 +52,15 @@ export default function AdminModule() {
   const [data, setData] = useState<AdminData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Determine if onboarding is incomplete once data loads
+  useEffect(() => {
+    if (!data) return;
+    const setup = data.companySetup ?? {};
+    const incomplete = !setup.onboarding_completed_at && (setup.onboarding_step ?? 0) < 6;
+    setShowOnboarding(incomplete);
+  }, [data]);
 
   const load = useCallback(() => {
     setData(null);
@@ -114,6 +131,17 @@ export default function AdminModule() {
       <div className="flex h-full items-center justify-center">
         <p className="text-[11px] text-white/40">No company context available</p>
       </div>
+    );
+  }
+
+  // AI-guided onboarding takes over when the company hasn't completed setup yet.
+  if (showOnboarding && data) {
+    return (
+      <AdminOnboardingCopilot
+        companyId={companyId}
+        onComplete={() => setShowOnboarding(false)}
+        onSkip={() => setShowOnboarding(false)}
+      />
     );
   }
 
@@ -209,17 +237,21 @@ export default function AdminModule() {
             onSaved={refreshAccountingSetup}
           />
         )}
-        {activeSection === "integrations" && (
-          <div className="mx-auto max-w-xl p-4">
-            <header className="mb-4">
-              <h1 className="text-[13px] font-bold tracking-[-0.01em] text-white/85">Integrations</h1>
-              <p className="mt-0.5 text-[10.5px] text-white/40">Connect external systems and APIs.</p>
-            </header>
-            <div className="rounded border border-white/[0.07] bg-white/[0.02] p-6 text-center">
-              <p className="text-[11px] text-white/40">Integration settings will appear here.</p>
-            </div>
+        {activeSection === "integrations" && <IntegrationsSection />}
+        {activeSection === "ai-agent" && companyId != null && (
+          <div className="min-h-0 flex-1 p-4">
+            <AdminAgentChat companyId={companyId} variant="page" />
           </div>
         )}
+        {activeSection === "audit-log" && <AuditLogSection />}
+        {activeSection === "cfdi-watcher" && <CfdiWatcherSection />}
+        {activeSection === "onboarding" && (
+          <div className="h-full">
+            <OnboardingWizard />
+          </div>
+        )}
+        {activeSection === "platform-api" && <PlatformApiSection />}
+        {activeSection === "routing-rules" && <RoutingRulesSection />}
         {activeSection === "advanced-settings" && (
           <div className="mx-auto max-w-xl p-4">
             <header className="mb-4">

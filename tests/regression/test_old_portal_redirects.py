@@ -5,7 +5,8 @@ from pathlib import Path
 
 import pytest
 
-WEB_APP = Path(__file__).resolve().parents[3] / "web" / "app"
+# Use repository root (parents[2]) to locate the web/app directory
+WEB_APP = Path(__file__).resolve().parents[2] / "web" / "app"
 
 
 def _read_page(path: Path) -> str:

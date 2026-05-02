@@ -89,7 +89,7 @@ export default function AgentUsagePage() {
       <header className="border-b border-white/[0.07] bg-zinc-900/40">
         <div className="mx-auto flex max-w-5xl items-center gap-3 px-5 py-3">
           <Link
-            href="/admin"
+            href="/super-admin"
             className="flex h-7 items-center gap-1 rounded text-[10px] text-white/45 transition-colors hover:text-white/70"
           >
             <ChevronLeft className="h-3 w-3" />

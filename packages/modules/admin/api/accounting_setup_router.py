@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from apps.api.auth import require_admin
+from apps.api.auth import get_current_user, require_admin, require_same_company
+from packages.core.platform.models_user import User
 from apps.api.deps import get_db
 from packages.modules.admin.schemas.accounting_setup import (
     AccountingSetupRead,
@@ -16,7 +17,8 @@ router = APIRouter(prefix="/admin/accounting-setup", tags=["admin"], dependencie
 
 
 @router.get("/{company_id}", response_model=AccountingSetupRead)
-def get_accounting_setup_route(company_id: int, db: Session = Depends(get_db)):
+def get_accounting_setup_route(company_id: int, db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)):
     return get_or_create_accounting_setup(db, company_id)
 
 

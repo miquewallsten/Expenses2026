@@ -18,7 +18,8 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from apps.api.auth import require_admin
+from apps.api.auth import get_current_user, require_admin, require_same_company
+from packages.core.platform.models_user import User
 from apps.api.deps import get_db
 from packages.core.platform.models_client import Client
 from packages.core.platform.models_cost_center import CostCenter

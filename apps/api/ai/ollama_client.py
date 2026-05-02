@@ -64,7 +64,32 @@ class Provider:
 
 
 def _build_primary() -> Provider | None:
-    kind = (os.getenv("LLM_PROVIDER") or "openai").strip().lower()
+    kind = (os.getenv("LLM_PROVIDER") or "").strip().lower()
+
+    # When no provider is explicitly configured, prefer Ollama if it is reachable.
+    if not kind:
+        base = (os.getenv("OLLAMA_BASE_URL") or "http://127.0.0.1:11434").rstrip("/")
+        model = os.getenv("OLLAMA_MODEL") or ""
+        if not model:
+            # Auto-detect first available model from local Ollama
+            try:
+                r = requests.get(f"{base}/api/tags", timeout=3)
+                r.raise_for_status()
+                models = r.json().get("models", [])
+                if models:
+                    model = models[0]["name"]
+            except Exception:
+                pass
+        if model:
+            return Provider(
+                kind="ollama",
+                base_url=base,
+                model=model,
+                num_ctx=int(os.getenv("LLM_NUM_CTX") or os.getenv("OLLAMA_NUM_CTX", "32768")),
+            )
+        # Ollama not available — fall through to legacy openai default
+        kind = "openai"
+
     if kind == "openai":
         base = (os.getenv("LLM_BASE_URL") or "").rstrip("/")
         model = os.getenv("LLM_MODEL") or ""

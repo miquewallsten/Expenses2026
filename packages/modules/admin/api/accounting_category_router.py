@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from apps.api.auth import require_admin
+from apps.api.auth import get_current_user, require_admin, require_same_company
+from packages.core.platform.models_user import User
 from apps.api.deps import get_db
 from packages.core.platform.models_accounting_category import (
     AccountingCategory,

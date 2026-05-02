@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from apps.api.deps import get_db
-from apps.api.auth import require_admin
+from apps.api.auth import get_current_user, require_admin, require_same_company
+from packages.core.platform.models_user import User
 from packages.core.platform.models_storage_config import StorageConfig
 from packages.modules.admin.schemas.storage_config import StorageConfigRead, StorageConfigUpdate, VALID_BACKENDS
 
@@ -31,7 +32,8 @@ def _get_or_create(company_id: int, db: Session) -> StorageConfig:
 
 
 @router.get("/{company_id}", response_model=StorageConfigRead)
-def get_storage_config(company_id: int, db: Session = Depends(get_db)):
+def get_storage_config(company_id: int, db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)):
     """Return storage config for *company_id*, creating defaults if none exist."""
     return _get_or_create(company_id, db)
 

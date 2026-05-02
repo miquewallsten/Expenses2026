@@ -78,7 +78,7 @@ export default function AiPolicyPage() {
     <div className="flex h-screen flex-col bg-zinc-950">
       <header className="flex h-11 shrink-0 items-center gap-3 border-b border-white/[0.07] px-5">
         <Link
-          href="/admin"
+          href="/super-admin"
           className="flex items-center gap-1.5 text-[10px] text-white/35 transition-colors hover:text-white/55"
         >
           <ChevronLeft className="h-3.5 w-3.5" />

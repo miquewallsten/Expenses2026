@@ -143,7 +143,7 @@ export default function CategoryMemoryPage() {
         <div className="mb-5 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Link
-              href="/admin"
+              href="/super-admin"
               className="flex items-center gap-1 rounded border border-white/10 bg-white/[0.03] px-2 py-1 text-[11px] text-zinc-400 transition hover:border-white/20 hover:text-zinc-200"
             >
               <ChevronLeft className="h-3.5 w-3.5" />

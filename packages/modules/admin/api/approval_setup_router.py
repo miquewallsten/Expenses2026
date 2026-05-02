@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from apps.api.auth import require_admin
+from apps.api.auth import get_current_user, require_admin, require_same_company
+from packages.core.platform.models_user import User
 from apps.api.deps import get_db
 from packages.modules.admin.schemas.approval_setup import ApprovalSetupRead, ApprovalSetupUpdate
 from packages.modules.admin.service.approval_setup_service import (
@@ -13,10 +14,21 @@ router = APIRouter(prefix="/admin/approval-setup", tags=["admin"], dependencies=
 
 
 @router.get("/{company_id}", response_model=ApprovalSetupRead)
-def get_approval_setup_route(company_id: int, db: Session = Depends(get_db)):
+def get_approval_setup_route(
+    company_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_same_company(company_id, current_user)
     return get_or_create_approval_setup(db, company_id)
 
 
 @router.put("/{company_id}", response_model=ApprovalSetupRead)
-def upsert_approval_setup_route(company_id: int, data: ApprovalSetupUpdate, db: Session = Depends(get_db)):
+def upsert_approval_setup_route(
+    company_id: int,
+    data: ApprovalSetupUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_same_company(company_id, current_user)
     return upsert_approval_setup(db, company_id, data)

@@ -11,7 +11,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from apps.api.auth import require_admin
+from apps.api.auth import get_current_user, require_admin, require_same_company
+from packages.core.platform.models_user import User
 from apps.api.deps import get_db
 from packages.core.platform.models_auth_settings import CompanyAuthSettings
 
@@ -75,7 +76,8 @@ def _to_read(row: CompanyAuthSettings) -> AuthSettingsRead:
 # ── Routes ────────────────────────────────────────────────────────────────────
 
 @router.get("/{company_id}", response_model=AuthSettingsRead)
-def get_auth_settings(company_id: int, db: Session = Depends(get_db)):
+def get_auth_settings(company_id: int, db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)):
     row = db.query(CompanyAuthSettings).filter(
         CompanyAuthSettings.company_id == company_id
     ).first()

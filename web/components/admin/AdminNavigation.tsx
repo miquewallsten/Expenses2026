@@ -11,6 +11,12 @@ import {
   Settings,
   Menu,
   X,
+  Bot,
+  ScrollText,
+  XOctagon,
+  Sparkles,
+  KeyRound,
+  Route,
 } from "lucide-react";
 
 export type AdminSection =
@@ -20,6 +26,12 @@ export type AdminSection =
   | "users-roles"
   | "accounting-setup"
   | "integrations"
+  | "ai-agent"
+  | "audit-log"
+  | "cfdi-watcher"
+  | "onboarding"
+  | "platform-api"
+  | "routing-rules"
   | "advanced-settings";
 
 interface SectionDef {
@@ -35,6 +47,12 @@ const SECTIONS: SectionDef[] = [
   { id: "users-roles", label: "Users & Roles", icon: <Users className="h-3.5 w-3.5" /> },
   { id: "accounting-setup", label: "Accounting Setup", icon: <Calculator className="h-3.5 w-3.5" /> },
   { id: "integrations", label: "Integrations", icon: <Plug className="h-3.5 w-3.5" /> },
+  { id: "ai-agent", label: "AI Agent", icon: <Bot className="h-3.5 w-3.5" /> },
+  { id: "audit-log", label: "Audit Log", icon: <ScrollText className="h-3.5 w-3.5" /> },
+  { id: "cfdi-watcher", label: "CFDI Watcher", icon: <XOctagon className="h-3.5 w-3.5" /> },
+  { id: "onboarding", label: "Onboarding", icon: <Sparkles className="h-3.5 w-3.5" /> },
+  { id: "platform-api", label: "Platform API", icon: <KeyRound className="h-3.5 w-3.5" /> },
+  { id: "routing-rules", label: "Routing Rules", icon: <Route className="h-3.5 w-3.5" /> },
   { id: "advanced-settings", label: "Advanced Settings", icon: <Settings className="h-3.5 w-3.5" /> },
 ];
 

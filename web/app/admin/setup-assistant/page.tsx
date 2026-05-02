@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-// Legacy route — redirects to unified onboarding wizard.
+// Legacy route — redirects to unified admin module in /mywork.
 export default function SetupAssistantPage() {
-  redirect("/admin/onboarding");
+  redirect("/mywork?module=admin");
 }

@@ -552,7 +552,7 @@ export default function MyWorkAssistant() {
 
         {/* Assistant card */}
         {hasContent ? (
-          <div className="overflow-hidden rounded-lg border border-white/[0.07] bg-black/20">
+          <div className="overflow-hidden rounded-lg border border-white/[0.07] bg-zinc-900/20">
             <div className="p-3">
 
               {insightLoading ? (

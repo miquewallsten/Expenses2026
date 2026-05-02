@@ -56,7 +56,7 @@ function NoVisibleModules({ role }: { role: string | null }) {
         <div className="flex flex-col gap-1.5">
           {isAdmin ? (
             <Link
-              href="/admin"
+              href="/mywork?module=admin"
               className="inline-flex items-center gap-1.5 rounded border border-indigo-500/30 bg-indigo-500/10 px-3 py-1.5 text-[11px] font-semibold text-indigo-200/90 transition-colors hover:bg-indigo-500/20"
             >
               <ArrowRight className="h-3 w-3" />

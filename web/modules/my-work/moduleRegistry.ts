@@ -35,7 +35,19 @@ function hasModule(ctx: ModuleVisibilityContext, key: string): boolean {
 // ── Module registry ────────────────────────────────────────────────────────────
 
 export const MY_WORK_MODULES: readonly MyWorkModule[] = [
-  // ── My Expenses ─────────────────────────────────────────────────────────────
+  // ── Admin ──────────────────────────────────────────────────────────────────────
+// Company configuration, user management, policies, workflows, accounting
+// setup, and announcements. Visible to admins and anyone with admin permission.
+{
+  id: "admin",
+  label: "Administration",
+  icon: "Settings",
+  isVisible: (ctx) =>
+    hasRole(ctx, "admin") || hasPermission(ctx, "admin"),
+  component: React.lazy(() => import("@/components/modules/AdminModule")),
+},
+
+// ── My Expenses ─────────────────────────────────────────────────────────────
   // Gated on the per-user can_create_expenses flag (default true) AND the
   // expenses module being enabled.  Secretaries see this too — the workspace
   // fetches their boss's expenses when delegates_for_user_id is set.

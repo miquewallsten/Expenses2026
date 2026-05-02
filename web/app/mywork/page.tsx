@@ -11,6 +11,7 @@ import {
   Menu, Settings, X,
   type LucideIcon,
 } from "lucide-react";
+import { Suspense } from "react";
 import { useTranslations } from "next-intl";
 import { UserProvider } from "@/context/UserContext";
 import { MyWorkProvider, useMyWorkContext } from "@/context/MyWorkContext";
@@ -20,7 +21,6 @@ import MyWorkWorkspace from "@/components/my-work/MyWorkWorkspace";
 import { buildGlobalNav } from "@/lib/navigation";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
-import MyWorkAssistant from "@/components/my-work/MyWorkAssistant";
 import SettingsModal from "@/components/shell/SettingsModal";
 import type { NavRailItem } from "@/components/shell/NavRail";
 
@@ -33,7 +33,7 @@ const SIDEBAR_COL_W = 48;    // collapsed (icon-only)
 
 const MOD_ICONS: Record<string, LucideIcon> = {
   Receipt, CheckSquare, Calculator, Clock, Archive, Download, BarChart2, ShoppingCart,
-  ClipboardList, BadgeCheck, CreditCard,
+  ClipboardList, BadgeCheck, CreditCard, Settings,
 };
 
 function resolveIcon(name?: string): LucideIcon | null {
@@ -193,7 +193,7 @@ function UnifiedSidebar({
 
 function MyWorkShell() {
   useAuthGuard();
-  const { effectiveConfig, activeModule, showAiCopilot } = useMyWorkContext();
+  const { effectiveConfig, activeModule } = useMyWorkContext();
   const user = useUserContext();
   const { isMobile, isTablet, isDesktop } = useLayoutMode();
   const tnShell = useTranslations("nav");
@@ -381,13 +381,6 @@ function MyWorkShell() {
         {workspace}
       </div>
 
-      {/* Copilot rail — right (hidden when requests module is active or AI copilot disabled) */}
-      {showAiCopilot && activeModule?.id !== "my_requests" && (
-        <aside className="flex w-[240px] shrink-0 flex-col overflow-hidden border-l border-white/[0.06] bg-zinc-950">
-          <MyWorkAssistant />
-        </aside>
-      )}
-
       {topRightToolbar}
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
@@ -396,12 +389,33 @@ function MyWorkShell() {
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
-export default function MyWorkPage() {
+function MyWorkPageInner() {
+  // Avoid useSearchParams — it de-opts SSR and causes hydration mismatches in
+  // Next.js App Router when combined with client-side layout branching.
+  const [initialModuleId, setInitialModuleId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setInitialModuleId(params.get("module"));
+  }, []);
+
   return (
     <UserProvider>
-      <MyWorkProvider>
+      <MyWorkProvider initialModuleId={initialModuleId}>
         <MyWorkShell />
       </MyWorkProvider>
     </UserProvider>
+  );
+}
+
+export default function MyWorkPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-[100dvh] items-center justify-center bg-zinc-950">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/10 border-t-indigo-400/80" />
+      </div>
+    }>
+      <MyWorkPageInner />
+    </Suspense>
   );
 }

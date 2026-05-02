@@ -142,10 +142,24 @@ def seed_all():
         # ── 7. CREATE LLM PROVIDER CONFIG ──
         llm = db.query(LLMProviderConfig).filter_by(company_id=None).first()
         if not llm:
-            llm = LLMProviderConfig(company_id=None, provider="anthropic", model_name="claude-sonnet-4-6", api_key_env_ref="ANTHROPIC_API_KEY", is_active=True)
+            # Auto-detect Ollama; fall back to generic ollama/llama3.2
+            provider = "ollama"
+            model_name = "llama3.2"
+            base_url = "http://127.0.0.1:11434"
+            try:
+                import urllib.request
+                req = urllib.request.Request("http://127.0.0.1:11434/api/tags", method="GET")
+                with urllib.request.urlopen(req, timeout=3.0) as resp:
+                    import json
+                    models = json.loads(resp.read()).get("models", [])
+                    if models:
+                        model_name = models[0]["name"]
+            except Exception:
+                pass
+            llm = LLMProviderConfig(company_id=None, provider=provider, model_name=model_name, base_url=base_url, is_active=True)
             db.add(llm)
             db.commit()
-            print(f"[7] Created global LLM config: anthropic / claude-sonnet-4-6")
+            print(f"[7] Created global LLM config: {provider} / {model_name}")
         else:
             print(f"[7] LLM config exists: {llm.provider} / {llm.model_name}")
 

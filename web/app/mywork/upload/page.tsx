@@ -246,7 +246,7 @@ export default function EmployeeUploadPage() {
   };
 
   return (
-    <main className="min-h-screen bg-neutral-950 text-white pb-28">
+    <main className="min-h-screen bg-zinc-950 text-white pb-28">
       <div className="mx-auto max-w-7xl px-6 py-10">
 
         {/* Success panel */}
@@ -364,7 +364,7 @@ export default function EmployeeUploadPage() {
                   {file.extractedData && (
                     <div className="space-y-2">
                       {/* Invoice Summary */}
-                      <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                      <div className="rounded-xl border border-white/10 bg-zinc-900/20 p-3">
                         <div className="mb-2 text-[10px] font-bold uppercase tracking-widest text-white/35">{t("invoice.summary")}</div>
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
                           {([
@@ -382,7 +382,7 @@ export default function EmployeeUploadPage() {
                       </div>
 
                       {/* Parties */}
-                      <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                      <div className="rounded-xl border border-white/10 bg-zinc-900/20 p-3">
                         <div className="mb-2 text-[10px] font-bold uppercase tracking-widest text-white/35">Parties</div>
                         <div className="space-y-1.5">
                           <div>
@@ -399,7 +399,7 @@ export default function EmployeeUploadPage() {
                       </div>
 
                       {/* Line Item */}
-                      <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                      <div className="rounded-xl border border-white/10 bg-zinc-900/20 p-3">
                         <div className="mb-2 text-[10px] font-bold uppercase tracking-widest text-white/35">Line Item</div>
                         <div>
                           <div className="text-[9px] font-bold uppercase tracking-widest text-white/25">Description</div>
@@ -408,7 +408,7 @@ export default function EmployeeUploadPage() {
                       </div>
 
                       {/* Fiscal */}
-                      <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                      <div className="rounded-xl border border-white/10 bg-zinc-900/20 p-3">
                         <div className="mb-2 text-[10px] font-bold uppercase tracking-widest text-white/35">Fiscal</div>
                         <div className="space-y-1.5">
                           <div>
@@ -423,7 +423,7 @@ export default function EmployeeUploadPage() {
                       </div>
 
                       {/* Taxes */}
-                      <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                      <div className="rounded-xl border border-white/10 bg-zinc-900/20 p-3">
                         <div className="mb-2 text-[10px] font-bold uppercase tracking-widest text-white/35">Taxes</div>
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
                           {([
@@ -452,13 +452,13 @@ export default function EmployeeUploadPage() {
                       Validation Results
                     </div>
                     {!file.validationResults.length ? (
-                      <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white/50">
+                      <div className="rounded-2xl border border-white/10 bg-zinc-900/20 px-4 py-3 text-sm text-white/50">
                         {emptyValidationMessage(file)}
                       </div>
                     ) : (
                       <div className="space-y-2">
                         {file.validationResults.map((result, index) => (
-                          <div key={`${file.localId}-${index}`} className="rounded-2xl border border-white/10 bg-black/20 p-3">
+                          <div key={`${file.localId}-${index}`} className="rounded-2xl border border-white/10 bg-zinc-900/20 p-3">
                             <div className="mb-2 flex items-center justify-between gap-3">
                               <div className="text-sm font-medium">{result.rule_code}</div>
                               <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium capitalize ${validationBadgeClass(result.status)}`}>
@@ -486,7 +486,7 @@ export default function EmployeeUploadPage() {
       </div>
 
       {/* Sticky action bar */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-white/10 bg-neutral-950/90 backdrop-blur px-6 py-4">
+      <div className="fixed bottom-0 left-0 right-0 border-t border-white/10 bg-zinc-950/90 backdrop-blur px-6 py-4">
         <div className="mx-auto max-w-7xl flex items-center justify-end gap-4">
           {blockedCount > 0 && (
             <span className="text-xs text-red-400/80">

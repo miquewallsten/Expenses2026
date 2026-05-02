@@ -131,7 +131,7 @@ const MyWorkContext = createContext<MyWorkContextValue | null>(null);
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 
-export function MyWorkProvider({ children }: { children: ReactNode }) {
+export function MyWorkProvider({ children, initialModuleId }: { children: ReactNode; initialModuleId?: string | null }) {
   const user = useUserContext();
 
   const [portalConfig, setPortalConfig] = useState<PortalConfig | null>(null);
@@ -192,16 +192,23 @@ export function MyWorkProvider({ children }: { children: ReactNode }) {
     [configLoading, user.loading, visibilityCtx],
   );
 
-  // ── Auto-select first module when list resolves ──────────────────────────
+  // ── Auto-select module when list resolves ───────────────────────────────
+  //
+  // If an initial module was requested via ?module=, prefer it when visible.
+  // Otherwise fall back to the first visible module.
 
   useEffect(() => {
     if (!visibleModules.length) return;
     setActiveModuleId((prev) => {
       // Keep current selection if it's still visible
       if (prev && visibleModules.some((m) => m.id === prev)) return prev;
+      // Prefer initialModuleId (e.g. from ?module=) if it resolves to a visible module
+      if (initialModuleId && visibleModules.some((m) => m.id === initialModuleId)) {
+        return initialModuleId;
+      }
       return visibleModules[0].id;
     });
-  }, [visibleModules]);
+  }, [visibleModules, initialModuleId]);
 
   // ── Derived module ───────────────────────────────────────────────────────
 

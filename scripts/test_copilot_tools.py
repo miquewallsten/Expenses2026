@@ -5,6 +5,7 @@ Tests admin copilot tools: invite_user, update_user, deactivate_user, reactivate
 get_company_config, update_workflow, update_policy, send_announcement.
 """
 
+import pytest
 import sys
 sys.path.insert(0, '/Users/mikaelwallsten/Projects/financial-ops-platform')
 
@@ -28,7 +29,8 @@ def make_ctx(db, company_id, user_id, role="admin"):
     )
 
 
-def test_tool(name, ctx, args):
+@pytest.mark.skip("Helper function, not a test")
+def _run_tool(name, ctx, args):
     """Run a single tool and print results."""
     print(f"\n  → {name}({args})")
     try:
