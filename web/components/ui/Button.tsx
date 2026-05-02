@@ -39,8 +39,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       disabled={disabled || loading}
       className={cn(
         "inline-flex items-center justify-center gap-1.5 rounded-md border font-medium",
-        "transition-colors disabled:cursor-not-allowed disabled:opacity-60",
-        "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-400/50",
+        "transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-60",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/50 focus-visible:ring-offset-1 focus-visible:ring-offset-zinc-950",
+        "active:scale-[0.97] active:brightness-95",
         VARIANT[variant],
         SIZE[size],
         className,
@@ -48,7 +49,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       {...rest}
     >
       {loading ? (
-        <span className="h-3 w-3 animate-spin rounded-full border border-white/40 border-t-transparent" />
+        <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/30 border-t-white/80" />
       ) : null}
       {children}
     </button>

@@ -40,7 +40,7 @@ export function TBody({
 }: HTMLAttributes<HTMLTableSectionElement>) {
   return (
     <tbody
-      className={cn("divide-y divide-white/[0.05]", className)}
+      className={cn("divide-y divide-white/[0.06]", className)}
       {...rest}
     />
   );
@@ -52,7 +52,7 @@ export function TR({
 }: HTMLAttributes<HTMLTableRowElement>) {
   return (
     <tr
-      className={cn("hover:bg-white/[0.03] transition-colors", className)}
+      className={cn("hover:bg-white/[0.02] transition-colors", className)}
       {...rest}
     />
   );
