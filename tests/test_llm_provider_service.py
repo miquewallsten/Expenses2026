@@ -12,10 +12,10 @@ def svc():
 
 
 def test_resolve_global_default(db_session, svc):
-    # No configs in DB
+    # No configs in DB — fallback auto-detects Ollama or uses hardcoded default
     config = svc.resolve_provider(db_session, company_id=None)
     assert config.provider == "ollama"
-    assert config.model_name == "llama3.2"
+    assert config.model_name  # non-empty (auto-detected or hardcoded)
 
 
 def test_resolve_company_override(db_session, svc):

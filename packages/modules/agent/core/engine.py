@@ -231,6 +231,14 @@ def _resolve_provider(db, company_id: int) -> Any | None:
         config = LLM_PROVIDER_SERVICE.resolve_provider(db, company_id=company_id)
         # Only use DB config if it has an id (real row) rather than the hardcoded fallback
         if config and getattr(config, "id", None) is not None:
+            # Validate that cloud providers have an API key or custom base_url
+            if not LLM_PROVIDER_SERVICE._is_viable(config):
+                _log.warning(
+                    "DB LLM config %s/%s is not viable (missing key or wrong base_url); "
+                    "falling back to env auto-detection.",
+                    config.provider, config.model_name,
+                )
+                return None
             return provider_from_config({
                 "provider": config.provider,
                 "model_name": config.model_name,
@@ -273,9 +281,11 @@ def run_turn(
     session: AgentSession | None = None
     if session_id:
         session = _load_session(db, company_id, session_id)
+
+    # Resolve user id for context (needed whether session is new or existing)
+    u_id = user.id if hasattr(user, "id") else user
+
     if session is None:
-        # Resolve user object if only ID was passed
-        u_id = user.id if hasattr(user, "id") else user
         session = _new_session(db, company_id=company_id, persona=persona, user_id=u_id)
     else:
         # Tenant lock: reject crossing companies even if session_id guessed.
