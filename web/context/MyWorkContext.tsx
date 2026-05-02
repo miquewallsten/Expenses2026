@@ -37,75 +37,17 @@ import { useUserContext } from "@/context/UserContext";
 import {
   MY_WORK_MODULES,
   getVisibleModules,
-  type MyWorkModule,
-  type ModuleVisibilityContext,
 } from "@/modules/my-work/moduleRegistry";
+import type {
+  PortalConfig,
+  ExpensePolicy,
+  MyWorkModule,
+  ModuleVisibilityContext,
+  SelectedWorkItem,
+} from "@/types";
+import { EMPTY_SELECTED_WORK_ITEM } from "@/types";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-// ── Portal config type ────────────────────────────────────────────────────────
-//
-// Matches the /admin/portal-config/:company_id response shape.
-
-export interface ExpensePolicy {
-  id: number;
-  company_id: number;
-  xml_required_mode: string;
-  pdf_pair_required_for_cfdi: boolean;
-  international_expenses_allowed: boolean;
-  tickets_allowed: boolean;
-  require_justification: boolean;
-  require_proof: boolean;
-  allow_split_allocations: boolean;
-  allocation_dimensions: string;
-  manager_approval_required: boolean;
-  accounting_review_required: boolean;
-  ai_policy_assist_enabled: boolean;
-  allow_document_free_expenses: boolean;
-}
-
-export interface PortalDerived {
-  enabled_modules: string[];
-  allocation_dimensions: string[];
-  allow_split_allocations: boolean;
-  tickets_allowed: boolean;
-  international_expenses_allowed: boolean;
-  xml_required_mode: string;
-  pdf_pair_required_for_cfdi: boolean;
-  allow_document_free_expenses: boolean;
-  manager_flow_enabled: boolean;
-  accounting_flow_enabled: boolean;
-  workflow_mode: string;
-}
-
-export interface PortalConfig {
-  company_setup: Record<string, unknown>;
-  expense_policy: ExpensePolicy;
-  accounting_setup: Record<string, unknown>;
-  approval_setup: Record<string, unknown>;
-  workflow_setup: Record<string, unknown>;
-  derived: PortalDerived;
-}
-
-// ── Selected work item ────────────────────────────────────────────────────────
-//
-// Generic envelope for whatever the active module considers "selected".
-// Each module uses a subset of these fields; unrelated fields remain null.
-
-export interface SelectedWorkItem {
-  /** Expense id when the expenses module is active */
-  expenseId: number | null;
-  /** Report/batch id when the accounting or approvals module is active */
-  reportId: number | null;
-  /** Any extra module-specific payload */
-  extra: Record<string, unknown>;
-}
-
-const EMPTY_SELECTION: SelectedWorkItem = {
-  expenseId: null,
-  reportId: null,
-  extra: {},
-};
 
 // ── Context value ─────────────────────────────────────────────────────────────
 
@@ -195,7 +137,7 @@ export function MyWorkProvider({ children }: { children: ReactNode }) {
   const [portalConfig, setPortalConfig] = useState<PortalConfig | null>(null);
   const [configLoading, setConfigLoading] = useState(true);
   const [activeModuleId, setActiveModuleId] = useState<string | null>(null);
-  const [selectedItem, setSelectedItemState] = useState<SelectedWorkItem>(EMPTY_SELECTION);
+  const [selectedItem, setSelectedItemState] = useState<SelectedWorkItem>(EMPTY_SELECTED_WORK_ITEM);
 
   const abortRef = useRef<AbortController | null>(null);
 
@@ -274,7 +216,7 @@ export function MyWorkProvider({ children }: { children: ReactNode }) {
     if (visibleModules.some((m) => m.id === id)) {
       setActiveModuleId(id);
       // Clear selection when switching modules so the detail area resets.
-      setSelectedItemState(EMPTY_SELECTION);
+      setSelectedItemState(EMPTY_SELECTED_WORK_ITEM);
     }
   }, [visibleModules]);
 
@@ -291,7 +233,7 @@ export function MyWorkProvider({ children }: { children: ReactNode }) {
   );
 
   const clearSelectedItem = useCallback(() => {
-    setSelectedItemState(EMPTY_SELECTION);
+    setSelectedItemState(EMPTY_SELECTED_WORK_ITEM);
   }, []);
 
   // ── Derived config scalars ───────────────────────────────────────────────

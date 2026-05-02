@@ -37,58 +37,10 @@ import {
   getCurrentCompanyId,
   getStoredSession,
 } from "@/lib/session";
+import type { UserCapabilities, UserRole } from "@/types";
+import { DEFAULT_USER_CAPABILITIES } from "@/types";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-// ── Types ──────────────────────────────────────────────────────────────────────
-
-/**
- * Per-user capability flags — set by admin per user.
- * These drive MyWork portal visibility independently of role.
- */
-export interface UserCapabilities {
-  can_create_expenses: boolean;
-  can_create_corporate_expenses: boolean;
-  can_invoice_corporation: boolean;
-  is_amex_reconciler: boolean;
-  requires_time_tracking: boolean;
-  has_executive_reporting: boolean;
-  delegates_for_user_id: number | null;
-  delegates_for_user_name: string | null;
-}
-
-/**
- * Per-user capability flags — set by admin per user.
- * These drive MyWork portal visibility independently of role.
- */
-export interface UserCapabilities {
-  can_create_expenses: boolean;
-  can_create_corporate_expenses: boolean;
-  can_invoice_corporation: boolean;
-  is_amex_reconciler: boolean;
-  requires_time_tracking: boolean;
-  has_executive_reporting: boolean;
-  delegates_for_user_id: number | null;
-  delegates_for_user_name: string | null;
-}
-
-const DEFAULT_CAPABILITIES: UserCapabilities = {
-  can_create_expenses: true,
-  can_create_corporate_expenses: false,
-  can_invoice_corporation: false,
-  is_amex_reconciler: false,
-  requires_time_tracking: false,
-  has_executive_reporting: false,
-  delegates_for_user_id: null,
-  delegates_for_user_name: null,
-};
-
-/**
- * The set of roles a user may hold.  The current session stores one role at a
- * time, but the context exposes an array so callers do not need to change when
- * multi-role support is introduced.
- */
-export type UserRole = "employee" | "manager" | "accounting" | "admin" | "executive" | "secretary";
 
 export interface UserContextValue {
   /** Numeric user id (null while unauthenticated or loading) */
@@ -146,7 +98,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [companyId, setCompanyId] = useState<number | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [permissionKeys, setPermissionKeys] = useState<string[]>([]);
-  const [capabilities, setCapabilities] = useState<UserCapabilities>(DEFAULT_CAPABILITIES);
+  const [capabilities, setCapabilities] = useState<UserCapabilities>(DEFAULT_USER_CAPABILITIES);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -188,7 +140,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     // ── Fetch permissions ──────────────────────────────────────────────────
     if (!rawId) {
       setPermissionKeys([]);
-      setCapabilities(DEFAULT_CAPABILITIES);
+      setCapabilities(DEFAULT_USER_CAPABILITIES);
       setLoading(false);
       return;
     }
