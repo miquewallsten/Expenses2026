@@ -760,6 +760,68 @@
         }
       }
     },
+    "onboardingWizard": {
+      "title": "Setup Wizard",
+      "nav": {
+        "prev": "Previous",
+        "next": "Next",
+        "saving": "Saving..."
+      },
+      "progress": {
+        "steps": {
+          "welcome": "Welcome",
+          "companyProfile": "Profile",
+          "selectModules": "Modules",
+          "configureModule": "Configure",
+          "review": "Review"
+        }
+      },
+      "welcome": {
+        "title": "Welcome to the platform",
+        "description": "Let's set up your workspace in 4 simple steps. You can save and continue later at any time.",
+        "step1": "Tell us about your company",
+        "step2": "Select the modules you need",
+        "step3": "Configure each module with guided questions",
+        "step4": "Review and confirm your setup",
+        "startButton": "Start setup"
+      },
+      "companyProfile": {
+        "title": "Company profile",
+        "subtitle": "Basic information used throughout the system.",
+        "companyName": "Company name",
+        "companyNamePlaceholder": "My Company Inc.",
+        "currency": "Currency",
+        "timezone": "Timezone",
+        "industry": "Industry",
+        "country": "Country"
+      },
+      "selectModules": {
+        "title": "Select modules",
+        "subtitle": "Choose the modules your team will use.",
+        "hint": "You can add or deactivate modules later from Settings."
+      },
+      "configureModule": {
+        "title": "Configure modules",
+        "subtitle": "Answer questions for each selected module.",
+        "prevModule": "Previous module",
+        "nextModule": "Next module",
+        "noModulesSelected": "No modules selected. Go back to the previous step."
+      },
+      "review": {
+        "title": "Summary",
+        "subtitle": "Review your setup before finishing.",
+        "companyProfile": "Company profile",
+        "modules": "Selected modules",
+        "edit": "Edit",
+        "editConfig": "Edit module configuration",
+        "companyName": "Name",
+        "currency": "Currency",
+        "timezone": "Timezone",
+        "country": "Country",
+        "completeSetup": "Complete setup",
+        "completeHint": "Your setup will be ready to use."
+      }
+    },
     "menu": {
       "overview": "Overview",
       "companySetup": "Company Setup",

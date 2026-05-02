@@ -40,3 +40,21 @@ export type {
   ActionResponseError,
   ActionResponse,
 } from "./mywork";
+
+// Onboarding types
+export type {
+  OnboardingStep,
+  ModuleType,
+  CompanyProfile,
+  ApprovalStage,
+  ModuleConfig,
+  ModuleQuestion,
+  ModuleDefinition as OnboardingModuleDefinition,
+  OnboardingState,
+} from "./onboarding";
+export {
+  MODULE_DEFINITIONS,
+  DEFAULT_COMPANY_PROFILE,
+  DEFAULT_MODULE_CONFIG,
+  STEP_ORDER,
+} from "./onboarding";

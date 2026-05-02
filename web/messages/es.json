@@ -760,6 +760,68 @@
         }
       }
     },
+    "onboardingWizard": {
+      "title": "Asistente de configuracion",
+      "nav": {
+        "prev": "Anterior",
+        "next": "Siguiente",
+        "saving": "Guardando..."
+      },
+      "progress": {
+        "steps": {
+          "welcome": "Bienvenida",
+          "companyProfile": "Perfil",
+          "selectModules": "Modulos",
+          "configureModule": "Configurar",
+          "review": "Revisar"
+        }
+      },
+      "welcome": {
+        "title": "Bienvenido a la plataforma",
+        "description": "Configuremos tu espacio de trabajo en 4 pasos simples. Puedes guardar y continuar despues en cualquier momento.",
+        "step1": "Cuentanos sobre tu empresa",
+        "step2": "Selecciona los modulos que necesitas",
+        "step3": "Configura cada modulo con preguntas guiadas",
+        "step4": "Revisa y confirma tu configuracion",
+        "startButton": "Comenzar configuracion"
+      },
+      "companyProfile": {
+        "title": "Perfil de la empresa",
+        "subtitle": "Informacion basica que se usa en todo el sistema.",
+        "companyName": "Nombre de la empresa",
+        "companyNamePlaceholder": "Mi Empresa S.A. de C.V.",
+        "currency": "Moneda",
+        "timezone": "Zona horaria",
+        "industry": "Industria",
+        "country": "Pais"
+      },
+      "selectModules": {
+        "title": "Selecciona modulos",
+        "subtitle": "Elige los modulos que tu equipo utilizara.",
+        "hint": "Puedes agregar o desactivar modulos despues desde Configuracion."
+      },
+      "configureModule": {
+        "title": "Configura los modulos",
+        "subtitle": "Responde las preguntas para cada modulo seleccionado.",
+        "prevModule": "Modulo anterior",
+        "nextModule": "Siguiente modulo",
+        "noModulesSelected": "No hay modulos seleccionados. Vuelve al paso anterior."
+      },
+      "review": {
+        "title": "Resumen",
+        "subtitle": "Revisa tu configuracion antes de finalizar.",
+        "companyProfile": "Perfil de empresa",
+        "modules": "Modulos seleccionados",
+        "edit": "Editar",
+        "editConfig": "Editar configuracion de modulos",
+        "companyName": "Nombre",
+        "currency": "Moneda",
+        "timezone": "Zona horaria",
+        "country": "Pais",
+        "completeSetup": "Completar configuracion",
+        "completeHint": "Tu configuracion estara lista para usar."
+      }
+    },
     "menu": {
       "overview": "Resumen",
       "companySetup": "Configuración de empresa",
