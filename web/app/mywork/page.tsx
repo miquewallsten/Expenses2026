@@ -381,13 +381,14 @@ function MyWorkShell() {
         {workspace}
       </div>
 
+      {/* Desktop toolbar */}
       {topRightToolbar}
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );
 }
 
-// ── Page ───────────────────────────────────────────────────────────────────────
+// ── Page component ─────────────────────────────────────────────────────────────
 
 function MyWorkPageInner() {
   // Avoid useSearchParams — it de-opts SSR and causes hydration mismatches in
