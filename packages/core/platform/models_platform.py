@@ -22,7 +22,7 @@ class PlatformTenant(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    slug: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     plan: Mapped[str] = mapped_column(String(32), nullable=False, default="starter")
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
@@ -68,12 +68,12 @@ class PlatformAgentDefinition(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    key: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    key: Mapped[str] = mapped_column(String(64), nullable=False)
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     system_prompt: Mapped[str] = mapped_column(Text, nullable=False)
     allowed_tools: Mapped[str] = mapped_column(Text, nullable=False, default="[]")  # JSON list
-    default_provider_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("platform_llm_providers.id"), nullable=True)
+    default_provider_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("platform_llm_providers.id", ondelete="SET NULL"), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
 
@@ -90,9 +90,9 @@ class PlatformUsageLog(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    tenant_id: Mapped[int] = mapped_column(Integer, ForeignKey("platform_tenants.id"), nullable=False)
+    tenant_id: Mapped[int] = mapped_column(Integer, ForeignKey("platform_tenants.id", ondelete="CASCADE"), nullable=False)
     agent_key: Mapped[str] = mapped_column(String(64), nullable=False)
-    provider_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("platform_llm_providers.id"), nullable=True)
+    provider_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("platform_llm_providers.id", ondelete="SET NULL"), nullable=True)
     input_tokens: Mapped[int] = mapped_column(Integer, nullable=False)
     output_tokens: Mapped[int] = mapped_column(Integer, nullable=False)
     cost_input: Mapped[Decimal] = mapped_column(Numeric(10, 6), nullable=False, default=Decimal("0"))
