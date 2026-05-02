@@ -23,18 +23,16 @@ const PII_LEVELS = ["strict", "standard", "off"] as const;
 
 export default function AiPolicyPage() {
   const t = useTranslations("copilot.aiPolicy");
-  const [companyId, setCompanyId] = useState<number | null>(null);
+  const [companyId] = useState<number | null>(() => {
+    const cid = getCurrentCompanyId();
+    return cid ? Number(cid) : null;
+  });
   const [policy, setPolicy] = useState<PolicyShape | null>(null);
   const [draft, setDraft] = useState<Partial<PolicyShape>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const cid = getCurrentCompanyId();
-    setCompanyId(cid ? Number(cid) : null);
-  }, []);
 
   const load = useCallback(async () => {
     if (companyId == null) return;
@@ -51,7 +49,7 @@ export default function AiPolicyPage() {
     }
   }, [companyId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void load(); }, [load]);
 
   const merged: PolicyShape | null = policy
     ? { ...policy, ...draft } as PolicyShape

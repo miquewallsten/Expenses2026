@@ -67,7 +67,10 @@ const NEW_RULE_TEMPLATE = {
 
 export default function RoutingRulesPage() {
   const t = useTranslations("admin.routingRules");
-  const [companyId, setCompanyId] = useState<number | null>(null);
+  const [companyId] = useState<number | null>(() => {
+    const cid = getCurrentCompanyId();
+    return cid ? Number(cid) : null;
+  });
   const [rules, setRules] = useState<Rule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -91,11 +94,6 @@ export default function RoutingRulesPage() {
   } | null>(null);
   const [probeError, setProbeError] = useState<string | null>(null);
   const [probing, setProbing] = useState(false);
-
-  useEffect(() => {
-    const cid = getCurrentCompanyId();
-    if (cid) setCompanyId(Number(cid));
-  }, []);
 
   const load = useCallback(async (cid: number) => {
     setLoading(true);

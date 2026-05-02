@@ -70,7 +70,10 @@ const EVENT_PRESETS = [
 
 export default function PlatformApiPage() {
   const t = useTranslations("admin.platformApi");
-  const [companyId, setCompanyId] = useState<number | null>(null);
+  const [companyId] = useState<number | null>(() => {
+    const cid = getCurrentCompanyId();
+    return cid ? Number(cid) : null;
+  });
 
   const [keys, setKeys] = useState<ApiKeyRow[]>([]);
   const [keysLoading, setKeysLoading] = useState(true);
@@ -91,11 +94,6 @@ export default function PlatformApiPage() {
   const [hookEvent, setHookEvent] = useState<string>("expense.approved");
   const [hookUrl, setHookUrl] = useState("");
   const [hookDesc, setHookDesc] = useState("");
-
-  useEffect(() => {
-    const cid = getCurrentCompanyId();
-    if (cid) setCompanyId(Number(cid));
-  }, []);
 
   const loadKeys = useCallback(async (cid: number) => {
     setKeysLoading(true);

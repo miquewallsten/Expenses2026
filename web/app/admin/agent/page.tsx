@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Bot, ChevronLeft } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -11,12 +11,10 @@ export const dynamic = "force-dynamic";
 
 export default function AdminAgentPage() {
   const t = useTranslations("agent.admin");
-  const [companyId, setCompanyId] = useState<number | null>(null);
-
-  useEffect(() => {
+  const [companyId] = useState<number | null>(() => {
     const cid = getCurrentCompanyId();
-    setCompanyId(cid ? Number(cid) : null);
-  }, []);
+    return cid ? Number(cid) : null;
+  });
 
   return (
     <div className="flex h-screen flex-col bg-zinc-950">

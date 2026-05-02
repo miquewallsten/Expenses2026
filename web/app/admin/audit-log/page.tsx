@@ -57,7 +57,10 @@ function actionTone(action: string): string {
 
 export default function AuditLogPage() {
   const t = useTranslations("admin.auditLog");
-  const [companyId, setCompanyId] = useState<number | null>(null);
+  const [companyId] = useState<number | null>(() => {
+    const cid = getCurrentCompanyId();
+    return cid ? Number(cid) : null;
+  });
 
   const [rows, setRows] = useState<AuditRow[]>([]);
   const [actions, setActions] = useState<string[]>([]);
@@ -68,11 +71,6 @@ export default function AuditLogPage() {
   const [moreLoading, setMoreLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<number | null>(null);
-
-  useEffect(() => {
-    const cid = getCurrentCompanyId();
-    if (cid) setCompanyId(Number(cid));
-  }, []);
 
   const loadActions = useCallback(async (cid: number) => {
     try {

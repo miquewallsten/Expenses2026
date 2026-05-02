@@ -29,7 +29,6 @@ interface RollupRow<K extends string> {
   [k: string]: number | string | undefined;
   // discriminating field — typed via generics on render-time
   // (k=K is the dimension column).
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }
 
 interface Rollup {
@@ -51,16 +50,14 @@ const DAY_PRESETS = [1, 7, 30, 90] as const;
 
 export default function AgentUsagePage() {
   const t = useTranslations("admin.agentUsage");
-  const [companyId, setCompanyId] = useState<number | null>(null);
+  const [companyId] = useState<number | null>(() => {
+    const cid = getCurrentCompanyId();
+    return cid ? Number(cid) : null;
+  });
   const [days, setDays] = useState<number>(30);
   const [data, setData] = useState<Rollup | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const cid = getCurrentCompanyId();
-    setCompanyId(cid ? Number(cid) : null);
-  }, []);
 
   const load = useCallback(async () => {
     if (companyId == null) return;
@@ -77,7 +74,7 @@ export default function AgentUsagePage() {
   }, [companyId, days]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   const okPct = useMemo(

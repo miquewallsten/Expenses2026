@@ -50,7 +50,10 @@ interface Suggestion {
 
 export default function CategoryMemoryPage() {
   const t = useTranslations("admin.categoryMemory");
-  const [companyId, setCompanyId] = useState<number | null>(null);
+  const [companyId] = useState<number | null>(() => {
+    const cid = getCurrentCompanyId();
+    return cid ? Number(cid) : null;
+  });
   const [data, setData] = useState<ListResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,11 +62,6 @@ export default function CategoryMemoryPage() {
   const [probeText, setProbeText] = useState("");
   const [probing, setProbing] = useState(false);
   const [suggestion, setSuggestion] = useState<Suggestion | null | undefined>(undefined);
-
-  useEffect(() => {
-    const cid = getCurrentCompanyId();
-    if (cid) setCompanyId(Number(cid));
-  }, []);
 
   const load = useCallback(async (cid: number) => {
     setLoading(true);

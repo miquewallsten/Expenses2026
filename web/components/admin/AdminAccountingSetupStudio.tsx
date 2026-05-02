@@ -5,13 +5,17 @@ import { useTranslations } from "next-intl";
 import { Save, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 import { apiPatch } from "@/lib/api/client";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SetupData = Record<string, any>;
+
 interface Props {
   companyId: number;
-  setup: any;
-  companySetup?: any;
-  expensePolicy?: any;
+  setup: SetupData;
+  companySetup?: SetupData;
+  expensePolicy?: SetupData;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onSaved?: (setup: any) => void;
-  draftPatch?: Partial<any>;
+  draftPatch?: Partial<SetupData>;
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -144,6 +148,16 @@ function ToggleRow({
   );
 }
 
+function DraftBadge({ patch, label }: { patch: Partial<SetupData> | undefined; label: string }) {
+  if (!patch || Object.keys(patch).length === 0) return null;
+  const count = Object.keys(patch).length;
+  return (
+    <span className="rounded border border-violet-500/20 bg-violet-500/[0.08] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-violet-300/60">
+      {label} ({count})
+    </span>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function AdminAccountingSetupStudio({ companyId, setup, companySetup, expensePolicy, onSaved, draftPatch }: Props) {
@@ -163,18 +177,7 @@ export default function AdminAccountingSetupStudio({ companyId, setup, companySe
     { value: "threshold_only", label: t("mgrThresholdOnly") },
   ];
 
-  // ── Draft badge ──────────────────────────────────────────────────────────
-  function DraftBadge({ patch }: { patch: Partial<any> | undefined }) {
-    if (!patch || Object.keys(patch).length === 0) return null;
-    const count = Object.keys(patch).length;
-    return (
-      <span className="rounded border border-violet-500/20 bg-violet-500/[0.08] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-violet-300/60">
-        {t("aiDraftCount", { count })}
-      </span>
-    );
-  }
-
-  const seed = (field: string, def: any) => {
+  const seed = (field: string, def: unknown) => {
     if (draftPatch && field in draftPatch) return draftPatch[field];
     return setup[field] ?? def;
   };
@@ -279,7 +282,7 @@ export default function AdminAccountingSetupStudio({ companyId, setup, companySe
       {/* Header */}
       <div className="flex items-center gap-2">
         <h2 className="text-sm font-semibold text-white">{t("title")}</h2>
-        <DraftBadge patch={draftPatch} />
+        <DraftBadge patch={draftPatch} label={t("aiDraftCount", { count: Object.keys(draftPatch || {}).length }).replace(/\s*\(\d+\)$/, "")} />
       </div>
 
       {/* Warnings */}
