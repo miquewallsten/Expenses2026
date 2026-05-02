@@ -3,10 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { GitBranch } from "lucide-react";
-import { getAuthHeaders } from "@/lib/session";
+import { apiCall, apiPost } from "@/lib/api/client";
 import AdminWorkflowSetupStudio from "./AdminWorkflowSetupStudio";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 interface Stage {
   id: number;
@@ -184,30 +182,22 @@ export default function AdminWorkflowMapPanel({
   }, []);
 
   async function loadGraph() {
-    const headers = await getAuthHeaders();
-    const [sr, tr] = await Promise.all([
-      fetch(`${API}/workflows/stages?company_id=${companyId}&module_key=expenses`, { headers }),
-      fetch(`${API}/workflows/transitions?company_id=${companyId}&module_key=expenses`, { headers }),
+    const [stagesData, transitionsData] = await Promise.all([
+      apiCall<Stage[]>(`/workflows/stages?company_id=${companyId}&module_key=expenses`),
+      apiCall<Transition[]>(`/workflows/transitions?company_id=${companyId}&module_key=expenses`),
     ]);
-    if (sr.ok) setStages(await sr.json());
-    if (tr.ok) setTransitions(await tr.json());
+    setStages(stagesData);
+    setTransitions(transitionsData);
   }
 
   async function applyPreset(preset: (typeof PRESETS)[0]) {
     setApplyingPreset(true);
     try {
-      const headers = { ...(await getAuthHeaders()), "Content-Type": "application/json" };
       for (const s of preset.stages) {
-        await fetch(`${API}/workflows/stages`, {
-          method: "POST", headers,
-          body: JSON.stringify({ ...s, company_id: companyId, module_key: "expenses" }),
-        });
+        await apiPost("/workflows/stages", { ...s, company_id: companyId, module_key: "expenses" });
       }
       for (const t of preset.transitions) {
-        await fetch(`${API}/workflows/transitions`, {
-          method: "POST", headers,
-          body: JSON.stringify({ ...t, company_id: companyId, module_key: "expenses" }),
-        });
+        await apiPost("/workflows/transitions", { ...t, company_id: companyId, module_key: "expenses" });
       }
       await loadGraph();
     } finally {

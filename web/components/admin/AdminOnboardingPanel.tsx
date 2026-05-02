@@ -23,9 +23,8 @@ import {
   ArrowUpRight,
   Bot,
 } from "lucide-react";
-import { getAuthHeaders } from "@/lib/session";
+import { apiCall, apiPatch } from "@/lib/api/client";
 import AdminProfileInterview from "./AdminProfileInterview";
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 interface ChecklistItem {
   ok: boolean;
@@ -90,11 +89,7 @@ export default function AdminOnboardingPanel({ companyId, onNavigate }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const r = await fetch(`${API}/admin/company-setup/${companyId}/checklist`, {
-        headers: getAuthHeaders(),
-      });
-      if (!r.ok) throw new Error(`${r.status}`);
-      const body: ChecklistResponse = await r.json();
+      const body = await apiCall<ChecklistResponse>(`/admin/company-setup/${companyId}/checklist`);
       // Hydrate client-side completion for the profile step (no backend support).
       const profileDone = typeof window !== "undefined" &&
         window.localStorage.getItem(`profile_complete:${companyId}`) === "1";
@@ -127,14 +122,7 @@ export default function AdminOnboardingPanel({ companyId, onNavigate }: Props) {
       if (companyId == null) return;
       setSaving(true);
       try {
-        await fetch(
-          `${API}/admin/company-setup/${companyId}/onboarding-step`,
-          {
-            method: "PATCH",
-            headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
-            body: JSON.stringify({ onboarding_step: step }),
-          },
-        );
+        await apiPatch(`/admin/company-setup/${companyId}/onboarding-step`, { onboarding_step: step });
       } catch {
         // non-blocking: progress will recompute on reload
       } finally {

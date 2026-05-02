@@ -3,9 +3,7 @@
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Save, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
-import { getAuthHeaders } from "@/lib/session";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { apiPatch } from "@/lib/api/client";
 
 interface Props {
   companyId: number;
@@ -266,13 +264,7 @@ export default function AdminAccountingSetupStudio({ companyId, setup, companySe
         allow_submit_with_warnings: allowSubmitWithWarnings,
         require_final_accounting_review_before_export: requireFinalReviewBeforeExport,
       };
-      const res = await fetch(`${API}/admin/accounting-setup/${companyId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error(`${res.status}`);
-      const data = await res.json();
+      const data = await apiPatch(`/admin/accounting-setup/${companyId}`, body);
       onSaved?.(data);
       setSaved(true);
     } catch (e: any) {

@@ -5,10 +5,8 @@ import {
   AlertTriangle, CheckCircle2, Loader2, Plus, Power, RefreshCw,
   Save, Sparkles, Trash2, X, AlertCircle,
 } from "lucide-react";
-import { getAuthHeaders } from "@/lib/session";
+import { apiCall, apiPost, apiPatch, apiDelete } from "@/lib/api/client";
 import { useTranslations } from "next-intl";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -111,8 +109,8 @@ export default function AdminPoliciesPanel({ companyId, expensePolicy, onExpense
   async function loadRules() {
     setLoadingRules(true);
     try {
-      const res = await fetch(`${API}/admin/ai-policies/${companyId}`, { headers: getAuthHeaders() });
-      if (res.ok) setRules(await res.json());
+      const data = await apiCall<AIPolicyRead[]>(`/admin/ai-policies/${companyId}`);
+      setRules(data);
     } finally {
       setLoadingRules(false);
     }
@@ -138,13 +136,7 @@ export default function AdminPoliciesPanel({ companyId, expensePolicy, onExpense
     setGenError(null);
     setPreview(null);
     try {
-      const res = await fetch(`${API}/admin/ai-policies/${companyId}/preview`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ source_text: prompt }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setGenError(data.detail ?? `${res.status}`); return; }
+      const data = await apiPost<PreviewResponse>(`/admin/ai-policies/${companyId}/preview`, { source_text: prompt });
       setPreview(data);
     } catch (e: any) {
       setGenError(e?.message ?? "error");
@@ -157,77 +149,44 @@ export default function AdminPoliciesPanel({ companyId, expensePolicy, onExpense
     if (!preview) return;
     setSaving(true);
     try {
-      const res = await fetch(`${API}/admin/ai-policies/${companyId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ source_text: prompt }),
-      });
-      if (res.ok) {
-        await loadRules();
-        setPrompt("");
-        setPreview(null);
-      }
+      await apiPost(`/admin/ai-policies/${companyId}`, { source_text: prompt });
+      await loadRules();
+      setPrompt("");
+      setPreview(null);
     } finally {
       setSaving(false);
     }
   }
 
   async function applySetting(key: string, value: unknown) {
-    const res = await fetch(`${API}/admin/ai-policies/${companyId}/apply-setting`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-      body: JSON.stringify({ setting_key: key, value }),
-    });
-    if (res.ok) { setPreview(null); setPrompt(""); }
+    await apiPost(`/admin/ai-policies/${companyId}/apply-setting`, { setting_key: key, value });
+    setPreview(null);
+    setPrompt("");
   }
 
   async function toggleRule(rule: AIPolicyRead) {
-    const res = await fetch(`${API}/admin/ai-policies/${companyId}/${rule.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-      body: JSON.stringify({ enabled: !rule.enabled }),
-    });
-    if (res.ok) {
-      const updated: AIPolicyRead = await res.json();
-      setRules((all) => all.map((x) => (x.id === updated.id ? updated : x)));
-      if (selectedRule?.id === updated.id) setSelectedRule(updated);
-    }
+    const updated = await apiPatch<AIPolicyRead>(`/admin/ai-policies/${companyId}/${rule.id}`, { enabled: !rule.enabled });
+    setRules((all) => all.map((x) => (x.id === updated.id ? updated : x)));
+    if (selectedRule?.id === updated.id) setSelectedRule(updated);
   }
 
   async function reExtract(rule: AIPolicyRead) {
-    const res = await fetch(`${API}/admin/ai-policies/${companyId}/${rule.id}/re-extract`, {
-      method: "POST",
-      headers: getAuthHeaders(),
-    });
-    if (res.ok) {
-      const updated: AIPolicyRead = await res.json();
-      setRules((all) => all.map((x) => (x.id === updated.id ? updated : x)));
-      if (selectedRule?.id === updated.id) setSelectedRule(updated);
-    }
+    const updated = await apiPost<AIPolicyRead>(`/admin/ai-policies/${companyId}/${rule.id}/re-extract`);
+    setRules((all) => all.map((x) => (x.id === updated.id ? updated : x)));
+    if (selectedRule?.id === updated.id) setSelectedRule(updated);
   }
 
   async function deleteRule(rule: AIPolicyRead) {
     if (!confirm(`Delete policy "${rule.summary}"?`)) return;
-    const res = await fetch(`${API}/admin/ai-policies/${companyId}/${rule.id}`, {
-      method: "DELETE",
-      headers: getAuthHeaders(),
-    });
-    if (res.ok) {
-      setRules((all) => all.filter((x) => x.id !== rule.id));
-      if (selectedRule?.id === rule.id) { setSelectedRule(null); setTab("create"); }
-    }
+    await apiDelete(`/admin/ai-policies/${companyId}/${rule.id}`);
+    setRules((all) => all.filter((x) => x.id !== rule.id));
+    if (selectedRule?.id === rule.id) { setSelectedRule(null); setTab("create"); }
   }
 
   async function saveSettings() {
     setSettingsSaving(true); setSettingsError(null); setSettingsSaved(false);
     try {
-      const res = await fetch(`${API}/expenses/policy/${companyId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify(form),
-      });
-      if (!res.ok) throw new Error(`${res.status}`);
-      const updated = await res.json();
+      const updated = await apiPatch(`/expenses/policy/${companyId}`, form);
       setSettingsDirty(false); setSettingsSaved(true);
       onExpensePolicySaved(updated);
     } catch (e: any) {

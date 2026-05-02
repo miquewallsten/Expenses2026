@@ -2,14 +2,12 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { getAuthHeaders } from "@/lib/session";
+import { apiCall, apiPatch } from "@/lib/api/client";
 import {
   MessageSquare, Mail, CheckCircle2, XCircle, AlertTriangle,
   RefreshCw, Send, Settings2, ChevronRight, ArrowDownLeft, ArrowUpRight,
   Loader2, Eye, EyeOff, Copy, Check,
 } from "lucide-react";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -162,13 +160,8 @@ function WhatsAppSettingsForm({
     try {
       const body: Record<string, unknown> = { ...form };
       if (!body.wa_access_token) delete body.wa_access_token; // don't overwrite with blank
-      const r = await fetch(`${API}/admin/channels/settings/${companyId}/whatsapp`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify(body),
-      });
-      if (!r.ok) throw new Error(await r.text());
-      onSaved(await r.json());
+      const updated = await apiPatch<ChannelSettings>(`/admin/channels/settings/${companyId}/whatsapp`, body);
+      onSaved(updated);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : t("saveFailed"));
     } finally {
@@ -181,15 +174,14 @@ function WhatsAppSettingsForm({
     setTesting(true);
     setTestResult(null);
     try {
-      const r = await fetch(`${API}/admin/channels/test/${companyId}/whatsapp`, {
+      const d = await apiCall<{ detail?: string }>(`/admin/channels/test/${companyId}/whatsapp`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ recipient: testRecipient }),
+        json: { recipient: testRecipient },
       });
-      const d = await r.json();
-      setTestResult(r.ok ? tw("testSent") : d.detail ?? tw("testFailed"));
-    } catch {
-      setTestResult(t("connectionError"));
+      setTestResult(tw("testSent"));
+    } catch (e: unknown) {
+      const err = e instanceof Error ? e.message : t("connectionError");
+      setTestResult(err);
     } finally {
       setTesting(false);
     }
@@ -349,13 +341,8 @@ function EmailSettingsForm({
       };
       if (!body.email_smtp_password) delete body.email_smtp_password;
       if (!body.email_webhook_secret) delete body.email_webhook_secret;
-      const r = await fetch(`${API}/admin/channels/settings/${companyId}/email`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify(body),
-      });
-      if (!r.ok) throw new Error(await r.text());
-      onSaved(await r.json());
+      const updated = await apiPatch<ChannelSettings>(`/admin/channels/settings/${companyId}/email`, body);
+      onSaved(updated);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : t("saveFailed"));
     } finally {
@@ -368,15 +355,14 @@ function EmailSettingsForm({
     setTesting(true);
     setTestResult(null);
     try {
-      const r = await fetch(`${API}/admin/channels/test/${companyId}/email`, {
+      await apiCall(`/admin/channels/test/${companyId}/email`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ recipient: testRecipient }),
+        json: { recipient: testRecipient },
       });
-      const d = await r.json();
-      setTestResult(r.ok ? te("testSent") : d.detail ?? te("testFailed"));
-    } catch {
-      setTestResult(t("connectionError"));
+      setTestResult(te("testSent"));
+    } catch (e: unknown) {
+      const err = e instanceof Error ? e.message : t("connectionError");
+      setTestResult(err);
     } finally {
       setTesting(false);
     }
@@ -525,8 +511,8 @@ function MessageLog({ channel, companyId }: { channel: ChannelTab | "all"; compa
       const params = new URLSearchParams();
       if (channel !== "all") params.set("channel", channel);
       params.set("limit", "80");
-      const r = await fetch(`${API}/admin/channels/messages/${companyId}?${params}`, { headers: getAuthHeaders() });
-      if (r.ok) setMessages(await r.json());
+      const data = await apiCall<ChannelMessage[]>(`/admin/channels/messages/${companyId}?${params}`);
+      setMessages(data);
     } finally {
       setLoading(false);
     }
@@ -630,9 +616,8 @@ function DispatchLog({ channel, companyId }: { channel: ChannelTab; companyId: n
       params.set("channel", channel);
       if (statusFilter !== "all") params.set("status", statusFilter);
       params.set("limit", "100");
-      const r = await fetch(`${API}/admin/channels/dispatches/${companyId}?${params}`, { headers: getAuthHeaders() });
-      if (!r.ok) throw new Error(await r.text());
-      setRows(await r.json());
+      const data = await apiCall<DispatchRow[]>(`/admin/channels/dispatches/${companyId}?${params}`);
+      setRows(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
     } finally {
@@ -788,8 +773,8 @@ export default function AdminChannelsPanel({ companyId }: { companyId: number })
 
   useEffect(() => {
     Promise.all([
-      fetch(`${API}/admin/channels/settings/${companyId}`, { headers: getAuthHeaders() }).then((r) => r.ok ? r.json() : null),
-      fetch(`${API}/admin/channels/stats/${companyId}`, { headers: getAuthHeaders() }).then((r) => r.ok ? r.json() : null),
+      apiCall<ChannelSettings[] | null>(`/admin/channels/settings/${companyId}`).catch(() => null),
+      apiCall<ChannelStats | null>(`/admin/channels/stats/${companyId}`).catch(() => null),
     ]).then(([s, st]) => {
       setSettings(s);
       setStats(st);

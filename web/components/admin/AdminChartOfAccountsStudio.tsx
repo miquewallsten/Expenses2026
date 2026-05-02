@@ -31,8 +31,7 @@ import {
   Wand2,
 } from "lucide-react";
 import { getAuthHeaders } from "@/lib/session";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { apiCall, apiPost, apiPatch, apiDelete } from "@/lib/api/client";
 
 // ── Types mirrored from backend ──────────────────────────────────────────────
 
@@ -122,18 +121,14 @@ export default function AdminChartOfAccountsStudio({ companyId }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const headers = getAuthHeaders();
       const [aRes, tRes, cRes] = await Promise.all([
-        fetch(`${API}/admin/coa/${companyId}/accounts`,         { headers }),
-        fetch(`${API}/admin/coa/${companyId}/tax-rates`,        { headers }),
-        fetch(`${API}/admin/accounting-categories/${companyId}`, { headers }),
+        apiCall<AccountRead[]>(`/admin/coa/${companyId}/accounts`),
+        apiCall<TaxRateRead[]>(`/admin/coa/${companyId}/tax-rates`),
+        apiCall<CategoryRead[]>(`/admin/accounting-categories/${companyId}`),
       ]);
-      if (!aRes.ok) throw new Error(`accounts ${aRes.status}`);
-      if (!tRes.ok) throw new Error(`tax-rates ${tRes.status}`);
-      if (!cRes.ok) throw new Error(`categories ${cRes.status}`);
-      setAccounts(await aRes.json());
-      setTaxRates(await tRes.json());
-      setCategories(await cRes.json());
+      setAccounts(aRes);
+      setTaxRates(tRes);
+      setCategories(cRes);
     } catch (e: any) {
       setError(e?.message ?? "load failed");
     } finally {
@@ -146,12 +141,7 @@ export default function AdminChartOfAccountsStudio({ companyId }: Props) {
   const applyPlanBasico = async () => {
     setSeeding(true);
     try {
-      const res = await fetch(`${API}/admin/coa/${companyId}/apply-preset`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ preset: "plan_basico" }),
-      });
-      if (!res.ok) throw new Error(`${res.status}`);
+      await apiPost(`/admin/coa/${companyId}/apply-preset`, { preset: "plan_basico" });
       await loadAll();
     } catch (e: any) {
       setError(e?.message ?? "preset failed");
@@ -299,12 +289,7 @@ function MapeoEngine({
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(
-          `${API}/admin/coa/${companyId}/bulk-simulate?limit=24`,
-          { headers: getAuthHeaders() },
-        );
-        if (!res.ok) return;
-        const data = await res.json();
+        const data = await apiCall<{ rows?: unknown[] }>(`/admin/coa/${companyId}/bulk-simulate?limit=24`);
         const rows = Array.isArray(data?.rows) ? data.rows : [];
         if (cancelled) return;
         const mapped = rows
@@ -338,13 +323,7 @@ function MapeoEngine({
     const run = async () => {
       setBusy(true);
       try {
-        const res = await fetch(`${API}/admin/coa/${companyId}/simulate`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-          body: JSON.stringify({ expense: sample }),
-        });
-        if (!res.ok) throw new Error(`${res.status}`);
-        const data = await res.json();
+        const data = await apiPost<PolizaResult>(`/admin/coa/${companyId}/simulate`, { expense: sample });
         if (!cancelled) setPoliza(data);
       } catch {
         if (!cancelled) setPoliza(null);
@@ -369,15 +348,7 @@ function MapeoEngine({
         counterparty_account_id: activeCategory.counterparty_account_id,
         [field]: value,
       };
-      const res = await fetch(
-        `${API}/admin/accounting-categories/${activeCategory.id}/bindings`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-          body: JSON.stringify(body),
-        },
-      );
-      if (!res.ok) throw new Error(`${res.status}`);
+      await apiPatch(`/admin/accounting-categories/${activeCategory.id}/bindings`, body);
       await onChanged();
     } finally {
       setSavingId(null);
@@ -591,19 +562,17 @@ function AccountsEditor({
     if (!d.code || !d.name) { setError("code y name son obligatorios"); return; }
     setBusy(true); setError(null);
     try {
-      const res = await fetch(`${API}/admin/coa/${companyId}/accounts`, {
+      await apiCall(`/admin/coa/${companyId}/accounts`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({
+        json: {
           code: d.code, name: d.name,
           sat_group_code: d.sat_group_code || null,
           account_class: d.account_class,
           split_by: d.split_by,
           is_postable: d.is_postable,
           parent_id: d.parent_id,
-        }),
+        },
       });
-      if (!res.ok) throw new Error(`${res.status}`);
       setDraft(blankAccount());
       setEditing(null);
       await onChanged();
@@ -616,10 +585,7 @@ function AccountsEditor({
     if (!confirm("¿Eliminar esta cuenta?")) return;
     setBusy(true);
     try {
-      const res = await fetch(`${API}/admin/coa/accounts/${id}`, {
-        method: "DELETE", headers: getAuthHeaders(),
-      });
-      if (!res.ok) throw new Error(`${res.status}`);
+      await apiDelete(`/admin/coa/accounts/${id}`);
       await onChanged();
     } finally { setBusy(false); }
   };
@@ -894,17 +860,15 @@ function TaxRatesEditor({
     if (!d.name) { setError("nombre obligatorio"); return; }
     setBusy(true); setError(null);
     try {
-      const res = await fetch(`${API}/admin/coa/${companyId}/tax-rates`, {
+      await apiCall(`/admin/coa/${companyId}/tax-rates`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({
+        json: {
           name: d.name,
           rate: Number(d.rate) || 0,
           behavior: d.behavior,
           gl_account_id: d.gl_account_id,
-        }),
+        },
       });
-      if (!res.ok) throw new Error(`${res.status}`);
       setDraft(blankRate());
       setEditing(null);
       await onChanged();
@@ -917,10 +881,7 @@ function TaxRatesEditor({
     if (!confirm("¿Eliminar esta tasa de IVA?")) return;
     setBusy(true);
     try {
-      const res = await fetch(`${API}/admin/coa/tax-rates/${id}`, {
-        method: "DELETE", headers: getAuthHeaders(),
-      });
-      if (!res.ok) throw new Error(`${res.status}`);
+      await apiDelete(`/admin/coa/tax-rates/${id}`);
       await onChanged();
     } finally { setBusy(false); }
   };
@@ -1119,12 +1080,7 @@ function ImportPanel({
   const runImport = async () => {
     setCsvBusy(true); setCsvResult(null);
     try {
-      const res = await fetch(`${API}/admin/coa/${companyId}/import-accounts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ csv_text: csv }),
-      });
-      const data = await res.json();
+      const data = await apiPost<{ created_or_updated: number; errors: string[]; warnings: string[] }>(`/admin/coa/${companyId}/import-accounts`, { csv_text: csv });
       setCsvResult(data);
       if (data.created_or_updated > 0) await onChanged();
     } finally { setCsvBusy(false); }
@@ -1140,12 +1096,7 @@ function ImportPanel({
   const runAi = async () => {
     setAiBusy(true); setAiNote(null); setSuggestions([]); setAccepted(new Set());
     try {
-      const res = await fetch(`${API}/admin/coa/${companyId}/ai-suggest`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ hint, only_unmapped: true }),
-      });
-      const data = await res.json();
+      const data = await apiPost<{ ok?: boolean; note?: string; suggestions?: AiSuggestion[] }>(`/admin/coa/${companyId}/ai-suggest`, { hint, only_unmapped: true });
       if (!data.ok) {
         setAiNote(data.note ?? "Falló la sugerencia IA");
       } else {
@@ -1168,16 +1119,10 @@ function ImportPanel({
         counterparty_account_id: s.counterparty_account_id,
       }));
     if (bindings.length === 0) return;
-    const res = await fetch(`${API}/admin/coa/${companyId}/bulk-bindings`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-      body: JSON.stringify({ bindings }),
-    });
-    if (res.ok) {
-      setSuggestions([]);
-      setAccepted(new Set());
-      await onChanged();
-    }
+    await apiPost(`/admin/coa/${companyId}/bulk-bindings`, { bindings });
+    setSuggestions([]);
+    setAccepted(new Set());
+    await onChanged();
   };
 
   const acctCode = (id: number | null) =>
@@ -1415,12 +1360,7 @@ function TemplateCopilotPanel({
   const analyze = async () => {
     setBusy(true); setNote(null); setPreview([]); setAccepted(new Set()); setImportResult(null);
     try {
-      const res = await fetch(`${API}/admin/coa/${companyId}/ai-normalize-accounts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ raw_text: raw, hint }),
-      });
-      const data = await res.json();
+      const data = await apiPost<{ ok?: boolean; note?: string; accounts?: NormalizedAccount[] }>(`/admin/coa/${companyId}/ai-normalize-accounts`, { raw_text: raw, hint });
       if (!data.ok) {
         setNote(data.note ?? "Falló el análisis");
       } else {
@@ -1448,12 +1388,7 @@ function TemplateCopilotPanel({
     ).join("\n");
     setImportBusy(true); setImportResult(null);
     try {
-      const res = await fetch(`${API}/admin/coa/${companyId}/import-accounts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ csv_text: csv }),
-      });
-      const data = await res.json();
+      const data = await apiPost<{ created_or_updated: number; errors: string[]; warnings: string[] }>(`/admin/coa/${companyId}/import-accounts`, { csv_text: csv });
       setImportResult(data);
       if (data.created_or_updated > 0) {
         await onChanged();
@@ -1611,19 +1546,14 @@ function SimulatorTab({ companyId, categories }: { companyId: number; categories
   const run = async () => {
     setBusy(true);
     try {
-      const res = await fetch(`${API}/admin/coa/${companyId}/simulate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({
-          expense: {
-            amount: Number(amount) || 0,
-            category_code: categoryCode,
-            description: "Prueba manual",
-          },
-        }),
+      const data = await apiPost<PolizaResult>(`/admin/coa/${companyId}/simulate`, {
+        expense: {
+          amount: Number(amount) || 0,
+          category_code: categoryCode,
+          description: "Prueba manual",
+        },
       });
-      if (!res.ok) throw new Error(`${res.status}`);
-      setResult(await res.json());
+      setResult(data);
     } catch {
       setResult(null);
     } finally {
@@ -1711,11 +1641,8 @@ function BulkSimulatorPanel({ companyId }: { companyId: number }) {
   const run = async () => {
     setBusy(true); setError(null);
     try {
-      const res = await fetch(`${API}/admin/coa/${companyId}/bulk-simulate?limit=${limit}`, {
-        headers: getAuthHeaders(),
-      });
-      if (!res.ok) throw new Error(`${res.status}`);
-      setResult(await res.json());
+      const data = await apiCall<BulkResult>(`/admin/coa/${companyId}/bulk-simulate?limit=${limit}`);
+      setResult(data);
     } catch (e: any) {
       setError(e?.message ?? "error");
     } finally { setBusy(false); }
