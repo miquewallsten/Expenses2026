@@ -33,6 +33,8 @@ import {
 import { getAuthHeaders } from "@/lib/session";
 import { apiCall, apiPost, apiPatch, apiDelete } from "@/lib/api/client";
 
+const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+
 // ── Types mirrored from backend ──────────────────────────────────────────────
 
 interface AccountRead {

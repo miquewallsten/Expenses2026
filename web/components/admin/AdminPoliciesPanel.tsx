@@ -186,7 +186,7 @@ export default function AdminPoliciesPanel({ companyId, expensePolicy, onExpense
   async function saveSettings() {
     setSettingsSaving(true); setSettingsError(null); setSettingsSaved(false);
     try {
-      const updated = await apiPatch(`/expenses/policy/${companyId}`, form);
+      const updated = await apiPatch<Record<string, any>>(`/expenses/policy/${companyId}`, form);
       setSettingsDirty(false); setSettingsSaved(true);
       onExpensePolicySaved(updated);
     } catch (e: any) {
