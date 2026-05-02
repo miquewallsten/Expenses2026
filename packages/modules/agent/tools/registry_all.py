@@ -23,10 +23,11 @@ from . import workflow          # noqa: F401
 from . import accounting_category  # noqa: F401
 from . import ai_policy         # noqa: F401
 from . import finance_copilot   # noqa: F401
+from . import platform          # noqa: F401
 
 __all__ = [
     "admin_tools", "config_patch", "creative", "diagnostic", "infra", "ingestion",
     "knowledge_tools", "memory", "org", "rbac", "read_tools", "readiness_tools",
     "search", "settings", "workflow", "accounting_category", "ai_policy",
-    "finance_copilot",
+    "finance_copilot", "platform",
 ]
