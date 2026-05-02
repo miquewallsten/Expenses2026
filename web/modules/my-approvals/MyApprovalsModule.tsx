@@ -14,15 +14,13 @@ import ReviewActionBar from "@/components/review/ReviewActionBar";
 import StatusNextAction from "@/components/my-work/StatusNextAction";
 import { useMyWorkContext } from "@/context/MyWorkContext";
 import { useUserContext } from "@/context/UserContext";
-import { getAuthHeaders } from "@/lib/session";
+import { apiCall, apiPost } from "@/lib/api/client";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
 import {
   MODULE_IDS,
   deriveExpenseDecision,
   type ExpenseDecision,
 } from "@/lib/my-work/expenseDecision";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -353,11 +351,8 @@ export default function MyApprovalsModule() {
   const loadQueue = useCallback(async () => {
     setListLoading(true);
     try {
-      const data = await fetch(`${API}/manager/queue/${cid}`, {
-        headers: { ...getAuthHeaders() },
-      })
-        .then((r) => r.ok ? r.json() : { items: [], summary: null })
-        .catch(() => ({ items: [], summary: null })) as { items: Expense[]; summary: QueueSummary };
+      const data = await apiCall<{ items: Expense[]; summary: QueueSummary | null }>(`/manager/queue/${cid}`)
+        .catch(() => ({ items: [], summary: null }));
 
       const items: Expense[] = data.items ?? [];
       setExpenses(items);
@@ -382,10 +377,7 @@ export default function MyApprovalsModule() {
   useEffect(() => {
     if (!selected) { setManagerActions(null); return; }
     let cancelled = false;
-    fetch(`${API}/expenses/actions/${selected.id}?portal_role=manager`, {
-      headers: { ...getAuthHeaders() },
-    })
-      .then((r) => r.ok ? r.json() : null)
+    apiCall<{ actions: ManagerActions } | null>(`/expenses/actions/${selected.id}?portal_role=manager`)
       .then((d) => { if (!cancelled) setManagerActions(d?.actions ?? null); })
       .catch(() => { if (!cancelled) setManagerActions(null); });
     return () => { cancelled = true; };
@@ -399,11 +391,8 @@ export default function MyApprovalsModule() {
   const postActionRefresh = useCallback(async (actedId: number) => {
     setListLoading(true);
     try {
-      const data = await fetch(`${API}/manager/queue/${cid}`, {
-        headers: { ...getAuthHeaders() },
-      })
-        .then((r) => r.ok ? r.json() : { items: [], summary: null })
-        .catch(() => ({ items: [], summary: null })) as { items: Expense[]; summary: QueueSummary };
+      const data = await apiCall<{ items: Expense[]; summary: QueueSummary | null }>(`/manager/queue/${cid}`)
+        .catch(() => ({ items: [], summary: null }));
 
       const items: Expense[] = data.items ?? [];
       setExpenses(items);
@@ -418,19 +407,15 @@ export default function MyApprovalsModule() {
       if (items.some((e) => e.id === actedId)) {
         // Still in queue (returned-to-draft, etc.) — refresh in-place.
         setSelected(items.find((e) => e.id === actedId)!);
-        const ar = await fetch(`${API}/expenses/actions/${actedId}?portal_role=manager`, {
-          headers: { ...getAuthHeaders() },
-        });
-        if (ar.ok) { const ad = await ar.json(); setManagerActions(ad?.actions ?? null); }
+        const ad = await apiCall<{ actions: ManagerActions } | null>(`/expenses/actions/${actedId}?portal_role=manager`).catch(() => null);
+        setManagerActions(ad?.actions ?? null);
       } else {
         // Left the queue — advance to the neighbour.
         const oldIdx = expensesRef.current.findIndex((e) => e.id === actedId);
         const next   = items[oldIdx] ?? items[Math.max(0, oldIdx - 1)] ?? items[0];
         setSelected(next);
-        const ar = await fetch(`${API}/expenses/actions/${next.id}?portal_role=manager`, {
-          headers: { ...getAuthHeaders() },
-        });
-        if (ar.ok) { const ad = await ar.json(); setManagerActions(ad?.actions ?? null); }
+        const ad = await apiCall<{ actions: ManagerActions } | null>(`/expenses/actions/${next.id}?portal_role=manager`).catch(() => null);
+        setManagerActions(ad?.actions ?? null);
       }
     } finally {
       setListLoading(false);
@@ -458,21 +443,15 @@ export default function MyApprovalsModule() {
     setActing(true);
     setActionError(null);
     try {
-      const r = await fetch(`${API}/expenses/review-actions/${selected.id}/${endpoint}`, {
-        method: "POST",
-        headers: comment != null
-          ? { ...getAuthHeaders(), "Content-Type": "application/json" }
-          : { ...getAuthHeaders() },
-        body: comment != null ? JSON.stringify({ comment }) : undefined,
-      });
-      if (r.ok) {
-        await postActionRefresh(selected.id);
+      if (comment != null) {
+        await apiPost(`/expenses/review-actions/${selected.id}/${endpoint}`, { comment });
       } else {
-        const body = await r.json().catch(() => ({}));
-        setActionError((body as { detail?: string })?.detail ?? `${label} failed (${r.status}).`);
+        await apiPost(`/expenses/review-actions/${selected.id}/${endpoint}`);
       }
-    } catch {
-      setActionError(t("serverError"));
+      await postActionRefresh(selected.id);
+    } catch (e) {
+      const err = e as { body?: { detail?: string }; message?: string };
+      setActionError(err?.body?.detail ?? err?.message ?? `${label} failed.`);
     } finally {
       setActing(false);
     }
@@ -511,25 +490,15 @@ export default function MyApprovalsModule() {
       setBulkBusy(true);
       setBulkError(null);
       try {
-        const r = await fetch(`${API}/expenses/review-actions/bulk-transition`, {
-          method: "POST",
-          headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action,
-            expense_ids: Array.from(bulkIds),
-            comment,
-          }),
-        });
-        if (!r.ok) {
-          const body = (await r.json().catch(() => ({}))) as { detail?: string };
-          setBulkError(body.detail ?? `Bulk action failed (${r.status})`);
-          return;
-        }
-        const data = (await r.json()) as {
+        const data = await apiPost<{
           succeeded: number;
           failed: number;
           results: { expense_id: number; ok: boolean; error?: string }[];
-        };
+        }>("/expenses/review-actions/bulk-transition", {
+          action,
+          expense_ids: Array.from(bulkIds),
+          comment,
+        });
         if (data.failed > 0) {
           const firstErr = data.results.find((x) => !x.ok)?.error;
           setBulkError(
@@ -539,8 +508,9 @@ export default function MyApprovalsModule() {
         }
         setBulkIds(new Set());
         await loadQueue();
-      } catch {
-        setBulkError(t("serverError"));
+      } catch (e) {
+        const err = e as { body?: { detail?: string }; message?: string };
+        setBulkError(err?.body?.detail ?? err?.message ?? "Bulk action failed.");
       } finally {
         setBulkBusy(false);
       }

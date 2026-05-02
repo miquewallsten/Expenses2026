@@ -22,7 +22,7 @@ import EmployeeExpenseList from "@/components/employee/EmployeeExpenseList";
 import EmployeeExpenseDetail from "@/components/employee/EmployeeExpenseDetail";
 import { useMyWorkContext } from "@/context/MyWorkContext";
 import { useUserContext } from "@/context/UserContext";
-import { getAuthHeaders } from "@/lib/session";
+import { apiCall, apiPost } from "@/lib/api/client";
 import { enqueueUpload } from "@/lib/offline/uploadQueue";
 import { compressImageFile } from "@/lib/imageCompress";
 import { MODULE_IDS, deriveExpenseDecision } from "@/lib/my-work/expenseDecision";
@@ -32,8 +32,6 @@ import {
   parseXmlExtracted,
   SUBMISSION_TYPES,
 } from "@/lib/expenses/xmlExtract";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -145,8 +143,6 @@ export default function MyExpensesModule() {
   // for doc completeness / parsed XML) and re-broadcasts to context so
   // the Copilot assistant and deriveExpenseDecision see the full picture.
   const loadDraftDocs = useCallback(async (expenseId: number) => {
-    const headers = { ...getAuthHeaders() };
-
     // Mark loading — seed a stub if this is a new selection.
     setDraftState((prev) =>
       prev?.expenseId === expenseId
@@ -167,41 +163,31 @@ export default function MyExpensesModule() {
     );
 
     try {
-      const [docsRes, expRes] = await Promise.all([
-        fetch(`${API}/expenses/documents/by-expense/${expenseId}`, { headers }),
-        fetch(`${API}/expenses/${expenseId}`, { headers }),
+      const [docs, expense] = await Promise.all([
+        apiCall<ExpenseDocument[]>(`/expenses/documents/by-expense/${expenseId}`).catch(() => [] as ExpenseDocument[]),
+        apiCall<Expense | null>(`/expenses/${expenseId}`).catch(() => null),
       ]);
-
-      const docs: ExpenseDocument[] = docsRes.ok ? await docsRes.json() : [];
-      const expense: Expense | null  = expRes.ok  ? await expRes.json()  : null;
 
       let parsedXml: ExtractedData | null = null;
       let satStatus: "valid" | "warning" | "error" | null = null;
 
       const xmlDoc = docs.find((d) => d.document_type === "cfdi_xml");
       if (xmlDoc) {
-        const [docRes, valRes] = await Promise.all([
-          fetch(`${API}/expenses/documents/${xmlDoc.id}`, { headers }),
-          fetch(`${API}/expenses/documents/${xmlDoc.id}/validation-results`, { headers }),
+        const [docData, vals] = await Promise.all([
+          apiCall<{ content_text?: string } | null>(`/expenses/documents/${xmlDoc.id}`).catch(() => null),
+          apiCall<Array<{ rule_code: string; status: string }>>(`/expenses/documents/${xmlDoc.id}/validation-results`).catch(() => []),
         ]);
-        if (docRes.ok) {
-          const docData = await docRes.json();
-          if (typeof docData.content_text === "string") {
-            parsedXml = parseXmlExtracted(docData.content_text) ?? null;
-          }
+        if (docData && typeof docData.content_text === "string") {
+          parsedXml = parseXmlExtracted(docData.content_text) ?? null;
         }
         // Trigger re-validation so stored results reflect live SAT SOAP.
-        fetch(`${API}/expenses/documents/${xmlDoc.id}/validate`, { method: "POST", headers }).catch(() => {});
-        if (valRes.ok) {
-          const vals: Array<{ rule_code: string; status: string }> = await valRes.json();
-          // Only SAT_VALIDATION drives satStatus — other rules (e.g. MISSING_PDF) are separate concerns.
-          const satRule = vals.find((v) => v.rule_code === "SAT_VALIDATION");
-          if (satRule) {
-            satStatus = satRule.status === "failed" ? "error" : satRule.status === "warning" ? "warning" : "valid";
-          } else {
-            // No stored SAT result yet — default to valid if XML parsed OK.
-            satStatus = parsedXml ? "valid" : null;
-          }
+        apiPost(`/expenses/documents/${xmlDoc.id}/validate`).catch(() => {});
+        const satRule = vals.find((v) => v.rule_code === "SAT_VALIDATION");
+        if (satRule) {
+          satStatus = satRule.status === "failed" ? "error" : satRule.status === "warning" ? "warning" : "valid";
+        } else {
+          // No stored SAT result yet — default to valid if XML parsed OK.
+          satStatus = parsedXml ? "valid" : null;
         }
       }
 
@@ -286,9 +272,8 @@ export default function MyExpensesModule() {
 
   const loadExpenses = useCallback((selectNewest = false, preferExpenseId?: number) => {
     setLoading(true);
-    fetch(`${API}/expenses/`, { headers: { ...getAuthHeaders() } })
-      .then((r) => r.json())
-      .then((data: Expense[]) => {
+    apiCall<Expense[]>("/expenses/")
+      .then((data) => {
         setExpenses(data);
         if (preferExpenseId != null) {
           const target = data.find((e) => e.id === preferExpenseId);
@@ -342,17 +327,10 @@ export default function MyExpensesModule() {
         const form = new FormData();
         form.append("company_id", String(cid));
         form.append("file", file, file.name);
-        const res = await fetch(`${API}/expenses/documents/upload`, {
-          method:  "POST",
-          headers: { ...getAuthHeaders() }, // NOTE: no Content-Type — fetch sets the boundary
-          body:    form,
+        const j = await apiCall<{ expense_id: number; document_type: string | null }>("/expenses/documents/upload", {
+          method: "POST",
+          body: form,
         });
-        if (!res.ok) {
-          const msg = await res.text().catch(() => res.statusText);
-          failures.push(`${file.name}: ${msg || res.status}`);
-          continue;
-        }
-        const j = await res.json();
         if (j) docs.push(j);
       } catch (e) {
         // Network failure (offline / DNS / CORS preflight refused). Stash
@@ -369,7 +347,8 @@ export default function MyExpensesModule() {
             // fall through to failure list below
           }
         }
-        failures.push(`${file.name}: ${e instanceof Error ? e.message : String(e)}`);
+        const err = e as { message?: string };
+        failures.push(`${file.name}: ${err?.message || String(e)}`);
       }
     }
     if (queued > 0) {
@@ -427,27 +406,19 @@ export default function MyExpensesModule() {
     setSimpleSubmitting(true);
     setSimpleError(null);
     try {
-      const res = await fetch(`${API}/expenses/`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body:    JSON.stringify({
-          company_id:   cid,
-          amount:       parseFloat(simpleAmount),
-          description:  simpleDesc.trim(),
-        }),
+      const created = await apiPost<Expense>("/expenses/", {
+        company_id:   cid,
+        amount:       parseFloat(simpleAmount),
+        description:  simpleDesc.trim(),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error((err as { detail?: string }).detail ?? "Failed to create expense");
-      }
-      const created: Expense = await res.json();
       setShowSimpleForm(false);
       setSimpleDesc("");
       setSimpleAmount("");
       setSimpleDate(new Date().toISOString().substring(0, 10));
       loadExpenses(false, created.id);
     } catch (e) {
-      setSimpleError(e instanceof Error ? e.message : "Unknown error");
+      const err = e as { body?: { detail?: string }; message?: string };
+      setSimpleError(err?.body?.detail ?? err?.message ?? "Unknown error");
     } finally {
       setSimpleSubmitting(false);
     }
