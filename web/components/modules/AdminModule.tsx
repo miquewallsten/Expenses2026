@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useUserContext } from "@/context/UserContext";
-import { getAuthHeaders } from "@/lib/session";
+import { apiCall } from "@/lib/api/client";
 import AdminNavigation, { type AdminSection } from "@/components/admin/AdminNavigation";
 import AnnouncementPanel from "@/components/admin/AnnouncementPanel";
 import AdminCompanySetupStudio from "@/components/admin/AdminCompanySetupStudio";
@@ -10,8 +10,6 @@ import AdminUsersPanel from "@/components/admin/AdminUsersPanel";
 import AdminPoliciesPanel from "@/components/admin/AdminPoliciesPanel";
 import AdminAccountingSetupStudio from "@/components/admin/AdminAccountingSetupStudio";
 import AdminWorkflowMapPanel from "@/components/admin/AdminWorkflowMapPanel";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 interface AdminData {
@@ -24,13 +22,12 @@ interface AdminData {
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 async function fetchAdminData(companyId: number): Promise<AdminData> {
-  const headers = getAuthHeaders();
   const [companySetup, users, expensePolicy, accountingSetup, workflowSetup] = await Promise.all([
-    fetch(`${API}/admin/company-setup/${companyId}`, { headers }).then((r) => (r.ok ? r.json() : null)),
-    fetch(`${API}/users?company_id=${companyId}`, { headers }).then((r) => (r.ok ? r.json() : [])),
-    fetch(`${API}/expenses/policy/${companyId}`, { headers }).then((r) => (r.ok ? r.json() : null)),
-    fetch(`${API}/admin/accounting-setup/${companyId}`, { headers }).then((r) => (r.ok ? r.json() : null)),
-    fetch(`${API}/admin/workflow-setup/${companyId}`, { headers }).then((r) => (r.ok ? r.json() : null)),
+    apiCall(`/admin/company-setup/${companyId}`).catch(() => null),
+    apiCall<any[]>(`/users?company_id=${companyId}`).catch(() => []),
+    apiCall(`/expenses/policy/${companyId}`).catch(() => null),
+    apiCall(`/admin/accounting-setup/${companyId}`).catch(() => null),
+    apiCall(`/admin/workflow-setup/${companyId}`).catch(() => null),
   ]);
   return {
     companySetup: companySetup ?? {},

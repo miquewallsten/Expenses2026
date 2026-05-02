@@ -3,13 +3,11 @@
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Bot, Zap, Loader2, CheckCircle2, AlertTriangle, AlertCircle } from "lucide-react";
-import { getAuthHeaders } from "@/lib/session";
+import { apiPost } from "@/lib/api/client";
 import {
   getPortalConfigConflicts,
   type PortalConfigConflict,
 } from "@/lib/portal-config-conflicts";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 // Accounting-relevant conflict codes for the pre-flight section
 const ACCOUNTING_CODES = new Set([
@@ -241,20 +239,13 @@ export default function AdminAccountingCopilot({
         approvalSetup, workflowSetup, portalConfig,
       );
 
-      const res = await fetch(`${API}/ai/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({
-          system_prompt: buildSystemPrompt(text, ctx),
-          prompt:        text,
-          context:       `company_id:${companyId}`,
-          locale,
-        }),
+      const data = await apiPost<{ content?: string }>(`/ai/chat`, {
+        system_prompt: buildSystemPrompt(text, ctx),
+        prompt:        text,
+        context:       `company_id:${companyId}`,
+        locale,
       });
 
-      if (!res.ok) { setOffline(true); return; }
-
-      const data = await res.json();
       const raw: string = typeof data?.content === "string" ? data.content : "";
 
       // Strip markdown fences if the model wraps output

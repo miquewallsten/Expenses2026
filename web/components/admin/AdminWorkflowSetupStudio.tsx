@@ -3,13 +3,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Save, Loader2, CheckCircle2, Sparkles, AlertTriangle, AlertCircle } from "lucide-react";
-import { getAuthHeaders } from "@/lib/session";
+import { apiCall, HttpError } from "@/lib/api/client";
 import {
   getPortalConfigConflicts,
   type PortalConfigConflict,
 } from "@/lib/portal-config-conflicts";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 interface Props {
   companyId: number;
@@ -264,19 +262,16 @@ export default function AdminWorkflowSetupStudio({
     setError(null);
     setSaved(false);
     try {
-      const res = await fetch(`${API}/admin/workflow-setup/${companyId}`, {
+      const updated = await apiCall(`/admin/workflow-setup/${companyId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify(form),
+        json: form,
       });
-      if (!res.ok) throw new Error(`${res.status}`);
-      const updated = await res.json();
       setDirty(false);
       setSaved(true);
       setAiDrafted(false);
       onSaved?.(updated);
     } catch (e: any) {
-      setError(e?.message ?? tc("save"));
+      setError(e instanceof HttpError ? e.message : tc("save"));
     } finally {
       setSaving(false);
     }
