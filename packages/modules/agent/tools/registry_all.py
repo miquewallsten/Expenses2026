@@ -2,8 +2,16 @@
 
 Importing this module triggers ``REGISTRY.register(...)`` calls in each
 submodule. The HTTP router imports this once at module load.
+
+Tools are organized into domain directories for better discoverability:
+- accounting/  — accounting configuration tools
+- work/        — expense and work execution tools
+- platform/    — tenant and provider management tools
+
+Flat imports remain for backwards compatibility.
 """
 
+# Flat imports (backwards compatibility)
 from . import admin_tools       # noqa: F401
 from . import config_patch      # noqa: F401
 from . import creative          # noqa: F401
@@ -25,9 +33,16 @@ from . import ai_policy         # noqa: F401
 from . import finance_copilot   # noqa: F401
 from . import platform          # noqa: F401
 
+# Domain directories (new organization)
+from . import accounting        # noqa: F401
+from . import work              # noqa: F401
+
 __all__ = [
+    # Flat modules (backwards compatibility)
     "admin_tools", "config_patch", "creative", "diagnostic", "infra", "ingestion",
     "knowledge_tools", "memory", "org", "rbac", "read_tools", "readiness_tools",
     "search", "settings", "workflow", "accounting_category", "ai_policy",
     "finance_copilot", "platform",
+    # Domain directories
+    "accounting", "work",
 ]
