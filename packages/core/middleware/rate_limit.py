@@ -397,17 +397,36 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # Process request
         response = await call_next(request)
 
-        # Add rate limit headers
+        # Add rate limit headers for both company and user limits
         if company_id:
             company_key = f"company:{company_id}"
-            response.headers["X-RateLimit-Limit"] = str(
+            response.headers["X-RateLimit-Limit-Company"] = str(
                 self.company_config.requests_per_minute
             )
-            response.headers["X-RateLimit-Remaining"] = str(
+            response.headers["X-RateLimit-Remaining-Company"] = str(
                 self._company_limiter.get_remaining(company_key)
             )
 
+        # Add user rate limit headers (for all rate-limited requests)
+        response.headers["X-RateLimit-Limit-User"] = str(self.config.requests_per_minute)
+        response.headers["X-RateLimit-Remaining-User"] = str(self._get_remaining(key))
+
         return response
+
+    def _get_remaining(self, key: str) -> int:
+        """Get remaining requests for a user key.
+
+        Args:
+            key: User identifier.
+
+        Returns:
+            Number of requests remaining in current window.
+        """
+        now = time.time()
+        bucket = self._buckets[key]
+        self._clean_old_requests(bucket, now)
+        count = len(bucket.requests)
+        return max(0, self.config.requests_per_minute - count)
 
     def reset(self, key: str | None = None) -> None:
         """Reset rate limit state.
