@@ -19,6 +19,7 @@ from .registry import REGISTRY, ToolResult
 from .routing import scoped_model, select_model
 from ..models_definitions import AgentDefinition
 from .agent_definition_service import AGENT_DEF_SERVICE
+from packages.core.cache.redis_client import SessionStore, REDIS_AVAILABLE
 
 _log = logging.getLogger(__name__)
 
@@ -35,10 +36,11 @@ class AgentTeam:
 
 class AgentOrchestrator:
     """Coordinates specialized agent teams for Financial Ops platform."""
-    
+
     def __init__(self):
         self.def_svc = AGENT_DEF_SERVICE
-        self.active_sessions: Dict[str, Any] = {}
+        self.active_sessions: Dict[str, Any] = {}  # Fallback for when Redis unavailable
+        self.session_store = SessionStore() if REDIS_AVAILABLE else None
         self.performance_metrics: Dict[str, Dict] = {}
         self.teams: Dict[str, AgentTeam] = {}
 
@@ -50,6 +52,25 @@ class AgentOrchestrator:
         self.request_history: List[Dict] = []
         self._max_history = 500
         self.start_time = time.time()
+
+    def _store_session(self, session_id: str, data: dict, ttl: int = 3600) -> None:
+        """Store session in Redis if available, else in-memory."""
+        if self.session_store:
+            self.session_store.save(session_id, data, ttl)
+        else:
+            self.active_sessions[session_id] = {
+                "data": data,
+                "expires": time.time() + ttl,
+            }
+
+    def _get_session(self, session_id: str) -> dict | None:
+        """Get session from Redis if available, else in-memory."""
+        if self.session_store:
+            return self.session_store.get(session_id)
+        session = self.active_sessions.get(session_id)
+        if session and session.get("expires", 0) > time.time():
+            return session.get("data")
+        return None
 
     def get_team_performance(self) -> Dict[str, Any]:
         """Per-team breakdown for the Super Admin dashboard."""
