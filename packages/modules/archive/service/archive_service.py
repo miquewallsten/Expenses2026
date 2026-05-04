@@ -228,11 +228,14 @@ def store_file(
         filename_hint=filename_hint,
     )
 
+    file_size = len(file_bytes)
+
     record = ArchiveFile(
         company_id=company_id,
         expense_id=expense_id,
         file_name=result["original_filename"],
         file_type=result["file_type"],
+        size_bytes=file_size,
         source_type=source_type,
         storage_backend=result["storage_backend"],
         storage_key=result["storage_key"],

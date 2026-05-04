@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, Index, String, Text, func
+from sqlalchemy import BigInteger, DateTime, Index, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from apps.api.db import Base
@@ -39,6 +39,7 @@ class ArchiveFile(Base):
     # file_type : lowercased extension without dot (e.g. "pdf", "xml", "jpg")
     file_name: Mapped[str] = mapped_column(String(255), nullable=False)
     file_type: Mapped[str] = mapped_column(String(20),  nullable=False)
+    size_bytes: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
 
     # ── Origin ────────────────────────────────────────────────────────────────
     # source_type : how the file entered the archive
