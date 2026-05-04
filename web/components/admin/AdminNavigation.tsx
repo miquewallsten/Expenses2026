@@ -70,36 +70,33 @@ export default function AdminNavigation({ activeSection, onSelect }: Props) {
   return (
     <>
       {/* Mobile toggle */}
-      <div className="flex h-10 shrink-0 items-center border-b border-subtle bg-surface-1 px-3 md:hidden">
+      <div className="flex h-9 shrink-0 items-center border-b border-white/[0.06] bg-zinc-950 px-2 md:hidden">
         <button
           type="button"
           onClick={() => setMobileOpen((v) => !v)}
-          className="flex h-7 w-7 items-center justify-center rounded-md text-tertiary transition-all hover:bg-surface-3 hover:text-primary active:scale-95"
+          className="flex h-6 w-6 items-center justify-center rounded text-white/40 transition-colors hover:bg-white/[0.05] hover:text-white/65"
         >
-          {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+          {mobileOpen ? <X className="h-3.5 w-3.5" /> : <Menu className="h-3.5 w-3.5" />}
         </button>
-        <span className="ml-2 text-[11px] font-semibold text-[var(--text-primary)]">
+        <span className="ml-2 text-[10px] font-bold uppercase tracking-widest text-white/45">
           {SECTIONS.find((s) => s.id === activeSection)?.label ?? "Admin"}
         </span>
       </div>
 
       {/* Nav panel */}
       <nav
-        className={`shrink-0 flex-col border-r border-subtle bg-surface-1 transition-all ${
+        className={`shrink-0 flex-col border-r border-white/[0.06] bg-zinc-950 transition-all ${
           mobileOpen ? "flex" : "hidden md:flex"
         }`}
-        style={{ width: "240px" }}
+        style={{ width: "220px" }}
         data-testid="admin-navigation"
       >
-        {/* Header */}
-        <div className="flex h-10 shrink-0 items-center border-b border-subtle px-4">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-tertiary">
+        <div className="flex h-9 shrink-0 items-center border-b border-white/[0.06] px-3">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-white/30">
             Administration
           </span>
         </div>
-
-        {/* Navigation items */}
-        <ul className="space-y-0.5 p-2">
+        <ul className="space-y-px py-1.5 px-2">
           {SECTIONS.map((section) => {
             const isActive = activeSection === section.id;
             return (
@@ -110,29 +107,24 @@ export default function AdminNavigation({ activeSection, onSelect }: Props) {
                     onSelect(section.id);
                     setMobileOpen(false);
                   }}
-                  className={`group relative flex w-full items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-all ${
+                  className={`group relative flex w-full items-center gap-2.5 rounded px-3 py-1.5 text-[11px] font-medium leading-none transition-colors ${
                     isActive
-                      ? "bg-accent-muted text-accent"
-                      : "text-secondary hover:bg-surface-3 hover:text-primary active:scale-[0.99]"
+                      ? "bg-indigo-600/[0.18] text-white"
+                      : "text-white/38 hover:bg-white/[0.04] hover:text-white/65"
                   }`}
                 >
-                  {/* Active indicator */}
                   {isActive && (
-                    <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-accent" />
+                    <span className="absolute left-0 top-1/2 h-3.5 w-0.5 -translate-y-1/2 rounded-r-full bg-indigo-400/70" />
                   )}
-
-                  {/* Icon */}
                   <span
-                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-all ${
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded ${
                       isActive
-                        ? "bg-accent text-white shadow-[var(--shadow-glow)]"
-                        : "bg-surface-2 text-tertiary group-hover:bg-surface-3 group-hover:text-secondary"
+                        ? "bg-indigo-500/25 text-indigo-300/80"
+                        : "bg-white/[0.04] text-white/30 group-hover:text-white/55"
                     }`}
                   >
                     {section.icon}
                   </span>
-
-                  {/* Label */}
                   <span className="truncate">{section.label}</span>
                 </button>
               </li>
