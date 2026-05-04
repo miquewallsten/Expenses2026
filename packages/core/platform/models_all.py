@@ -53,6 +53,7 @@ from packages.core.platform.models_request_attachment import RequestAttachment  
 from packages.core.platform.models_report_cycle import ReportCycleSettings  # noqa: F401
 from packages.core.platform.models_auth_settings import CompanyAuthSettings  # noqa: F401
 from packages.core.platform.models_storage_config import StorageConfig  # noqa: F401
+from packages.core.platform.models_storage_usage import StorageUsage  # noqa: F401
 from packages.core.platform.models_time_tracking import (  # noqa: F401
     TimeProject, TimeActivity, TimeAssignment, TimeEntry,
 )
