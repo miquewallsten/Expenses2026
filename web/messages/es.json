@@ -770,10 +770,11 @@
       "progress": {
         "steps": {
           "welcome": "Bienvenida",
-          "companyProfile": "Perfil",
-          "selectModules": "Modulos",
-          "configureModule": "Configurar",
-          "review": "Revisar"
+          "companyType": "Empresa",
+          "companyBasics": "Datos",
+          "recommendations": "Modulos",
+          "smartConfig": "Configurar",
+          "ready": "Listo"
         }
       },
       "welcome": {
@@ -784,6 +785,51 @@
         "step3": "Configura cada modulo con preguntas guiadas",
         "step4": "Revisa y confirma tu configuracion",
         "startButton": "Comenzar configuracion"
+      },
+      "companyType": {
+        "title": "Que tipo de empresa tienes?",
+        "subtitle": "Configurare todo segun el tipo de empresa. Puedes personalizar despues."
+      },
+      "basics": {
+        "title": "Datos basicos",
+        "subtitle": "Unos pocos datos para personalizar tu experiencia.",
+        "companyName": "Nombre de la empresa",
+        "companyNamePlaceholder": "Mi Empresa S.A. de C.V.",
+        "currency": "Moneda",
+        "timezone": "Zona horaria",
+        "country": "Pais"
+      },
+      "recommendations": {
+        "title": "Modulos recomendados",
+        "subtitle": "Segun tu tipo de empresa, te recomiendo estos modulos. Puedes personalizar la seleccion.",
+        "aiSummary": "He seleccionado {count} modulos que te daran mas valor.",
+        "applyAll": "Usar todas las recomendaciones",
+        "recommended": "Recomendados para ti",
+        "optional": "Opcionales",
+        "selected": "Seleccionado"
+      },
+      "smartConfig": {
+        "title": "Resumen de configuracion",
+        "subtitle": "Configure todo con valores inteligentes. Puedes pedir cambios.",
+        "configuredTitle": "{count} modulos configurados",
+        "configuredDesc": "Puedes personalizar estos ajustes cuando quieras en el panel de administracion.",
+        "configured": "Configurado",
+        "customizeHint": "Necesitas ajustes diferentes? Pide al asistente que los personalice."
+      },
+      "ready": {
+        "title": "Todo listo!",
+        "subtitle": "{company} esta listo para usar. Esto es lo que sigue.",
+        "yourCompany": "Tu empresa",
+        "configured": "Configurado",
+        "nextSteps": "Proximos pasos",
+        "inviteTeam": "Invita a tu equipo",
+        "inviteTeamDesc": "Agrega companeros para empezar a colaborar",
+        "tryExpense": "Prueba un gasto",
+        "tryExpenseDesc": "Envia tu primer reporte de gastos",
+        "connectAccounting": "Conecta contabilidad",
+        "connectAccountingDesc": "Configura tu catalogo contable",
+        "aiHandoff": "Estoy aqui cuando necesites ayuda — solo pregunta!",
+        "openDashboard": "Abrir panel"
       },
       "companyProfile": {
         "title": "Perfil de la empresa",

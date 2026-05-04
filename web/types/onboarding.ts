@@ -1,14 +1,16 @@
 /**
  * Onboarding Wizard Types
  * Phase 5: Admin Onboarding Wizard for Enterprise App
+ * Redesigned: AI-guided onboarding with intelligent defaults
  */
 
 export type OnboardingStep =
   | "welcome"
-  | "company-profile"
-  | "select-modules"
-  | "configure-module"
-  | "review";
+  | "company-type"
+  | "company-basics"
+  | "recommendations"
+  | "smart-config"
+  | "ready";
 
 export type ModuleType =
   | "expenses"
@@ -17,12 +19,32 @@ export type ModuleType =
   | "accounting"
   | "ai";
 
+export type CompanyType =
+  | "tech-startup"
+  | "professional-services"
+  | "manufacturing"
+  | "retail"
+  | "other";
+
 export interface CompanyProfile {
   name: string;
   currency: string;
   timezone: string;
   industry?: string;
   country?: string;
+  companyType?: CompanyType;
+}
+
+export interface ModuleRecommendation {
+  module: ModuleType;
+  reason: string;
+  keyFeatures: string[];
+}
+
+export interface AIContext {
+  greeting: string;
+  insight: string;
+  suggestion: string;
 }
 
 export interface ApprovalStage {
@@ -242,8 +264,184 @@ export const DEFAULT_MODULE_CONFIG: ModuleConfig = {
 
 export const STEP_ORDER: OnboardingStep[] = [
   "welcome",
-  "company-profile",
-  "select-modules",
-  "configure-module",
-  "review",
+  "company-type",
+  "company-basics",
+  "recommendations",
+  "smart-config",
+  "ready",
 ];
+
+export const COMPANY_TYPES: { type: CompanyType; name: string; description: string; icon: string }[] = [
+  {
+    type: "tech-startup",
+    name: "Tech Startup",
+    description: "Software, hardware, or technology services company",
+    icon: "Rocket",
+  },
+  {
+    type: "professional-services",
+    name: "Professional Services",
+    description: "Consulting, legal, accounting, or other professional services",
+    icon: "Briefcase",
+  },
+  {
+    type: "manufacturing",
+    name: "Manufacturing",
+    description: "Production, assembly, or industrial operations",
+    icon: "Factory",
+  },
+  {
+    type: "retail",
+    name: "Retail",
+    description: "Retail stores, e-commerce, or consumer goods",
+    icon: "Store",
+  },
+  {
+    type: "other",
+    name: "Other",
+    description: "Something else — I'll describe my company",
+    icon: "Building2",
+  },
+];
+
+/**
+ * AI-generated module recommendations based on company type.
+ * These are intelligent defaults that can be customized.
+ */
+export function getRecommendationsForCompanyType(
+  companyType: CompanyType,
+  industry?: string
+): ModuleRecommendation[] {
+  const recommendations: Record<CompanyType, ModuleRecommendation[]> = {
+    "tech-startup": [
+      {
+        module: "expenses",
+        reason: "Startups move fast — employees need easy expense submission via web or WhatsApp",
+        keyFeatures: ["WhatsApp submission", "AI categorization", "Quick approval"],
+      },
+      {
+        module: "accounting",
+        reason: "Clean books from day one — export to your accounting system automatically",
+        keyFeatures: ["Auto Poliza export", "CFDI integration", "Chart of accounts"],
+      },
+      {
+        module: "ai",
+        reason: "Save time on manual work — let AI categorize expenses and match receipts",
+        keyFeatures: ["Smart categorization", "Receipt OCR", "Anomaly detection"],
+      },
+    ],
+    "professional-services": [
+      {
+        module: "expenses",
+        reason: "Client-facing expenses need clear approval trails and project tracking",
+        keyFeatures: ["Project tagging", "Multi-client allocation", "Receipt matching"],
+      },
+      {
+        module: "timesheets",
+        reason: "Billable hours are your revenue — track time by project and client",
+        keyFeatures: ["Project tracking", "Billable hours", "Approval workflow"],
+      },
+      {
+        module: "accounting",
+        reason: "Export clean, auditable records for client billing and tax compliance",
+        keyFeatures: ["CFDI integration", "Category mapping", "Poliza bundles"],
+      },
+    ],
+    manufacturing: [
+      {
+        module: "expenses",
+        reason: "Track production expenses and operational costs with policy enforcement",
+        keyFeatures: ["Policy validation", "Cost center tagging", "Multi-approval"],
+      },
+      {
+        module: "timesheets",
+        reason: "Manage shift workers and project-based time tracking",
+        keyFeatures: ["Shift tracking", "Overtime rules", "Project allocation"],
+      },
+      {
+        module: "accounting",
+        reason: "Integrate with SAP, Oracle, or other ERP systems",
+        keyFeatures: ["ERP integration", "Multi-entity support", "Tax compliance"],
+      },
+    ],
+    retail: [
+      {
+        module: "expenses",
+        reason: "Store managers and staff need simple expense submission with policy guardrails",
+        keyFeatures: ["Simple mobile submission", "Policy checks", "Quick approval"],
+      },
+      {
+        module: "accounting",
+        reason: "Sync with retail accounting systems and manage inventory-related expenses",
+        keyFeatures: ["Multi-store support", "Category mapping", "Tax compliance"],
+      },
+    ],
+    other: [
+      {
+        module: "expenses",
+        reason: "Every company needs expense tracking — start here and customize as you grow",
+        keyFeatures: ["Flexible approval", "Receipt capture", "Basic reporting"],
+      },
+      {
+        module: "accounting",
+        reason: "Keep your books organized from day one",
+        keyFeatures: ["Chart of accounts", "Category mapping", "Export bundles"],
+      },
+    ],
+  };
+
+  return recommendations[companyType] ?? recommendations.other;
+}
+
+/**
+ * AI context messages for each step.
+ * These provide helpful, contextual guidance throughout onboarding.
+ */
+export function getAIContextForStep(
+  step: OnboardingStep,
+  companyType?: CompanyType,
+  companyProfile?: Partial<CompanyProfile>
+): AIContext {
+  const contexts: Record<OnboardingStep, AIContext> = {
+    welcome: {
+      greeting: "Hi! I'm your setup guide.",
+      insight: "I'll help you configure everything perfectly for your company type.",
+      suggestion: "Let's start by understanding what kind of company you have.",
+    },
+    "company-type": {
+      greeting: "Great choice!",
+      insight: companyType === "tech-startup"
+        ? "Startups often need flexible expense tracking and quick approvals."
+        : companyType === "professional-services"
+          ? "Service firms need strong project tracking and billable hour management."
+          : "I'll configure the right modules for your business type.",
+      suggestion: "I'll recommend the best modules once you select your company type.",
+    },
+    "company-basics": {
+      greeting: "Perfect!",
+      insight: companyProfile?.country === "MX"
+        ? "I'm setting up CFDI integration for Mexican tax compliance."
+        : "I'm configuring your currency and timezone settings.",
+      suggestion: companyProfile?.name
+        ? `${companyProfile.name} is ready to go. Let's configure your modules.`
+        : "Enter your company name and I'll set up the basics automatically.",
+    },
+    recommendations: {
+      greeting: "I've analyzed your setup.",
+      insight: "Based on your company type, these modules will give you the most value.",
+      suggestion: "You can customize this selection, or trust my recommendations.",
+    },
+    "smart-config": {
+      greeting: "Almost done!",
+      insight: "I've configured everything based on your selections.",
+      suggestion: "Review the settings below, or ask me to change anything.",
+    },
+    ready: {
+      greeting: "You're all set!",
+      insight: "Your platform is configured and ready to use.",
+      suggestion: "I'll be available in the admin panel whenever you need help.",
+    },
+  };
+
+  return contexts[step];
+}

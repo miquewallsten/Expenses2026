@@ -20,18 +20,24 @@ export function ProgressIndicator({
 
   const stepLabels: Record<OnboardingStep, string> = {
     welcome: t("steps.welcome"),
-    "company-profile": t("steps.companyProfile"),
-    "select-modules": t("steps.selectModules"),
-    "configure-module": t("steps.configureModule"),
-    review: t("steps.review"),
+    "company-type": t("steps.companyType"),
+    "company-basics": t("steps.companyBasics"),
+    recommendations: t("steps.recommendations"),
+    "smart-config": t("steps.smartConfig"),
+    ready: t("steps.ready"),
   };
+
+  // Hide welcome and ready from progress indicator
+  const visibleSteps: OnboardingStep[] = STEP_ORDER.filter(
+    (s): s is Exclude<OnboardingStep, "welcome" | "ready"> => s !== "welcome" && s !== "ready"
+  );
 
   return (
     <nav aria-label="Progress" className="flex items-center justify-center gap-0.5">
-      {STEP_ORDER.map((step, index) => {
+      {visibleSteps.map((step, index) => {
         const isCompleted = completedSteps.includes(step);
         const isCurrent = step === currentStep;
-        const isClickable = isCompleted || index === STEP_ORDER.indexOf(currentStep) - 1;
+        const isClickable = isCompleted || index === visibleSteps.indexOf(currentStep) - 1;
 
         return (
           <div key={step} className="flex items-center">
@@ -55,10 +61,10 @@ export function ProgressIndicator({
               )}
               <span className="sr-only">{stepLabels[step]}</span>
             </button>
-            {index < STEP_ORDER.length - 1 && (
+            {index < visibleSteps.length - 1 && (
               <div
                 className={`mx-1 h-px w-4 ${
-                  completedSteps.includes(STEP_ORDER[index]) || isCurrent
+                  completedSteps.includes(visibleSteps[index]) || isCurrent
                     ? "bg-emerald-500/30"
                     : "bg-white/[0.06]"
                 }`}

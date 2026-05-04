@@ -97,6 +97,7 @@ class PlatformUsageLog(Base):
     output_tokens: Mapped[int] = mapped_column(Integer, nullable=False)
     cost_input: Mapped[Decimal] = mapped_column(Numeric(10, 6), nullable=False, default=Decimal("0"))
     cost_output: Mapped[Decimal] = mapped_column(Numeric(10, 6), nullable=False, default=Decimal("0"))
+    ok: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)  # True if request succeeded
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
 
     # Relationships

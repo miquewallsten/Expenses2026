@@ -26,7 +26,7 @@ def upgrade():
     op.create_index(
         'idx_expense_company_created',
         'expenses',
-        ['company_id', sa.text('created_at DESC')],
+        ['company_id', 'created_at'],
         unique=False
     )
 

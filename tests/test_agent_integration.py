@@ -17,8 +17,16 @@ from packages.modules.agent.core.workflow import WorkflowService
 from packages.modules.agent.core.memory import TenantMemoryService
 from packages.modules.agent.core.agent_definition_service import (
     AgentDefinitionService,
+    _CACHE,  # Import cache to clear between tests
 )
 from packages.modules.agent.tools import registry_all  # noqa: F401 — populate REGISTRY
+
+
+@pytest.fixture(autouse=True)
+def clear_agent_definition_cache():
+    """Clear the module-level cache before each test to prevent detached instances."""
+    _CACHE.clear()
+    yield
 
 
 @pytest.fixture

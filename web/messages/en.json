@@ -770,10 +770,11 @@
       "progress": {
         "steps": {
           "welcome": "Welcome",
-          "companyProfile": "Profile",
-          "selectModules": "Modules",
-          "configureModule": "Configure",
-          "review": "Review"
+          "companyType": "Company",
+          "companyBasics": "Basics",
+          "recommendations": "Modules",
+          "smartConfig": "Configure",
+          "ready": "Done"
         }
       },
       "welcome": {
@@ -784,6 +785,51 @@
         "step3": "Configure each module with guided questions",
         "step4": "Review and confirm your setup",
         "startButton": "Start setup"
+      },
+      "companyType": {
+        "title": "What best describes your company?",
+        "subtitle": "I'll configure everything based on your company type. You can customize later."
+      },
+      "basics": {
+        "title": "Company basics",
+        "subtitle": "A few details to personalize your experience.",
+        "companyName": "Company name",
+        "companyNamePlaceholder": "My Company Inc.",
+        "currency": "Currency",
+        "timezone": "Timezone",
+        "country": "Country"
+      },
+      "recommendations": {
+        "title": "Recommended modules",
+        "subtitle": "Based on your company type, I recommend these modules. You can customize the selection.",
+        "aiSummary": "I've selected {count} modules that will give you the most value.",
+        "applyAll": "Use all recommendations",
+        "recommended": "Recommended for you",
+        "optional": "Optional",
+        "selected": "Selected"
+      },
+      "smartConfig": {
+        "title": "Configuration summary",
+        "subtitle": "I've configured everything with intelligent defaults. Ask me to change anything.",
+        "configuredTitle": "{count} modules configured",
+        "configuredDesc": "You can customize these settings anytime in the admin panel.",
+        "configured": "Configured",
+        "customizeHint": "Need different settings? Ask the assistant to customize."
+      },
+      "ready": {
+        "title": "You're all set!",
+        "subtitle": "{company} is ready to use. Here's what to do next.",
+        "yourCompany": "Your company",
+        "configured": "Configured",
+        "nextSteps": "Next steps",
+        "inviteTeam": "Invite your team",
+        "inviteTeamDesc": "Add colleagues to start collaborating",
+        "tryExpense": "Try an expense",
+        "tryExpenseDesc": "Submit your first expense report",
+        "connectAccounting": "Connect accounting",
+        "connectAccountingDesc": "Set up your chart of accounts",
+        "aiHandoff": "I'm here whenever you need help — just ask!",
+        "openDashboard": "Open dashboard"
       },
       "companyProfile": {
         "title": "Company profile",

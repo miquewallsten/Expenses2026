@@ -1,0 +1,193 @@
+"use client";
+
+import { Sparkles, ChevronRight, Send, Loader2 } from "lucide-react";
+import { useAgent } from "@/hooks/useAgent";
+import { useEffect, useRef, useState } from "react";
+import type { AIContext, OnboardingStep } from "@/types/onboarding";
+
+interface OnboardingAssistantProps {
+  currentStep: OnboardingStep;
+  aiContext: AIContext;
+  completedSteps: OnboardingStep[];
+  companyType?: string;
+}
+
+// Step-specific quick actions
+const STEP_QUICK_ACTIONS: Record<OnboardingStep, string[]> = {
+  welcome: [],
+  "company-type": [
+    "What if my company doesn't fit these categories?",
+    "Can I change this later?",
+  ],
+  "company-basics": [
+    "How do I add more currencies?",
+    "What timezone should I use?",
+  ],
+  recommendations: [
+    "What does the Expenses module do?",
+    "Do I need the Accounting module?",
+    "How does AI assistance help?",
+  ],
+  "smart-config": [
+    "Change the approval workflow",
+    "Add more approval stages",
+    "What is CFDI?",
+  ],
+  ready: [
+    "How do I invite my team?",
+    "What should I do next?",
+  ],
+};
+
+export function OnboardingAssistant({
+  currentStep,
+  aiContext,
+  completedSteps,
+}: OnboardingAssistantProps) {
+  const { messages, chat, isTyping } = useAgent("admin-copilot");
+  const [inputValue, setInputValue] = useState("");
+  const hasIntroduced = useRef(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to bottom when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Send contextual introduction when component mounts
+  useEffect(() => {
+    if (!hasIntroduced.current && messages.length === 0) {
+      hasIntroduced.current = true;
+      chat("User is starting the onboarding wizard. Introduce yourself briefly as their setup assistant. Be friendly but concise. Tell them you'll help them configure everything perfectly.");
+    }
+  }, [messages.length, chat]);
+
+  // Send step context when step changes
+  useEffect(() => {
+    if (currentStep === "welcome" || currentStep === "company-type") {
+      // Already handled by introduction or handled below
+    } else if (currentStep === "company-basics" && hasIntroduced.current) {
+      chat("The user is now entering company basics (name, currency, timezone). Offer help if they have questions.");
+    } else if (currentStep === "recommendations" && hasIntroduced.current) {
+      chat("The user is reviewing module recommendations. Briefly explain why these modules are recommended.");
+    } else if (currentStep === "smart-config" && hasIntroduced.current) {
+      chat("Configuration is ready. Offer to customize settings if they want.");
+    } else if (currentStep === "ready" && hasIntroduced.current) {
+      chat("Onboarding complete! Congratulate them and tell them you're available in the admin panel.");
+    }
+  }, [currentStep, chat]);
+
+  const handleQuestionClick = (question: string) => {
+    chat(question);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (inputValue.trim()) {
+      chat(inputValue.trim());
+      setInputValue("");
+    }
+  };
+
+  const quickActions = STEP_QUICK_ACTIONS[currentStep] || [];
+
+  return (
+    <div className="flex h-full flex-col border-l border-white/[0.06] bg-zinc-950/50">
+      {/* Header */}
+      <div className="flex items-center gap-2.5 border-b border-white/[0.06] px-4 py-3">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/15">
+          <Sparkles className="h-4 w-4 text-indigo-300" />
+        </div>
+        <div>
+          <p className="text-[11px] font-medium text-white/80">Setup Assistant</p>
+          <p className="text-[9px] text-white/35">
+            Step {completedSteps.length + 1} of 6
+          </p>
+        </div>
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="space-y-3">
+          {/* Initial greeting from AI context */}
+          <div className="rounded-lg bg-indigo-500/[0.06] p-3">
+            <p className="text-[11px] leading-relaxed text-white/80">
+              {aiContext.greeting}
+            </p>
+          </div>
+
+          {/* Agent messages */}
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`rounded-lg p-3 ${
+                message.role === "user"
+                  ? "bg-white/[0.04] ml-4"
+                  : "bg-indigo-500/[0.04] mr-4"
+              }`}
+            >
+              <p className="text-[11px] leading-relaxed text-white/80">
+                {message.content}
+              </p>
+            </div>
+          ))}
+
+          {/* Typing indicator */}
+          {isTyping && (
+            <div className="rounded-lg bg-indigo-500/[0.04] p-3 mr-4">
+              <div className="flex items-center gap-1.5">
+                <Loader2 className="h-3 w-3 animate-spin text-indigo-300" />
+                <p className="text-[10px] text-white/50">Thinking...</p>
+              </div>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      {quickActions.length > 0 && !isTyping && (
+        <div className="border-t border-white/[0.06] px-4 py-3">
+          <p className="mb-2 text-[9px] font-medium uppercase tracking-wide text-white/35">
+            Quick questions
+          </p>
+          <div className="space-y-1">
+            {quickActions.map((action, index) => (
+              <button
+                key={index}
+                type="button"
+                onClick={() => handleQuestionClick(action)}
+                className="flex w-full items-center gap-2 rounded bg-white/[0.02] px-2.5 py-1.5 text-left transition-colors hover:bg-white/[0.04]"
+              >
+                <ChevronRight className="h-3 w-3 shrink-0 text-white/30" />
+                <span className="text-[10px] text-white/60">{action}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Input */}
+      <div className="border-t border-white/[0.06] p-3">
+        <form onSubmit={handleSubmit} className="flex items-center gap-2">
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            placeholder="Ask me anything..."
+            disabled={isTyping}
+            className="flex-1 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-[11px] text-white/80 placeholder:text-white/30 focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/25 disabled:opacity-50"
+          />
+          <button
+            type="submit"
+            disabled={isTyping || !inputValue.trim()}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-300 transition-colors hover:bg-indigo-500/30 disabled:opacity-50"
+          >
+            <Send className="h-4 w-4" />
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
