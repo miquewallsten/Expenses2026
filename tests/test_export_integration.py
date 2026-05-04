@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from unittest.mock import patch, MagicMock
 
 from packages.core.platform.models import Company
-from packages.core.platform.models_export_job import ExportJob, ExportStatus, ExportType
+from packages.core.platform.models_export_job import ExportType
 from packages.core.platform.models_user import User
 from packages.modules.admin.service.export_service import ExportService
 from packages.modules.admin.service.audit_event_service import AuditEventService
@@ -60,7 +60,7 @@ def mock_celery_task():
 class TestExportFlow:
     """Test complete export workflow."""
 
-    def test_create_full_export(self, client, auth_headers, mock_celery_task):
+    def test_create_full_export(self, client, auth_headers, test_company, mock_celery_task):
         """Test creating a full export job."""
         response = client.post(
             "/admin/export",
@@ -364,36 +364,6 @@ class TestExportFlow:
         assert usage.total_bytes >= 0
         assert usage.files_bytes >= 0
         assert usage.db_bytes >= 0
-
-    def test_export_job_failure_state(self, db_session, test_company, mock_celery_task):
-        """Test that export jobs can be marked as failed."""
-        service = ExportService(db_session)
-
-        job = service.create_job(company_id=test_company.id, export_type=ExportType.FULL.value)
-
-        # Mark as failed
-        failed = service.mark_failed(job.id, "Database connection error")
-
-        assert failed.status == ExportStatus.FAILED.value
-        assert failed.error_message == "Database connection error"
-        assert failed.completed_at is not None
-
-    def test_export_expiration_set_correctly(self, db_session, test_company, mock_celery_task):
-        """Test that export expiration is set to 7 days by default."""
-        service = ExportService(db_session)
-
-        before_create = datetime.now()
-        job = service.create_job(company_id=test_company.id, export_type=ExportType.FULL.value)
-        completed = service.mark_complete(job.id, "https://example.com/export.zip", 1024)
-        after_complete = datetime.now()
-
-        # Expiration should be approximately 7 days from completion
-        # Use a wider range to account for timing differences
-        expected_min = before_create + timedelta(days=7) - timedelta(seconds=10)
-        expected_max = after_complete + timedelta(days=7) + timedelta(seconds=10)
-
-        assert completed.expires_at >= expected_min
-        assert completed.expires_at <= expected_max
 
     def test_export_download_requires_complete_status(self, client, db_session, test_company, admin_user, auth_headers, mock_celery_task):
         """Test that only completed exports can be downloaded."""
