@@ -7,7 +7,7 @@ deliberately conservative: it only uses status values and config flags that
 already exist in the database.
 """
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from packages.modules.expenses.models.document import ExpenseDocument
 from packages.modules.expenses.models.expense import Expense
@@ -585,7 +585,10 @@ def list_manager_queue_paginated(
     if not eligible_statuses:
         return {"items": [], "total": 0, "page": page, "pages": 0}
 
-    query = db.query(Expense).filter(
+    query = db.query(Expense).options(
+        joinedload(Expense.documents),
+        joinedload(Expense.category),
+    ).filter(
         Expense.company_id == company_id,
         Expense.status.in_(eligible_statuses),
     )
@@ -658,7 +661,10 @@ def list_accounting_queue_paginated(
     if not eligible_statuses:
         return {"items": [], "total": 0, "page": page, "pages": 0}
 
-    query = db.query(Expense).filter(
+    query = db.query(Expense).options(
+        joinedload(Expense.documents),
+        joinedload(Expense.category),
+    ).filter(
         Expense.company_id == company_id,
         Expense.status.in_(eligible_statuses),
     )

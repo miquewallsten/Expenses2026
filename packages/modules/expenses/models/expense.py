@@ -2,7 +2,7 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, Index, Integer, Numeric, String, Text, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from apps.api.db import Base
 
@@ -62,4 +62,20 @@ class Expense(Base):
     cfdi_last_checked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     cfdi_amount_mismatch: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default="false", nullable=False
+    )
+
+    # ── Relationships for eager loading ─────────────────────────────────────────
+    # Documents linked to this expense via ExpenseDocument.expense_id
+    documents: Mapped[list["ExpenseDocument"]] = relationship(
+        "ExpenseDocument",
+        back_populates="expense",
+        lazy="select",
+    )
+    # Category lookup via category_code (soft ref, no FK constraint)
+    category: Mapped["AccountingCategory | None"] = relationship(
+        "AccountingCategory",
+        primaryjoin="and_(foreign(Expense.category_code) == AccountingCategory.code, "
+                    "foreign(Expense.company_id) == AccountingCategory.company_id)",
+        uselist=False,
+        lazy="select",
     )

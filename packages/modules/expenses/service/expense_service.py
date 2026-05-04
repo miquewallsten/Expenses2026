@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from packages.core.platform.models import Company
 from packages.core.platform.models_accounting_category import AccountingCategory
@@ -203,7 +203,10 @@ def list_expenses_paginated(
     limit = min(limit, 100)
     offset = (page - 1) * limit
 
-    query = db.query(Expense)
+    query = db.query(Expense).options(
+        joinedload(Expense.documents),
+        joinedload(Expense.category),
+    )
 
     if company_id is not None:
         query = query.filter(Expense.company_id == company_id)

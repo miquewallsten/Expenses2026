@@ -2,7 +2,7 @@ from datetime import datetime
 
 from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from apps.api.db import Base
 
@@ -45,3 +45,16 @@ class ExpenseDocument(Base):
     # Phase 8.2 — OCR-derived structured fields (rfc/total/date/merchant).
     extracted_fields: Mapped[dict | None] = mapped_column(_EXTRACTED_FIELDS_TYPE, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    # ── Relationships ───────────────────────────────────────────────────────────
+    # Back-reference from Expense.documents
+    expense: Mapped["Expense | None"] = relationship(
+        "Expense",
+        back_populates="documents",
+    )
+    # Validation results for this document
+    validations: Mapped[list["ValidationResult"]] = relationship(
+        "ValidationResult",
+        back_populates="document",
+        lazy="select",
+    )
