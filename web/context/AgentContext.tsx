@@ -21,6 +21,9 @@ import {
   type ReactNode,
 } from "react";
 
+import { sendChatMessage, type Persona } from "@/lib/agent-api";
+import { getStoredSession } from "@/lib/session";
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface AgentMessage {
@@ -142,6 +145,13 @@ export function AgentProvider({ children }: { children: ReactNode }) {
 
   const sendMessage = useCallback(
     async (agentKey: string, message: string): Promise<void> => {
+      // Get company ID from stored session
+      const session = getStoredSession();
+      if (!session?.companyId) {
+        console.error("No company ID in session");
+        return;
+      }
+
       // Ensure session exists
       setSessions((prev) => {
         if (!prev.has(agentKey)) {
@@ -173,31 +183,69 @@ export function AgentProvider({ children }: { children: ReactNode }) {
         return newMap;
       });
 
-      // TODO: Call backend API to get agent response
-      // For now, simulate a response after a short delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      try {
+        // Map agentKey to persona for the backend
+        const personaMap: Record<string, Persona> = {
+          "admin-copilot": "admin",
+          admin: "admin",
+          finance_manager: "finance_manager",
+          employee: "employee",
+          expense: "expense",
+          accounting: "accounting",
+        };
+        const persona = personaMap[agentKey] ?? "admin";
 
-      const assistantMessage: AgentMessage = {
-        id: generateId(),
-        role: "assistant",
-        content: `Acknowledged: "${message}". Agent functionality will be connected to backend.`,
-        timestamp: Date.now(),
-      };
+        // Call backend API
+        const response = await sendChatMessage(session.companyId, {
+          message,
+          session_id: sessions.get(agentKey)?.id,
+          persona,
+        });
 
-      setSessions((prev) => {
-        const newMap = new Map(prev);
-        const session = newMap.get(agentKey);
-        if (session) {
-          newMap.set(agentKey, {
-            ...session,
-            messages: [...session.messages, assistantMessage],
-            isTyping: false,
-          });
-        }
-        return newMap;
-      });
+        const assistantMessage: AgentMessage = {
+          id: generateId(),
+          role: "assistant",
+          content: response.content || (response.error ? `Error: ${response.error}` : "No response"),
+          timestamp: Date.now(),
+        };
+
+        setSessions((prev) => {
+          const newMap = new Map(prev);
+          const session = newMap.get(agentKey);
+          if (session) {
+            newMap.set(agentKey, {
+              ...session,
+              id: response.session_id ?? session.id,
+              messages: [...session.messages, assistantMessage],
+              isTyping: false,
+            });
+          }
+          return newMap;
+        });
+      } catch (error) {
+        console.error("Agent API error:", error);
+        const errorMessage: AgentMessage = {
+          id: generateId(),
+          role: "assistant",
+          content: `Failed to reach agent: ${error instanceof Error ? error.message : "Unknown error"}`,
+          timestamp: Date.now(),
+        };
+
+        setSessions((prev) => {
+          const newMap = new Map(prev);
+          const session = newMap.get(agentKey);
+          if (session) {
+            newMap.set(agentKey, {
+              ...session,
+              messages: [...session.messages, errorMessage],
+              isTyping: false,
+            });
+          }
+          return newMap;
+        });
+      }
     },
-    [],
+    [sessions],
   );
 
   // ── Assemble value ─────────────────────────────────────────────────────────
