@@ -93,12 +93,24 @@ class _Registry:
         if spec is None:
             return ToolResult(ok=False, summary=f"unknown tool: {name}", error="unknown_tool")
 
-        if ctx.persona not in spec.personas:
-            return ToolResult(
-                ok=False,
-                summary=f"tool {name} is not available for persona {ctx.persona}",
-                error="forbidden",
-            )
+        # Permission check: if allowed_tools is set, enforce it strictly.
+        # When None, fall back to persona-based check (legacy behavior).
+        allowed_tools = getattr(ctx, 'allowed_tools', None)
+        if allowed_tools is not None:
+            if name not in allowed_tools:
+                return ToolResult(
+                    ok=False,
+                    summary=f"Tool '{name}' is not available to this agent",
+                    error="permission_denied",
+                )
+        else:
+            # Legacy: use persona-based tool filtering
+            if ctx.persona not in spec.personas:
+                return ToolResult(
+                    ok=False,
+                    summary=f"tool {name} is not available for persona {ctx.persona}",
+                    error="forbidden",
+                )
 
         # Phase 8.4 — fine-grained permission gate (post-persona).
         if spec.required_permission and not _role_has_permission(

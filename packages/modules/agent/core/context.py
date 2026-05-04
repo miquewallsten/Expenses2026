@@ -26,3 +26,4 @@ class AgentContext:
     persona: Persona
     locale: str = "es"
     session_id: str | None = None
+    allowed_tools: list[str] | None = None  # From agent definition; None = use persona defaults

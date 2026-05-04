@@ -299,6 +299,16 @@ def run_turn(
                 "pending": [],
             }
 
+    # Resolve allowed_tools from agent_definition if provided
+    allowed_tools_list: list[str] | None = None
+    if agent_definition:
+        allowed_tools_json = agent_definition.allowed_tools
+        # Handle cases where allowed_tools might be a MagicMock or not a string (e.g. in tests)
+        if isinstance(allowed_tools_json, str):
+            allowed_tools_list = json.loads(allowed_tools_json) if allowed_tools_json else []
+        else:
+            allowed_tools_list = []
+
     ctx = AgentContext(
         db=db,
         company_id=company_id,
@@ -308,6 +318,7 @@ def run_turn(
         persona=persona,
         locale=locale,
         session_id=session.session_id,
+        allowed_tools=allowed_tools_list,
     )
 
     # ── executor closure ──────────────────────────────────────────────────
@@ -364,16 +375,9 @@ def run_turn(
     if agent_definition:
         # DB-driven override
         system_prompt = agent_definition.system_prompt
-        allowed_tools_json = agent_definition.allowed_tools
-        
-        # Handle cases where allowed_tools might be a MagicMock or not a string (e.g. in tests)
-        if isinstance(allowed_tools_json, str):
-            tools_list = json.loads(allowed_tools_json) if allowed_tools_json else []
-        else:
-            tools_list = []
-        
+        # allowed_tools_list already computed above
         # Filter registry for these specific tools
-        tools = [REGISTRY.get(t) for t in tools_list if REGISTRY.get(t)]
+        tools = [REGISTRY.get(t) for t in (allowed_tools_list or []) if REGISTRY.get(t)]
         # Convert to Ollama format
         tools = [t.to_ollama_tool() for t in tools]
     else:
