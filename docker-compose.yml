@@ -25,8 +25,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       DATABASE_URL: postgresql://app:${POSTGRES_PASSWORD:-changeme}@db:5432/financial_ops
+      REDIS_URL: redis://redis:6379/0
       # Ollama runs on the host Mac — host.docker.internal resolves on OrbStack
       # & Docker Desktop. Hardcoded here (no ${} substitution) so a native-dev
       # .env pointing at 127.0.0.1 can't leak into containers.
@@ -65,6 +68,53 @@ services:
       NODE_ENV: production
     ports:
       - "${FRONTEND_HOST_PORT:-3000}:3000"
+
+  # ── Redis (for caching, sessions, Celery broker) ─────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    ports:
+      - "6379:6379"
+
+  # ── Celery Worker (background jobs) ────────────────────────────────────────
+  celery-worker:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://app:${POSTGRES_PASSWORD:-changeme}@db:5432/financial_ops
+      REDIS_URL: redis://redis:6379/0
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-deepseek-v3.1:671b-cloud}
+      OLLAMA_NUM_CTX: ${OLLAMA_NUM_CTX:-32768}
+    command: celery -A packages.core.jobs.celery_app worker -l info
+
+  # ── Celery Beat (periodic task scheduler) ───────────────────────────────────
+  celery-beat:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://app:${POSTGRES_PASSWORD:-changeme}@db:5432/financial_ops
+      REDIS_URL: redis://redis:6379/0
+    command: celery -A packages.core.jobs.celery_app beat -l info
 
 volumes:
   postgres_data:
