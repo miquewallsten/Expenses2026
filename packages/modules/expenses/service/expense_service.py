@@ -177,6 +177,57 @@ def list_expenses(db: Session, company_id: int | None = None, status: str | None
     return query.all()
 
 
+def list_expenses_paginated(
+    db: Session,
+    company_id: int | None = None,
+    status: str | None = None,
+    page: int = 1,
+    limit: int = 50,
+    order_by: str = "created_at",
+    order_dir: str = "desc",
+) -> dict:
+    """Return paginated expenses with total count.
+
+    Args:
+        db: Database session
+        company_id: Filter by company (required for tenant isolation)
+        status: Filter by status
+        page: Page number (1-indexed)
+        limit: Items per page (max 100)
+        order_by: Sort column (created_at, amount)
+        order_dir: Sort direction (asc, desc)
+
+    Returns:
+        dict with items, total, page, pages
+    """
+    limit = min(limit, 100)
+    offset = (page - 1) * limit
+
+    query = db.query(Expense)
+
+    if company_id is not None:
+        query = query.filter(Expense.company_id == company_id)
+    if status is not None:
+        query = query.filter(Expense.status == status)
+
+    # Ordering
+    order_column = getattr(Expense, order_by, Expense.created_at)
+    if order_dir == "desc":
+        query = query.order_by(order_column.desc())
+    else:
+        query = query.order_by(order_column.asc())
+
+    total = query.count()
+    items = query.offset(offset).limit(limit).all()
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "pages": (total + limit - 1) // limit if limit > 0 else 0,
+    }
+
+
 def submit_expense(db: Session, expense_id: int) -> Expense | None:
     return _change_expense_status(db, expense_id, "submitted")
 

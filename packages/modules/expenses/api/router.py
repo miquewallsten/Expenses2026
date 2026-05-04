@@ -1,7 +1,7 @@
 import asyncio
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -11,7 +11,7 @@ from packages.core.platform.models_user import User
 from packages.core.platform.service_permissions import has_permission
 from packages.modules.expenses.schemas.expense import ExpenseCreate, ExpenseRead
 from packages.modules.expenses.schemas.expense_update import ExpenseUpdate
-from packages.modules.expenses.service.expense_service import create_expense, delete_expense, get_expense, get_expense_summary, list_expenses, update_expense
+from packages.modules.expenses.service.expense_service import create_expense, delete_expense, get_expense, get_expense_summary, list_expenses, list_expenses_paginated, update_expense
 from packages.modules.expenses.service.config_reader import get_account_mapping_config
 from packages.modules.expenses.schemas.document import ExpenseDocumentCreate, ExpenseDocumentRead
 from packages.modules.expenses.schemas.document_update import ExpenseDocumentUpdate
@@ -43,6 +43,13 @@ from packages.modules.archive.service.archive_service import purge_archive_files
 router = APIRouter(prefix="/expenses", tags=["expenses"])
 
 
+class PaginatedExpenseResponse(BaseModel):
+    items: list[ExpenseRead]
+    total: int
+    page: int
+    pages: int
+
+
 @router.post("/", response_model=ExpenseRead)
 def create_expense_route(payload: ExpenseCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     try:
@@ -52,12 +59,34 @@ def create_expense_route(payload: ExpenseCreate, db: Session = Depends(get_db), 
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/", response_model=list[ExpenseRead])
-def list_expenses_route(company_id: int | None = None, status: str | None = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@router.get("/", response_model=PaginatedExpenseResponse)
+def list_expenses_route(
+    company_id: int | None = None,
+    page: int = Query(1, ge=1, description="Page number (1-indexed)"),
+    limit: int = Query(50, ge=1, le=100, description="Items per page (max 100)"),
+    status: str | None = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List expenses with pagination."""
     # Non-admin users are scoped to their own company. Admins may pass an explicit company_id.
     if not has_permission(db, current_user, "expense:read:any"):
         company_id = current_user.company_id
-    return list_expenses(db, company_id, status)
+
+    result = list_expenses_paginated(
+        db=db,
+        company_id=company_id,
+        status=status,
+        page=page,
+        limit=limit,
+    )
+
+    return PaginatedExpenseResponse(
+        items=[ExpenseRead.model_validate(e) for e in result["items"]],
+        total=result["total"],
+        page=result["page"],
+        pages=result["pages"],
+    )
 
 
 @router.get("/summary")
