@@ -20,6 +20,7 @@ from packages.modules.expenses.service.document_service import create_document, 
 from packages.modules.expenses.service.document_validation_service import validate_document
 from packages.modules.expenses.models.document import ExpenseDocument
 from packages.modules.expenses.models.expense import Expense
+from packages.modules.expenses.models.poliza import Poliza
 from packages.modules.expenses.models.report import ExpenseReport
 from packages.modules.expenses.models.validation_result import ValidationResult
 from packages.modules.expenses.models.tag import ExpenseTag
@@ -45,6 +46,27 @@ router = APIRouter(prefix="/expenses", tags=["expenses"])
 
 class PaginatedExpenseResponse(BaseModel):
     items: list[ExpenseRead]
+    total: int
+    page: int
+    pages: int
+
+
+class PaginatedDocumentResponse(BaseModel):
+    items: list[ExpenseDocumentRead]
+    total: int
+    page: int
+    pages: int
+
+
+class PaginatedReportResponse(BaseModel):
+    items: list[ExpenseReportRead]
+    total: int
+    page: int
+    pages: int
+
+
+class PaginatedPolizaResponse(BaseModel):
+    items: list[PolizaRead]
     total: int
     page: int
     pages: int
@@ -344,11 +366,34 @@ async def upload_document_route(
         raise HTTPException(status_code=500, detail=f"Upload failed: {e}")
 
 
-@router.get("/documents", response_model=list[ExpenseDocumentRead])
-def list_documents_route(company_id: int | None = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@router.get("/documents", response_model=PaginatedDocumentResponse)
+def list_documents_route(
+    company_id: int | None = None,
+    page: int = Query(1, ge=1, description="Page number (1-indexed)"),
+    limit: int = Query(50, ge=1, le=100, description="Items per page (max 100)"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List expense documents with pagination."""
     if not has_permission(db, current_user, "document:read:any"):
         company_id = current_user.company_id
-    return list_documents(db, company_id)
+
+    limit = min(limit, 100)
+    offset = (page - 1) * limit
+
+    query = db.query(ExpenseDocument)
+    if company_id is not None:
+        query = query.filter(ExpenseDocument.company_id == company_id)
+
+    total = query.count()
+    items = query.order_by(ExpenseDocument.created_at.desc()).offset(offset).limit(limit).all()
+
+    return PaginatedDocumentResponse(
+        items=[ExpenseDocumentRead.model_validate(d) for d in items],
+        total=total,
+        page=page,
+        pages=(total + limit - 1) // limit if limit > 0 else 0,
+    )
 
 
 @router.get("/documents/{document_id}", response_model=ExpenseDocumentRead)
@@ -564,11 +609,34 @@ def create_report_route(payload: ExpenseReportCreate, db: Session = Depends(get_
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/reports", response_model=list[ExpenseReportRead])
-def list_reports_route(company_id: int | None = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@router.get("/reports", response_model=PaginatedReportResponse)
+def list_reports_route(
+    company_id: int | None = None,
+    page: int = Query(1, ge=1, description="Page number (1-indexed)"),
+    limit: int = Query(50, ge=1, le=100, description="Items per page (max 100)"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List expense reports with pagination."""
     if not has_permission(db, current_user, "expense:read:any"):
         company_id = current_user.company_id
-    return list_reports(db, company_id)
+
+    limit = min(limit, 100)
+    offset = (page - 1) * limit
+
+    query = db.query(ExpenseReport)
+    if company_id is not None:
+        query = query.filter(ExpenseReport.company_id == company_id)
+
+    total = query.count()
+    items = query.order_by(ExpenseReport.created_at.desc()).offset(offset).limit(limit).all()
+
+    return PaginatedReportResponse(
+        items=[ExpenseReportRead.model_validate(r) for r in items],
+        total=total,
+        page=page,
+        pages=(total + limit - 1) // limit if limit > 0 else 0,
+    )
 
 
 @router.get("/reports/summary")
@@ -660,11 +728,34 @@ def generate_poliza_route(report_id: int, db: Session = Depends(get_db), _user: 
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/polizas", response_model=list[PolizaRead])
-def list_polizas_route(company_id: int | None = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@router.get("/polizas", response_model=PaginatedPolizaResponse)
+def list_polizas_route(
+    company_id: int | None = None,
+    page: int = Query(1, ge=1, description="Page number (1-indexed)"),
+    limit: int = Query(50, ge=1, le=100, description="Items per page (max 100)"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List polizas with pagination."""
     if not has_permission(db, current_user, "accounting:work"):
         company_id = current_user.company_id
-    return list_polizas(db, company_id)
+
+    limit = min(limit, 100)
+    offset = (page - 1) * limit
+
+    query = db.query(Poliza)
+    if company_id is not None:
+        query = query.filter(Poliza.company_id == company_id)
+
+    total = query.count()
+    items = query.order_by(Poliza.created_at.desc()).offset(offset).limit(limit).all()
+
+    return PaginatedPolizaResponse(
+        items=[PolizaRead.model_validate(p) for p in items],
+        total=total,
+        page=page,
+        pages=(total + limit - 1) // limit if limit > 0 else 0,
+    )
 
 
 @router.get("/polizas/summary")
