@@ -1,6 +1,7 @@
 """Tests for ExportService — export job management."""
 
 from datetime import datetime, timedelta
+from unittest.mock import patch, MagicMock
 
 import pytest
 from sqlalchemy.orm import Session
@@ -39,6 +40,18 @@ def export_user(db_session: Session, export_company: Company) -> User:
 def export_service(db_session: Session) -> ExportService:
     """Create an ExportService instance."""
     return ExportService(db_session)
+
+
+@pytest.fixture(autouse=True)
+def mock_celery_task():
+    """Mock the Celery task to avoid Redis connection in tests.
+
+    The import happens inside create_job() at runtime, so we patch
+    the task in the module where it's defined.
+    """
+    with patch("apps.api.jobs.export_tasks.process_export_task") as mock_task:
+        mock_task.delay = MagicMock(return_value=MagicMock(id="test-task-id"))
+        yield mock_task
 
 
 class TestCreateExportJob:

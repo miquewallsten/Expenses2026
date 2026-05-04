@@ -1,11 +1,24 @@
 """Tests for export_router API endpoints."""
 
 from datetime import datetime, timedelta
+from unittest.mock import patch, MagicMock
 
 import pytest
 from packages.core.platform.models import Company
 from packages.core.platform.models_export_job import ExportJob, ExportStatus, ExportType
 from packages.core.platform.models_user import User
+
+
+@pytest.fixture(autouse=True)
+def mock_celery_task():
+    """Mock the Celery task to avoid Redis connection in tests.
+
+    The import happens inside create_job() at runtime, so we patch
+    the task in the module where it's defined.
+    """
+    with patch("apps.api.jobs.export_tasks.process_export_task") as mock_task:
+        mock_task.delay = MagicMock(return_value=MagicMock(id="test-task-id"))
+        yield mock_task
 
 
 class TestExportRouter:

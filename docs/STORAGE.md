@@ -213,7 +213,57 @@ own backup path (e.g. managed snapshot + PITR).
 
 ---
 
-## 7. Known gaps (to fix)
+## 7. Tenant Data Export
+
+### Overview
+
+Clients can download all their data in a human-readable format:
+- Excel reports (Expenses, Categories, Vendors, Audit Trail)
+- Original files (CFDIs, receipts)
+- Offline HTML viewer
+
+### API Endpoints
+
+- `POST /api/admin/export` - Create export job
+- `GET /api/admin/export` - List export history
+- `GET /api/admin/export/{id}` - Get export status
+- `GET /api/admin/export/{id}/download` - Download export file
+- `GET /api/admin/export/storage` - Get storage usage
+
+### Export Types
+
+- **Full**: All data from the beginning
+- **Incremental**: Data since last successful export
+- **Range**: Data within specified date range
+
+### Export Package Structure
+
+```
+Company_Export_2026-05-04.zip
+├── README.html
+├── Excel_Reports/
+│   ├── Gastos.xlsx
+│   ├── Categorias.xlsx
+│   ├── Proveedores.xlsx
+│   └── Auditoria.xlsx
+├── CFDIs/
+│   └── {year}/{month}/{filename}
+└── offline_viewer/
+    ├── index.html
+    └── data.js
+```
+
+### Storage Usage
+
+Each company has storage metrics tracked monthly:
+- Files: Sum of all ArchiveFile sizes
+- Database: Estimated footprint
+
+Use `StorageUsageService.get_usage_summary(company_id)` to get current usage.
+
+---
+
+## 8. Known gaps (to fix)
 
 - **Duplicate archive rows.** Uploading the same filename twice creates two
   rows (different `storage_key` suffixes). Storage is safe but the DB has
@@ -221,4 +271,3 @@ own backup path (e.g. managed snapshot + PITR).
 - **`expense_documents` vs `archive_files` divergence.** They hold the same
   `content_text` today. Long-term, `expense_documents` should become a
   lightweight view over `archive_files` (no duplicate text).
-- **No per-company export endpoint yet.** See 6.3.
