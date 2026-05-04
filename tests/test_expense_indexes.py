@@ -37,9 +37,5 @@ def test_archive_file_has_company_expense_index():
     indexes = list(table.indexes)
     index_columns = [sorted([c.name for c in idx.columns]) for idx in indexes]
 
-    has_index = (
-        ['company_id', 'expense_id'] in index_columns or
-        ['company_id', 'expense_id', 'file_name'] in index_columns
-    )
-
-    assert has_index, "Missing index on (company_id, expense_id)"
+    has_index = ['company_id', 'expense_id', 'file_name'] in index_columns
+    assert has_index, "Missing index on (company_id, expense_id, file_name)"
