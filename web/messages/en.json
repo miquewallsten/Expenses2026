@@ -592,6 +592,38 @@
       "noMatch": "No rule matches this context.",
       "evaluated": "{count, plural, =0 {No active rules} one {# rule evaluated} other {# rules evaluated}}"
     },
+    "export": {
+      "title": "Export Data",
+      "refresh": "Refresh",
+      "loading": "Loading…",
+      "noCompany": "Select a company to view exports.",
+      "storage": {
+        "title": "Storage Usage",
+        "files": "Files",
+        "database": "Database",
+        "total": "Total",
+        "included": "Included",
+        "unavailable": "Could not load storage usage."
+      },
+      "create": {
+        "title": "Create Export",
+        "description": "Generate a ZIP file with all company data for backup or migration.",
+        "button": "Export",
+        "full": "Full Export",
+        "incremental": "Incremental Export",
+        "range": "Date Range",
+        "comingSoon": "Export functionality coming soon."
+      },
+      "history": {
+        "title": "Export History",
+        "date": "Date",
+        "type": "Type",
+        "status": "Status",
+        "size": "Size",
+        "download": "Download",
+        "empty": "No previous exports."
+      }
+    },
     "cfdiWatcher": {
       "title": "SAT watcher — cancelled CFDIs",
       "subtitle": "Expenses whose CFDI has been marked Cancelled by SAT",
@@ -709,6 +741,21 @@
       "notReady": "Steps remaining",
       "countLabel": "{count} record(s)",
       "completedAt": "Completed {ts}",
+      "welcomeMessage": "Welcome to OpsFlow! I'm your setup assistant. I'll ask a few quick questions about your company to get everything ready. Shall we begin?",
+      "actionStart": "Start setup",
+      "actionSkip": "Skip for now",
+      "userStart": "Yes, let's begin",
+      "thinking": "Thinking...",
+      "skip": "Skip",
+      "placeholder": "Type your response...",
+      "errorTryAgain": "I couldn't process that. Can you try again?",
+      "errorNetwork": "Connection issue. Check your network and try again.",
+      "actionCompany": "Configure company",
+      "actionModules": "Choose modules",
+      "actionUsers": "Add users",
+      "actionAccounting": "Setup accounting",
+      "actionPolicy": "Setup policies",
+      "actionComplete": "Finish",
       "nav": {
         "prev": "Previous",
         "next": "Next",

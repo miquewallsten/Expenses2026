@@ -15,6 +15,7 @@ import AdminOnboardingCopilot from "@/components/admin/AdminOnboardingCopilot";
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 import AuditLogSection from "@/components/admin/sections/AuditLogSection";
 import CfdiWatcherSection from "@/components/admin/sections/CfdiWatcherSection";
+import ExportSection from "@/components/admin/sections/ExportSection";
 import IntegrationsSection from "@/components/admin/sections/IntegrationsSection";
 import PlatformApiSection from "@/components/admin/sections/PlatformApiSection";
 import RoutingRulesSection from "@/components/admin/sections/RoutingRulesSection";
@@ -252,6 +253,7 @@ export default function AdminModule() {
         )}
         {activeSection === "platform-api" && <PlatformApiSection />}
         {activeSection === "routing-rules" && <RoutingRulesSection />}
+        {activeSection === "export" && <ExportSection />}
         {activeSection === "advanced-settings" && (
           <div className="mx-auto max-w-xl p-4">
             <header className="mb-4">

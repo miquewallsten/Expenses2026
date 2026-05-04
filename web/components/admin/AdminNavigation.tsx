@@ -17,6 +17,7 @@ import {
   Sparkles,
   KeyRound,
   Route,
+  Download,
 } from "lucide-react";
 
 export type AdminSection =
@@ -32,6 +33,7 @@ export type AdminSection =
   | "onboarding"
   | "platform-api"
   | "routing-rules"
+  | "export"
   | "advanced-settings";
 
 interface SectionDef {
@@ -53,6 +55,7 @@ const SECTIONS: SectionDef[] = [
   { id: "onboarding", label: "Onboarding", icon: <Sparkles className="h-3.5 w-3.5" /> },
   { id: "platform-api", label: "Platform API", icon: <KeyRound className="h-3.5 w-3.5" /> },
   { id: "routing-rules", label: "Routing Rules", icon: <Route className="h-3.5 w-3.5" /> },
+  { id: "export", label: "Export Data", icon: <Download className="h-3.5 w-3.5" /> },
   { id: "advanced-settings", label: "Advanced Settings", icon: <Settings className="h-3.5 w-3.5" /> },
 ];
 
@@ -67,33 +70,36 @@ export default function AdminNavigation({ activeSection, onSelect }: Props) {
   return (
     <>
       {/* Mobile toggle */}
-      <div className="flex h-9 shrink-0 items-center border-b border-white/[0.06] bg-zinc-950 px-2 md:hidden">
+      <div className="flex h-10 shrink-0 items-center border-b border-subtle bg-surface-1 px-3 md:hidden">
         <button
           type="button"
           onClick={() => setMobileOpen((v) => !v)}
-          className="flex h-6 w-6 items-center justify-center rounded text-white/40 transition-colors hover:bg-white/[0.05] hover:text-white/65"
+          className="flex h-7 w-7 items-center justify-center rounded-md text-tertiary transition-all hover:bg-surface-3 hover:text-primary active:scale-95"
         >
-          {mobileOpen ? <X className="h-3.5 w-3.5" /> : <Menu className="h-3.5 w-3.5" />}
+          {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
         </button>
-        <span className="ml-2 text-[10px] font-bold uppercase tracking-widest text-white/45">
+        <span className="ml-2 text-[11px] font-semibold text-[var(--text-primary)]">
           {SECTIONS.find((s) => s.id === activeSection)?.label ?? "Admin"}
         </span>
       </div>
 
       {/* Nav panel */}
       <nav
-        className={`shrink-0 flex-col border-r border-white/[0.06] bg-zinc-950 transition-all ${
+        className={`shrink-0 flex-col border-r border-subtle bg-surface-1 transition-all ${
           mobileOpen ? "flex" : "hidden md:flex"
         }`}
-        style={{ width: "220px" }}
+        style={{ width: "240px" }}
         data-testid="admin-navigation"
       >
-        <div className="flex h-9 shrink-0 items-center border-b border-white/[0.06] px-3">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-white/30">
+        {/* Header */}
+        <div className="flex h-10 shrink-0 items-center border-b border-subtle px-4">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-tertiary">
             Administration
           </span>
         </div>
-        <ul className="space-y-px py-1.5 px-2">
+
+        {/* Navigation items */}
+        <ul className="space-y-0.5 p-2">
           {SECTIONS.map((section) => {
             const isActive = activeSection === section.id;
             return (
@@ -104,24 +110,29 @@ export default function AdminNavigation({ activeSection, onSelect }: Props) {
                     onSelect(section.id);
                     setMobileOpen(false);
                   }}
-                  className={`group relative flex w-full items-center gap-2.5 rounded px-3 py-1.5 text-[11px] font-medium leading-none transition-colors ${
+                  className={`group relative flex w-full items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-all ${
                     isActive
-                      ? "bg-indigo-600/[0.18] text-white"
-                      : "text-white/38 hover:bg-white/[0.04] hover:text-white/65"
+                      ? "bg-accent-muted text-accent"
+                      : "text-secondary hover:bg-surface-3 hover:text-primary active:scale-[0.99]"
                   }`}
                 >
+                  {/* Active indicator */}
                   {isActive && (
-                    <span className="absolute left-0 top-1/2 h-3.5 w-0.5 -translate-y-1/2 rounded-r-full bg-indigo-400/70" />
+                    <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-accent" />
                   )}
+
+                  {/* Icon */}
                   <span
-                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded ${
+                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-all ${
                       isActive
-                        ? "bg-indigo-500/25 text-indigo-300/80"
-                        : "bg-white/[0.04] text-white/30 group-hover:text-white/55"
+                        ? "bg-accent text-white shadow-[var(--shadow-glow)]"
+                        : "bg-surface-2 text-tertiary group-hover:bg-surface-3 group-hover:text-secondary"
                     }`}
                   >
                     {section.icon}
                   </span>
+
+                  {/* Label */}
                   <span className="truncate">{section.label}</span>
                 </button>
               </li>
