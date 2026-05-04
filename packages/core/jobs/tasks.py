@@ -8,7 +8,11 @@ from packages.core.jobs.celery_app import celery_app
 logger = logging.getLogger(__name__)
 
 
-@celery_app.task(name="process_cfdi_recheck")
+@celery_app.task(
+    name="process_cfdi_recheck",
+    autoretry_for=(Exception,),
+    retry_kwargs={"max_retries": 3, "countdown": 60},
+)
 def process_cfdi_recheck(company_ids: list[int] | None = None) -> dict:
     """Process CFDI recheck for all companies or specified companies.
 
@@ -20,12 +24,11 @@ def process_cfdi_recheck(company_ids: list[int] | None = None) -> dict:
     Returns:
         dict with processed count and any errors
     """
-    from apps.api.deps import get_db
+    from apps.api.db import SessionLocal
     from packages.core.platform.models import Company
     from packages.modules.expenses.service.cfdi_lifecycle_service import recheck_pending
 
-    db_gen = get_db()
-    db = next(db_gen)
+    db = SessionLocal()
     processed = 0
     errors = []
     totals = {"checked": 0, "flipped": 0, "skipped": 0}
@@ -61,13 +64,14 @@ def process_cfdi_recheck(company_ids: list[int] | None = None) -> dict:
         }
 
     finally:
-        try:
-            next(db_gen)
-        except StopIteration:
-            pass
+        db.close()
 
 
-@celery_app.task(name="cleanup_expired_sessions")
+@celery_app.task(
+    name="cleanup_expired_sessions",
+    autoretry_for=(Exception,),
+    retry_kwargs={"max_retries": 2, "countdown": 30},
+)
 def cleanup_expired_sessions() -> dict:
     """Clean up expired agent session from Redis.
 
