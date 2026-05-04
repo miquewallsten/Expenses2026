@@ -149,13 +149,13 @@ export default function AdminModule() {
   if (loading) {
     return (
       <div className="flex h-full" data-testid="admin-module">
-        <div className="hidden md:flex shrink-0 flex-col border-r border-white/[0.06] bg-zinc-950" style={{ width: "220px" }}>
-          <div className="flex h-9 shrink-0 items-center border-b border-white/[0.06] px-3">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-white/30">Administration</span>
+        <div className="hidden md:flex shrink-0 flex-col border-r border-subtle bg-surface-1" style={{ width: "200px" }}>
+          <div className="flex h-9 shrink-0 items-center border-b border-subtle px-3">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-muted">Administration</span>
           </div>
         </div>
         <div className="flex flex-1 items-center justify-center">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/10 border-t-indigo-400/80" />
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-subtle border-t-accent" />
         </div>
       </div>
     );
@@ -167,12 +167,12 @@ export default function AdminModule() {
         <AdminNavigation activeSection={activeSection} onSelect={setActiveSection} />
         <div className="flex flex-1 items-center justify-center">
           <div className="text-center">
-            <p className="text-[11px] font-medium text-white/45">Failed to load admin data</p>
-            <p className="mt-1 text-[10px] text-white/25">{error}</p>
+            <p className="text-xs font-medium text-secondary">Failed to load admin data</p>
+            <p className="mt-1 text-xs text-muted">{error}</p>
             <button
               type="button"
               onClick={load}
-              className="mt-3 rounded border border-white/[0.07] bg-white/[0.02] px-3 py-1.5 text-[11px] text-white/55 transition-colors hover:bg-white/[0.04]"
+              className="btn btn-secondary mt-3"
             >
               Retry
             </button>
@@ -185,7 +185,7 @@ export default function AdminModule() {
   return (
     <div className="flex h-full" data-testid="admin-module">
       <AdminNavigation activeSection={activeSection} onSelect={setActiveSection} />
-      <main className="min-h-0 flex-1 overflow-y-auto bg-zinc-950">
+      <main className="min-h-0 flex-1 overflow-y-auto bg-surface-0">
         {activeSection === "company-setup" && (
           <AdminCompanySetupStudio
             companyId={companyId}

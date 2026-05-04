@@ -6,54 +6,41 @@ product
 
 ## Users
 
-Finance teams in Mexican companies (50-500 employees) managing expense reports, CFDI (tax receipt) integration, and accounting exports. Employees submitting expenses through web or WhatsApp. Managers approving requests. Accountants reconciling and exporting to Poliza. Super admins configuring AI agents, LLM providers, and platform settings.
-
-**Context:** Office workers during business hours, on desktop monitors. Finance teams often work in focused sessions — reviewing batches of expenses, matching CFDIs, running exports. They need clarity and speed, not hand-holding.
+Finance operations teams in mid-to-large enterprises. Controllers, accountants, CFOs, and finance staff who manage expenses, approvals, and accounting workflows. They use this daily during high-pressure periods like month-end close, audit season, and tax filings. They need clarity, speed, and confidence that what they see is accurate.
 
 ## Product Purpose
 
-A unified financial operations platform that eliminates the gap between expense submission and accounting. Expenses flow from submission through approval to accounting export. AI agents categorize expenses, match CFDIs, and surface anomalies. The platform replaces fragmented spreadsheets and manual reconciliation with a single, coherent system.
-
-**Success looks like:** Finance teams close their books faster. Employees submit expenses without friction. Managers approve with one click. Accountants export to Poliza without manual matching. Anomalies surface automatically.
+A workflow-driven financial operations platform that brings AI-assisted efficiency to expense management, approval routing, and accounting integration. Success means users complete their financial workflows faster with fewer errors, and executives have real-time visibility into company spending.
 
 ## Brand Personality
 
-**Three words:** Precise, calm, capable.
+**Executive. Precise. Commanding.**
 
-**Voice:** Direct but not cold. Technical but not jargon. Explains what happened and what to do next, without condescension. The UI is quiet — it doesn't announce itself. When something needs attention, it signals clearly. When everything is fine, it stays out of the way.
+Three words: Enterprise-grade, Professional, Polished
 
-**Emotional goal:** Confidence. Users trust the system to handle complexity correctly. They feel on top of their finances, not overwhelmed by them.
+Voice: Confident without being cold. Capable without being complicated. The interface should feel like a well-tailored suit, it projects competence and reliability without demanding attention.
 
 ## Anti-references
 
-**What this should NOT look like:**
-
-- **Generic SaaS dashboards** — No gradient hero metrics, identical card grids, cream/beige backgrounds, or "AI-powered" badges on every surface. Avoid the template look.
-- **Enterprise clutter** — No dense tables with 20 columns, sidebar overload, nested menus three levels deep, or overwhelming data density. Complexity should be revealed progressively, not dumped all at once.
-
-**What this should NOT feel like:**
-
-- A tool that requires training to understand
-- A system that makes users second-guess their actions
-- An interface that fights the user's mental model
+- **Pastel/washed-out colors** - No soft, weak, or washed-out palettes. Enterprise tools need presence.
+- **SaaS cliché gradients** - No generic purple-to-blue hero gradients or floating blob illustrations.
+- **Playful UI** - No quirky illustrations, friendly mascots, or whimsical copy. This is finance.
+- **Glassmorphism** - No decorative blur effects. Glass is for windows, not UI panels.
+- **Cheap dark mode** - No pure black backgrounds with gray text that strains the eyes.
+- **Flat, lifeless buttons** - Buttons must have visual weight and clear affordance.
 
 ## Design Principles
 
-1. **Show, don't tell.** Status is visible at a glance. Actions are inferred from context. Labels are the last resort.
-
-2. **Progressive disclosure.** Present the essential first. Details on demand. Advanced options behind clear affordances, not hidden.
-
-3. **Motion with purpose.** Animations guide attention — a row highlighting when data changes, a drawer sliding in to show context. No decorative motion.
-
-4. **Density with hierarchy.** Information density is good; visual noise is bad. Group related actions. Distinguish primary from secondary. Use whitespace to separate, not decorate.
-
-5. **One clear action.** Every screen has a primary task. Secondary actions exist, but they don't compete for attention.
+1. **Executive presence** - Every element projects competence. No weak colors, no fuzzy borders, no half-measures.
+2. **Information density with clarity** - Like Salesforce and Bloomberg, show what matters without clutter. Respect the professional user's time.
+3. **Action-oriented affordance** - Buttons look clickable. States are obvious. Interactive elements have clear visual weight.
+4. **Dark mode that works** - High contrast, readable text, proper surface hierarchy. No eye strain during late-night closes.
+5. **Light mode that commands** - Crisp, high-contrast, professional. Not washed-out or pastel. White space is intentional, not empty.
 
 ## Accessibility & Inclusion
 
-- WCAG 2.1 AA contrast requirements for text and interactive elements
-- Dark mode as primary (finance professionals often work in controlled lighting)
-- Light mode for daylight or preference
-- Focus states visible for keyboard navigation
-- Screen reader support for status changes (toast announcements, table updates)
-- Reduced motion support for vestibular sensitivity
+- WCAG 2.1 AA minimum
+- Sufficient contrast ratios in both themes (4.5:1 for text)
+- Clear focus states for keyboard navigation
+- No reliance on color alone to convey meaning
+- Support for reduced motion preferences

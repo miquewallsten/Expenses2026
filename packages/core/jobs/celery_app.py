@@ -11,7 +11,10 @@ celery_app = Celery(
     "financial_ops",
     broker=REDIS_URL,
     backend=REDIS_URL,
-    include=["packages.core.jobs.tasks"],
+    includes=[
+        "packages.core.jobs.tasks",
+        "apps.api.jobs.export_tasks",
+    ],
 )
 
 # Configuration
@@ -25,6 +28,7 @@ celery_app.conf.update(
     # Task routing
     task_routes={
         "packages.core.jobs.tasks.*": {"queue": "default"},
+        "apps.api.jobs.export_tasks.*": {"queue": "exports"},
     },
     # Retry settings
     task_default_retry_delay=60,  # 1 minute

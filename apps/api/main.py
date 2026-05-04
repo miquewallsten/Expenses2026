@@ -349,6 +349,10 @@ from packages.modules.admin.api.audit_log_router import (  # noqa: E402
     router as audit_log_router,
 )
 app.include_router(audit_log_router)
+from packages.modules.admin.api.export_router import (  # noqa: E402
+    router as export_router,
+)
+app.include_router(export_router)
 from packages.modules.admin.api.routing_rules_router import (  # noqa: E402
     router as routing_rules_router,
 )

@@ -6,11 +6,6 @@ import {
 } from "lucide-react";
 import { useMyWorkContext } from "@/context/MyWorkContext";
 
-// ── Icon resolver ─────────────────────────────────────────────────────────────
-//
-// Modules store icon names as plain strings so the registry stays free of
-// React imports.  Resolve them here, at the rendering boundary.
-
 const ICON_MAP: Record<string, LucideIcon> = {
   Receipt,
   CheckSquare,
@@ -25,18 +20,9 @@ function resolveIcon(name: string | undefined): LucideIcon | null {
   return name ? (ICON_MAP[name] ?? null) : null;
 }
 
-// ── Props ─────────────────────────────────────────────────────────────────────
-
 interface MyWorkSidebarProps {
-  /**
-   * Called after the user selects a module.  AppShell passes `closeDrawer`
-   * here when rendering in the mobile drawer so the overlay dismisses
-   * automatically.  On desktop/tablet the prop is a no-op (default).
-   */
   onSelect?: () => void;
 }
-
-// ── Component ─────────────────────────────────────────────────────────────────
 
 export default function MyWorkSidebar({ onSelect }: MyWorkSidebarProps) {
   const { visibleModules, activeModule, setActiveModule } = useMyWorkContext();
@@ -44,7 +30,7 @@ export default function MyWorkSidebar({ onSelect }: MyWorkSidebarProps) {
   if (!visibleModules.length) return null;
 
   return (
-    <nav aria-label="Module navigation" className="flex flex-col gap-px px-1.5 py-1.5">
+    <nav aria-label="Module navigation" className="flex flex-col gap-0.5 px-2 py-1.5">
       {visibleModules.map((mod) => {
         const Icon = resolveIcon(mod.icon);
         const isActive = activeModule?.id === mod.id;
@@ -58,19 +44,24 @@ export default function MyWorkSidebar({ onSelect }: MyWorkSidebarProps) {
               onSelect?.();
             }}
             aria-current={isActive ? "page" : undefined}
-            className={`relative flex min-h-[44px] items-center gap-3 rounded-md px-2.5 py-2 text-left text-sm font-medium transition-colors md:min-h-0 md:gap-2.5 md:py-1.5 md:text-[11px] ${
+            className={`group relative flex items-center gap-2.5 rounded py-1.5 px-2.5 text-left text-xs font-medium transition-colors ${
               isActive
-                ? "bg-indigo-600/[0.15] text-white shadow-[inset_2px_0_0_0_theme(colors.indigo.400/60%)]"
-                : "text-white/45 hover:bg-white/[0.06] hover:text-white/75"
+                ? "bg-accent-muted text-primary"
+                : "text-secondary hover:bg-surface-2 hover:text-primary"
             }`}
           >
+            {isActive && (
+              <span className="absolute left-0 top-1/2 h-3.5 w-0.5 -translate-y-1/2 rounded-r bg-accent" />
+            )}
             {Icon && (
               <Icon
-                className="h-4 w-4 shrink-0 md:h-3.5 md:w-3.5"
+                className={`h-3.5 w-3.5 shrink-0 ${
+                  isActive ? "text-accent" : "text-muted group-hover:text-secondary"
+                }`}
                 aria-hidden="true"
               />
             )}
-            {mod.label}
+            <span className="truncate">{mod.label}</span>
           </button>
         );
       })}

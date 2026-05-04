@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Bot, X, Loader2 } from "lucide-react";
 import { apiPost } from "@/lib/api/client";
+import { renderContent } from "@/lib/chat/renderContent";
 
 interface Message {
   role: "user" | "assistant";
@@ -84,17 +85,25 @@ export default function LLMConfigAssistant({ currentProvider, currentModel }: LL
                 key={i}
                 className={`text-[11px] leading-relaxed ${
                   m.role === "user"
-                    ? "ml-4 rounded bg-indigo-500/10 px-2 py-1.5 text-white/80"
-                    : "mr-4 text-white/60"
+                    ? "ml-4 rounded-xl bg-indigo-500/15 px-3 py-2 text-indigo-100/90 ring-1 ring-inset ring-indigo-500/20"
+                    : "mr-4 rounded-xl bg-white/[0.03] px-3 py-2 text-white/60 ring-1 ring-inset ring-white/[0.05]"
                 }`}
               >
-                {m.content}
+                {m.role === "assistant" ? renderContent(m.content) : m.content}
               </div>
             ))}
             {loading && (
-              <div className="flex items-center gap-1.5 text-white/40">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                <span className="text-[10px]">Thinking...</span>
+              <div className="mr-4 flex items-center gap-2 rounded-xl bg-white/[0.03] px-3 py-2 ring-1 ring-inset ring-white/[0.05]">
+                <span className="inline-flex gap-1">
+                  {[0, 1, 2].map((d) => (
+                    <span
+                      key={d}
+                      className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-400/60"
+                      style={{ animationDelay: `${d * 150}ms` }}
+                    />
+                  ))}
+                </span>
+                <span className="text-[10px] text-white/40">Thinking...</span>
               </div>
             )}
           </div>

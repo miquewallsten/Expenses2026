@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Bot, Loader2, Send, Paperclip, AlertTriangle, Wrench } from "lucide-react";
+import { renderContent } from "@/lib/chat/renderContent";
 import {
   agentChat,
   getReceipt,
@@ -437,7 +438,11 @@ function TurnView({
       </div>
       <div className="min-w-0 flex-1 space-y-2">
         <div className="max-w-[90%] rounded-xl rounded-bl-sm border border-white/[0.08] bg-white/[0.05] px-3 py-2 text-[11px] leading-relaxed text-white/65">
-          {turn.content}
+          {renderContent(turn.content, {
+            textClassName: "mb-2 last:mb-0 text-white/65 leading-relaxed",
+            boldClassName: "font-semibold text-white/80",
+            bulletClassName: "text-white/50 text-[11px] leading-relaxed",
+          })}
         </div>
 
         {turn.toolCalls && turn.toolCalls.length > 0 && (

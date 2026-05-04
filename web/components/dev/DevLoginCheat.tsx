@@ -97,26 +97,32 @@ function DevLoginPanel() {
   const [loadingUsers, setLoadingUsers] = useState(true);
 
   useEffect(() => {
-    // Fetch all users — assumes company_id=1 for dev
-    fetch(`${API}/users/?company_id=1`)
-      .then((r) => (r.ok ? r.json() : []))
-      .catch(() => [])
-      .then((data: DevUser[]) => {
-        const active = Array.isArray(data) ? data.filter((u) => u.is_active !== false) : [];
-        // Fallback demo users if fetch fails
-        if (active.length === 0) {
-          setUsers([
-            { id: 1, company_id: 1, email: "admin@demo.com", full_name: "Admin User", role: "admin", is_active: true },
-            { id: 2, company_id: 1, email: "manager@demo.com", full_name: "Manager User", role: "manager", is_active: true },
-            { id: 3, company_id: 1, email: "accounting@demo.com", full_name: "Accounting User", role: "accounting", is_active: true },
-            { id: 4, company_id: 1, email: "employee@demo.com", full_name: "Lola Sten", role: "employee", is_active: true },
-            { id: 5, company_id: 1, email: "executive@demo.com", full_name: "Executive User", role: "executive", is_active: true },
-          ]);
-        } else {
-          setUsers(active);
-        }
-        setLoadingUsers(false);
-      });
+    // Always start with demo users for immediate display
+    const demoUsers: DevUser[] = [
+      { id: 1, company_id: 1, email: "admin@demo.com", full_name: "Admin User", role: "admin", is_active: true },
+      { id: 2, company_id: 1, email: "manager@demo.com", full_name: "Manager User", role: "manager", is_active: true },
+      { id: 3, company_id: 1, email: "accounting@demo.com", full_name: "Accounting User", role: "accounting", is_active: true },
+      { id: 4, company_id: 1, email: "employee@demo.com", full_name: "Lola Sten", role: "employee", is_active: true },
+      { id: 5, company_id: 1, email: "executive@demo.com", full_name: "Executive User", role: "executive", is_active: true },
+      { id: 6, company_id: 1, email: "secretary@demo.com", full_name: "Secretary User", role: "secretary", is_active: true },
+    ];
+    setUsers(demoUsers);
+    setLoadingUsers(false);
+
+    // Try to fetch real users in the background (optional, non-blocking)
+    if (API) {
+      fetch(`${API}/users/?company_id=1`)
+        .then((r) => r.ok ? r.json() : null)
+        .then((data) => {
+          if (Array.isArray(data) && data.length > 0) {
+            const active = data.filter((u: DevUser) => u.is_active !== false);
+            if (active.length > 0) {
+              setUsers(active);
+            }
+          }
+        })
+        .catch(() => {/* ignore errors, keep demo users */});
+    }
   }, []);
 
   // ── Login action ─────────────────────────────────────────────────────────────

@@ -50,7 +50,8 @@
     "expandNav": "Expandir navegación",
     "collapseNav": "Colapsar navegación",
     "expandSidebar": "Expandir panel lateral",
-    "collapseSidebar": "Colapsar panel lateral"
+    "collapseSidebar": "Colapsar panel lateral",
+    "notifications": "Notificaciones"
   },
   "nav": {
     "employee": "Empleado",

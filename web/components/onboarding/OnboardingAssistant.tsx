@@ -4,6 +4,7 @@ import { Sparkles, ChevronRight, Send, Loader2 } from "lucide-react";
 import { useAgent } from "@/hooks/useAgent";
 import { useEffect, useRef, useState } from "react";
 import type { AIContext, OnboardingStep } from "@/types/onboarding";
+import { renderContent } from "@/lib/chat/renderContent";
 
 interface OnboardingAssistantProps {
   currentStep: OnboardingStep;
@@ -120,24 +121,32 @@ export function OnboardingAssistant({
           {messages.map((message) => (
             <div
               key={message.id}
-              className={`rounded-lg p-3 ${
+              className={`rounded-xl px-3.5 py-2.5 ${
                 message.role === "user"
-                  ? "bg-white/[0.04] ml-4"
-                  : "bg-indigo-500/[0.04] mr-4"
+                  ? "ml-4 bg-indigo-500/15 text-indigo-100/90 ring-1 ring-inset ring-indigo-500/20"
+                  : "mr-4 bg-white/[0.03] text-white/60 ring-1 ring-inset ring-white/[0.05]"
               }`}
             >
-              <p className="text-[11px] leading-relaxed text-white/80">
-                {message.content}
-              </p>
+              <div className="text-[11px] leading-relaxed">
+                {message.role === "assistant" ? renderContent(message.content) : message.content}
+              </div>
             </div>
           ))}
 
           {/* Typing indicator */}
           {isTyping && (
-            <div className="rounded-lg bg-indigo-500/[0.04] p-3 mr-4">
-              <div className="flex items-center gap-1.5">
-                <Loader2 className="h-3 w-3 animate-spin text-indigo-300" />
-                <p className="text-[10px] text-white/50">Thinking...</p>
+            <div className="mr-4 rounded-xl bg-white/[0.03] px-3.5 py-2.5 ring-1 ring-inset ring-white/[0.05]">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex gap-1">
+                  {[0, 1, 2].map((d) => (
+                    <span
+                      key={d}
+                      className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-400/60"
+                      style={{ animationDelay: `${d * 150}ms` }}
+                    />
+                  ))}
+                </span>
+                <span className="text-[10px] text-white/40">Thinking...</span>
               </div>
             </div>
           )}

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Send, Bot } from "lucide-react";
+import { renderContent } from "@/lib/chat/renderContent";
 
 export interface ChatMessage {
   id: string;
@@ -54,33 +55,33 @@ export default function CopilotChat({ userName }: CopilotChatProps) {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden" data-testid="copilot-chat">
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-3 py-3 space-y-3">
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-          >
-            {msg.role === "assistant" && (
-              <div className="mr-1.5 mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-600/30">
-                <Bot className="h-3 w-3 text-indigo-300/80" />
-              </div>
-            )}
+    <div className="flex h-full flex-col bg-surface-0" data-testid="copilot-chat">
+      {/* Messages */}
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto p-4">
+        <div className="mx-auto max-w-lg space-y-3">
+          {messages.map((msg) => (
             <div
-              className={`max-w-[85%] rounded-lg px-2.5 py-1.5 text-[11px] leading-relaxed ${
-                msg.role === "user"
-                  ? "bg-indigo-600/30 text-white/85"
-                  : "bg-zinc-800 text-white/60"
-              }`}
+              key={msg.id}
+              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
-              {msg.content}
+              {msg.role === "assistant" && (
+                <div className="mr-2 mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-accent text-white shadow-[var(--shadow-glow)]">
+                  <Bot className="h-3.5 w-3.5" />
+                </div>
+              )}
+              <div
+                className={`chat-message ${msg.role}`}
+              >
+                {msg.role === "assistant" ? renderContent(msg.content) : msg.content}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
-      <div className="shrink-0 border-t border-white/[0.06] px-3 py-2">
-        <div className="flex items-center gap-2">
+      {/* Input */}
+      <div className="shrink-0 border-t border-subtle bg-surface-1 p-3">
+        <div className="mx-auto flex max-w-lg items-center gap-2">
           <input
             type="text"
             value={input}
@@ -92,16 +93,16 @@ export default function CopilotChat({ userName }: CopilotChatProps) {
               }
             }}
             placeholder="Ask me anything..."
-            className="min-w-0 flex-1 rounded-md border border-white/[0.07] bg-zinc-900 px-2.5 py-1.5 text-[11px] text-white/60 placeholder:text-white/25 outline-none transition-colors focus:border-indigo-500/40 focus:bg-zinc-800"
+            className="chat-input"
           />
           <button
             type="button"
             onClick={handleSend}
             disabled={!input.trim()}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-indigo-600/30 text-indigo-300/80 transition-colors hover:bg-indigo-600/50 disabled:opacity-30 disabled:hover:bg-indigo-600/30"
+            className="chat-send-btn disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
             aria-label="Send message"
           >
-            <Send className="h-3.5 w-3.5" />
+            <Send className="h-4 w-4" />
           </button>
         </div>
       </div>

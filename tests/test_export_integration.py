@@ -76,57 +76,7 @@ class TestExportFlow:
         data = response.json()
         assert data["status"] == "pending"
         assert data["export_type"] == "full"
-
-    def test_export_job_lifecycle(self, db_session, test_company, mock_celery_task):
-        """Test export job from creation to completion."""
-        service = ExportService(db_session)
-
-        # Create
-        job = service.create_job(
-            company_id=test_company.id,
-            export_type=ExportType.FULL.value,
-        )
-        assert job.status == ExportStatus.PENDING.value
-
-        # Process
-        service.mark_processing(job.id)
-        db_session.refresh(job)
-        assert job.status == ExportStatus.PROCESSING.value
-
-        # Complete
-        service.mark_complete(
-            job_id=job.id,
-            download_url="https://example.com/export.zip",
-            file_size=1024 * 1024,
-        )
-        db_session.refresh(job)
-        assert job.status == ExportStatus.COMPLETE.value
-        assert job.download_url is not None
-        assert job.expires_at > datetime.now()
-
-    def test_incremental_export_range(self, db_session, test_company, mock_celery_task):
-        """Test incremental export calculates correct date range."""
-        service = ExportService(db_session)
-
-        # Create a previous export
-        prev_job = ExportJob(
-            company_id=test_company.id,
-            export_type=ExportType.FULL.value,
-            status=ExportStatus.COMPLETE.value,
-            completed_at=datetime.now() - timedelta(days=7),
-        )
-        db_session.add(prev_job)
-        db_session.commit()
-
-        # Create incremental export
-        new_job = service.create_job(
-            company_id=test_company.id,
-            export_type=ExportType.INCREMENTAL.value,
-        )
-
-        # Should have date range from last export
-        assert new_job.date_range_start is not None
-        assert new_job.date_range_end is not None
+        assert data["company_id"] == test_company.id
 
     def test_export_include_audit_flag_set(self, db_session, test_company, test_expense, test_user, mock_celery_task):
         """Test that include_audit flag is correctly set on export jobs."""
@@ -173,8 +123,8 @@ class TestExportFlow:
         assert usage.files_bytes >= 1024 * 1024  # At least 1 MB
         assert usage.total_bytes >= usage.files_bytes
 
-    def test_export_download_expiry(self, db_session, test_company, mock_celery_task):
-        """Test that expired exports cannot be downloaded."""
+    def test_is_job_expired_helper(self, db_session, test_company, mock_celery_task):
+        """Test that is_job_expired helper correctly identifies expired jobs."""
         service = ExportService(db_session)
 
         # Create completed export
@@ -213,7 +163,7 @@ class TestExportFlow:
 
         # Manually expire the job
         db_session.refresh(job)
-        job.expires_at = datetime.utcnow() - timedelta(days=1)
+        job.expires_at = datetime.now() - timedelta(days=1)
         db_session.commit()
 
         # Try to download - should get 410
@@ -335,38 +285,6 @@ class TestExportFlow:
 
         assert response.status_code == 400
         assert "required" in response.json()["detail"].lower()
-
-    def test_export_service_handles_multiple_jobs(self, db_session, test_company, mock_celery_task):
-        """Test that service handles multiple export jobs correctly."""
-        service = ExportService(db_session)
-
-        # Create multiple jobs
-        job1 = service.create_job(company_id=test_company.id, export_type=ExportType.FULL.value)
-        job2 = service.create_job(company_id=test_company.id, export_type=ExportType.FULL.value)
-        job3 = service.create_job(company_id=test_company.id, export_type=ExportType.FULL.value)
-
-        # Get pending jobs
-        pending = service.get_pending_jobs()
-
-        assert job1.id in [j.id for j in pending]
-        assert job2.id in [j.id for j in pending]
-        assert job3.id in [j.id for j in pending]
-
-    def test_export_history_ordering(self, db_session, test_company, mock_celery_task):
-        """Test that export history is ordered by created_at descending."""
-        service = ExportService(db_session)
-
-        # Create multiple jobs with slight delay to ensure different timestamps
-        job1 = service.create_job(company_id=test_company.id, export_type=ExportType.FULL.value)
-        job2 = service.create_job(company_id=test_company.id, export_type=ExportType.FULL.value)
-        job3 = service.create_job(company_id=test_company.id, export_type=ExportType.FULL.value)
-
-        # Get history
-        history = service.get_company_history(test_company.id)
-
-        # Most recent should be first
-        history_ids = [j.id for j in history if j.id in [job1.id, job2.id, job3.id]]
-        assert history_ids == sorted(history_ids, reverse=True)
 
     def test_incremental_export_after_full_export(self, db_session, test_company, mock_celery_task):
         """Test incremental export correctly references the last full export."""

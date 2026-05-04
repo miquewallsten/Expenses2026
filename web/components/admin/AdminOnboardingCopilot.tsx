@@ -23,6 +23,7 @@ import {
   Calculator,
   FileText,
   ArrowRight,
+  Check,
 } from "lucide-react";
 import { apiPost } from "@/lib/api/client";
 
@@ -53,6 +54,93 @@ interface Props {
   onSkip: () => void;
 }
 
+/**
+ * Render message content with basic markdown-like formatting:
+ * - **bold** → <strong>
+ * - - item → bullet list
+ * - 1. item → numbered list
+ * - Line breaks → proper spacing
+ */
+function renderContent(content: string) {
+  const lines = content.split("\n");
+  const elements: React.ReactNode[] = [];
+  let listItems: string[] = [];
+  let listType: "bullet" | "number" | null = null;
+  let key = 0;
+
+  const flushList = () => {
+    if (listItems.length > 0) {
+      const ListTag = listType === "number" ? "ol" : "ul";
+      elements.push(
+        <ListTag key={key++} className={`mb-2 ${listType === "number" ? "list-decimal pl-4" : "list-disc pl-4"}`}>
+          {listItems.map((item, i) => (
+            <li key={i} className="text-white/50 text-[11px] leading-relaxed">
+              {renderInline(item)}
+            </li>
+          ))}
+        </ListTag>
+      );
+      listItems = [];
+      listType = null;
+    }
+  };
+
+  const renderInline = (text: string): React.ReactNode => {
+    // Handle **bold**
+    const parts = text.split(/(\*\*[^*]+\*\*)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith("**") && part.endsWith("**")) {
+        return (
+          <strong key={i} className="font-semibold text-white/75">
+            {part.slice(2, -2)}
+          </strong>
+        );
+      }
+      return part;
+    });
+  };
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Bullet list
+    if (trimmed.startsWith("- ")) {
+      if (listType !== "bullet") {
+        flushList();
+        listType = "bullet";
+      }
+      listItems.push(trimmed.slice(2));
+      continue;
+    }
+
+    // Numbered list
+    const numberedMatch = trimmed.match(/^(\d+)\.\s+(.+)/);
+    if (numberedMatch) {
+      if (listType !== "number") {
+        flushList();
+        listType = "number";
+      }
+      listItems.push(numberedMatch[2]);
+      continue;
+    }
+
+    // Flush any pending list
+    flushList();
+
+    // Regular paragraph
+    if (trimmed) {
+      elements.push(
+        <p key={key++} className="mb-2 last:mb-0 text-white/60 leading-relaxed">
+          {renderInline(trimmed)}
+        </p>
+      );
+    }
+  }
+
+  flushList();
+  return elements;
+}
+
 export default function AdminOnboardingCopilot({ companyId, onComplete, onSkip }: Props) {
   const t = useTranslations("admin.onboarding");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -61,6 +149,7 @@ export default function AdminOnboardingCopilot({ companyId, onComplete, onSkip }
   const [state, setState] = useState<OnboardingState>({ step: 0 });
   const [progress, setProgress] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const initializedRef = useRef(false);
 
   const sendAssistant = useCallback((content: string, actions?: ActionButton[]) => {
     setMessages((prev) => [...prev, { role: "assistant", content, actions }]);
@@ -76,9 +165,10 @@ export default function AdminOnboardingCopilot({ companyId, onComplete, onSkip }
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Initial greeting
+  // Initial greeting - run once only
   useEffect(() => {
-    if (messages.length === 0) {
+    if (!initializedRef.current) {
+      initializedRef.current = true;
       sendAssistant(
         t("welcomeMessage"),
         [
@@ -87,7 +177,7 @@ export default function AdminOnboardingCopilot({ companyId, onComplete, onSkip }
         ]
       );
     }
-  }, [messages.length, sendAssistant, t]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAction = useCallback(
     async (value: string) => {
@@ -159,7 +249,7 @@ export default function AdminOnboardingCopilot({ companyId, onComplete, onSkip }
   return (
     <div className="flex h-full flex-col bg-zinc-950">
       {/* Header */}
-      <header className="flex h-11 shrink-0 items-center justify-between border-b border-white/[0.06] px-4">
+      <header className="flex h-11 shrink-0 items-center justify-between border-b border-white/[0.06] bg-zinc-900/50 px-4">
         <div className="flex items-center gap-2">
           <div className="flex h-5 w-5 items-center justify-center rounded bg-indigo-500/20">
             <Sparkles className="h-3 w-3 text-indigo-300/80" />
@@ -169,18 +259,18 @@ export default function AdminOnboardingCopilot({ companyId, onComplete, onSkip }
         <div className="flex items-center gap-3">
           {/* Progress */}
           <div className="flex items-center gap-1.5">
-            <div className="h-1 w-16 overflow-hidden rounded-full bg-white/[0.06]">
+            <div className="h-1.5 w-20 overflow-hidden rounded-full bg-white/[0.06]">
               <div
-                className="h-full rounded-full bg-indigo-500/70 transition-all duration-500"
+                className="h-full rounded-full bg-gradient-to-r from-indigo-500/80 to-indigo-400/60 transition-all duration-500"
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <span className="text-[9px] font-medium tabular-nums text-white/30">{progress}%</span>
+            <span className="text-[9px] font-medium tabular-nums text-white/40">{progress}%</span>
           </div>
           <button
             type="button"
             onClick={onSkip}
-            className="flex items-center gap-1 rounded px-2 py-1 text-[10px] text-white/30 transition-colors hover:bg-white/[0.04] hover:text-white/50"
+            className="flex items-center gap-1 rounded-md border border-white/[0.06] bg-white/[0.02] px-2 py-1 text-[10px] text-white/40 transition-colors hover:bg-white/[0.05] hover:text-white/60"
           >
             <SkipForward className="h-3 w-3" />
             {t("skip")}
@@ -190,42 +280,42 @@ export default function AdminOnboardingCopilot({ companyId, onComplete, onSkip }
 
       {/* Messages */}
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-        <div className="mx-auto max-w-lg space-y-4">
+        <div className="mx-auto max-w-lg space-y-3">
           {messages.map((msg, i) => (
             <div
               key={i}
               className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[85%] rounded-lg px-3 py-2 text-[11px] leading-relaxed ${
+                className={`max-w-[90%] rounded-xl px-3.5 py-2.5 text-[11px] leading-relaxed ${
                   msg.role === "user"
-                    ? "bg-indigo-600/20 text-indigo-100/80"
-                    : "bg-white/[0.03] text-white/60"
+                    ? "bg-indigo-500/15 text-indigo-100/90 ring-1 ring-inset ring-indigo-500/20"
+                    : "bg-white/[0.03] text-white/60 ring-1 ring-inset ring-white/[0.05]"
                 }`}
               >
-                {msg.content}
+                {msg.role === "assistant" ? renderContent(msg.content) : msg.content}
 
                 {/* Action buttons */}
                 {msg.actions && msg.actions.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
+                  <div className="mt-3 flex flex-wrap gap-2">
                     {msg.actions.map((action) => (
                       <button
                         key={action.value}
                         type="button"
                         onClick={() => handleAction(action.value)}
                         disabled={loading}
-                        className="inline-flex items-center gap-1 rounded border border-white/[0.07] bg-white/[0.03] px-2 py-1 text-[10px] text-white/50 transition-colors hover:bg-white/[0.06] hover:text-white/70 disabled:opacity-40"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-500/25 bg-indigo-500/10 px-3 py-1.5 text-[10px] font-medium text-indigo-200/90 transition-all hover:bg-indigo-500/20 hover:text-indigo-100 disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         {action.icon && (
-                          <span className="text-white/30">
-                            {action.icon === "company" && <Building2 className="h-3 w-3" />}
-                            {action.icon === "users" && <Users className="h-3 w-3" />}
-                            {action.icon === "accounting" && <Calculator className="h-3 w-3" />}
-                            {action.icon === "policy" && <FileText className="h-3 w-3" />}
+                          <span className="text-indigo-300/70">
+                            {action.icon === "company" && <Building2 className="h-3.5 w-3.5" />}
+                            {action.icon === "users" && <Users className="h-3.5 w-3.5" />}
+                            {action.icon === "accounting" && <Calculator className="h-3.5 w-3.5" />}
+                            {action.icon === "policy" && <FileText className="h-3.5 w-3.5" />}
                           </span>
                         )}
                         {action.label}
-                        <ArrowRight className="h-2.5 w-2.5 opacity-40" />
+                        <ArrowRight className="h-3 w-3 opacity-50" />
                       </button>
                     ))}
                   </div>
@@ -236,18 +326,22 @@ export default function AdminOnboardingCopilot({ companyId, onComplete, onSkip }
 
           {loading && (
             <div className="flex justify-start">
-              <div className="flex items-center gap-1.5 rounded-lg bg-white/[0.03] px-3 py-2">
-                <Loader2 className="h-3 w-3 animate-spin text-white/30" />
-                <span className="text-[10px] text-white/30">{t("thinking")}</span>
+              <div className="flex items-center gap-2 rounded-xl bg-white/[0.03] px-3.5 py-2.5 ring-1 ring-inset ring-white/[0.05]">
+                <div className="flex gap-0.5">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-400/60" style={{ animationDelay: "0ms" }} />
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-400/60" style={{ animationDelay: "150ms" }} />
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-400/60" style={{ animationDelay: "300ms" }} />
+                </div>
+                <span className="text-[10px] text-white/40">{t("thinking")}</span>
               </div>
             </div>
           )}
 
           {progress >= 100 && (
             <div className="flex justify-center py-4">
-              <div className="flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/[0.06] px-3 py-1.5">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400/80" />
-                <span className="text-[10px] font-medium text-emerald-300/80">{t("complete")}</span>
+              <div className="flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-4 py-2">
+                <Check className="h-4 w-4 text-emerald-400" />
+                <span className="text-[11px] font-medium text-emerald-300">{t("complete")}</span>
               </div>
             </div>
           )}
@@ -257,7 +351,7 @@ export default function AdminOnboardingCopilot({ companyId, onComplete, onSkip }
       </div>
 
       {/* Input */}
-      <div className="shrink-0 border-t border-white/[0.06] px-4 py-2.5">
+      <div className="shrink-0 border-t border-white/[0.06] bg-zinc-900/30 px-4 py-3">
         <div className="mx-auto flex max-w-lg items-center gap-2">
           <input
             type="text"
@@ -266,15 +360,15 @@ export default function AdminOnboardingCopilot({ companyId, onComplete, onSkip }
             onKeyDown={handleKeyDown}
             placeholder={t("placeholder")}
             disabled={loading || progress >= 100}
-            className="min-w-0 flex-1 rounded border border-white/[0.07] bg-white/[0.02] px-3 py-1.5 text-[11px] text-white/60 placeholder:text-white/20 outline-none transition-colors focus:border-indigo-500/30 focus:bg-white/[0.03] disabled:opacity-40"
+            className="min-w-0 flex-1 rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-[11px] text-white/70 placeholder:text-white/25 outline-none transition-all focus:border-indigo-500/40 focus:bg-white/[0.04] focus:ring-1 focus:ring-indigo-500/20 disabled:opacity-40"
           />
           <button
             type="button"
             onClick={handleSend}
             disabled={!input.trim() || loading || progress >= 100}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-indigo-600/20 text-indigo-300/70 transition-colors hover:bg-indigo-600/30 disabled:opacity-30"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/80 text-white transition-all hover:bg-indigo-500 disabled:bg-white/[0.04] disabled:text-white/20"
           >
-            <Send className="h-3 w-3" />
+            <Send className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>

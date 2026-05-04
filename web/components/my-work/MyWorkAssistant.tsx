@@ -6,6 +6,7 @@ import { Bot, CheckCircle2, Send, TriangleAlert } from "lucide-react";
 import { useMyWorkContext } from "@/context/MyWorkContext";
 import { apiCall } from "@/lib/api/client";
 import { getAuthHeaders } from "@/lib/session";
+import { renderContent } from "@/lib/chat/renderContent";
 import {
   MODULE_IDS,
   deriveExpenseDecision,
@@ -205,32 +206,32 @@ function StateBullets({ ac }: { ac: AssistantContext }) {
   const bullets: Bullet[] = [];
 
   if (ac.hasXml) {
-    bullets.push({ text: tb("xmlValid"), cls: "text-emerald-400/65", icon: "ok" });
+    bullets.push({ text: tb("xmlValid"), cls: "text-emerald-400", icon: "ok" });
   }
   if (ac.satStatus === "valid") {
-    bullets.push({ text: tb("satPassed"), cls: "text-emerald-400/65", icon: "ok" });
+    bullets.push({ text: tb("satPassed"), cls: "text-emerald-400", icon: "ok" });
   } else if (ac.satStatus === "warning") {
-    bullets.push({ text: tb("satWarning"), cls: "text-amber-400/65", icon: "warn" });
+    bullets.push({ text: tb("satWarning"), cls: "text-amber-400", icon: "warn" });
   } else if (ac.satStatus === "error") {
-    bullets.push({ text: tb("satFailed"), cls: "text-red-400/60", icon: "warn" });
+    bullets.push({ text: tb("satFailed"), cls: "text-rose-400", icon: "warn" });
   }
   if (ac.pdfPairRequired && ac.hasXml && !ac.hasPdf) {
-    bullets.push({ text: tb("pdfRequired"), cls: "text-white/40", icon: "info" });
+    bullets.push({ text: tb("pdfRequired"), cls: "text-tertiary", icon: "info" });
   } else if (ac.pdfPairRequired && ac.hasPdf) {
-    bullets.push({ text: tb("pdfUploaded"), cls: "text-emerald-400/65", icon: "ok" });
+    bullets.push({ text: tb("pdfUploaded"), cls: "text-emerald-400", icon: "ok" });
   }
 
   if (!bullets.length) return null;
 
   return (
-    <div className="mt-2.5 border-t border-white/[0.05] pt-2">
-      <p className="mb-1.5 text-[9px] uppercase tracking-wider text-white/18">{ta("why")}</p>
-      <ul className="space-y-1">
+    <div className="mt-3 border-t border-subtle pt-2">
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted">{ta("why")}</p>
+      <ul className="space-y-1.5">
         {bullets.map((b, i) => (
-          <li key={i} className={`flex items-center gap-1.5 text-[9px] ${b.cls} opacity-70`}>
+          <li key={i} className={`flex items-center gap-2 text-[11px] ${b.cls}`}>
             {b.icon === "warn"
-              ? <TriangleAlert className="h-2.5 w-2.5 shrink-0" />
-              : <CheckCircle2  className="h-2.5 w-2.5 shrink-0" />}
+              ? <TriangleAlert className="h-3 w-3 shrink-0" />
+              : <CheckCircle2  className="h-3 w-3 shrink-0" />}
             {b.text}
           </li>
         ))}
@@ -255,7 +256,7 @@ function Chip({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="min-h-[36px] rounded border border-white/[0.08] bg-white/[0.03] px-3 py-1 text-xs font-medium text-white/35 transition-colors hover:border-indigo-500/30 hover:bg-indigo-500/[0.08] hover:text-indigo-300 disabled:cursor-not-allowed disabled:opacity-40 md:min-h-0 md:px-2 md:py-0.5 md:text-[10px]"
+      className="rounded-md border border-default bg-surface-2 px-3 py-1.5 text-[12px] font-medium text-secondary transition-all hover:border-accent hover:bg-accent-muted hover:text-accent active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
     >
       {label}
     </button>
@@ -527,71 +528,73 @@ export default function MyWorkAssistant() {
   return (
     <div className="flex h-full flex-col overflow-hidden">
 
-      {/* Header — desktop only; mobile/tablet uses AppShell overlay title */}
-      <div className="hidden h-9 shrink-0 items-center gap-2 border-b border-white/[0.07] px-2.5 lg:flex">
-        <Bot className="h-3.5 w-3.5 shrink-0 text-indigo-400/60" />
-        <span className="flex-1 truncate text-[11px] font-semibold text-white/50">
+      {/* Header — desktop only */}
+      <div className="hidden h-10 shrink-0 items-center gap-2 border-b border-subtle bg-surface-1 px-3 lg:flex">
+        <div className="flex h-6 w-6 items-center justify-center rounded-md bg-accent text-white shadow-[var(--shadow-glow)]">
+          <Bot className="h-3.5 w-3.5" />
+        </div>
+        <span className="flex-1 truncate text-[12px] font-semibold text-primary">
           {ta("copilot")}
         </span>
         {aiStatus?.active_model && (
-          <span className="shrink-0 rounded border border-indigo-500/20 bg-indigo-500/[0.08] px-1.5 py-px font-mono text-[8px] text-indigo-300/55">
+          <span className="shrink-0 rounded-md border border-default bg-surface-2 px-2 py-0.5 font-mono text-[9px] text-tertiary">
             {aiStatus.active_model.split(":")[0]}
           </span>
         )}
       </div>
 
       {/* Body */}
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 py-2.5">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
 
         {/* Offline notice */}
         {aiStatus && !aiStatus.available && (
-          <p className="text-[10px] leading-relaxed text-white/22">
+          <p className="text-[12px] leading-relaxed text-tertiary">
             {ta("aiOffline")}
           </p>
         )}
 
         {/* Assistant card */}
         {hasContent ? (
-          <div className="overflow-hidden rounded-lg border border-white/[0.07] bg-zinc-900/20">
+          <div className="overflow-hidden rounded-lg border border-subtle bg-surface-2 shadow-[var(--shadow-md)]">
             <div className="p-3">
 
               {insightLoading ? (
-                <div className="space-y-1.5">
-                  <div className="h-2 w-4/5 animate-pulse rounded bg-white/[0.07]" />
-                  <div className="h-1.5 w-3/5 animate-pulse rounded bg-white/[0.05]" />
-                  <div className="h-1.5 w-2/3 animate-pulse rounded bg-white/[0.04]" />
+                <div className="space-y-2">
+                  <div className="skeleton h-3 w-4/5 rounded" />
+                  <div className="skeleton h-2 w-3/5 rounded" />
+                  <div className="skeleton h-2 w-2/3 rounded" />
                 </div>
               ) : (
                 <>
-                  {/* Primary action — decisive, deterministic first; AI fallback second */}
+                  {/* Primary action */}
                   {(() => {
                     const decisive = decision ? getDecisiveAction(decision.assistantContext, assistantStrings) : null;
                     const primary  = decisive ?? recommendation;
                     return primary ? (
                       <>
-                        <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-wider text-white/30">{ta("recommendedStep")}</p>
-                        <p className="text-[12px] font-semibold leading-snug text-white/80">{primary}</p>
+                        <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-accent">{ta("recommendedStep")}</p>
+                        <p className="text-[14px] font-semibold leading-snug text-primary">{primary}</p>
                       </>
                     ) : null;
                   })()}
-                  {/* Supporting AI explanation — secondary, dimmer */}
+                  {/* Supporting AI explanation */}
                   {recommendation && decision && getDecisiveAction(decision.assistantContext, assistantStrings) && (
-                    <p className="mt-2 text-[10px] leading-relaxed text-white/30">{recommendation}</p>
+                    <p className="mt-2 text-[12px] leading-relaxed text-secondary">{recommendation}</p>
                   )}
                   {explanation && (
-                    <p className="mt-1 text-[10px] leading-relaxed text-white/25">{explanation}</p>
+                    <p className="mt-1 text-[11px] leading-relaxed text-tertiary">{explanation}</p>
                   )}
                   {!recommendation && !decision?.assistantContext.expenseId && (
-                    <p className="text-[11px] text-white/25">{ta("noRecommendation")}</p>
+                    <p className="text-[13px] text-tertiary">{ta("noRecommendation")}</p>
                   )}
-                  {/* Why? — supporting state bullets, reduced weight */}
+                  {/* Why? */}
                   {decision && <StateBullets ac={decision.assistantContext} />}
                 </>
               )}
 
-              {/* Quick actions — decision-driven, up to 3, only when loaded */}
+              {/* Quick actions */}
               {!insightLoading && quickPrompts.length > 0 && (
-                <div className="mt-2.5 flex flex-col gap-1.5 md:flex-row md:flex-wrap md:gap-1">
+                <div className="mt-3 flex flex-col gap-2 md:flex-row md:flex-wrap">
                   {quickPrompts.map((q) => (
                     <Chip key={q} label={q} disabled={chatLoading} onClick={() => sendMessage(q)} />
                   ))}
@@ -602,7 +605,7 @@ export default function MyWorkAssistant() {
           </div>
         ) : (
           !messages.length && (
-            <p className="mt-8 text-center text-[11px] text-white/18">
+            <p className="mt-8 text-center text-[13px] text-tertiary">
               {activeModule
                 ? ta("selectItem", { module: activeModule.label })
                 : ta("selectModule")}
@@ -612,29 +615,25 @@ export default function MyWorkAssistant() {
 
         {/* Chat thread */}
         {messages.length > 0 && (
-          <div className="space-y-1.5 pt-1">
+          <div className="space-y-2 pt-2">
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div
-                  className={`max-w-[88%] rounded px-2.5 py-1.5 text-xs leading-snug md:text-[11px] ${
-                    msg.role === "user"
-                      ? "bg-indigo-600/20 text-indigo-100/80"
-                      : "border border-white/[0.06] bg-white/[0.03] text-white/50"
-                  }`}
+                  className={`chat-message ${msg.role}`}
                 >
-                  {msg.content}
+                  {msg.role === "assistant" ? renderContent(msg.content) : msg.content}
                 </div>
               </div>
             ))}
-            {/* Streaming cursor — only shown before first token arrives */}
+            {/* Streaming cursor */}
             {chatLoading && messages[messages.length - 1]?.role === "assistant" && messages[messages.length - 1]?.content === "" && (
               <div className="flex justify-start">
-                <div className="rounded border border-white/[0.06] bg-white/[0.03] px-2.5 py-1.5">
+                <div className="rounded-lg border border-subtle bg-surface-3 px-3 py-2">
                   <span className="inline-flex gap-1">
                     {[0, 1, 2].map((d) => (
                       <span
                         key={d}
-                        className="h-1 w-1 animate-bounce rounded-full bg-white/25"
+                        className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent"
                         style={{ animationDelay: `${d * 150}ms` }}
                       />
                     ))}
@@ -648,10 +647,10 @@ export default function MyWorkAssistant() {
       </div>
 
       {/* Chat input */}
-      <div className="shrink-0 border-t border-white/[0.07] px-3 py-2.5 md:px-2.5 md:py-2">
+      <div className="shrink-0 border-t border-subtle bg-surface-1 p-3">
         <form
           onSubmit={(e) => { e.preventDefault(); sendMessage(input); }}
-          className="flex items-center gap-2 md:gap-1.5"
+          className="flex items-center gap-2"
         >
           <input
             type="text"
@@ -659,14 +658,14 @@ export default function MyWorkAssistant() {
             onChange={(e) => setInput(e.target.value)}
             disabled={chatLoading}
             placeholder={ta("askPlaceholder")}
-            className="min-w-0 flex-1 rounded border border-white/[0.09] bg-white/[0.03] px-3 py-2.5 text-sm text-white placeholder-white/20 outline-none transition-colors focus:border-indigo-500/40 disabled:cursor-not-allowed disabled:opacity-40 md:px-2.5 md:py-1.5 md:text-[11px]"
+            className="chat-input"
           />
           <button
             type="submit"
             disabled={!input.trim() || chatLoading}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-white/[0.08] bg-white/[0.03] text-white/30 transition-colors hover:border-indigo-500/30 hover:bg-indigo-500/[0.08] hover:text-indigo-300 disabled:cursor-not-allowed disabled:opacity-30 md:h-7 md:w-7"
+            className="chat-send-btn"
           >
-            <Send className="h-4 w-4 md:h-3 md:w-3" />
+            <Send className="h-4 w-4" />
           </button>
         </form>
       </div>

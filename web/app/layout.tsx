@@ -46,7 +46,7 @@ export default function RootLayout({
       className="antialiased dark"
       suppressHydrationWarning
     >
-      <body className="h-full overflow-hidden bg-zinc-950 text-white">
+      <body className="h-full overflow-hidden bg-surface-0 text-primary">
         <ThemeProvider>
           <ErrorBoundary>
             <LocaleProvider>

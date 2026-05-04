@@ -3,13 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bot, LogOut, Menu, Search, Settings, Shield } from "lucide-react";
+import { Bot, LogOut, Menu, Search, Settings, Bell, ChevronDown } from "lucide-react";
 import { clearSession, getCurrentRole, getStoredSession } from "@/lib/session";
 import { useTranslations } from "next-intl";
 import SettingsModal from "./SettingsModal";
 
 interface TopBarProps {
-  title: string;
+  title?: string;
   portal?: string;
   onMenuOpen?: () => void;
   onAiOpen?: () => void;
@@ -20,6 +20,7 @@ export default function TopBar({ title, portal, onMenuOpen, onAiOpen }: TopBarPr
   const [role, setRole] = useState<string | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
   const t = useTranslations("shell");
   const tc = useTranslations("common");
   const tn = useTranslations("nav");
@@ -36,106 +37,107 @@ export default function TopBar({ title, portal, onMenuOpen, onAiOpen }: TopBarPr
   };
 
   return (
-    <header className="relative flex h-11 shrink-0 items-stretch border-b border-[var(--border-subtle)] bg-[var(--surface-1)] md:h-9">
-
+    <header className="relative flex h-10 shrink-0 items-center gap-2 border-b border-subtle bg-surface-1 px-3">
+      {/* Mobile menu button */}
       {onMenuOpen && (
         <button
           type="button"
           onClick={onMenuOpen}
           title={t("openNavigation")}
           aria-label={t("openNavigation")}
-          className="flex w-11 items-center justify-center border-r border-[var(--border-hairline)] text-white/40 transition-colors hover:bg-white/[0.05] hover:text-white/65 md:hidden"
+          className="flex h-7 w-7 items-center justify-center rounded text-secondary transition-colors hover:bg-surface-2 hover:text-primary md:hidden"
         >
           <Menu className="h-4 w-4" />
         </button>
       )}
 
-      <div className="hidden w-48 shrink-0 flex-col justify-center border-r border-[var(--border-hairline)] px-3.5 md:flex">
-        <span className="truncate text-[10px] font-bold uppercase tracking-widest text-white/60">
-          {title}
-        </span>
-        {portal && (
-          <span className="truncate text-[9px] font-medium tracking-wide text-white/25">
-            {portal}
-          </span>
-        )}
-      </div>
-
-      {!onMenuOpen && (
-        <div className="flex items-center pl-4 md:hidden">
-          <span className="truncate text-[10px] font-bold uppercase tracking-widest text-white/55">
+      {/* Title area - mobile only */}
+      {title && (
+        <div className="flex flex-col justify-center md:hidden">
+          <span className="truncate text-[11px] font-semibold uppercase tracking-wide text-primary">
             {title}
           </span>
+          {portal && (
+            <span className="truncate text-[9px] text-tertiary">
+              {portal}
+            </span>
+          )}
         </div>
       )}
 
-      <div className="hidden flex-1 items-center justify-center px-4 md:flex">
-        <div className="relative w-full max-w-md">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-white/20" />
+      {/* Spacer for mobile */}
+      <div className="flex-1 md:hidden" />
+
+      {/* Global search - desktop only */}
+      <div className="hidden flex-1 items-center justify-center md:flex">
+        <div className={`relative w-full max-w-sm transition-all ${searchFocused ? "max-w-md" : ""}`}>
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-tertiary" />
           <input
             type="search"
             placeholder={tc("search")}
-            className="h-[30px] w-full rounded border border-[var(--border-standard)] bg-[var(--surface-2)] pl-7 pr-3 text-[11px] text-white/70 placeholder-white/28 outline-none transition-all focus:border-indigo-500/40 focus:bg-indigo-950/15 focus:ring-1 focus:ring-indigo-500/15"
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
+            className="h-7 w-full rounded border border-default bg-surface-0 pl-8 pr-3 text-sm text-primary placeholder-tertiary outline-none transition-all focus:border-accent focus:bg-surface-2 focus:ring-2 focus:ring-accent-muted"
           />
         </div>
       </div>
 
-      <div className="flex-1 md:hidden" />
-
-      <div className="flex items-stretch border-l border-[var(--border-hairline)]">
-
+      {/* Right actions */}
+      <div className="flex items-center gap-1">
+        {/* AI Copilot button */}
         {onAiOpen && (
           <button
             type="button"
             onClick={onAiOpen}
             title={t("openAI")}
             aria-label={t("openAI")}
-            className="flex w-10 items-center justify-center border-r border-[var(--border-hairline)] text-white/28 transition-colors hover:bg-white/[0.04] hover:text-indigo-300/70 lg:hidden"
+            className="flex h-7 items-center gap-1.5 rounded px-2 text-secondary transition-colors hover:bg-surface-2 hover:text-primary"
           >
             <Bot className="h-3.5 w-3.5" />
+            <span className="hidden text-[10px] font-medium uppercase tracking-wide lg:inline">
+              Copilot
+            </span>
           </button>
         )}
 
+        {/* Notifications */}
+        <button
+          type="button"
+          title={t("notifications")}
+          aria-label={t("notifications")}
+          className="relative flex h-7 w-7 items-center justify-center rounded text-secondary transition-colors hover:bg-surface-2 hover:text-primary"
+        >
+          <Bell className="h-3.5 w-3.5" />
+          {/* Notification dot */}
+          <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-accent" />
+        </button>
+
+        {/* Settings */}
         <button
           type="button"
           onClick={() => setSettingsOpen(true)}
           title={tn("settings")}
           aria-label={tn("settings")}
-          className="hidden w-8 items-center justify-center border-r border-[var(--border-hairline)] text-white/28 transition-colors hover:bg-white/[0.04] hover:text-white/55 md:flex"
+          className="flex h-7 w-7 items-center justify-center rounded text-secondary transition-colors hover:bg-surface-2 hover:text-primary"
         >
           <Settings className="h-3.5 w-3.5" />
         </button>
         <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
+        {/* Divider */}
+        <div className="mx-1 h-4 w-px bg-subtle" />
+
+        {/* User menu */}
         <button
           type="button"
-          onClick={handleLogout}
-          title={t("logOut")}
-          aria-label={t("logOut")}
-          className="flex w-10 items-center justify-center border-r border-[var(--border-hairline)] text-white/28 transition-colors hover:bg-white/[0.04] hover:text-white/55 md:w-8"
+          className="flex h-7 items-center gap-1.5 rounded pl-1.5 pr-2 text-secondary transition-colors hover:bg-surface-2 hover:text-primary"
         >
-          <LogOut className="h-3.5 w-3.5" />
-        </button>
-
-        {isSuperAdmin && (
-          <Link
-            href="/super-admin"
-            title="Super Admin"
-            aria-label="Super Admin"
-            className="hidden items-center gap-1.5 border-r border-[var(--border-hairline)] px-3 text-rose-300/70 [html.light_&]:text-rose-600/80 transition-colors hover:bg-rose-500/[0.08] [html.light_&]:hover:bg-rose-500/[0.12] hover:text-rose-200 [html.light_&]:hover:text-rose-700 md:flex"
-          >
-            <Shield className="h-3.5 w-3.5" />
-            <span className="text-[9px] font-bold uppercase tracking-widest">Super</span>
-          </Link>
-        )}
-
-        {role && (
-          <div className="hidden items-center px-3 md:flex">
-            <span className="rounded border border-indigo-500/25 bg-indigo-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-indigo-300/65 [html.light_&]:text-indigo-700/80 [html.light_&]:bg-indigo-100 [html.light_&]:border-indigo-300/50">
-              {role}
-            </span>
+          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-accent-muted text-[10px] font-bold text-accent">
+            {role?.charAt(0).toUpperCase() ?? "U"}
           </div>
-        )}
+          <span className="hidden text-xs font-medium lg:inline">{role}</span>
+          <ChevronDown className="hidden h-3 w-3 opacity-50 lg:inline" />
+        </button>
       </div>
     </header>
   );

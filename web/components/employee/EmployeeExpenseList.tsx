@@ -33,9 +33,6 @@ function formatDate(iso: string): string {
 }
 
 function needsExtraction(e: Expense): boolean {
-  // Only show "loading" during an in-flight upload. Once the expense is
-  // persisted (status="draft"), a $0 amount just means extraction couldn't
-  // find one — don't pretend we're still working.
   return e.status === "uploading";
 }
 
@@ -71,11 +68,9 @@ function secondaryLine(e: Expense): string {
   return "";
 }
 
-// ── Skeleton row ──────────────────────────────────────────────────────────────
-
 function SkeletonRow({ delay = 0 }: { delay?: number }) {
   return (
-    <li className="border-b border-white/[0.04] px-3 py-3" style={{ animationDelay: `${delay}ms` }}>
+    <li className="border-b border-subtle px-3 py-3" style={{ animationDelay: `${delay}ms` }}>
       <div className="flex items-baseline justify-between gap-2">
         <div className="skeleton h-2.5 w-2/3 rounded" />
         <div className="skeleton h-2.5 w-12 rounded" />
@@ -88,8 +83,6 @@ function SkeletonRow({ delay = 0 }: { delay?: number }) {
     </li>
   );
 }
-
-// ── Props ─────────────────────────────────────────────────────────────────────
 
 interface Props {
   expenses: Expense[];
@@ -112,21 +105,23 @@ export default function EmployeeExpenseList({
   onTakePhoto,
   onNewSimpleExpense,
 }: Props) {
-  const t = useTranslations("employee");
+  const t = useTranslations("employee.expenseList");
   const tc = useTranslations("common");
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!menuOpen) return;
-    function onDocClick(e: MouseEvent) {
-      if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false);
-    }
-    function onKey(e: KeyboardEvent) {
+    const onDocClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setMenuOpen(false);
-    }
+    };
     document.addEventListener("mousedown", onDocClick);
     document.addEventListener("keydown", onKey);
     return () => {
@@ -136,6 +131,7 @@ export default function EmployeeExpenseList({
   }, [menuOpen]);
 
   const filtered = useMemo(() => {
+    if (!Array.isArray(expenses)) return [];
     return expenses.filter((e) => {
       if (!matchesFilterKey(e, activeFilter)) return false;
       if (query.trim()) {
@@ -153,15 +149,14 @@ export default function EmployeeExpenseList({
   return (
     <div className="flex h-full flex-col overflow-hidden">
 
-      {/* ── Top bar: new + search ─────────────────────────────────────────── */}
-      <div className="flex shrink-0 items-center gap-2 border-b border-white/[0.05] px-3 py-2.5">
+      <div className="flex shrink-0 items-center gap-2 border-b border-subtle px-3 py-2">
         <div ref={menuRef} className="relative shrink-0">
           <button
             onClick={() => setMenuOpen((v) => !v)}
             disabled={uploading}
             aria-haspopup="menu"
             aria-expanded={menuOpen}
-            className="flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-indigo-500 active:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="btn btn-primary"
           >
             <Plus className="h-3 w-3" />
             {uploading ? t("uploadingDoc") : t("newExpense")}
@@ -169,23 +164,23 @@ export default function EmployeeExpenseList({
           {menuOpen && !uploading && (
             <div
               role="menu"
-              className="absolute left-0 top-full z-30 mt-1 w-48 overflow-hidden rounded-md border border-white/[0.08] bg-[#0f1016] shadow-xl ring-1 ring-black/40"
+              className="absolute left-0 top-full z-30 mt-1 w-48 overflow-hidden rounded-md border border-default bg-surface-2 shadow-lg"
             >
               <button
                 role="menuitem"
                 onClick={() => { setMenuOpen(false); onUploadFile(); }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-white/80 transition-colors hover:bg-white/[0.06]"
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-secondary transition-colors hover:bg-surface-3 hover:text-primary"
               >
-                <Upload className="h-3 w-3 text-white/45" />
+                <Upload className="h-3 w-3 text-muted" />
                 {t("uploadFile")}
               </button>
               {onTakePhoto && (
                 <button
                   role="menuitem"
                   onClick={() => { setMenuOpen(false); onTakePhoto(); }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-white/80 transition-colors hover:bg-white/[0.06]"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-secondary transition-colors hover:bg-surface-3 hover:text-primary"
                 >
-                  <Camera className="h-3 w-3 text-white/45" />
+                  <Camera className="h-3 w-3 text-muted" />
                   {t("takePhoto")}
                 </button>
               )}
@@ -193,9 +188,9 @@ export default function EmployeeExpenseList({
                 <button
                   role="menuitem"
                   onClick={() => { setMenuOpen(false); onNewSimpleExpense(); }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-white/80 transition-colors hover:bg-white/[0.06]"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-secondary transition-colors hover:bg-surface-3 hover:text-primary"
                 >
-                  <FileText className="h-3 w-3 text-white/45" />
+                  <FileText className="h-3 w-3 text-muted" />
                   {t("noReceipt")}
                 </button>
               )}
@@ -207,11 +202,10 @@ export default function EmployeeExpenseList({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t("searchPlaceholder")}
-          className="min-w-0 flex-1 rounded-md border border-white/[0.08] bg-transparent px-2.5 py-1.5 text-xs text-white/75 placeholder-white/28 outline-none transition-colors focus:border-white/[0.18]"
+          className="input h-7 text-xs"
         />
       </div>
 
-      {/* ── Pill filter tabs ──────────────────────────────────────────────── */}
       <div className="flex shrink-0 items-center gap-1 overflow-x-auto px-3 py-2">
         {FILTER_KEYS.map((key) => (
           <button
@@ -219,8 +213,8 @@ export default function EmployeeExpenseList({
             onClick={() => setActiveFilter(key)}
             className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
               activeFilter === key
-                ? "bg-indigo-500/20 text-indigo-300/90 ring-1 ring-indigo-500/30"
-                : "text-white/38 hover:bg-white/[0.06] hover:text-white/65"
+                ? "bg-accent-muted text-accent"
+                : "text-secondary hover:bg-surface-2 hover:text-primary"
             }`}
           >
             {t(`filters.${key}` as Parameters<typeof t>[0])}
@@ -228,7 +222,6 @@ export default function EmployeeExpenseList({
         ))}
       </div>
 
-      {/* ── Scrollable list ───────────────────────────────────────────────── */}
       <div className="min-h-0 flex-1 overflow-y-auto">
 
         {loading && (
@@ -241,12 +234,12 @@ export default function EmployeeExpenseList({
 
         {!loading && filtered.length === 0 && (
           <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.04]">
-              <svg viewBox="0 0 20 20" fill="none" className="h-5 w-5 text-white/20">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface-2">
+              <svg viewBox="0 0 20 20" fill="none" className="h-5 w-5 text-muted">
                 <path d="M4 5h12M4 10h8M4 15h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             </div>
-            <p className="text-xs text-white/30">{t("noExpenses")}</p>
+            <p className="text-xs text-muted">{t("noExpenses")}</p>
           </div>
         )}
 
@@ -260,35 +253,33 @@ export default function EmployeeExpenseList({
                 <li key={exp.id}>
                   <button
                     onClick={() => onSelect(exp)}
-                    className={`w-full border-b py-3 pl-3 pr-3 text-left transition-all ${
+                    className={`group w-full border-b py-3 pl-3 pr-3 text-left transition-all ${
                       isSelected
-                        ? "border-b-indigo-500/20 bg-indigo-950/50 shadow-[inset_2px_0_0_0_theme(colors.indigo.500/60%)]"
-                        : "border-b-white/[0.05] hover:bg-white/[0.05]"
+                        ? "border-b-subtle bg-accent-muted"
+                        : "border-b-subtle hover:bg-surface-2"
                     }`}
                   >
-                    {/* Row 1: description + amount */}
                     <div className="flex items-baseline justify-between gap-2">
-                      <span className={`truncate text-[11px] font-medium leading-snug ${isSelected ? "text-white" : "text-white/80"}`}>
+                      <span className={`truncate text-xs font-medium leading-snug ${isSelected ? "text-primary" : "text-secondary group-hover:text-primary"}`}>
                         {sanitizeDescription(exp.description, t("uploadedXml"), t("uploadedPdf"), t("uploadedDoc"))}
                       </span>
-                      <span className={`shrink-0 tabular-nums text-[11px] font-semibold ${isSelected ? "text-white" : "text-white/65"}`}>
+                      <span className={`shrink-0 tabular-nums text-xs font-semibold ${isSelected ? "text-primary" : "text-primary"}`}>
                         ${formatAmount(exp.amount)}
                       </span>
                     </div>
 
-                    {/* Row 2: status + secondary + date */}
                     <div className="mt-1.5 flex items-center gap-1.5">
                       <StatusDot status={exp.status} />
                       <StatusText status={exp.status} className="text-[10px]" />
                       {secondary && (
                         <>
-                          <span className="text-white/18">·</span>
-                          <span className={`truncate text-[10px] ${needsExtraction(exp) ? "italic text-amber-400/50" : "text-white/32"}`}>
+                          <span className="text-muted">·</span>
+                          <span className={`truncate text-[10px] ${needsExtraction(exp) ? "italic text-warning" : "text-tertiary"}`}>
                             {secondary}
                           </span>
                         </>
                       )}
-                      <span className="ml-auto shrink-0 tabular-nums text-[10px] text-white/25">
+                      <span className="ml-auto shrink-0 tabular-nums text-[10px] text-muted">
                         {formatDate(exp.created_at)}
                       </span>
                     </div>

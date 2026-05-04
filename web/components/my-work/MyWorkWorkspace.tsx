@@ -13,7 +13,7 @@ function ModuleLoadingFallback() {
   const tc = useTranslations("common");
   return (
     <div className="flex h-full items-center justify-center">
-      <p className="text-xs text-white/22">{tc("loading")}</p>
+      <p className="text-xs text-tertiary">{tc("loading")}</p>
     </div>
   );
 }
@@ -43,33 +43,33 @@ function NoVisibleModules({ role }: { role: string | null }) {
 
   return (
     <div className="flex h-full items-center justify-center px-8">
-      <div className="max-w-md rounded-lg border border-white/[0.07] bg-white/[0.02] p-6">
+      <div className="max-w-md rounded-lg border border-subtle bg-surface-2 p-6">
         <div className="mb-3 flex items-center gap-2">
           <AlertCircle className="h-4 w-4 text-amber-400/70" />
-          <h2 className="text-[12px] font-bold uppercase tracking-widest text-white/65">
+          <h2 className="text-[12px] font-bold uppercase tracking-widest text-secondary">
             {t("title", { role: roleLabel })}
           </h2>
         </div>
-        <p className="mb-4 text-[11px] leading-relaxed text-white/45">
+        <p className="mb-4 text-[11px] leading-relaxed text-tertiary">
           {t(bodyKey)}
         </p>
         <div className="flex flex-col gap-1.5">
           {isAdmin ? (
             <Link
               href="/mywork?module=admin"
-              className="inline-flex items-center gap-1.5 rounded border border-indigo-500/30 bg-indigo-500/10 px-3 py-1.5 text-[11px] font-semibold text-indigo-200/90 transition-colors hover:bg-indigo-500/20"
+              className="inline-flex items-center gap-1.5 rounded border border-accent-muted bg-accent-muted px-3 py-1.5 text-[11px] font-semibold text-sky-300 transition-colors hover:bg-accent-muted/80"
             >
               <ArrowRight className="h-3 w-3" />
               {t("goToAdmin")}
             </Link>
           ) : (
             <>
-              <p className="text-[10px] italic text-white/30">
+              <p className="text-[10px] italic text-muted">
                 {t("askAdmin")}
               </p>
               <Link
                 href="/settings"
-                className="inline-flex items-center gap-1.5 rounded border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-white/55 transition-colors hover:bg-white/[0.06]"
+                className="inline-flex items-center gap-1.5 rounded border border-subtle bg-surface-3 px-3 py-1.5 text-[11px] font-medium text-secondary transition-colors hover:bg-surface-4"
               >
                 <Settings className="h-3 w-3" />
                 {tn("settings")}
@@ -86,7 +86,7 @@ function NoModuleSelected() {
   const t = useTranslations("myWork");
   return (
     <div className="flex h-full items-center justify-center">
-      <p className="text-xs text-white/22">{t("noModule")}</p>
+      <p className="text-xs text-tertiary">{t("noModule")}</p>
     </div>
   );
 }
@@ -107,7 +107,10 @@ export default function MyWorkWorkspace() {
   if (configLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <p className="text-xs text-white/22">{tc("loading")}</p>
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+          <p className="text-[13px] text-tertiary">{tc("loading")}</p>
+        </div>
       </div>
     );
   }
