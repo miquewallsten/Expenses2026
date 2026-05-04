@@ -40,6 +40,7 @@ from ..core.audit import list_for_company as list_audit
 from ..core.context import AgentContext, Persona
 from ..core.engine import run_turn
 from ..core.orchestrator import ORCHESTRATOR, AgentOrchestrator
+from ..core.workflow import WORKFLOW_SERVICE
 from ..insights import run_scanners
 from ..models import (
     AgentInsight,
@@ -866,3 +867,109 @@ def usage_rollup(
         "by_persona":       [{"persona": p, "count": int(c)} for p, c in by_persona],
         "tool_breakdown":   [{"tool_name": t, "count": int(c)} for t, c in tool_breakdown],
     }
+
+
+# ── Workflow State Machine ────────────────────────────────────────────────
+
+class WorkflowStartRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    workflow_key: str = Field(..., min_length=1, max_length=128)
+    total_steps: int = Field(..., ge=1, le=100)
+    context: dict[str, Any] | None = None
+
+
+class WorkflowAdvanceRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    workflow_key: str = Field(..., min_length=1, max_length=128)
+
+
+class WorkflowResponse(BaseModel):
+    ok: bool
+    workflow_key: str
+    current_step: str
+    total_steps: int
+    completed_steps: int
+    context: dict[str, Any] | None = None
+
+
+@router.post("/workflow/{cid}/start", response_model=WorkflowResponse)
+def start_workflow(
+    cid: int,
+    body: WorkflowStartRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    """Start a new workflow for a company."""
+    require_same_company(cid, current_user)
+    try:
+        progress = WORKFLOW_SERVICE.start(
+            db,
+            company_id=cid,
+            workflow_key=body.workflow_key,
+            total_steps=body.total_steps,
+            context=body.context,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return WorkflowResponse(
+        ok=True,
+        workflow_key=progress.workflow_key,
+        current_step=progress.current_step,
+        total_steps=progress.total_steps,
+        completed_steps=progress.completed_steps,
+        context=json.loads(progress.context) if progress.context else None,
+    )
+
+
+@router.get("/workflow/{cid}")
+def get_workflow(
+    cid: int,
+    workflow_key: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    """Get workflow progress for a company."""
+    require_same_company(cid, current_user)
+    progress = WORKFLOW_SERVICE.get(db, company_id=cid, workflow_key=workflow_key)
+    if progress is None:
+        raise HTTPException(status_code=404, detail="workflow not found")
+
+    return WorkflowResponse(
+        ok=True,
+        workflow_key=progress.workflow_key,
+        current_step=progress.current_step,
+        total_steps=progress.total_steps,
+        completed_steps=progress.completed_steps,
+        context=json.loads(progress.context) if progress.context else None,
+    )
+
+
+@router.post("/workflow/{cid}/advance", response_model=WorkflowResponse)
+def advance_workflow(
+    cid: int,
+    body: WorkflowAdvanceRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    """Advance workflow to the next step."""
+    require_same_company(cid, current_user)
+    try:
+        progress = WORKFLOW_SERVICE.advance(
+            db,
+            company_id=cid,
+            workflow_key=body.workflow_key,
+        )
+    except ValueError as e:
+        if "not found" in str(e):
+            raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return WorkflowResponse(
+        ok=True,
+        workflow_key=progress.workflow_key,
+        current_step=progress.current_step,
+        total_steps=progress.total_steps,
+        completed_steps=progress.completed_steps,
+        context=json.loads(progress.context) if progress.context else None,
+    )

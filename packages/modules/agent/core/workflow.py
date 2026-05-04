@@ -280,3 +280,7 @@ class WorkflowService:
         db.commit()
         db.refresh(progress)
         return progress
+
+
+# Singleton instance for dependency injection
+WORKFLOW_SERVICE = WorkflowService()
