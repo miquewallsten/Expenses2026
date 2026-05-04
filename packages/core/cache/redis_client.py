@@ -27,25 +27,34 @@ class SessionStore:
         """Save session data with TTL."""
         if not REDIS_AVAILABLE:
             return
-        key = f"{self.prefix}{session_id}"
-        self._client.setex(key, ttl, json.dumps(data))
+        try:
+            key = f"{self.prefix}{session_id}"
+            self._client.setex(key, ttl, json.dumps(data))
+        except Exception:
+            pass  # Gracefully degrade when Redis unavailable
 
     def get(self, session_id: str) -> dict | None:
         """Retrieve session data."""
         if not REDIS_AVAILABLE:
             return None
-        key = f"{self.prefix}{session_id}"
-        data = self._client.get(key)
-        if data:
-            return json.loads(data)
-        return None
+        try:
+            key = f"{self.prefix}{session_id}"
+            data = self._client.get(key)
+            if data:
+                return json.loads(data)
+            return None
+        except Exception:
+            return None
 
     def delete(self, session_id: str) -> None:
         """Delete session."""
         if not REDIS_AVAILABLE:
             return
-        key = f"{self.prefix}{session_id}"
-        self._client.delete(key)
+        try:
+            key = f"{self.prefix}{session_id}"
+            self._client.delete(key)
+        except Exception:
+            pass
 
 
 class PermissionCache:
@@ -59,31 +68,43 @@ class PermissionCache:
         """Cache permissions with TTL (default 5 minutes)."""
         if not REDIS_AVAILABLE:
             return
-        key = f"{self.prefix}{company_id}:{role_key}"
-        self._client.setex(key, ttl, json.dumps(permissions))
+        try:
+            key = f"{self.prefix}{company_id}:{role_key}"
+            self._client.setex(key, ttl, json.dumps(permissions))
+        except Exception:
+            pass  # Gracefully degrade when Redis unavailable
 
     def get(self, company_id: int, role_key: str) -> list[str] | None:
         """Get cached permissions."""
         if not REDIS_AVAILABLE:
             return None
-        key = f"{self.prefix}{company_id}:{role_key}"
-        data = self._client.get(key)
-        if data:
-            return json.loads(data)
-        return None
+        try:
+            key = f"{self.prefix}{company_id}:{role_key}"
+            data = self._client.get(key)
+            if data:
+                return json.loads(data)
+            return None
+        except Exception:
+            return None
 
     def clear(self, company_id: int, role_key: str) -> None:
         """Clear cached permissions."""
         if not REDIS_AVAILABLE:
             return
-        key = f"{self.prefix}{company_id}:{role_key}"
-        self._client.delete(key)
+        try:
+            key = f"{self.prefix}{company_id}:{role_key}"
+            self._client.delete(key)
+        except Exception:
+            pass
 
     def clear_company(self, company_id: int) -> None:
         """Clear all cached permissions for a company."""
         if not REDIS_AVAILABLE:
             return
-        pattern = f"{self.prefix}{company_id}:*"
-        keys = self._client.keys(pattern)
-        if keys:
-            self._client.delete(*keys)
+        try:
+            pattern = f"{self.prefix}{company_id}:*"
+            keys = self._client.keys(pattern)
+            if keys:
+                self._client.delete(*keys)
+        except Exception:
+            pass
