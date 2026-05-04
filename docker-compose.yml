@@ -36,7 +36,7 @@ services:
       OLLAMA_BASE_URL: http://host.docker.internal:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-deepseek-v3.1:671b-cloud}
       OLLAMA_NUM_CTX: ${OLLAMA_NUM_CTX:-32768}
-      ENVIRONMENT: ${ENVIRONMENT:-production}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
       DEBUG: ${DEBUG:-false}
       AUTH_SECRET: ${AUTH_SECRET:-0a2d19310530b99811807426cdd45482da60d3ebe2b3e888a3a75542bd4f017c}
       CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:3000","http://127.0.0.1:3000","http://localhost:3001","http://127.0.0.1:3001"]}
@@ -59,7 +59,7 @@ services:
       dockerfile: ../infrastructure/docker/Dockerfile.frontend
       args:
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
-        NEXT_PUBLIC_DEV_CHEAT: ${NEXT_PUBLIC_DEV_CHEAT:-true}
+        NEXT_PUBLIC_DEV_CHEAT: "true"
     restart: unless-stopped
     depends_on:
       backend:
