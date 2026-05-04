@@ -34,6 +34,7 @@ from packages.core.platform.models_user import User
 from packages.core.platform.service_permissions import has_permission
 
 from ..core import memory as memory_api
+from ..core.memory import TenantMemoryService
 from ..core import receipts as receipts_api
 from ..core.appliers import get_applier
 from ..core.audit import list_for_company as list_audit
@@ -697,6 +698,71 @@ def delete_memory(
     db.delete(row)
     db.commit()
     return {"ok": True, "id": mem_id}
+
+
+# ── Tenant Agent Memory ─────────────────────────────────────────────────────
+
+TENANT_MEMORY_SERVICE = TenantMemoryService
+
+
+@router.get("/tenant-memory/{cid}")
+def list_tenant_memory(
+    cid: int,
+    agent_key: str = "admin",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    """List tenant agent memories for a company.
+
+    Args:
+        cid: Company ID
+        agent_key: Agent key to filter by (default: "admin")
+
+    Returns:
+        List of memory entries with id, agent_key, key, value, confidence, timestamps
+    """
+    require_same_company(cid, current_user)
+    service = TENANT_MEMORY_SERVICE(db)
+    rows = service.list_for_agent(company_id=cid, agent_key=agent_key)
+    return [
+        {
+            "id": r.id,
+            "agent_key": r.agent_key,
+            "key": r.key,
+            "value": r.value,
+            "confidence": r.confidence,
+            "created_at": r.created_at,
+            "updated_at": r.updated_at,
+            "last_used_at": r.last_used_at,
+        }
+        for r in rows
+    ]
+
+
+@router.delete("/tenant-memory/{cid}/{key}")
+def delete_tenant_memory(
+    cid: int,
+    key: str,
+    agent_key: str = "admin",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    """Delete a specific tenant agent memory entry.
+
+    Args:
+        cid: Company ID
+        key: Memory key to delete
+        agent_key: Agent key (default: "admin")
+
+    Returns:
+        Confirmation with deleted key
+    """
+    require_same_company(cid, current_user)
+    service = TENANT_MEMORY_SERVICE(db)
+    deleted = service.delete(company_id=cid, agent_key=agent_key, key=key)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="memory not found")
+    return {"ok": True, "key": key}
 
 
 # ── Super Admin Agent Management Endpoints ─────────────────────────────────
