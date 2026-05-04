@@ -11,7 +11,7 @@ Records are created once per billing period per company.
 
 from datetime import date, datetime
 
-from sqlalchemy import BigInteger, Date, DateTime, Index, Integer, Boolean, func
+from sqlalchemy import BigInteger, Date, DateTime, ForeignKey, Index, Integer, Boolean, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from apps.api.db import Base
@@ -51,7 +51,7 @@ class StorageUsage(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
 
     # Tenant identifier
-    company_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    company_id: Mapped[int] = mapped_column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
 
     # Billing period
     period_start: Mapped[date] = mapped_column(Date, nullable=False)

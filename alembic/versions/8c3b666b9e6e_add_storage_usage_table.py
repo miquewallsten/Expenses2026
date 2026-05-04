@@ -35,6 +35,7 @@ def upgrade() -> None:
         sa.Column('billed', sa.Boolean(), nullable=True),
         sa.Column('billed_at', sa.DateTime(), nullable=True),
         sa.PrimaryKeyConstraint('id'),
+        sa.ForeignKeyConstraint(['company_id'], ['companies.id'], name='fk_storage_usage_company_id'),
     )
     op.create_index('ix_storage_usage_company_period', 'storage_usage', ['company_id', 'period_start', 'period_end'], unique=True)
     op.create_index(op.f('ix_storage_usage_company_id'), 'storage_usage', ['company_id'], unique=False)
