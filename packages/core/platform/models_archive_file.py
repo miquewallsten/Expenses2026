@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, String, Text, func
+from sqlalchemy import DateTime, Index, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from apps.api.db import Base
@@ -25,6 +25,10 @@ class ArchiveFile(Base):
     """
 
     __tablename__ = "archive_files"
+    __table_args__ = (
+        # Composite index for document lookup queries
+        Index('idx_archive_company_expense', 'company_id', 'expense_id', 'file_name'),
+    )
 
     id:         Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     company_id: Mapped[int] = mapped_column(index=True, nullable=False)

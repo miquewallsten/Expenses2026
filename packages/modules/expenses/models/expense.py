@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, Integer, Numeric, String, Text, func
+from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, Index, Integer, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from apps.api.db import Base
@@ -28,6 +28,9 @@ class Expense(Base):
             "amount >= 0",
             name="ck_expense_amount_non_negative",
         ),
+        # Composite indexes for common query patterns
+        Index('idx_expense_company_status', 'company_id', 'status'),
+        Index('idx_expense_company_created', 'company_id', 'created_at'),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
