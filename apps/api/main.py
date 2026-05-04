@@ -61,6 +61,7 @@ from packages.modules.admin.api.ai_policy_router import router as ai_policy_rout
 from packages.modules.admin.api.ai_governance_router import router as ai_governance_router
 from packages.modules.admin.api.portal_config_router import router as portal_config_router
 from packages.modules.admin.api.readiness_router import router as readiness_router
+from packages.modules.admin.api.onboarding_router import router as onboarding_router
 # from packages.modules.admin.api.setup_orchestrator_router import router as setup_orchestrator_router  # Module does not exist
 from packages.modules.admin.api.accounting_category_router import router as accounting_category_router
 from packages.modules.admin.api.accounting_category_apply_router import router as accounting_category_apply_router
@@ -174,6 +175,16 @@ from apps.api.observability import install as _install_observability  # noqa: E4
 
 _install_observability(app)
 
+# ── Celery initialization ──────────────────────────────────────────────────────
+from packages.core.jobs.celery_app import celery_app as _celery_app
+
+# Configure Celery to use the same Redis URL as the app
+_redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+_celery_app.conf.update(
+    broker_url=_redis_url,
+    result_backend=_redis_url,
+)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -266,6 +277,7 @@ app.include_router(accounting_setup_router)
 app.include_router(coa_router)
 app.include_router(approval_setup_router)
 app.include_router(readiness_router)
+app.include_router(onboarding_router)
 app.include_router(portal_config_router)
 app.include_router(super_admin_agents_router)
 
