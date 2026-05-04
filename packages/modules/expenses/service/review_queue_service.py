@@ -543,6 +543,104 @@ def list_accounting_queue(db: Session, company_id: int) -> list[Expense]:
     return []
 
 
+def list_manager_queue_paginated(
+    db: Session,
+    company_id: int,
+    page: int = 1,
+    limit: int = 50,
+    filters: dict | None = None,
+) -> dict:
+    """Return paginated manager queue with total count.
+
+    Args:
+        db: Database session
+        company_id: Company ID for tenant isolation
+        page: Page number (1-indexed)
+        limit: Items per page (max 100)
+        filters: Optional filters dict
+
+    Returns:
+        dict with items, total, page, pages
+    """
+    # Delegate eligibility logic to list_manager_queue
+    expenses = list_manager_queue(db, company_id)
+    total = len(expenses)
+
+    # Apply filters if provided
+    if filters:
+        if filters.get("min_amount") is not None:
+            expenses = [e for e in expenses if e.amount >= filters["min_amount"]]
+        if filters.get("max_amount") is not None:
+            expenses = [e for e in expenses if e.amount <= filters["max_amount"]]
+        total = len(expenses)
+
+    # Cap limit at 100 to prevent memory exhaustion
+    limit = min(limit, 100)
+    offset = (page - 1) * limit
+
+    # Calculate total pages
+    pages = (total + limit - 1) // limit if limit > 0 else 0
+
+    # Slice for pagination
+    items = expenses[offset : offset + limit]
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "pages": pages,
+    }
+
+
+def list_accounting_queue_paginated(
+    db: Session,
+    company_id: int,
+    page: int = 1,
+    limit: int = 50,
+    filters: dict | None = None,
+) -> dict:
+    """Return paginated accounting queue with total count.
+
+    Args:
+        db: Database session
+        company_id: Company ID for tenant isolation
+        page: Page number (1-indexed)
+        limit: Items per page (max 100)
+        filters: Optional filters dict
+
+    Returns:
+        dict with items, total, page, pages
+    """
+    # Delegate eligibility logic to list_accounting_queue
+    expenses = list_accounting_queue(db, company_id)
+    total = len(expenses)
+
+    # Apply filters if provided
+    if filters:
+        if filters.get("min_amount") is not None:
+            expenses = [e for e in expenses if e.amount >= filters["min_amount"]]
+        if filters.get("max_amount") is not None:
+            expenses = [e for e in expenses if e.amount <= filters["max_amount"]]
+        total = len(expenses)
+
+    # Cap limit at 100 to prevent memory exhaustion
+    limit = min(limit, 100)
+    offset = (page - 1) * limit
+
+    # Calculate total pages
+    pages = (total + limit - 1) // limit if limit > 0 else 0
+
+    # Slice for pagination
+    items = expenses[offset : offset + limit]
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "pages": pages,
+    }
+
+
 def build_queue_summary(expenses: list[Expense]) -> dict:
     """
     Return a lightweight summary dict for a review queue.
