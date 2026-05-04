@@ -103,7 +103,18 @@ function DevLoginPanel() {
       .catch(() => [])
       .then((data: DevUser[]) => {
         const active = Array.isArray(data) ? data.filter((u) => u.is_active !== false) : [];
-        setUsers(active);
+        // Fallback demo users if fetch fails
+        if (active.length === 0) {
+          setUsers([
+            { id: 1, company_id: 1, email: "admin@demo.com", full_name: "Admin User", role: "admin", is_active: true },
+            { id: 2, company_id: 1, email: "manager@demo.com", full_name: "Manager User", role: "manager", is_active: true },
+            { id: 3, company_id: 1, email: "accounting@demo.com", full_name: "Accounting User", role: "accounting", is_active: true },
+            { id: 4, company_id: 1, email: "employee@demo.com", full_name: "Lola Sten", role: "employee", is_active: true },
+            { id: 5, company_id: 1, email: "executive@demo.com", full_name: "Executive User", role: "executive", is_active: true },
+          ]);
+        } else {
+          setUsers(active);
+        }
         setLoadingUsers(false);
       });
   }, []);
