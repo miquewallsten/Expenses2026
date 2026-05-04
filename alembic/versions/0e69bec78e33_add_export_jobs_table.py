@@ -50,9 +50,26 @@ def upgrade() -> None:
     )
     # Create index for job queue polling
     op.create_index("ix_export_jobs_status", "export_jobs", ["status"])
+    # Add foreign key constraints
+    op.create_foreign_key(
+        "fk_export_jobs_company_id",
+        "export_jobs",
+        "companies",
+        ["company_id"],
+        ["id"],
+    )
+    op.create_foreign_key(
+        "fk_export_jobs_requested_by",
+        "export_jobs",
+        "users",
+        ["requested_by"],
+        ["id"],
+    )
 
 
 def downgrade() -> None:
     """Remove export_jobs table."""
+    op.drop_constraint("fk_export_jobs_requested_by", "export_jobs", type_="foreignkey")
+    op.drop_constraint("fk_export_jobs_company_id", "export_jobs", type_="foreignkey")
     op.drop_index("ix_export_jobs_status", table_name="export_jobs")
     op.drop_table("export_jobs")

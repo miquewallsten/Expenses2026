@@ -12,7 +12,7 @@ Download URLs are temporary and expire after 7 days.
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import Boolean, DateTime, Index, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from apps.api.db import Base
@@ -66,7 +66,7 @@ class ExportJob(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    company_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    company_id: Mapped[int] = mapped_column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
 
     # Export configuration
     export_type: Mapped[str] = mapped_column(String(20), default=ExportType.FULL.value)
@@ -91,4 +91,4 @@ class ExportJob(Base):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Requester
-    requested_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    requested_by: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
