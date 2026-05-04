@@ -157,6 +157,18 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
+# Agent/Platform rate limiting with sliding window + burst allowance
+from packages.core.middleware import RateLimitMiddleware, RateLimitConfig
+
+app.add_middleware(
+    RateLimitMiddleware,
+    config=RateLimitConfig(
+        requests_per_minute=60,
+        burst=10,
+        paths=("/api/agent/", "/api/platform/"),
+    ),
+)
+
 # Phase 2.5 — Request-ID middleware + structured 500/422 responses.
 from apps.api.observability import install as _install_observability  # noqa: E402
 
