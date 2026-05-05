@@ -521,18 +521,31 @@ export default function AdminUsersPanel({ companyId, users, onUsersChanged, comp
   const others = users.filter((u) => !allGrouped.has(u.id));
 
   return (
-    <div className="max-w-3xl">
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-muted" />
-          <h2 className="text-sm font-semibold text-primary">{tu("title")}</h2>
-          <span className="rounded border border-default bg-surface-2 px-1.5 py-0.5 font-mono text-[10px] text-muted">
-            {users.filter((u) => u.is_active).length} / {users.length}
-          </span>
+    <div className="max-w-3xl space-y-4">
+      {/* Header with metrics */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10">
+            <Users className="h-4 w-4 text-accent" />
+          </div>
+          <div className="flex flex-col">
+            <h2 className="text-sm font-semibold text-primary">{tu("title")}</h2>
+            <div className="flex items-center gap-2">
+              <span className="rounded-full border border-success/20 bg-success/5 px-2 py-0.5 font-mono text-[9px] text-success/70">
+                {users.filter((u) => u.is_active).length} active
+              </span>
+              <span className="text-[9px] text-muted">
+                {users.length} total
+              </span>
+            </div>
+          </div>
         </div>
         {!showForm && (
-          <button type="button" onClick={() => setShowForm(true)}
-            className="inline-flex items-center gap-1.5 rounded border border-default bg-surface-1 px-2.5 py-1 text-[10px] font-semibold text-tertiary transition-colors hover:border-strong hover:text-secondary">
+          <button
+            type="button"
+            onClick={() => setShowForm(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-accent/20 bg-accent/5 px-3 py-1.5 text-[10px] font-semibold text-accent transition-all hover:border-accent/30 hover:bg-accent/10"
+          >
             <Plus className="h-3 w-3" />
             {tu("inviteUser")}
           </button>
@@ -540,55 +553,83 @@ export default function AdminUsersPanel({ companyId, users, onUsersChanged, comp
       </div>
 
       {users.length === 0 && !showForm ? (
-        <div className="rounded-lg border border-default bg-surface-1 px-4 py-8 text-center">
-          <Users className="mx-auto mb-2 h-6 w-6 text-muted" />
-          <p className="text-xs text-muted italic">{tu("noUsers")}</p>
+        <div className="relative overflow-hidden rounded-lg border border-default bg-surface-1 px-4 py-10 text-center">
+          <div className="absolute inset-0 bg-gradient-to-br from-surface-2/50 via-transparent to-transparent pointer-events-none" />
+          <div className="relative">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-surface-2">
+              <Users className="h-6 w-6 text-muted" />
+            </div>
+            <p className="text-xs text-muted">{tu("noUsers")}</p>
+            <p className="mt-1 text-[10px] text-muted/60">Add your first team member to get started</p>
+          </div>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-default">
-          {/* Column headers */}
-          <div className="grid grid-cols-[1fr_1.5fr_110px_80px_20px] items-center gap-x-3 border-b border-subtle bg-surface-1 px-4 py-1.5">
-            {[tu("colName"), tu("colEmail"), tu("colRole"), tu("colFlags"), ""].map((h, i) => (
-              <span key={i} className="text-[8.5px] font-bold uppercase tracking-[0.12em] text-muted">{h}</span>
-            ))}
+        <div className="relative overflow-hidden rounded-lg border border-default">
+          {/* Gradient header */}
+          <div className="relative bg-gradient-to-r from-surface-2 via-surface-1 to-accent/[0.02]">
+            {/* Column headers */}
+            <div className="grid grid-cols-[1fr_1.5fr_110px_80px_20px] items-center gap-x-3 border-b border-subtle px-4 py-2">
+              {[tu("colName"), tu("colEmail"), tu("colRole"), tu("colFlags"), ""].map((h, i) => (
+                <span key={i} className="text-[8px] font-bold uppercase tracking-[0.15em] text-muted/70">{h}</span>
+              ))}
+            </div>
           </div>
 
-          {[...roleGroups, ...(others.length > 0 ? [{ label: tu("groupOther"), roles: [], users: others }] : [])].map((group) => {
-            if (group.users.length === 0) return null;
-            return (
-              <div key={group.label}>
-                <div className="px-4 py-1 bg-surface-0 border-b border-subtle">
-                  <span className="text-[8px] font-bold uppercase tracking-[0.12em] text-muted">{group.label}</span>
+          {/* User list with groups */}
+          <div className="relative">
+            {[...roleGroups, ...(others.length > 0 ? [{ label: tu("groupOther"), roles: [], users: others }] : [])].map((group, groupIdx) => {
+              if (group.users.length === 0) return null;
+              return (
+                <div key={group.label}>
+                  {/* Group header */}
+                  <div className="sticky top-0 z-10 px-4 py-1.5 bg-surface-0/95 border-b border-subtle/50 backdrop-blur-sm">
+                    <span className="text-[8px] font-bold uppercase tracking-[0.15em] text-muted/60">{group.label}</span>
+                    <span className="ml-2 rounded-full bg-surface-2 px-1.5 py-0.5 font-mono text-[8px] text-muted">
+                      {group.users.length}
+                    </span>
+                  </div>
+                  {/* User rows */}
+                  {group.users.map((user, userIdx) => (
+                    <button
+                      key={user.id}
+                      type="button"
+                      onClick={() => setSelectedUser(user)}
+                      className={`group relative grid w-full grid-cols-[1fr_1.5fr_110px_80px_20px] items-center gap-x-3 px-4 py-3 text-left transition-colors hover:bg-surface-1 ${
+                        userIdx < group.users.length - 1 ? "border-b border-subtle/30" : ""
+                      }`}
+                    >
+                      {/* Row hover indicator */}
+                      <span className="absolute left-0 top-1/2 h-6 w-0.5 -translate-y-1/2 rounded-r bg-accent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                      <div className="flex items-center gap-2 min-w-0">
+                        <StatusDot active={user.is_active} />
+                        <span className="truncate text-[11px] font-medium text-secondary group-hover:text-primary transition-colors">{user.full_name}</span>
+                        {user.delegates_for_user_name && (
+                          <span className="shrink-0 rounded-full border border-purple-500/15 bg-purple-500/5 px-1.5 py-0.5 text-[8px] text-purple-400/60">
+                            → {user.delegates_for_user_name}
+                          </span>
+                        )}
+                      </div>
+                      <span className="truncate font-mono text-[10px] text-tertiary">{user.email}</span>
+                      <div><RoleBadge role={user.role} /></div>
+                      <div className="flex flex-wrap gap-1">
+                        {user.can_create_corporate_expenses && (
+                          <span className="rounded-full border border-amber-500/15 bg-amber-500/[0.03] px-1.5 py-0.5 text-[7.5px] font-medium text-warning/60">corp</span>
+                        )}
+                        {user.is_amex_reconciler && (
+                          <span className="rounded-full border border-ai/15 bg-ai/[0.03] px-1.5 py-0.5 text-[7.5px] font-medium text-ai/60">amex</span>
+                        )}
+                        {user.has_executive_reporting && (
+                          <span className="rounded-full border border-rose-500/15 bg-rose-500/[0.03] px-1.5 py-0.5 text-[7.5px] font-medium text-rose-400/60">exec</span>
+                        )}
+                      </div>
+                      <ChevronRight className="h-3.5 w-3.5 text-muted/50 opacity-0 group-hover:opacity-100 group-hover:text-accent transition-all" />
+                    </button>
+                  ))}
                 </div>
-                {group.users.map((user) => (
-                  <button key={user.id} type="button" onClick={() => setSelectedUser(user)}
-                    className="grid w-full grid-cols-[1fr_1.5fr_110px_80px_20px] items-center gap-x-3 border-b border-subtle px-4 py-2.5 text-left last:border-0 hover:bg-surface-1 group">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <StatusDot active={user.is_active} />
-                      <span className="truncate text-[11px] font-medium text-secondary">{user.full_name}</span>
-                      {user.delegates_for_user_name && (
-                        <span className="shrink-0 text-[9px] text-purple-300/50">→ {user.delegates_for_user_name}</span>
-                      )}
-                    </div>
-                    <span className="truncate font-mono text-[10px] text-tertiary">{user.email}</span>
-                    <div><RoleBadge role={user.role} /></div>
-                    <div className="flex flex-wrap gap-0.5">
-                      {user.can_create_corporate_expenses && (
-                        <span className="rounded border border-amber-500/20 bg-amber-500/[0.06] px-1 py-0.5 text-[8px] text-warning/50">corp</span>
-                      )}
-                      {user.is_amex_reconciler && (
-                        <span className="rounded border border-sky-500/20 bg-accent/[0.06] px-1 py-0.5 text-[8px] text-accent/50">amex</span>
-                      )}
-                      {user.has_executive_reporting && (
-                        <span className="rounded border border-rose-500/20 bg-rose-500/[0.06] px-1 py-0.5 text-[8px] text-rose-300/50">exec</span>
-                      )}
-                    </div>
-                    <ChevronRight className="h-3.5 w-3.5 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </button>
-                ))}
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
 

@@ -8,9 +8,11 @@ import os
 
 sys.path.append(".")
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from sqlalchemy.orm import Session
-from sqlalchemy import create_engine
-from sqlalchemy.exc import OperationalError
 import getpass
 import warnings
 
@@ -20,28 +22,14 @@ warnings.filterwarnings("ignore", category=UserWarning)
 def create_super_admin():
     """Create a Super Admin user with password authentication."""
 
-    database_url = os.getenv(
-        "DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/financial_ops"
-    )
+    # Use project settings to get the correct database URL
+    from apps.api.db import engine
 
     try:
-        engine = create_engine(database_url)
-
         with Session(engine) as db:
             # Import models
             from packages.core.platform.models_user import User
             from packages.core.platform.password_utils import hash_password
-
-            # Check if users table exists
-            try:
-                table_exists = engine.dialect.has_table(engine.connect(), "users")
-            except Exception:
-                table_exists = False
-
-            if not table_exists:
-                print("Users table doesn't exist. Please run migrations first:")
-                print("   alembic upgrade head")
-                return False
 
             email = os.getenv("SUPER_ADMIN_EMAIL", "superadmin@platform.local")
 
@@ -98,9 +86,6 @@ def create_super_admin():
             print("Access the super-admin portal at: /super-admin/login")
             return True
 
-    except OperationalError as e:
-        print(f"Database connection failed: {e}")
-        return False
     except Exception as e:
         print(f"Error creating Super Admin: {e}")
         import traceback
