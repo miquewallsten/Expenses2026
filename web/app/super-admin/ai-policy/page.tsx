@@ -75,23 +75,23 @@ export default function AiPolicyPage() {
   }, [companyId, dirty, draft]);
 
   return (
-    <div className="flex h-screen flex-col bg-zinc-950">
-      <header className="flex h-11 shrink-0 items-center gap-3 border-b border-white/[0.07] px-5">
+    <div className="flex h-screen flex-col bg-surface-0">
+      <header className="flex h-11 shrink-0 items-center gap-3 border-b border-default px-5">
         <Link
           href="/super-admin"
-          className="flex items-center gap-1.5 text-[10px] text-white/35 transition-colors hover:text-white/55"
+          className="flex items-center gap-1.5 text-[10px] text-muted transition-colors hover:text-tertiary"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
           Admin
         </Link>
-        <span className="text-white/15">/</span>
+        <span className="text-muted">/</span>
         <div className="flex items-center gap-1.5">
-          <Sparkles className="h-3.5 w-3.5 text-indigo-400/70" />
-          <span className="text-[11px] font-semibold text-white/55">{t("pageTitle")}</span>
+          <Sparkles className="h-3.5 w-3.5 text-accent" />
+          <span className="text-[11px] font-semibold text-tertiary">{t("pageTitle")}</span>
         </div>
         <div className="ml-auto flex items-center gap-2">
           {saved && (
-            <span className="inline-flex items-center gap-1 rounded border border-emerald-500/25 bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-emerald-300/80">
+            <span className="inline-flex items-center gap-1 rounded border border-emerald-500/25 bg-success-muted px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-emerald-300/80">
               <Check className="h-2.5 w-2.5" />
               {t("saved")}
             </span>
@@ -100,7 +100,7 @@ export default function AiPolicyPage() {
             type="button"
             onClick={onSave}
             disabled={!dirty || saving || loading}
-            className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600/30 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-indigo-200 transition-colors hover:bg-indigo-600/50 disabled:cursor-not-allowed disabled:opacity-30"
+            className="inline-flex items-center gap-1.5 rounded-md bg-accent-muted px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-accent transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-30"
           >
             {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
             {t("save")}
@@ -110,7 +110,7 @@ export default function AiPolicyPage() {
 
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-6">
         <div className="mx-auto max-w-2xl space-y-5">
-          <p className="text-[11px] leading-relaxed text-white/45">{t("description")}</p>
+          <p className="text-[11px] leading-relaxed text-tertiary">{t("description")}</p>
 
           {error && (
             <div className="flex items-center gap-2 rounded border border-rose-500/20 bg-rose-500/[0.08] px-3 py-2 text-[11px] text-rose-300/80">
@@ -120,12 +120,12 @@ export default function AiPolicyPage() {
           )}
 
           {loading || !merged ? (
-            <div className="flex items-center gap-2 text-[11px] text-white/35">
+            <div className="flex items-center gap-2 text-[11px] text-muted">
               <Loader2 className="h-3 w-3 animate-spin" />
               {t("loading")}
             </div>
           ) : (
-            <div className="space-y-4 rounded-lg border border-white/[0.07] bg-zinc-900 p-5">
+            <div className="space-y-4 rounded-lg border border-default bg-surface-1 p-5">
               <Field label={t("aiEnabled")} hint={t("aiEnabledHint")}>
                 <Toggle
                   checked={merged.ai_enabled}
@@ -140,10 +140,10 @@ export default function AiPolicyPage() {
                     ...d,
                     pii_redaction_level: e.target.value as PolicyShape["pii_redaction_level"],
                   }))}
-                  className="w-full rounded border border-white/[0.08] bg-white/[0.03] px-2.5 py-1.5 text-[11px] text-white/80 outline-none focus:border-indigo-500/35"
+                  className="w-full rounded border border-default bg-surface-1 px-2.5 py-1.5 text-[11px] text-secondary outline-none focus:bg-accent-muted"
                 >
                   {PII_LEVELS.map((lvl) => (
-                    <option key={lvl} value={lvl} className="bg-zinc-900">
+                    <option key={lvl} value={lvl} className="bg-surface-1">
                       {t(`piiLevels.${lvl}`)}
                     </option>
                   ))}
@@ -156,7 +156,7 @@ export default function AiPolicyPage() {
                   value={merged.allowed_models}
                   onChange={(e) => setDraft((d) => ({ ...d, allowed_models: e.target.value }))}
                   placeholder="*"
-                  className="w-full rounded border border-white/[0.08] bg-white/[0.03] px-2.5 py-1.5 font-mono text-[11px] text-white/80 outline-none focus:border-indigo-500/35"
+                  className="w-full rounded border border-default bg-surface-1 px-2.5 py-1.5 font-mono text-[11px] text-secondary outline-none focus:bg-accent-muted"
                 />
               </Field>
 
@@ -169,7 +169,7 @@ export default function AiPolicyPage() {
                     ...d,
                     max_tokens_per_call: Math.max(0, Number.parseInt(e.target.value, 10) || 0),
                   }))}
-                  className="w-full rounded border border-white/[0.08] bg-white/[0.03] px-2.5 py-1.5 text-[11px] text-white/80 outline-none focus:border-indigo-500/35"
+                  className="w-full rounded border border-default bg-surface-1 px-2.5 py-1.5 text-[11px] text-secondary outline-none focus:bg-accent-muted"
                 />
               </Field>
 
@@ -182,7 +182,7 @@ export default function AiPolicyPage() {
                     ...d,
                     monthly_token_budget: Math.max(0, Number.parseInt(e.target.value, 10) || 0),
                   }))}
-                  className="w-full rounded border border-white/[0.08] bg-white/[0.03] px-2.5 py-1.5 text-[11px] text-white/80 outline-none focus:border-indigo-500/35"
+                  className="w-full rounded border border-default bg-surface-1 px-2.5 py-1.5 text-[11px] text-secondary outline-none focus:bg-accent-muted"
                 />
               </Field>
 
@@ -191,7 +191,7 @@ export default function AiPolicyPage() {
                   rows={3}
                   value={merged.notes ?? ""}
                   onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value || null }))}
-                  className="w-full resize-none rounded border border-white/[0.08] bg-white/[0.03] px-2.5 py-1.5 text-[11px] text-white/80 outline-none focus:border-indigo-500/35"
+                  className="w-full resize-none rounded border border-default bg-surface-1 px-2.5 py-1.5 text-[11px] text-secondary outline-none focus:bg-accent-muted"
                 />
               </Field>
             </div>
@@ -209,9 +209,9 @@ function Field({ label, hint, children }: {
 }) {
   return (
     <label className="block">
-      <div className="mb-1 text-[9px] font-bold uppercase tracking-widest text-white/45">{label}</div>
+      <div className="mb-1 text-[9px] font-bold uppercase tracking-widest text-tertiary">{label}</div>
       {children}
-      {hint && <p className="mt-1 text-[10px] text-white/28">{hint}</p>}
+      {hint && <p className="mt-1 text-[10px] text-muted">{hint}</p>}
     </label>
   );
 }
@@ -225,7 +225,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
       onClick={() => onChange(!checked)}
       className={[
         "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
-        checked ? "bg-indigo-600/60" : "bg-white/[0.08]",
+        checked ? "bg-accent" : "bg-surface-3",
       ].join(" ")}
     >
       <span

@@ -37,7 +37,7 @@ const WORKFLOW_CODES = new Set([
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mb-1 px-1 text-[9px] font-bold uppercase tracking-widest text-white/22">
+    <p className="mb-1 px-1 text-[9px] font-bold uppercase tracking-widest text-muted">
       {children}
     </p>
   );
@@ -45,7 +45,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 function Panel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-white/[0.07] bg-white/[0.02] divide-y divide-white/[0.05]">
+    <div className="overflow-hidden rounded-lg border border-default bg-surface-1 divide-y divide-white/[0.05]">
       {children}
     </div>
   );
@@ -67,13 +67,13 @@ function SelectRow({
   return (
     <div className="flex items-center justify-between gap-4 px-4 py-2.5">
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium text-white/68">{label}</p>
-        {description && <p className="text-[10px] text-white/28">{description}</p>}
+        <p className="text-[11px] font-medium text-secondary">{label}</p>
+        {description && <p className="text-[10px] text-muted">{description}</p>}
       </div>
       <select
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
-        className="shrink-0 rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 text-[10px] text-white/55 outline-none focus:border-indigo-500/40"
+        className="shrink-0 rounded border border-default bg-surface-1 px-2 py-1 text-[10px] text-tertiary outline-none focus:bg-accent-muted"
       >
         <option value="">—</option>
         {options.map((o) => (
@@ -98,21 +98,21 @@ function ToggleRow({
   return (
     <div className="flex items-center justify-between gap-4 px-4 py-2.5">
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium text-white/68">{label}</p>
-        {description && <p className="text-[10px] text-white/28">{description}</p>}
+        <p className="text-[11px] font-medium text-secondary">{label}</p>
+        {description && <p className="text-[10px] text-muted">{description}</p>}
       </div>
       <button
         type="button"
         onClick={() => onChange(!checked)}
         className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border transition-colors ${
           checked
-            ? "border-indigo-500/40 bg-indigo-600/30"
-            : "border-white/[0.1] bg-white/[0.04]"
+            ? "bg-accent-muted bg-accent-muted"
+            : "border-default bg-surface-2"
         }`}
       >
         <span
           className={`absolute top-0.5 h-3 w-3 rounded-full transition-transform ${
-            checked ? "translate-x-3 bg-indigo-400" : "translate-x-0.5 bg-white/20"
+            checked ? "translate-x-3 bg-accent" : "translate-x-0.5 bg-surface-2"
           }`}
         />
       </button>
@@ -136,15 +136,15 @@ function TextareaRow({
   return (
     <div className="flex flex-col gap-1.5 px-4 py-2.5">
       <div>
-        <p className="text-[11px] font-medium text-white/68">{label}</p>
-        {description && <p className="text-[10px] text-white/28">{description}</p>}
+        <p className="text-[11px] font-medium text-secondary">{label}</p>
+        {description && <p className="text-[10px] text-muted">{description}</p>}
       </div>
       <textarea
         rows={2}
         value={value ?? ""}
         placeholder={placeholder ?? "—"}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full resize-none rounded border border-white/[0.08] bg-zinc-900 px-2 py-1.5 text-[10px] text-white/55 placeholder:text-white/20 outline-none focus:border-indigo-500/40"
+        className="w-full resize-none rounded border border-default bg-surface-1 px-2 py-1.5 text-[10px] text-tertiary placeholder:text-muted outline-none focus:bg-accent-muted"
       />
     </div>
   );
@@ -292,11 +292,11 @@ export default function AdminWorkflowSetupStudio({
     <div className="max-w-2xl space-y-5">
 
       {/* Summary banner */}
-      <div className="rounded-lg border border-white/[0.07] bg-white/[0.02] px-4 py-2.5">
+      <div className="rounded-lg border border-default bg-surface-1 px-4 py-2.5">
         <div className="flex items-start justify-between gap-3">
-          <p className="text-[10px] leading-relaxed text-white/35">{buildSummary(form)}</p>
+          <p className="text-[10px] leading-relaxed text-muted">{buildSummary(form)}</p>
           {aiDrafted && (
-            <span className="flex shrink-0 items-center gap-1 rounded border border-indigo-500/20 bg-indigo-500/[0.06] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-indigo-300/50">
+            <span className="flex shrink-0 items-center gap-1 rounded border border-blue-500/20 bg-blue-500/[0.06] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-accent/50">
               <Sparkles className="h-2.5 w-2.5" /> {tc("draft")}
             </span>
           )}
@@ -316,11 +316,11 @@ export default function AdminWorkflowSetupStudio({
               }`}
             >
               {c.severity === "critical"
-                ? <AlertCircle   className="mt-0.5 h-3 w-3 shrink-0 text-red-400/55" />
-                : <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-amber-400/55" />
+                ? <AlertCircle   className="mt-0.5 h-3 w-3 shrink-0 text-error/55" />
+                : <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-warning/55" />
               }
               <p className={`text-[10px] leading-relaxed ${
-                c.severity === "critical" ? "text-red-300/60" : "text-amber-300/55"
+                c.severity === "critical" ? "text-error/60" : "text-warning/55"
               }`}>{c.message}</p>
             </div>
           ))}
@@ -332,8 +332,8 @@ export default function AdminWorkflowSetupStudio({
         <div className="space-y-1.5">
           {localWarnings.map((w, i) => (
             <div key={i} className="flex items-start gap-2 rounded border border-amber-500/15 bg-amber-500/[0.04] px-3 py-2">
-              <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-amber-400/55" />
-              <p className="text-[10px] leading-relaxed text-amber-300/55">{w}</p>
+              <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-warning/55" />
+              <p className="text-[10px] leading-relaxed text-warning/55">{w}</p>
             </div>
           ))}
         </div>
@@ -459,20 +459,20 @@ export default function AdminWorkflowSetupStudio({
 
       {/* Save bar */}
       {error && (
-        <p className="text-[10px] text-red-400/70">{error}</p>
+        <p className="text-[10px] text-error/70">{error}</p>
       )}
       <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={save}
           disabled={saving || !dirty}
-          className="flex items-center gap-1.5 rounded border border-indigo-500/30 bg-indigo-600/20 px-4 py-1.5 text-[10px] font-semibold text-indigo-300 transition-colors hover:bg-indigo-600/30 disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex items-center gap-1.5 rounded border bg-accent-muted bg-accent-muted px-4 py-1.5 text-[10px] font-semibold text-accent transition-colors hover:bg-accent-muted disabled:cursor-not-allowed disabled:opacity-40"
         >
           {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
           {t("saveWorkflowSetup")}
         </button>
         {saved && !dirty && (
-          <span className="flex items-center gap-1 text-[10px] text-emerald-400/60">
+          <span className="flex items-center gap-1 text-[10px] text-success/60">
             <CheckCircle2 className="h-3 w-3" /> {tc("saved")}
           </span>
         )}

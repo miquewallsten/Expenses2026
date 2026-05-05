@@ -74,7 +74,7 @@ function renderContent(content: string) {
       elements.push(
         <ListTag key={key++} className={`mb-2 ${listType === "number" ? "list-decimal pl-4" : "list-disc pl-4"}`}>
           {listItems.map((item, i) => (
-            <li key={i} className="text-white/50 text-[11px] leading-relaxed">
+            <li key={i} className="text-secondary text-[11px] leading-relaxed">
               {renderInline(item)}
             </li>
           ))}
@@ -91,7 +91,7 @@ function renderContent(content: string) {
     return parts.map((part, i) => {
       if (part.startsWith("**") && part.endsWith("**")) {
         return (
-          <strong key={i} className="font-semibold text-white/75">
+          <strong key={i} className="font-semibold text-secondary">
             {part.slice(2, -2)}
           </strong>
         );
@@ -130,7 +130,7 @@ function renderContent(content: string) {
     // Regular paragraph
     if (trimmed) {
       elements.push(
-        <p key={key++} className="mb-2 last:mb-0 text-white/60 leading-relaxed">
+        <p key={key++} className="mb-2 last:mb-0 text-secondary leading-relaxed">
           {renderInline(trimmed)}
         </p>
       );
@@ -247,30 +247,30 @@ export default function AdminOnboardingCopilot({ companyId, onComplete, onSkip }
   }, [progress, onComplete]);
 
   return (
-    <div className="flex h-full flex-col bg-zinc-950">
+    <div className="flex h-full flex-col bg-surface-0">
       {/* Header */}
-      <header className="flex h-11 shrink-0 items-center justify-between border-b border-white/[0.06] bg-zinc-900/50 px-4">
+      <header className="flex h-11 shrink-0 items-center justify-between border-b border-subtle bg-surface-1/50 px-4">
         <div className="flex items-center gap-2">
-          <div className="flex h-5 w-5 items-center justify-center rounded bg-indigo-500/20">
-            <Sparkles className="h-3 w-3 text-indigo-300/80" />
+          <div className="flex h-5 w-5 items-center justify-center rounded bg-accent-muted">
+            <Sparkles className="h-3 w-3 text-accent" />
           </div>
-          <span className="text-[11px] font-semibold text-white/60">{t("title")}</span>
+          <span className="text-[11px] font-semibold text-secondary">{t("title")}</span>
         </div>
         <div className="flex items-center gap-3">
           {/* Progress */}
           <div className="flex items-center gap-1.5">
-            <div className="h-1.5 w-20 overflow-hidden rounded-full bg-white/[0.06]">
+            <div className="h-1.5 w-20 overflow-hidden rounded-full bg-surface-2">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-indigo-500/80 to-indigo-400/60 transition-all duration-500"
+                className="h-full rounded-full bg-gradient-to-r from-blue-500/80 to-blue-400/60 transition-all duration-500"
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <span className="text-[9px] font-medium tabular-nums text-white/40">{progress}%</span>
+            <span className="text-[9px] font-medium tabular-nums text-tertiary">{progress}%</span>
           </div>
           <button
             type="button"
             onClick={onSkip}
-            className="flex items-center gap-1 rounded-md border border-white/[0.06] bg-white/[0.02] px-2 py-1 text-[10px] text-white/40 transition-colors hover:bg-white/[0.05] hover:text-white/60"
+            className="flex items-center gap-1 rounded-md border border-subtle bg-surface-1 px-2 py-1 text-[10px] text-tertiary transition-colors hover:bg-surface-2 hover:text-secondary"
           >
             <SkipForward className="h-3 w-3" />
             {t("skip")}
@@ -289,8 +289,8 @@ export default function AdminOnboardingCopilot({ companyId, onComplete, onSkip }
               <div
                 className={`max-w-[90%] rounded-xl px-3.5 py-2.5 text-[11px] leading-relaxed ${
                   msg.role === "user"
-                    ? "bg-indigo-500/15 text-indigo-100/90 ring-1 ring-inset ring-indigo-500/20"
-                    : "bg-white/[0.03] text-white/60 ring-1 ring-inset ring-white/[0.05]"
+                    ? "bg-blue-500/15 text-indigo-100/90 ring-1 ring-inset ring-blue-500/20"
+                    : "bg-surface-1 text-secondary ring-1 ring-inset ring-white/[0.05]"
                 }`}
               >
                 {msg.role === "assistant" ? renderContent(msg.content) : msg.content}
@@ -304,10 +304,10 @@ export default function AdminOnboardingCopilot({ companyId, onComplete, onSkip }
                         type="button"
                         onClick={() => handleAction(action.value)}
                         disabled={loading}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-500/25 bg-indigo-500/10 px-3 py-1.5 text-[10px] font-medium text-indigo-200/90 transition-all hover:bg-indigo-500/20 hover:text-indigo-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="inline-flex items-center gap-1.5 rounded-lg border bg-accent-muted-muted bg-accent-muted px-3 py-1.5 text-[10px] font-medium text-accent/90 transition-all hover:bg-accent-muted hover:text-indigo-100 disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         {action.icon && (
-                          <span className="text-indigo-300/70">
+                          <span className="text-accent/70">
                             {action.icon === "company" && <Building2 className="h-3.5 w-3.5" />}
                             {action.icon === "users" && <Users className="h-3.5 w-3.5" />}
                             {action.icon === "accounting" && <Calculator className="h-3.5 w-3.5" />}
@@ -326,21 +326,21 @@ export default function AdminOnboardingCopilot({ companyId, onComplete, onSkip }
 
           {loading && (
             <div className="flex justify-start">
-              <div className="flex items-center gap-2 rounded-xl bg-white/[0.03] px-3.5 py-2.5 ring-1 ring-inset ring-white/[0.05]">
+              <div className="flex items-center gap-2 rounded-xl bg-surface-1 px-3.5 py-2.5 ring-1 ring-inset ring-white/[0.05]">
                 <div className="flex gap-0.5">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-400/60" style={{ animationDelay: "0ms" }} />
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-400/60" style={{ animationDelay: "150ms" }} />
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-400/60" style={{ animationDelay: "300ms" }} />
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent/60" style={{ animationDelay: "0ms" }} />
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent/60" style={{ animationDelay: "150ms" }} />
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent/60" style={{ animationDelay: "300ms" }} />
                 </div>
-                <span className="text-[10px] text-white/40">{t("thinking")}</span>
+                <span className="text-[10px] text-tertiary">{t("thinking")}</span>
               </div>
             </div>
           )}
 
           {progress >= 100 && (
             <div className="flex justify-center py-4">
-              <div className="flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-4 py-2">
-                <Check className="h-4 w-4 text-emerald-400" />
+              <div className="flex items-center gap-2 rounded-full border border-emerald-500/25 bg-success-muted px-4 py-2">
+                <Check className="h-4 w-4 text-success" />
                 <span className="text-[11px] font-medium text-emerald-300">{t("complete")}</span>
               </div>
             </div>
@@ -351,7 +351,7 @@ export default function AdminOnboardingCopilot({ companyId, onComplete, onSkip }
       </div>
 
       {/* Input */}
-      <div className="shrink-0 border-t border-white/[0.06] bg-zinc-900/30 px-4 py-3">
+      <div className="shrink-0 border-t border-subtle bg-surface-1 px-4 py-3">
         <div className="mx-auto flex max-w-lg items-center gap-2">
           <input
             type="text"
@@ -360,13 +360,13 @@ export default function AdminOnboardingCopilot({ companyId, onComplete, onSkip }
             onKeyDown={handleKeyDown}
             placeholder={t("placeholder")}
             disabled={loading || progress >= 100}
-            className="min-w-0 flex-1 rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-[11px] text-white/70 placeholder:text-white/25 outline-none transition-all focus:border-indigo-500/40 focus:bg-white/[0.04] focus:ring-1 focus:ring-indigo-500/20 disabled:opacity-40"
+            className="min-w-0 flex-1 rounded-lg border border-default bg-surface-1 px-3 py-2 text-[11px] text-secondary placeholder:text-muted outline-none transition-all focus:bg-accent-muted focus:bg-surface-2 focus:ring-1 focus:ring-blue-500/20 disabled:opacity-40"
           />
           <button
             type="button"
             onClick={handleSend}
             disabled={!input.trim() || loading || progress >= 100}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/80 text-white transition-all hover:bg-indigo-500 disabled:bg-white/[0.04] disabled:text-white/20"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/80 text-primary transition-all hover:bg-accent-hover disabled:bg-surface-2 disabled:text-muted"
           >
             <Send className="h-3.5 w-3.5" />
           </button>

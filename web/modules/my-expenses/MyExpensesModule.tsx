@@ -274,7 +274,7 @@ export default function MyExpensesModule() {
     setLoading(true);
     apiCall<Expense[]>("/expenses/")
       .then((data) => {
-        setExpenses(data);
+        setExpenses(Array.isArray(data) ? data : []);
         if (preferExpenseId != null) {
           const target = data.find((e) => e.id === preferExpenseId);
           if (target) { selectExpense(target); return; }
@@ -291,7 +291,7 @@ export default function MyExpensesModule() {
           selectExpense(null);
         }
       })
-      .catch(() => {})
+      .catch(() => { setExpenses([]); })
       .finally(() => setLoading(false));
   }, [userIdStr, selectExpense]);
 
@@ -434,14 +434,14 @@ export default function MyExpensesModule() {
         className={[
           moduleIsNarrow && activeMobilePane === "detail" ? "hidden" : "flex",
           isMobile ? "w-full border-b" : "w-72 border-r",
-          "shrink-0 flex-col overflow-hidden border-white/[0.07]",
+          "shrink-0 flex-col overflow-hidden border-default",
         ].join(" ")}
       >
         {/* Upload zone — tap-friendly on mobile */}
         {showSimpleForm ? (
           /* ── Simple-expense inline form ────────────────────────────────── */
-          <div className="mx-3 mt-2 mb-1 shrink-0 rounded border border-white/[0.09] bg-white/[0.02] px-3 py-2.5">
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-white/40">{te("quickExpenseTitle")}</p>
+          <div className="mx-3 mt-2 mb-1 shrink-0 rounded border border-default bg-surface-1 px-3 py-2.5">
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-tertiary">{te("quickExpenseTitle")}</p>
             <div className="flex flex-col gap-2">
               <input
                 autoFocus
@@ -449,7 +449,7 @@ export default function MyExpensesModule() {
                 placeholder={te("descriptionPlaceholder")}
                 value={simpleDesc}
                 onChange={(e) => setSimpleDesc(e.target.value)}
-                className="w-full rounded border border-white/[0.08] bg-transparent px-2.5 py-1.5 text-xs text-white/80 placeholder-white/20 outline-none focus:border-white/[0.18]"
+                className="w-full rounded border border-default bg-transparent px-2.5 py-1.5 text-xs text-secondary placeholder-white/20 outline-none focus:border-strong"
               />
               <div className="flex gap-2">
                 <input
@@ -459,27 +459,27 @@ export default function MyExpensesModule() {
                   onChange={(e) => setSimpleAmount(e.target.value)}
                   min="0"
                   step="0.01"
-                  className="w-28 rounded border border-white/[0.08] bg-transparent px-2.5 py-1.5 text-xs text-white/80 placeholder-white/20 outline-none focus:border-white/[0.18]"
+                  className="w-28 rounded border border-default bg-transparent px-2.5 py-1.5 text-xs text-secondary placeholder-white/20 outline-none focus:border-strong"
                 />
                 <input
                   type="date"
                   value={simpleDate}
                   onChange={(e) => setSimpleDate(e.target.value)}
-                  className="flex-1 rounded border border-white/[0.08] bg-transparent px-2.5 py-1.5 text-xs text-white/80 outline-none focus:border-white/[0.18]"
+                  className="flex-1 rounded border border-default bg-transparent px-2.5 py-1.5 text-xs text-secondary outline-none focus:border-strong"
                 />
               </div>
-              {simpleError && <p className="text-[10px] text-red-400">{simpleError}</p>}
+              {simpleError && <p className="text-[10px] text-error">{simpleError}</p>}
               <div className="flex gap-2">
                 <button
                   onClick={handleCreateSimple}
                   disabled={simpleSubmitting || !simpleDesc.trim() || !simpleAmount}
-                  className="flex-1 rounded bg-indigo-600 py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex-1 rounded bg-indigo-600 py-1.5 text-[11px] font-semibold text-primary transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {simpleSubmitting ? te("creating") : te("create")}
                 </button>
                 <button
                   onClick={() => { setShowSimpleForm(false); setSimpleError(null); }}
-                  className="rounded border border-white/[0.1] px-3 py-1.5 text-[11px] text-white/50 transition-colors hover:text-white/70"
+                  className="rounded border border-default px-3 py-1.5 text-[11px] text-secondary transition-colors hover:text-secondary"
                 >
                   {tc("cancel")}
                 </button>
@@ -500,13 +500,13 @@ export default function MyExpensesModule() {
               "mx-3 mt-2 mb-1 shrink-0 rounded border-2 border-dashed px-4 text-center transition-colors",
               isMobile ? "py-4" : "py-2.5",
               uploading
-                ? "cursor-not-allowed border-indigo-500/30 bg-indigo-500/[0.04]"
+                ? "cursor-not-allowed bg-accent-muted bg-accent-muted"
                 : dragOver
                 ? "cursor-copy border-indigo-500/50 bg-indigo-500/[0.07]"
-                : "cursor-pointer border-white/[0.09] bg-white/[0.02] hover:border-white/[0.15]",
+                : "cursor-pointer border-default bg-surface-1 hover:border-default",
             ].join(" ")}
           >
-            <p className={isMobile ? "text-xs text-white/30" : "text-[10px] text-white/30"}>
+            <p className={isMobile ? "text-xs text-muted" : "text-[10px] text-muted"}>
               {uploading
                 ? (uploadProgress
                     ? tc("uploadingProgress", { current: uploadProgress.current, total: uploadProgress.total, name: uploadProgress.name })
@@ -516,7 +516,7 @@ export default function MyExpensesModule() {
                 : te("dragDropUpload")}
             </p>
             {uploading && uploadProgress && (
-              <div className="mt-1.5 h-0.5 w-full overflow-hidden rounded bg-white/[0.06]">
+              <div className="mt-1.5 h-0.5 w-full overflow-hidden rounded bg-surface-2">
                 <div
                   className="h-full bg-indigo-500/70 transition-all duration-200"
                   style={{ width: `${Math.round((uploadProgress.current / Math.max(1, uploadProgress.total)) * 100)}%` }}
@@ -527,11 +527,11 @@ export default function MyExpensesModule() {
         )}
 
         {policyHint && (
-          <p className="mx-3 mb-1.5 text-[9px] leading-snug text-white/22">{policyHint}</p>
+          <p className="mx-3 mb-1.5 text-[9px] leading-snug text-muted">{policyHint}</p>
         )}
 
         {uploadError && (
-          <p className="mx-3 mb-1.5 shrink-0 rounded border border-red-500/25 bg-red-500/[0.06] px-2 py-1 text-[10px] leading-snug text-red-300/80">
+          <p className="mx-3 mb-1.5 shrink-0 rounded border border-red-500/25 bg-red-500/[0.06] px-2 py-1 text-[10px] leading-snug text-error/80">
             {uploadError}
           </p>
         )}

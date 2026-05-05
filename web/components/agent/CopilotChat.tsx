@@ -65,7 +65,7 @@ export default function CopilotChat({ userName }: CopilotChatProps) {
               className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
               {msg.role === "assistant" && (
-                <div className="mr-2 mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-accent text-white shadow-[var(--shadow-glow)]">
+                <div className="mr-2 mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-accent text-primary shadow-[var(--shadow-glow)]">
                   <Bot className="h-3.5 w-3.5" />
                 </div>
               )}

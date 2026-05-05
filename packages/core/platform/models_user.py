@@ -33,12 +33,21 @@ class User(Base):
     )
 
     # ── Capability flags ────────────────────────────────────────────────────────
+    # These flags control what functional areas a user can access, regardless of role.
+    # An admin with can_create_expenses=False is a configuration-only admin who
+    # focuses on setup and doesn't submit expenses themselves.
     can_create_expenses: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     can_create_corporate_expenses: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     can_invoice_corporation: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     is_amex_reconciler: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     requires_time_tracking: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     has_executive_reporting: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    # Accounting access: when True, user can access Accounting Review and Finance Analytics.
+    # Used to give admins accounting visibility without changing their role.
+    can_access_accounting: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    # Analytics access: when True, user can view Finance Analytics dashboard.
+    # Separate from can_access_accounting for fine-grained control.
+    can_view_analytics: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
     # ── Channel identifiers ─────────────────────────────────────────────────────
     whatsapp_phone: Mapped[Optional[str]] = mapped_column(String(30), nullable=True, unique=True)

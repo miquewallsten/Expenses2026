@@ -168,8 +168,8 @@ export default function AdminChartOfAccountsStudio({ companyId }: Props) {
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-semibold text-white">{t("title")}</h2>
-          <span className="rounded border border-white/[0.07] px-1.5 py-0.5 text-[9px] uppercase tracking-widest text-white/40">
+          <h2 className="text-sm font-semibold text-primary">{t("title")}</h2>
+          <span className="rounded border border-default px-1.5 py-0.5 text-[9px] uppercase tracking-widest text-tertiary">
             {t("badge")}
           </span>
         </div>
@@ -177,14 +177,14 @@ export default function AdminChartOfAccountsStudio({ companyId }: Props) {
           <button
             onClick={() => void loadAll()}
             disabled={loading}
-            className="inline-flex items-center gap-1 rounded border border-white/[0.08] px-2 py-1 text-[10px] text-white/60 hover:bg-white/[0.04] disabled:opacity-40"
+            className="inline-flex items-center gap-1 rounded border border-default px-2 py-1 text-[10px] text-secondary hover:bg-surface-2 disabled:opacity-40"
           >
             <RefreshCcw className="h-3 w-3" /> {tc("refresh")}
           </button>
           <button
             onClick={() => void applyPlanBasico()}
             disabled={seeding}
-            className="inline-flex items-center gap-1 rounded border border-indigo-500/30 bg-indigo-500/10 px-2 py-1 text-[10px] text-indigo-200 hover:bg-indigo-500/20 disabled:opacity-40"
+            className="inline-flex items-center gap-1 rounded border bg-accent-muted bg-accent-muted px-2 py-1 text-[10px] text-accent hover:bg-accent-muted disabled:opacity-40"
           >
             {seeding ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
             {t("applyPreset")}
@@ -194,13 +194,13 @@ export default function AdminChartOfAccountsStudio({ companyId }: Props) {
 
       {error && (
         <div className="flex items-start gap-2 rounded border border-red-500/20 bg-red-950/20 px-3 py-2">
-          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-400" />
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-error" />
           <p className="text-[11px] text-red-200">{error}</p>
         </div>
       )}
 
       {/* Tab strip */}
-      <div className="flex items-center gap-0 border-b border-white/[0.07]">
+      <div className="flex items-center gap-0 border-b border-default">
         {(["mapeo", "cuentas", "iva", "importar", "pruebas", "exportar"] as Tab[]).map((k) => (
           <button
             key={k}
@@ -208,8 +208,8 @@ export default function AdminChartOfAccountsStudio({ companyId }: Props) {
             className={
               "px-3 py-1.5 text-[11px] font-medium border-b -mb-px transition-colors " +
               (tab === k
-                ? "border-indigo-400 text-white"
-                : "border-transparent text-white/45 hover:text-white/70")
+                ? "bg-accent-muted text-primary"
+                : "border-transparent text-tertiary hover:text-secondary")
             }
           >
             {t(`tabs.${k}`)}
@@ -219,7 +219,7 @@ export default function AdminChartOfAccountsStudio({ companyId }: Props) {
 
       {/* Tab body */}
       {loading ? (
-        <div className="flex items-center justify-center py-10 text-white/40">
+        <div className="flex items-center justify-center py-10 text-tertiary">
           <Loader2 className="h-4 w-4 animate-spin" />
         </div>
       ) : tab === "mapeo" ? (
@@ -367,37 +367,37 @@ function MapeoEngine({
             className={`ml-2 inline-flex items-center rounded px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest ${
               usingReal
                 ? "bg-emerald-500/15 text-emerald-300/80"
-                : "bg-amber-500/15 text-amber-300/80"
+                : "bg-amber-500/15 text-warning/80"
             }`}
             title={usingReal ? t("mapeo.sourceLiveHint") : t("mapeo.sourceSampleHint")}
           >
             {usingReal ? t("mapeo.sourceLive") : t("mapeo.sourceSample")}
           </span>
         </SectionLabel>
-        <div className="overflow-hidden rounded-lg border border-white/[0.07] bg-white/[0.02]">
+        <div className="overflow-hidden rounded-lg border border-default bg-surface-1">
           <div className="px-3 py-2.5">
             <div className="flex items-baseline justify-between">
-              <p className="text-[11px] font-semibold text-white">{sample.vendor}</p>
-              <p className="text-[10px] tabular-nums text-white/55">
+              <p className="text-[11px] font-semibold text-primary">{sample.vendor}</p>
+              <p className="text-[10px] tabular-nums text-tertiary">
                 ${sample.amount.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
               </p>
             </div>
-            <p className="mt-0.5 text-[10px] text-white/45">{sample.description}</p>
-            <p className="mt-2 text-[9px] uppercase tracking-widest text-white/30">
+            <p className="mt-0.5 text-[10px] text-tertiary">{sample.description}</p>
+            <p className="mt-2 text-[9px] uppercase tracking-widest text-muted">
               {t("mapeo.category")}: {sample.category_code}
             </p>
           </div>
-          <div className="flex border-t border-white/[0.07] divide-x divide-white/[0.05]">
+          <div className="flex border-t border-default divide-x divide-white/[0.05]">
             <button
               onClick={() => setSampleIdx((i) => (i - 1 + samplePool.length) % samplePool.length)}
-              className="flex-1 py-1.5 text-[10px] text-white/55 hover:bg-white/[0.04]"
+              className="flex-1 py-1.5 text-[10px] text-tertiary hover:bg-surface-2"
             >‹ {t("mapeo.prev")}</button>
             <button
               onClick={() => setSampleIdx((i) => (i + 1) % samplePool.length)}
-              className="flex-1 py-1.5 text-[10px] text-white/55 hover:bg-white/[0.04]"
+              className="flex-1 py-1.5 text-[10px] text-tertiary hover:bg-surface-2"
             >{t("mapeo.next")} ›</button>
           </div>
-          <p className="border-t border-white/[0.07] px-3 py-1.5 text-center text-[9px] text-white/30 tabular-nums">
+          <p className="border-t border-default px-3 py-1.5 text-center text-[9px] text-muted tabular-nums">
             {safeIdx + 1} / {samplePool.length}
           </p>
         </div>
@@ -407,13 +407,13 @@ function MapeoEngine({
       <div className="col-span-12 lg:col-span-5">
         <SectionLabel>
           {t("mapeo.decisionsHeader")}
-          {savingId !== null && <Loader2 className="ml-2 inline h-3 w-3 animate-spin text-white/40" />}
+          {savingId !== null && <Loader2 className="ml-2 inline h-3 w-3 animate-spin text-tertiary" />}
         </SectionLabel>
 
         {!activeCategory ? (
           <EmptyHint message={t("mapeo.noCategory", { code: sample.category_code })} />
         ) : (
-          <div className="overflow-hidden rounded-lg border border-white/[0.07] bg-white/[0.02] divide-y divide-white/[0.05]">
+          <div className="overflow-hidden rounded-lg border border-default bg-surface-1 divide-y divide-white/[0.05]">
             <BindingRow
               label={t("mapeo.expenseAccount")}
               hint={t("mapeo.expenseAccountHint")}
@@ -442,7 +442,7 @@ function MapeoEngine({
         )}
 
         {accounts.length === 0 && (
-          <p className="mt-2 text-[10px] text-amber-300/80">
+          <p className="mt-2 text-[10px] text-warning/80">
             {t("mapeo.emptyHint")}
           </p>
         )}
@@ -452,7 +452,7 @@ function MapeoEngine({
       <div className="col-span-12 lg:col-span-4">
         <SectionLabel>
           {t("mapeo.previewHeader")}
-          {busy && <Loader2 className="ml-2 inline h-3 w-3 animate-spin text-white/40" />}
+          {busy && <Loader2 className="ml-2 inline h-3 w-3 animate-spin text-tertiary" />}
         </SectionLabel>
         <PolizaPreview poliza={poliza} />
       </div>
@@ -595,28 +595,28 @@ function AccountsEditor({
   return (
     <div className="space-y-3">
       {error && (
-        <p className="text-[10px] text-red-300">{error}</p>
+        <p className="text-[10px] text-error">{error}</p>
       )}
 
       {/* Add-new row */}
-      <div className="overflow-hidden rounded-lg border border-white/[0.07] bg-white/[0.02]">
+      <div className="overflow-hidden rounded-lg border border-default bg-surface-1">
         <div className="grid grid-cols-12 items-center gap-2 px-3 py-2">
           <input
             value={draft.code}
             onChange={(e) => setDraft({ ...draft, code: e.target.value })}
             placeholder={t("cuentas.code")}
-            className="col-span-2 rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 font-mono text-[11px] text-white outline-none focus:border-indigo-500/40"
+            className="col-span-2 rounded border border-default bg-surface-1 px-2 py-1 font-mono text-[11px] text-primary outline-none focus:bg-accent-muted"
           />
           <input
             value={draft.name}
             onChange={(e) => setDraft({ ...draft, name: e.target.value })}
             placeholder={t("cuentas.name")}
-            className="col-span-3 rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 text-[11px] text-white outline-none focus:border-indigo-500/40"
+            className="col-span-3 rounded border border-default bg-surface-1 px-2 py-1 text-[11px] text-primary outline-none focus:bg-accent-muted"
           />
           <select
             value={draft.parent_id ?? ""}
             onChange={(e) => setDraft({ ...draft, parent_id: e.target.value ? Number(e.target.value) : null })}
-            className="col-span-2 rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 text-[10px] text-white/70 outline-none focus:border-indigo-500/40"
+            className="col-span-2 rounded border border-default bg-surface-1 px-2 py-1 text-[10px] text-secondary outline-none focus:bg-accent-muted"
             title="Cuenta padre"
           >
             <option value="">— sin padre —</option>
@@ -627,7 +627,7 @@ function AccountsEditor({
           <select
             value={draft.account_class}
             onChange={(e) => setDraft({ ...draft, account_class: e.target.value })}
-            className="col-span-1 rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 text-[10px] text-white/70 outline-none focus:border-indigo-500/40"
+            className="col-span-1 rounded border border-default bg-surface-1 px-2 py-1 text-[10px] text-secondary outline-none focus:bg-accent-muted"
           >
             {ACCOUNT_CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
@@ -635,16 +635,16 @@ function AccountsEditor({
             value={draft.sat_group_code}
             onChange={(e) => setDraft({ ...draft, sat_group_code: e.target.value })}
             placeholder="Agrupador SAT"
-            className="col-span-1 rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 font-mono text-[10px] text-white/70 outline-none focus:border-indigo-500/40"
+            className="col-span-1 rounded border border-default bg-surface-1 px-2 py-1 font-mono text-[10px] text-secondary outline-none focus:bg-accent-muted"
           />
           <select
             value={draft.split_by}
             onChange={(e) => setDraft({ ...draft, split_by: e.target.value })}
-            className="col-span-1 rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 text-[10px] text-white/70 outline-none focus:border-indigo-500/40"
+            className="col-span-1 rounded border border-default bg-surface-1 px-2 py-1 text-[10px] text-secondary outline-none focus:bg-accent-muted"
           >
             {SPLIT_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
-          <label className="col-span-1 flex items-center gap-1 text-[10px] text-white/55">
+          <label className="col-span-1 flex items-center gap-1 text-[10px] text-tertiary">
             <input
               type="checkbox"
               checked={draft.is_postable}
@@ -655,7 +655,7 @@ function AccountsEditor({
           <button
             onClick={() => void saveDraft(draft)}
             disabled={busy}
-            className="col-span-1 inline-flex items-center justify-center gap-1 rounded border border-indigo-500/30 bg-indigo-500/10 py-1 text-[10px] text-indigo-200 hover:bg-indigo-500/20 disabled:opacity-40"
+            className="col-span-1 inline-flex items-center justify-center gap-1 rounded border bg-accent-muted bg-accent-muted py-1 text-[10px] text-accent hover:bg-accent-muted disabled:opacity-40"
           >
             {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
           </button>
@@ -665,9 +665,9 @@ function AccountsEditor({
       {accounts.length === 0 ? (
         <EmptyHint message={t("cuentas.empty")} />
       ) : (
-        <div className="overflow-hidden rounded-lg border border-white/[0.07] bg-white/[0.02]">
+        <div className="overflow-hidden rounded-lg border border-default bg-surface-1">
           <table className="w-full text-[11px]">
-            <thead className="bg-white/[0.02] text-[9px] uppercase tracking-widest text-white/30">
+            <thead className="bg-surface-1 text-[9px] uppercase tracking-widest text-muted">
               <tr>
                 <th className="px-3 py-1.5 text-left">{t("cuentas.code")}</th>
                 <th className="px-3 py-1.5 text-left">{t("cuentas.name")}</th>
@@ -698,43 +698,43 @@ function AccountsEditor({
                 <tr
                   key={a.id}
                   className={
-                    "hover:bg-white/[0.02] " +
-                    (!a.is_postable ? "bg-white/[0.015]" : "")
+                    "hover:bg-surface-1 " +
+                    (!a.is_postable ? "bg-surface-1" : "")
                   }
                 >
                   <td
                     className={
                       "px-3 py-1.5 font-mono tabular-nums " +
-                      (a.is_postable ? "text-white/70" : "text-white/85 font-semibold")
+                      (a.is_postable ? "text-secondary" : "text-primary font-semibold")
                     }
                     style={{ paddingLeft: 12 + depth * 16 }}
                   >
                     {!a.is_postable && (
-                      <span className="mr-1.5 text-white/25">▸</span>
+                      <span className="mr-1.5 text-muted">▸</span>
                     )}
                     {a.code}
                   </td>
-                  <td className={a.is_postable ? "px-3 py-1.5 text-white/85" : "px-3 py-1.5 text-white font-medium"}>
+                  <td className={a.is_postable ? "px-3 py-1.5 text-primary" : "px-3 py-1.5 text-primary font-medium"}>
                     {a.name}
                   </td>
-                  <td className="px-3 py-1.5 text-white/45">{a.account_class}</td>
-                  <td className="px-3 py-1.5 font-mono text-white/40 tabular-nums">{a.sat_group_code ?? "—"}</td>
-                  <td className="px-3 py-1.5 text-white/45">{a.is_postable ? a.split_by : "—"}</td>
+                  <td className="px-3 py-1.5 text-tertiary">{a.account_class}</td>
+                  <td className="px-3 py-1.5 font-mono text-tertiary tabular-nums">{a.sat_group_code ?? "—"}</td>
+                  <td className="px-3 py-1.5 text-tertiary">{a.is_postable ? a.split_by : "—"}</td>
                   <td className="px-3 py-1 text-right whitespace-nowrap">
                     {!a.is_postable && (
                       <button
                         onClick={() => startSubaccount(a)}
-                        className="mr-1 rounded border border-white/[0.08] px-1.5 py-0.5 text-[9px] text-white/55 hover:bg-white/[0.04]"
+                        className="mr-1 rounded border border-default px-1.5 py-0.5 text-[9px] text-tertiary hover:bg-surface-2"
                         title="Crear subcuenta bajo esta cuenta"
                       >+ subcuenta</button>
                     )}
                     <button
                       onClick={() => setEditing(a.id)}
-                      className="mr-1 rounded border border-white/[0.08] px-1.5 py-0.5 text-[9px] text-white/55 hover:bg-white/[0.04]"
+                      className="mr-1 rounded border border-default px-1.5 py-0.5 text-[9px] text-tertiary hover:bg-surface-2"
                     >Editar</button>
                     <button
                       onClick={() => void remove(a.id)}
-                      className="rounded border border-red-500/20 px-1.5 py-0.5 text-[9px] text-red-300/80 hover:bg-red-500/10"
+                      className="rounded border border-red-500/20 px-1.5 py-0.5 text-[9px] text-error/80 hover:bg-red-500/10"
                     ><Trash2 className="inline h-3 w-3" /></button>
                   </td>
                 </tr>
@@ -758,17 +758,17 @@ function EditableAccountRow({
 }) {
   const [d, setD] = useState<AccountDraft>(initial);
   return (
-    <tr className="bg-indigo-500/5">
+    <tr className="bg-blue-500/5">
       <td className="px-2 py-1">
         <input
           value={d.code} onChange={(e) => setD({ ...d, code: e.target.value })}
-          className="w-full rounded border border-white/[0.08] bg-zinc-900 px-1.5 py-0.5 font-mono text-[11px] text-white outline-none focus:border-indigo-500/40"
+          className="w-full rounded border border-default bg-surface-1 px-1.5 py-0.5 font-mono text-[11px] text-primary outline-none focus:bg-accent-muted"
         />
       </td>
       <td className="px-2 py-1">
         <input
           value={d.name} onChange={(e) => setD({ ...d, name: e.target.value })}
-          className="w-full rounded border border-white/[0.08] bg-zinc-900 px-1.5 py-0.5 text-[11px] text-white outline-none focus:border-indigo-500/40"
+          className="w-full rounded border border-default bg-surface-1 px-1.5 py-0.5 text-[11px] text-primary outline-none focus:bg-accent-muted"
         />
       </td>
       <td className="px-2 py-1">
@@ -776,14 +776,14 @@ function EditableAccountRow({
           <select
             value={d.account_class}
             onChange={(e) => setD({ ...d, account_class: e.target.value })}
-            className="rounded border border-white/[0.08] bg-zinc-900 px-1.5 py-0.5 text-[10px] text-white/70 outline-none"
+            className="rounded border border-default bg-surface-1 px-1.5 py-0.5 text-[10px] text-secondary outline-none"
           >
             {ACCOUNT_CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
           <select
             value={d.parent_id ?? ""}
             onChange={(e) => setD({ ...d, parent_id: e.target.value ? Number(e.target.value) : null })}
-            className="rounded border border-white/[0.08] bg-zinc-900 px-1.5 py-0.5 text-[10px] text-white/55 outline-none"
+            className="rounded border border-default bg-surface-1 px-1.5 py-0.5 text-[10px] text-tertiary outline-none"
             title="Cuenta padre"
           >
             <option value="">— sin padre —</option>
@@ -791,7 +791,7 @@ function EditableAccountRow({
               .filter(h => h.id !== d.id)
               .map(h => <option key={h.id} value={h.id}>{h.code}</option>)}
           </select>
-          <label className="flex items-center gap-1 text-[9px] text-white/55">
+          <label className="flex items-center gap-1 text-[9px] text-tertiary">
             <input
               type="checkbox"
               checked={d.is_postable}
@@ -805,14 +805,14 @@ function EditableAccountRow({
         <input
           value={d.sat_group_code}
           onChange={(e) => setD({ ...d, sat_group_code: e.target.value })}
-          className="w-20 rounded border border-white/[0.08] bg-zinc-900 px-1.5 py-0.5 font-mono text-[10px] text-white/70 outline-none"
+          className="w-20 rounded border border-default bg-surface-1 px-1.5 py-0.5 font-mono text-[10px] text-secondary outline-none"
         />
       </td>
       <td className="px-2 py-1">
         <select
           value={d.split_by}
           onChange={(e) => setD({ ...d, split_by: e.target.value })}
-          className="rounded border border-white/[0.08] bg-zinc-900 px-1.5 py-0.5 text-[10px] text-white/70 outline-none"
+          className="rounded border border-default bg-surface-1 px-1.5 py-0.5 text-[10px] text-secondary outline-none"
         >
           {SPLIT_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
@@ -820,11 +820,11 @@ function EditableAccountRow({
       <td className="px-2 py-1 text-right whitespace-nowrap">
         <button
           onClick={() => void onSave(d)} disabled={busy}
-          className="mr-1 rounded border border-indigo-500/30 bg-indigo-500/10 px-1.5 py-0.5 text-[9px] text-indigo-200 hover:bg-indigo-500/20"
+          className="mr-1 rounded border bg-accent-muted bg-accent-muted px-1.5 py-0.5 text-[9px] text-accent hover:bg-accent-muted"
         >Guardar</button>
         <button
           onClick={onCancel}
-          className="rounded border border-white/[0.08] px-1.5 py-0.5 text-[9px] text-white/55 hover:bg-white/[0.04]"
+          className="rounded border border-default px-1.5 py-0.5 text-[9px] text-tertiary hover:bg-surface-2"
         >×</button>
       </td>
     </tr>
@@ -890,34 +890,34 @@ function TaxRatesEditor({
 
   return (
     <div className="space-y-3">
-      {error && <p className="text-[10px] text-red-300">{error}</p>}
+      {error && <p className="text-[10px] text-error">{error}</p>}
 
       {/* Add-new */}
-      <div className="overflow-hidden rounded-lg border border-white/[0.07] bg-white/[0.02]">
+      <div className="overflow-hidden rounded-lg border border-default bg-surface-1">
         <div className="grid grid-cols-12 items-center gap-2 px-3 py-2">
           <input
             value={draft.name}
             onChange={(e) => setDraft({ ...draft, name: e.target.value })}
             placeholder={t("iva.name")}
-            className="col-span-4 rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 text-[11px] text-white outline-none focus:border-indigo-500/40"
+            className="col-span-4 rounded border border-default bg-surface-1 px-2 py-1 text-[11px] text-primary outline-none focus:bg-accent-muted"
           />
           <input
             type="number" step="0.0001" min="0" max="1"
             value={draft.rate}
             onChange={(e) => setDraft({ ...draft, rate: e.target.value })}
-            className="col-span-1 rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 text-right text-[11px] tabular-nums text-white outline-none focus:border-indigo-500/40"
+            className="col-span-1 rounded border border-default bg-surface-1 px-2 py-1 text-right text-[11px] tabular-nums text-primary outline-none focus:bg-accent-muted"
           />
           <select
             value={draft.behavior}
             onChange={(e) => setDraft({ ...draft, behavior: e.target.value })}
-            className="col-span-3 rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 text-[10px] text-white/70 outline-none focus:border-indigo-500/40"
+            className="col-span-3 rounded border border-default bg-surface-1 px-2 py-1 text-[10px] text-secondary outline-none focus:bg-accent-muted"
           >
             {TAX_BEHAVIORS.map(b => <option key={b} value={b}>{b}</option>)}
           </select>
           <select
             value={draft.gl_account_id ?? ""}
             onChange={(e) => setDraft({ ...draft, gl_account_id: e.target.value ? Number(e.target.value) : null })}
-            className="col-span-3 rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 text-[10px] text-white/70 outline-none focus:border-indigo-500/40"
+            className="col-span-3 rounded border border-default bg-surface-1 px-2 py-1 text-[10px] text-secondary outline-none focus:bg-accent-muted"
           >
             <option value="">— GL —</option>
             {glOptions.map(a => (
@@ -927,7 +927,7 @@ function TaxRatesEditor({
           <button
             onClick={() => void saveDraft(draft)}
             disabled={busy}
-            className="col-span-1 inline-flex items-center justify-center gap-1 rounded border border-indigo-500/30 bg-indigo-500/10 py-1 text-[10px] text-indigo-200 hover:bg-indigo-500/20 disabled:opacity-40"
+            className="col-span-1 inline-flex items-center justify-center gap-1 rounded border bg-accent-muted bg-accent-muted py-1 text-[10px] text-accent hover:bg-accent-muted disabled:opacity-40"
           >
             {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
           </button>
@@ -937,9 +937,9 @@ function TaxRatesEditor({
       {rates.length === 0 ? (
         <EmptyHint message={t("iva.empty")} />
       ) : (
-        <div className="overflow-hidden rounded-lg border border-white/[0.07] bg-white/[0.02]">
+        <div className="overflow-hidden rounded-lg border border-default bg-surface-1">
           <table className="w-full text-[11px]">
-            <thead className="bg-white/[0.02] text-[9px] uppercase tracking-widest text-white/30">
+            <thead className="bg-surface-1 text-[9px] uppercase tracking-widest text-muted">
               <tr>
                 <th className="px-3 py-1.5 text-left">{t("iva.name")}</th>
                 <th className="px-3 py-1.5 text-left">{t("iva.rate")}</th>
@@ -962,21 +962,21 @@ function TaxRatesEditor({
                   busy={busy}
                 />
               ) : (
-                <tr key={r.id} className="hover:bg-white/[0.02]">
-                  <td className="px-3 py-1.5 text-white/85">{r.name}</td>
-                  <td className="px-3 py-1.5 tabular-nums text-white/70">{(r.rate * 100).toFixed(2)}%</td>
-                  <td className="px-3 py-1.5 text-white/45">{r.behavior}</td>
-                  <td className="px-3 py-1.5 font-mono text-white/40 tabular-nums">
+                <tr key={r.id} className="hover:bg-surface-1">
+                  <td className="px-3 py-1.5 text-primary">{r.name}</td>
+                  <td className="px-3 py-1.5 tabular-nums text-secondary">{(r.rate * 100).toFixed(2)}%</td>
+                  <td className="px-3 py-1.5 text-tertiary">{r.behavior}</td>
+                  <td className="px-3 py-1.5 font-mono text-tertiary tabular-nums">
                     {r.gl_account_id === null ? "—" : accounts.find(a => a.id === r.gl_account_id)?.code ?? "?"}
                   </td>
                   <td className="px-3 py-1 text-right whitespace-nowrap">
                     <button
                       onClick={() => setEditing(r.id)}
-                      className="mr-1 rounded border border-white/[0.08] px-1.5 py-0.5 text-[9px] text-white/55 hover:bg-white/[0.04]"
+                      className="mr-1 rounded border border-default px-1.5 py-0.5 text-[9px] text-tertiary hover:bg-surface-2"
                     >Editar</button>
                     <button
                       onClick={() => void remove(r.id)}
-                      className="rounded border border-red-500/20 px-1.5 py-0.5 text-[9px] text-red-300/80 hover:bg-red-500/10"
+                      className="rounded border border-red-500/20 px-1.5 py-0.5 text-[9px] text-error/80 hover:bg-red-500/10"
                     ><Trash2 className="inline h-3 w-3" /></button>
                   </td>
                 </tr>
@@ -1000,24 +1000,24 @@ function EditableTaxRow({
 }) {
   const [d, setD] = useState<TaxRateDraft>(initial);
   return (
-    <tr className="bg-indigo-500/5">
+    <tr className="bg-blue-500/5">
       <td className="px-2 py-1">
         <input
           value={d.name} onChange={(e) => setD({ ...d, name: e.target.value })}
-          className="w-full rounded border border-white/[0.08] bg-zinc-900 px-1.5 py-0.5 text-[11px] text-white outline-none"
+          className="w-full rounded border border-default bg-surface-1 px-1.5 py-0.5 text-[11px] text-primary outline-none"
         />
       </td>
       <td className="px-2 py-1">
         <input
           type="number" step="0.0001" min="0" max="1"
           value={d.rate} onChange={(e) => setD({ ...d, rate: e.target.value })}
-          className="w-20 rounded border border-white/[0.08] bg-zinc-900 px-1.5 py-0.5 text-right text-[11px] tabular-nums text-white outline-none"
+          className="w-20 rounded border border-default bg-surface-1 px-1.5 py-0.5 text-right text-[11px] tabular-nums text-primary outline-none"
         />
       </td>
       <td className="px-2 py-1">
         <select
           value={d.behavior} onChange={(e) => setD({ ...d, behavior: e.target.value })}
-          className="rounded border border-white/[0.08] bg-zinc-900 px-1.5 py-0.5 text-[10px] text-white/70 outline-none"
+          className="rounded border border-default bg-surface-1 px-1.5 py-0.5 text-[10px] text-secondary outline-none"
         >
           {TAX_BEHAVIORS.map(b => <option key={b} value={b}>{b}</option>)}
         </select>
@@ -1026,7 +1026,7 @@ function EditableTaxRow({
         <select
           value={d.gl_account_id ?? ""}
           onChange={(e) => setD({ ...d, gl_account_id: e.target.value ? Number(e.target.value) : null })}
-          className="rounded border border-white/[0.08] bg-zinc-900 px-1.5 py-0.5 text-[10px] text-white/70 outline-none"
+          className="rounded border border-default bg-surface-1 px-1.5 py-0.5 text-[10px] text-secondary outline-none"
         >
           <option value="">—</option>
           {glOptions.map(a => <option key={a.id} value={a.id}>{a.code}</option>)}
@@ -1035,11 +1035,11 @@ function EditableTaxRow({
       <td className="px-2 py-1 text-right whitespace-nowrap">
         <button
           onClick={() => void onSave(d)} disabled={busy}
-          className="mr-1 rounded border border-indigo-500/30 bg-indigo-500/10 px-1.5 py-0.5 text-[9px] text-indigo-200 hover:bg-indigo-500/20"
+          className="mr-1 rounded border bg-accent-muted bg-accent-muted px-1.5 py-0.5 text-[9px] text-accent hover:bg-accent-muted"
         >Guardar</button>
         <button
           onClick={onCancel}
-          className="rounded border border-white/[0.08] px-1.5 py-0.5 text-[9px] text-white/55 hover:bg-white/[0.04]"
+          className="rounded border border-default px-1.5 py-0.5 text-[9px] text-tertiary hover:bg-surface-2"
         >×</button>
       </td>
     </tr>
@@ -1150,18 +1150,18 @@ function ImportPanel({
       <div>
         <div className="mb-1 flex items-baseline justify-between px-1">
           <SectionLabel>{t("importar.aiHeader")}</SectionLabel>
-          <span className="text-[10px] text-white/30">
+          <span className="text-[10px] text-muted">
             {categories.length} categorías · {accounts.length} cuentas
           </span>
         </div>
-        <div className="rounded-lg border border-white/[0.07] bg-white/[0.02] p-3 space-y-2">
-          <p className="text-[10px] text-white/45">{t("importar.aiHint")}</p>
+        <div className="rounded-lg border border-default bg-surface-1 p-3 space-y-2">
+          <p className="text-[10px] text-tertiary">{t("importar.aiHint")}</p>
           <div className="flex items-center gap-2">
             <input
               value={hint}
               onChange={(e) => setHint(e.target.value)}
               placeholder={t("importar.aiPlaceholder")}
-              className="flex-1 rounded border border-white/[0.07] bg-black/30 px-2 py-1 text-[11px] text-white/70 placeholder:text-white/20 outline-none focus:border-white/20"
+              className="flex-1 rounded border border-default bg-black/30 px-2 py-1 text-[11px] text-secondary placeholder:text-muted outline-none focus:border-strong"
             />
             <button
               onClick={() => void runAi()}
@@ -1174,7 +1174,7 @@ function ImportPanel({
             {suggestions.length > 0 && (
               <button
                 onClick={() => void applyAccepted()}
-                className="shrink-0 inline-flex items-center gap-1 rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-[10px] text-emerald-200 hover:bg-emerald-500/20"
+                className="shrink-0 inline-flex items-center gap-1 rounded border border-emerald-500/30 bg-success-muted px-2 py-1 text-[10px] text-success hover:bg-success-muted"
               >
                 <CheckCircle2 className="h-3 w-3" />
                 {t("importar.aiApply", { count: accepted.size })}
@@ -1183,15 +1183,15 @@ function ImportPanel({
           </div>
 
           {aiNote && (
-            <p className="rounded border border-amber-500/20 bg-amber-950/20 px-2 py-1 text-[10px] text-amber-200">
+            <p className="rounded border border-amber-500/20 bg-amber-950/20 px-2 py-1 text-[10px] text-warning">
               {aiNote}
             </p>
           )}
 
           {suggestions.length > 0 && (
-            <div className="overflow-hidden rounded border border-white/[0.07]">
+            <div className="overflow-hidden rounded border border-default">
               <table className="w-full text-[10px]">
-                <thead className="bg-white/[0.03] text-[9px] uppercase tracking-widest text-white/30">
+                <thead className="bg-surface-1 text-[9px] uppercase tracking-widest text-muted">
                   <tr>
                     <th className="px-2 py-1 text-left">✓</th>
                     <th className="px-2 py-1 text-left">Cat.</th>
@@ -1214,10 +1214,10 @@ function ImportPanel({
                           }}
                         />
                       </td>
-                      <td className="px-2 py-1 font-mono text-white/65">{s.category_code}</td>
-                      <td className="px-2 py-1 font-mono text-white/65 tabular-nums">{acctCode(s.expense_account_id)}</td>
-                      <td className="px-2 py-1 text-white/55">{rateName(s.tax_rate_id)}</td>
-                      <td className="px-2 py-1 font-mono text-white/65 tabular-nums">{acctCode(s.counterparty_account_id)}</td>
+                      <td className="px-2 py-1 font-mono text-secondary">{s.category_code}</td>
+                      <td className="px-2 py-1 font-mono text-secondary tabular-nums">{acctCode(s.expense_account_id)}</td>
+                      <td className="px-2 py-1 text-tertiary">{rateName(s.tax_rate_id)}</td>
+                      <td className="px-2 py-1 font-mono text-secondary tabular-nums">{acctCode(s.counterparty_account_id)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1260,19 +1260,19 @@ function UnifiedImportPanel({
     <div>
       <div className="mb-1 flex items-baseline justify-between px-1">
         <SectionLabel>Importar catálogo</SectionLabel>
-        <div className="inline-flex overflow-hidden rounded border border-white/[0.08]">
+        <div className="inline-flex overflow-hidden rounded border border-default">
           <button
             onClick={() => setMode("csv")}
             className={`px-2 py-0.5 text-[10px] transition-colors ${
-              mode === "csv" ? "bg-indigo-500/20 text-indigo-200" : "bg-white/[0.02] text-white/45 hover:text-white/70"
+              mode === "csv" ? "bg-accent-muted text-accent" : "bg-surface-1 text-tertiary hover:text-secondary"
             }`}
           >
             CSV directo
           </button>
           <button
             onClick={() => setMode("copilot")}
-            className={`border-l border-white/[0.08] px-2 py-0.5 text-[10px] transition-colors ${
-              mode === "copilot" ? "bg-violet-500/20 text-violet-200" : "bg-white/[0.02] text-white/45 hover:text-white/70"
+            className={`border-l border-default px-2 py-0.5 text-[10px] transition-colors ${
+              mode === "copilot" ? "bg-violet-500/20 text-violet-200" : "bg-surface-1 text-tertiary hover:text-secondary"
             }`}
           >
             <Sparkles className="mr-1 -mt-0.5 inline h-2.5 w-2.5" />
@@ -1282,10 +1282,10 @@ function UnifiedImportPanel({
       </div>
 
       {mode === "csv" ? (
-        <div className="rounded-lg border border-white/[0.07] bg-white/[0.02] p-3 space-y-2">
-          <p className="text-[10px] text-white/45">{t("importar.csvHint")}</p>
+        <div className="rounded-lg border border-default bg-surface-1 p-3 space-y-2">
+          <p className="text-[10px] text-tertiary">{t("importar.csvHint")}</p>
           <div className="flex items-center gap-2">
-            <label className="inline-flex cursor-pointer items-center gap-1 rounded border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-[10px] text-white/65 hover:bg-white/[0.06]">
+            <label className="inline-flex cursor-pointer items-center gap-1 rounded border border-default bg-surface-1 px-2 py-1 text-[10px] text-secondary hover:bg-surface-3">
               <Upload className="h-3 w-3" />
               {t("importar.chooseFile")}
               <input
@@ -1298,7 +1298,7 @@ function UnifiedImportPanel({
             <button
               onClick={() => void runImport()}
               disabled={!csv.trim() || csvBusy}
-              className="inline-flex items-center gap-1 rounded border border-indigo-500/30 bg-indigo-500/10 px-2 py-1 text-[10px] text-indigo-200 hover:bg-indigo-500/20 disabled:opacity-40"
+              className="inline-flex items-center gap-1 rounded border bg-accent-muted bg-accent-muted px-2 py-1 text-[10px] text-accent hover:bg-accent-muted disabled:opacity-40"
             >
               {csvBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
               {t("importar.run")}
@@ -1309,13 +1309,13 @@ function UnifiedImportPanel({
             onChange={(e) => setCsv(e.target.value)}
             rows={6}
             placeholder={"code,name,class,sat,split\n601.30,Renta de oficina,expense,601.30,none\n..."}
-            className="w-full resize-y rounded border border-white/[0.07] bg-black/30 px-2 py-1.5 font-mono text-[10px] text-white/70 placeholder:text-white/20 outline-none focus:border-white/20"
+            className="w-full resize-y rounded border border-default bg-black/30 px-2 py-1.5 font-mono text-[10px] text-secondary placeholder:text-muted outline-none focus:border-strong"
           />
           {csvResult && (
-            <div className="space-y-1 rounded border border-white/[0.07] bg-black/20 p-2 text-[10px]">
+            <div className="space-y-1 rounded border border-default bg-black/20 p-2 text-[10px]">
               <p className="text-emerald-300">✓ {csvResult.created_or_updated} cuentas procesadas</p>
-              {csvResult.warnings?.map((w, i) => <p key={i} className="text-amber-300/80">• {w}</p>)}
-              {csvResult.errors?.map((e, i) => <p key={i} className="text-red-300/80">× {e}</p>)}
+              {csvResult.warnings?.map((w, i) => <p key={i} className="text-warning/80">• {w}</p>)}
+              {csvResult.errors?.map((e, i) => <p key={i} className="text-error/80">× {e}</p>)}
             </div>
           )}
         </div>
@@ -1414,12 +1414,12 @@ function TemplateCopilotPanel({
 
   return (
     <div className="rounded-lg border border-violet-500/20 bg-gradient-to-br from-violet-950/20 to-transparent p-3 space-y-2">
-      <p className="text-[10px] text-white/55">{t("importar.copilotHint")}</p>
+      <p className="text-[10px] text-tertiary">{t("importar.copilotHint")}</p>
 
         <div className="grid grid-cols-12 gap-2">
           <div className="col-span-12 lg:col-span-7 space-y-2">
             <div className="flex items-center gap-2">
-              <label className="inline-flex cursor-pointer items-center gap-1 rounded border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-[10px] text-white/65 hover:bg-white/[0.06]">
+              <label className="inline-flex cursor-pointer items-center gap-1 rounded border border-default bg-surface-1 px-2 py-1 text-[10px] text-secondary hover:bg-surface-3">
                 <Upload className="h-3 w-3" />
                 {t("importar.chooseFile")}
                 <input
@@ -1437,14 +1437,14 @@ function TemplateCopilotPanel({
                 {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
                 {t("importar.copilotAnalyze")}
               </button>
-              <span className="text-[10px] text-white/35">{raw.length} chars</span>
+              <span className="text-[10px] text-muted">{raw.length} chars</span>
             </div>
             <textarea
               value={raw}
               onChange={(e) => setRaw(e.target.value)}
               rows={8}
               placeholder={t("importar.copilotPlaceholder")}
-              className="w-full resize-y rounded border border-white/[0.07] bg-black/30 px-2 py-1.5 font-mono text-[10px] text-white/70 placeholder:text-white/20 outline-none focus:border-white/20"
+              className="w-full resize-y rounded border border-default bg-black/30 px-2 py-1.5 font-mono text-[10px] text-secondary placeholder:text-muted outline-none focus:border-strong"
             />
           </div>
           <div className="col-span-12 lg:col-span-5 space-y-2">
@@ -1453,17 +1453,17 @@ function TemplateCopilotPanel({
               onChange={(e) => setHint(e.target.value)}
               rows={3}
               placeholder={t("importar.copilotHintPlaceholder")}
-              className="w-full resize-none rounded border border-white/[0.07] bg-black/30 px-2 py-1.5 text-[11px] text-white/70 placeholder:text-white/20 outline-none focus:border-white/20"
+              className="w-full resize-none rounded border border-default bg-black/30 px-2 py-1.5 text-[11px] text-secondary placeholder:text-muted outline-none focus:border-strong"
             />
             {note && (
-              <p className="rounded border border-amber-500/20 bg-amber-950/20 px-2 py-1 text-[10px] text-amber-200">
+              <p className="rounded border border-amber-500/20 bg-amber-950/20 px-2 py-1 text-[10px] text-warning">
                 {note}
               </p>
             )}
             {importResult && (
-              <div className="space-y-1 rounded border border-white/[0.07] bg-black/20 p-2 text-[10px]">
+              <div className="space-y-1 rounded border border-default bg-black/20 p-2 text-[10px]">
                 <p className="text-emerald-300">✓ {importResult.created_or_updated} cuentas importadas</p>
-                {importResult.errors?.slice(0, 4).map((e, i) => <p key={i} className="text-red-300/80">× {e}</p>)}
+                {importResult.errors?.slice(0, 4).map((e, i) => <p key={i} className="text-error/80">× {e}</p>)}
               </div>
             )}
           </div>
@@ -1472,29 +1472,29 @@ function TemplateCopilotPanel({
         {preview.length > 0 && (
           <div className="space-y-2 pt-1">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] text-white/45">
+              <span className="text-[10px] text-tertiary">
                 {preview.length} cuentas detectadas · {accepted.size} seleccionadas
               </span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={toggleAll}
-                  className="rounded border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-[10px] text-white/65 hover:bg-white/[0.06]"
+                  className="rounded border border-default bg-surface-1 px-2 py-1 text-[10px] text-secondary hover:bg-surface-3"
                 >
                   {accepted.size === preview.length ? "Deseleccionar todo" : "Seleccionar todo"}
                 </button>
                 <button
                   onClick={() => void importSelected()}
                   disabled={accepted.size === 0 || importBusy}
-                  className="inline-flex items-center gap-1 rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-[10px] text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-40"
+                  className="inline-flex items-center gap-1 rounded border border-emerald-500/30 bg-success-muted px-2 py-1 text-[10px] text-success hover:bg-success-muted disabled:opacity-40"
                 >
                   {importBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
                   {t("importar.copilotImport", { count: accepted.size })}
                 </button>
               </div>
             </div>
-            <div className="max-h-[360px] overflow-auto rounded border border-white/[0.07]">
+            <div className="max-h-[360px] overflow-auto rounded border border-default">
               <table className="w-full text-[10px]">
-                <thead className="sticky top-0 bg-zinc-950 text-[9px] uppercase tracking-widest text-white/30">
+                <thead className="sticky top-0 bg-surface-0 text-[9px] uppercase tracking-widest text-muted">
                   <tr>
                     <th className="px-2 py-1 text-left">✓</th>
                     <th className="px-2 py-1 text-left">Código</th>
@@ -1514,11 +1514,11 @@ function TemplateCopilotPanel({
                           onChange={() => toggle(a.code)}
                         />
                       </td>
-                      <td className="px-2 py-1 font-mono text-white/75 tabular-nums">{a.code}</td>
-                      <td className="px-2 py-1 text-white/75">{a.name}</td>
-                      <td className="px-2 py-1 text-white/55">{a.account_class}</td>
-                      <td className="px-2 py-1 font-mono text-white/45 tabular-nums">{a.sat_group_code ?? "—"}</td>
-                      <td className="px-2 py-1 text-white/45">{a.split_by}</td>
+                      <td className="px-2 py-1 font-mono text-secondary tabular-nums">{a.code}</td>
+                      <td className="px-2 py-1 text-secondary">{a.name}</td>
+                      <td className="px-2 py-1 text-tertiary">{a.account_class}</td>
+                      <td className="px-2 py-1 font-mono text-tertiary tabular-nums">{a.sat_group_code ?? "—"}</td>
+                      <td className="px-2 py-1 text-tertiary">{a.split_by}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1567,22 +1567,22 @@ function SimulatorTab({ companyId, categories }: { companyId: number; categories
     <div className="grid grid-cols-12 gap-3">
       <div className="col-span-12 lg:col-span-5">
         <SectionLabel>{t("pruebas.input")}</SectionLabel>
-        <div className="overflow-hidden rounded-lg border border-white/[0.07] bg-white/[0.02] divide-y divide-white/[0.05]">
+        <div className="overflow-hidden rounded-lg border border-default bg-surface-1 divide-y divide-white/[0.05]">
           <div className="flex items-center justify-between gap-3 px-3 py-2">
-            <p className="text-[11px] text-white/68">{t("pruebas.amount")}</p>
+            <p className="text-[11px] text-secondary">{t("pruebas.amount")}</p>
             <input
               type="number" step="0.01" min="0"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-28 rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 text-right text-[11px] tabular-nums text-white outline-none focus:border-indigo-500/40"
+              className="w-28 rounded border border-default bg-surface-1 px-2 py-1 text-right text-[11px] tabular-nums text-primary outline-none focus:bg-accent-muted"
             />
           </div>
           <div className="flex items-center justify-between gap-3 px-3 py-2">
-            <p className="text-[11px] text-white/68">{t("pruebas.category")}</p>
+            <p className="text-[11px] text-secondary">{t("pruebas.category")}</p>
             <select
               value={categoryCode}
               onChange={(e) => setCategoryCode(e.target.value)}
-              className="w-48 rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 text-[10px] text-white/70 outline-none focus:border-indigo-500/40"
+              className="w-48 rounded border border-default bg-surface-1 px-2 py-1 text-[10px] text-secondary outline-none focus:bg-accent-muted"
             >
               {categories.map(c => (
                 <option key={c.id} value={c.code}>{c.code} — {c.name}</option>
@@ -1593,7 +1593,7 @@ function SimulatorTab({ companyId, categories }: { companyId: number; categories
             <button
               onClick={() => void run()}
               disabled={busy}
-              className="inline-flex items-center gap-1 rounded border border-indigo-500/30 bg-indigo-500/10 px-2 py-1 text-[10px] text-indigo-200 hover:bg-indigo-500/20 disabled:opacity-40"
+              className="inline-flex items-center gap-1 rounded border bg-accent-muted bg-accent-muted px-2 py-1 text-[10px] text-accent hover:bg-accent-muted disabled:opacity-40"
             >
               {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <PlayCircle className="h-3 w-3" />}
               {t("pruebas.run")}
@@ -1653,37 +1653,37 @@ function BulkSimulatorPanel({ companyId }: { companyId: number }) {
   return (
     <div>
       <SectionLabel>{t("pruebas.bulkHeader")}</SectionLabel>
-      <div className="space-y-3 rounded-lg border border-white/[0.07] bg-white/[0.02] p-3">
+      <div className="space-y-3 rounded-lg border border-default bg-surface-1 p-3">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-white/40">{t("pruebas.bulkLimit")}</span>
+          <span className="text-[10px] text-tertiary">{t("pruebas.bulkLimit")}</span>
           <input
             type="number" min="1" max="500" value={limit}
             onChange={(e) => setLimit(Number(e.target.value) || 50)}
-            className="w-20 rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 text-right text-[11px] tabular-nums text-white outline-none focus:border-indigo-500/40"
+            className="w-20 rounded border border-default bg-surface-1 px-2 py-1 text-right text-[11px] tabular-nums text-primary outline-none focus:bg-accent-muted"
           />
           <button
             onClick={() => void run()}
             disabled={busy}
-            className="inline-flex items-center gap-1 rounded border border-indigo-500/30 bg-indigo-500/10 px-2 py-1 text-[10px] text-indigo-200 hover:bg-indigo-500/20 disabled:opacity-40"
+            className="inline-flex items-center gap-1 rounded border bg-accent-muted bg-accent-muted px-2 py-1 text-[10px] text-accent hover:bg-accent-muted disabled:opacity-40"
           >
             {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <PlayCircle className="h-3 w-3" />}
             {t("pruebas.bulkRun")}
           </button>
           {result && (
-            <span className="ml-auto text-[10px] text-white/40">
+            <span className="ml-auto text-[10px] text-tertiary">
               {result.count} gastos · {result.balanced}/{result.count} balanceados ·
-              {" "}<span className="text-amber-300/80">{result.unmapped}</span> sin mapeo ·
-              {" "}<span className="text-amber-300/80">{result.missing_iva}</span> sin IVA
+              {" "}<span className="text-warning/80">{result.unmapped}</span> sin mapeo ·
+              {" "}<span className="text-warning/80">{result.missing_iva}</span> sin IVA
             </span>
           )}
         </div>
 
-        {error && <p className="text-[10px] text-red-300">{error}</p>}
+        {error && <p className="text-[10px] text-error">{error}</p>}
 
         {result && result.rows.length > 0 && (
-          <div className="overflow-hidden rounded border border-white/[0.07]">
+          <div className="overflow-hidden rounded border border-default">
             <table className="w-full text-[10px]">
-              <thead className="bg-white/[0.03] text-[9px] uppercase tracking-widest text-white/30">
+              <thead className="bg-surface-1 text-[9px] uppercase tracking-widest text-muted">
                 <tr>
                   <th className="px-2 py-1 text-left">#</th>
                   <th className="px-2 py-1 text-left">{t("pruebas.colDate")}</th>
@@ -1697,25 +1697,25 @@ function BulkSimulatorPanel({ companyId }: { companyId: number }) {
               <tbody className="divide-y divide-white/[0.04]">
                 {result.rows.map(r => (
                   <tr key={r.expense_id} className={r.balanced ? "" : "bg-rose-500/5"}>
-                    <td className="px-2 py-1 font-mono text-white/55 tabular-nums">{r.expense_id}</td>
-                    <td className="px-2 py-1 font-mono text-white/40 tabular-nums">{r.date ?? "—"}</td>
-                    <td className="px-2 py-1 text-white/75">{r.description.slice(0, 60)}</td>
-                    <td className="px-2 py-1 font-mono text-white/55">{r.category_code ?? "—"}</td>
-                    <td className="px-2 py-1 text-right font-mono tabular-nums text-white/80">{r.amount}</td>
+                    <td className="px-2 py-1 font-mono text-tertiary tabular-nums">{r.expense_id}</td>
+                    <td className="px-2 py-1 font-mono text-tertiary tabular-nums">{r.date ?? "—"}</td>
+                    <td className="px-2 py-1 text-secondary">{r.description.slice(0, 60)}</td>
+                    <td className="px-2 py-1 font-mono text-tertiary">{r.category_code ?? "—"}</td>
+                    <td className="px-2 py-1 text-right font-mono tabular-nums text-secondary">{r.amount}</td>
                     <td className="px-2 py-1 text-center">
                       {r.balanced
                         ? <CheckCircle2 className="inline h-3 w-3 text-emerald-300" />
                         : <AlertTriangle className="inline h-3 w-3 text-rose-300" />}
                     </td>
-                    <td className="px-2 py-1 text-amber-200/70" title={r.warnings.join(" · ")}>
+                    <td className="px-2 py-1 text-warning/70" title={r.warnings.join(" · ")}>
                       {r.warning_count > 0 ? t("pruebas.warningCount", { count: r.warning_count }) : "—"}
                     </td>
                   </tr>
                 ))}
               </tbody>
-              <tfoot className="bg-white/[0.03]">
+              <tfoot className="bg-surface-1">
                 <tr>
-                  <td colSpan={4} className="px-2 py-1 text-right text-[9px] uppercase tracking-widest text-white/30">{t("pruebas.totals")}</td>
+                  <td colSpan={4} className="px-2 py-1 text-right text-[9px] uppercase tracking-widest text-muted">{t("pruebas.totals")}</td>
                   <td className="px-2 py-1 text-right font-mono tabular-nums text-emerald-300/90">{result.total_debit}</td>
                   <td colSpan={2} className="px-2 py-1 text-right font-mono tabular-nums text-rose-300/90">{result.total_credit}</td>
                 </tr>
@@ -1766,15 +1766,15 @@ function ExportPanel({ companyId }: { companyId: number }) {
   const Card = ({ title, desc, format, icon: Icon }: {
     title: string; desc: string; format: "coi" | "contpaqi" | "sat-polizas"; icon: typeof FileText;
   }) => (
-    <div className="rounded-lg border border-white/[0.07] bg-white/[0.02] p-4">
+    <div className="rounded-lg border border-default bg-surface-1 p-4">
       <div className="mb-2 flex items-center gap-2">
-        <Icon className="h-4 w-4 text-indigo-300/80" />
-        <p className="text-[12px] font-semibold text-white/85">{title}</p>
+        <Icon className="h-4 w-4 text-accent" />
+        <p className="text-[12px] font-semibold text-primary">{title}</p>
       </div>
-      <p className="mb-3 text-[10px] text-white/45">{desc}</p>
+      <p className="mb-3 text-[10px] text-tertiary">{desc}</p>
       <button
         onClick={() => download(format)}
-        className="inline-flex items-center gap-1 rounded border border-indigo-500/30 bg-indigo-500/10 px-2 py-1 text-[10px] text-indigo-200 hover:bg-indigo-500/20"
+        className="inline-flex items-center gap-1 rounded border bg-accent-muted bg-accent-muted px-2 py-1 text-[10px] text-accent hover:bg-accent-muted"
       >
         <Download className="h-3 w-3" />
         {t("exportar.download")}
@@ -1785,21 +1785,21 @@ function ExportPanel({ companyId }: { companyId: number }) {
   return (
     <div className="space-y-4">
       <SectionLabel>{t("exportar.params")}</SectionLabel>
-      <div className="flex items-center gap-3 rounded-lg border border-white/[0.07] bg-white/[0.02] p-3">
-        <label className="flex items-center gap-2 text-[10px] text-white/45">
+      <div className="flex items-center gap-3 rounded-lg border border-default bg-surface-1 p-3">
+        <label className="flex items-center gap-2 text-[10px] text-tertiary">
           {t("exportar.limit")}
           <input
             type="number" min="1" max="500" value={limit}
             onChange={(e) => setLimit(Number(e.target.value) || 200)}
-            className="w-20 rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 text-right text-[11px] tabular-nums text-white outline-none focus:border-indigo-500/40"
+            className="w-20 rounded border border-default bg-surface-1 px-2 py-1 text-right text-[11px] tabular-nums text-primary outline-none focus:bg-accent-muted"
           />
         </label>
-        <label className="flex items-center gap-2 text-[10px] text-white/45">
+        <label className="flex items-center gap-2 text-[10px] text-tertiary">
           RFC
           <input
             value={rfc} onChange={(e) => setRfc(e.target.value.toUpperCase())}
             maxLength={13}
-            className="w-32 rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 font-mono text-[11px] text-white outline-none focus:border-indigo-500/40"
+            className="w-32 rounded border border-default bg-surface-1 px-2 py-1 font-mono text-[11px] text-primary outline-none focus:bg-accent-muted"
           />
         </label>
       </div>
@@ -1927,12 +1927,12 @@ function CustomExportPanel({ companyId, defaultLimit }: { companyId: number; def
   return (
     <div className="space-y-2 rounded-lg border border-violet-500/20 bg-gradient-to-br from-violet-950/15 to-transparent p-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[12px] font-semibold text-white/85">{t("exportar.customTitle")}</p>
+        <p className="text-[12px] font-semibold text-primary">{t("exportar.customTitle")}</p>
         <div className="flex items-center gap-2">
           <select
             onChange={(e) => applyPreset(Number(e.target.value))}
             defaultValue=""
-            className="rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 text-[10px] text-white/65"
+            className="rounded border border-default bg-surface-1 px-2 py-1 text-[10px] text-secondary"
           >
             <option value="" disabled>{t("exportar.customPresets")}</option>
             {CUSTOM_PRESETS.map((p, i) => (
@@ -1941,49 +1941,49 @@ function CustomExportPanel({ companyId, defaultLimit }: { companyId: number; def
           </select>
         </div>
       </div>
-      <p className="text-[10px] text-white/50">{t("exportar.customHint")}</p>
+      <p className="text-[10px] text-secondary">{t("exportar.customHint")}</p>
 
       <div className="grid grid-cols-12 gap-2">
         <div className="col-span-12 lg:col-span-7 space-y-2">
           <div>
-            <p className="mb-1 text-[9px] uppercase tracking-widest text-white/30">{t("exportar.customHeader")}</p>
+            <p className="mb-1 text-[9px] uppercase tracking-widest text-muted">{t("exportar.customHeader")}</p>
             <input
               value={header}
               onChange={(e) => setHeader(e.target.value)}
               placeholder="fecha,cuenta,debe,haber,concepto"
-              className="w-full rounded border border-white/[0.07] bg-black/30 px-2 py-1.5 font-mono text-[10px] text-white/70 placeholder:text-white/20 outline-none focus:border-white/20"
+              className="w-full rounded border border-default bg-black/30 px-2 py-1.5 font-mono text-[10px] text-secondary placeholder:text-muted outline-none focus:border-strong"
             />
           </div>
           <div>
-            <p className="mb-1 text-[9px] uppercase tracking-widest text-white/30">{t("exportar.customLine")}</p>
+            <p className="mb-1 text-[9px] uppercase tracking-widest text-muted">{t("exportar.customLine")}</p>
             <textarea
               value={line}
               onChange={(e) => setLine(e.target.value)}
               rows={3}
               placeholder="{date},{account_code},{debit},{credit},{description}"
-              className="w-full resize-y rounded border border-white/[0.07] bg-black/30 px-2 py-1.5 font-mono text-[10px] text-white/70 placeholder:text-white/20 outline-none focus:border-white/20"
+              className="w-full resize-y rounded border border-default bg-black/30 px-2 py-1.5 font-mono text-[10px] text-secondary placeholder:text-muted outline-none focus:border-strong"
             />
           </div>
           <div>
-            <p className="mb-1 text-[9px] uppercase tracking-widest text-white/30">{t("exportar.customFooter")}</p>
+            <p className="mb-1 text-[9px] uppercase tracking-widest text-muted">{t("exportar.customFooter")}</p>
             <input
               value={footer}
               onChange={(e) => setFooter(e.target.value)}
               placeholder="(opcional)"
-              className="w-full rounded border border-white/[0.07] bg-black/30 px-2 py-1.5 font-mono text-[10px] text-white/70 placeholder:text-white/20 outline-none focus:border-white/20"
+              className="w-full rounded border border-default bg-black/30 px-2 py-1.5 font-mono text-[10px] text-secondary placeholder:text-muted outline-none focus:border-strong"
             />
           </div>
         </div>
 
         <div className="col-span-12 lg:col-span-5 space-y-2">
           <div>
-            <p className="mb-1 text-[9px] uppercase tracking-widest text-white/30">{t("exportar.customPlaceholders")}</p>
+            <p className="mb-1 text-[9px] uppercase tracking-widest text-muted">{t("exportar.customPlaceholders")}</p>
             <div className="space-y-1">
               <div className="flex flex-wrap gap-1">
                 {EXPENSE_KEYS.map(k => (
                   <button key={k}
                     onClick={() => insertPlaceholder(k)}
-                    className="rounded border border-indigo-500/20 bg-indigo-500/[0.06] px-1.5 py-0.5 font-mono text-[10px] text-indigo-200/85 hover:bg-indigo-500/15"
+                    className="rounded border border-blue-500/20 bg-blue-500/[0.06] px-1.5 py-0.5 font-mono text-[10px] text-accent/85 hover:bg-accent-hover/15"
                   >{`{${k}}`}</button>
                 ))}
               </div>
@@ -1992,7 +1992,7 @@ function CustomExportPanel({ companyId, defaultLimit }: { companyId: number; def
                   <button key={k}
                     onClick={() => insertPlaceholder(k)}
                     disabled={perExpense}
-                    className="rounded border border-emerald-500/20 bg-emerald-500/[0.06] px-1.5 py-0.5 font-mono text-[10px] text-emerald-200/85 hover:bg-emerald-500/15 disabled:opacity-30"
+                    className="rounded border border-emerald-500/20 bg-emerald-500/[0.06] px-1.5 py-0.5 font-mono text-[10px] text-success/85 hover:bg-emerald-500/15 disabled:opacity-30"
                   >{`{${k}}`}</button>
                 ))}
               </div>
@@ -2000,43 +2000,43 @@ function CustomExportPanel({ companyId, defaultLimit }: { companyId: number; def
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <label className="flex items-center gap-1 text-[10px] text-white/55">
+            <label className="flex items-center gap-1 text-[10px] text-tertiary">
               {t("exportar.customGranularity")}
               <select
                 value={perExpense ? "expense" : "movement"}
                 onChange={(e) => setPerExpense(e.target.value === "expense")}
-                className="flex-1 rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 text-[10px] text-white/65"
+                className="flex-1 rounded border border-default bg-surface-1 px-2 py-1 text-[10px] text-secondary"
               >
                 <option value="movement">por movimiento</option>
                 <option value="expense">por gasto</option>
               </select>
             </label>
-            <label className="flex items-center gap-1 text-[10px] text-white/55">
+            <label className="flex items-center gap-1 text-[10px] text-tertiary">
               {t("exportar.limit")}
               <input
                 type="number" min={1} max={500} value={limit}
                 onChange={(e) => setLimit(Number(e.target.value) || 200)}
-                className="w-16 rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 text-right text-[10px] tabular-nums text-white/85"
+                className="w-16 rounded border border-default bg-surface-1 px-2 py-1 text-right text-[10px] tabular-nums text-primary"
               />
             </label>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <label className="flex items-center gap-1 text-[10px] text-white/55">
+            <label className="flex items-center gap-1 text-[10px] text-tertiary">
               {t("exportar.customFilename")}
               <input
                 value={filename}
                 onChange={(e) => setFilename(e.target.value.replace(/[^a-zA-Z0-9_-]/g, ""))}
-                className="flex-1 rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 font-mono text-[10px] text-white/85"
+                className="flex-1 rounded border border-default bg-surface-1 px-2 py-1 font-mono text-[10px] text-primary"
               />
             </label>
-            <label className="flex items-center gap-1 text-[10px] text-white/55">
+            <label className="flex items-center gap-1 text-[10px] text-tertiary">
               {t("exportar.customExtension")}
               <input
                 value={extension}
                 onChange={(e) => setExtension(e.target.value.replace(/[^a-zA-Z0-9]/g, ""))}
                 maxLength={5}
-                className="w-16 rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 font-mono text-[10px] text-white/85"
+                className="w-16 rounded border border-default bg-surface-1 px-2 py-1 font-mono text-[10px] text-primary"
               />
             </label>
           </div>
@@ -2055,20 +2055,20 @@ function CustomExportPanel({ companyId, defaultLimit }: { companyId: number; def
         <button
           onClick={() => void callExport(true)}
           disabled={!line.trim() || busy}
-          className="inline-flex items-center gap-1 rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-[10px] text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-40"
+          className="inline-flex items-center gap-1 rounded border border-emerald-500/30 bg-success-muted px-2 py-1 text-[10px] text-success hover:bg-success-muted disabled:opacity-40"
         >
           <Download className="h-3 w-3" />
           {t("exportar.customDownload")}
         </button>
         {preview && (
-          <span className="text-[10px] text-white/40">
+          <span className="text-[10px] text-tertiary">
             {preview.row_count} gastos · {preview.line_count} líneas · {preview.byte_count} bytes
           </span>
         )}
       </div>
 
       {preview && (
-        <pre className="max-h-[280px] overflow-auto rounded border border-white/[0.07] bg-black/40 p-2 font-mono text-[10px] text-white/70">{preview.preview}{preview.truncated ? "\n…" : ""}</pre>
+        <pre className="max-h-[280px] overflow-auto rounded border border-default bg-black/40 p-2 font-mono text-[10px] text-secondary">{preview.preview}{preview.truncated ? "\n…" : ""}</pre>
       )}
     </div>
   );
@@ -2080,7 +2080,7 @@ function CustomExportPanel({ companyId, defaultLimit }: { companyId: number; def
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mb-1 px-1 text-[9px] font-bold uppercase tracking-widest text-white/22">
+    <p className="mb-1 px-1 text-[9px] font-bold uppercase tracking-widest text-muted">
       {children}
     </p>
   );
@@ -2088,8 +2088,8 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 function EmptyHint({ message }: { message: string }) {
   return (
-    <div className="rounded-lg border border-dashed border-white/[0.08] bg-white/[0.01] px-3 py-6 text-center">
-      <p className="text-[10px] text-white/40">{message}</p>
+    <div className="rounded-lg border border-dashed border-default bg-surface-0 px-3 py-6 text-center">
+      <p className="text-[10px] text-tertiary">{message}</p>
     </div>
   );
 }
@@ -2106,13 +2106,13 @@ function BindingRow({
   return (
     <div className="flex items-center justify-between gap-3 px-3 py-2">
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium text-white/68">{label}</p>
-        {hint && <p className="text-[10px] text-white/28">{hint}</p>}
+        <p className="text-[11px] font-medium text-secondary">{label}</p>
+        {hint && <p className="text-[10px] text-muted">{hint}</p>}
       </div>
       <select
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
-        className="shrink-0 rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 text-[10px] text-white/70 outline-none focus:border-indigo-500/40 max-w-[260px]"
+        className="shrink-0 rounded border border-default bg-surface-1 px-2 py-1 text-[10px] text-secondary outline-none focus:bg-accent-muted max-w-[260px]"
       >
         <option value="">—</option>
         {options.map(o => (
@@ -2129,9 +2129,9 @@ function PolizaPreview({ poliza }: { poliza: PolizaResult | null }) {
     return <EmptyHint message={t("preview.empty")} />;
   }
   return (
-    <div className="overflow-hidden rounded-lg border border-white/[0.07] bg-white/[0.02]">
+    <div className="overflow-hidden rounded-lg border border-default bg-surface-1">
       <table className="w-full text-[10.5px]">
-        <thead className="bg-white/[0.02] text-[9px] uppercase tracking-widest text-white/30">
+        <thead className="bg-surface-1 text-[9px] uppercase tracking-widest text-muted">
           <tr>
             <th className="px-2 py-1 text-left">{t("preview.account")}</th>
             <th className="px-2 py-1 text-right">{t("preview.debit")}</th>
@@ -2142,21 +2142,21 @@ function PolizaPreview({ poliza }: { poliza: PolizaResult | null }) {
           {poliza.lines.map((ln, i) => (
             <tr key={i} className={ln.account_code === "?" ? "bg-amber-950/15" : ""}>
               <td className="px-2 py-1">
-                <p className="font-mono tabular-nums text-white/80">{ln.account_code}</p>
-                <p className="text-[9.5px] text-white/35">{ln.account_name} · {ln.note}</p>
+                <p className="font-mono tabular-nums text-secondary">{ln.account_code}</p>
+                <p className="text-[9.5px] text-muted">{ln.account_name} · {ln.note}</p>
               </td>
               <td className="px-2 py-1 text-right tabular-nums text-emerald-300/85">
-                {ln.debit !== "0.00" ? ln.debit : <span className="text-white/15">—</span>}
+                {ln.debit !== "0.00" ? ln.debit : <span className="text-muted">—</span>}
               </td>
               <td className="px-2 py-1 text-right tabular-nums text-rose-300/85">
-                {ln.credit !== "0.00" ? ln.credit : <span className="text-white/15">—</span>}
+                {ln.credit !== "0.00" ? ln.credit : <span className="text-muted">—</span>}
               </td>
             </tr>
           ))}
         </tbody>
-        <tfoot className="border-t border-white/[0.07] bg-white/[0.02] text-[10px] font-semibold">
+        <tfoot className="border-t border-default bg-surface-1 text-[10px] font-semibold">
           <tr>
-            <td className="px-2 py-1 text-white/55">
+            <td className="px-2 py-1 text-tertiary">
               {poliza.balanced
                 ? <span className="inline-flex items-center gap-1 text-emerald-300"><CheckCircle2 className="h-3 w-3" /> Balanceado</span>
                 : <span className="inline-flex items-center gap-1 text-rose-300"><AlertTriangle className="h-3 w-3" /> Descuadrado</span>}
@@ -2167,9 +2167,9 @@ function PolizaPreview({ poliza }: { poliza: PolizaResult | null }) {
         </tfoot>
       </table>
       {poliza.warnings.length > 0 && (
-        <div className="border-t border-white/[0.07] bg-amber-950/10 px-2 py-1.5">
+        <div className="border-t border-default bg-amber-950/10 px-2 py-1.5">
           {poliza.warnings.map((w, i) => (
-            <p key={i} className="text-[10px] text-amber-200/80">• {w}</p>
+            <p key={i} className="text-[10px] text-warning/80">• {w}</p>
           ))}
         </div>
       )}

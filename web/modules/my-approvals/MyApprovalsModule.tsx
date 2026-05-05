@@ -51,13 +51,13 @@ interface ManagerActions {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const STATUS_CLS: Record<string, string> = {
-  draft:     "bg-zinc-500/15 text-zinc-400 border-zinc-500/30",
-  submitted: "bg-sky-500/15 text-sky-300 border-sky-500/30",
+  draft:     "bg-surface-2 text-secondary border-default",
+  submitted: "bg-accent-muted text-accent border-sky-500/30",
   approved:  "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
-  rejected:  "bg-red-500/15 text-red-300 border-red-500/30",
+  rejected:  "bg-error-muted text-error border-error",
 };
 function statusCls(s: string) {
-  return STATUS_CLS[s] ?? "bg-zinc-500/15 text-zinc-400 border-zinc-500/30";
+  return STATUS_CLS[s] ?? "bg-surface-2 text-secondary border-default";
 }
 
 // ── Queue list ─────────────────────────────────────────────────────────────────
@@ -89,12 +89,12 @@ function QueueList({
 
       {/* Summary strip */}
       {summary && summary.total_count > 0 && (
-        <div className="shrink-0 border-b border-white/[0.05] bg-black/10 px-3 py-1.5">
+        <div className="shrink-0 border-b border-subtle bg-black/10 px-3 py-1.5">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
-            <span className="text-[9px] font-semibold tabular-nums text-white/35">
+            <span className="text-[9px] font-semibold tabular-nums text-muted">
               {t("queuePending", { count: summary.total_count })}
             </span>
-            <span className="font-mono text-[9px] text-white/28">
+            <span className="font-mono text-[9px] text-muted">
               ${summary.total_amount.toFixed(2)}
             </span>
             {Object.entries(summary.statuses).map(([s, n]) => (
@@ -108,15 +108,15 @@ function QueueList({
 
       {/* List */}
       {loading ? (
-        <div className="px-4 py-6 text-center text-xs text-white/30">{tc("loading")}</div>
+        <div className="px-4 py-6 text-center text-xs text-muted">{tc("loading")}</div>
       ) : !expenses.length ? (
         <div className="flex flex-1 items-center justify-center">
-          <p className="text-xs text-white/22">{t("queueEmpty")}</p>
+          <p className="text-xs text-muted">{t("queueEmpty")}</p>
         </div>
       ) : (
         <ul className="flex-1 overflow-y-auto">
           {expenses.length > 0 && (
-            <li className="flex items-center gap-2 border-b border-white/[0.05] bg-black/10 px-3 py-1.5">
+            <li className="flex items-center gap-2 border-b border-subtle bg-black/10 px-3 py-1.5">
               <input
                 type="checkbox"
                 aria-label={t("bulk.selectAll")}
@@ -127,7 +127,7 @@ function QueueList({
                 onChange={() => onToggleAll(expenses.map((e) => e.id))}
                 className="h-3 w-3 cursor-pointer accent-indigo-500"
               />
-              <span className="text-[9px] uppercase tracking-widest text-white/30">
+              <span className="text-[9px] uppercase tracking-widest text-muted">
                 {bulkIds.size > 0 ? t("bulk.selectedCount", { count: bulkIds.size }) : t("bulk.selectAll")}
               </span>
             </li>
@@ -135,7 +135,7 @@ function QueueList({
           {expenses.map((e) => (
             <li key={e.id} className="flex items-stretch">
               <label
-                className={`flex shrink-0 cursor-pointer items-center border-b border-white/[0.05] pl-3 pr-1 ${
+                className={`flex shrink-0 cursor-pointer items-center border-b border-subtle pl-3 pr-1 ${
                   bulkIds.has(e.id) ? "bg-indigo-500/[0.08]" : ""
                 }`}
                 onClick={(ev) => ev.stopPropagation()}
@@ -151,26 +151,26 @@ function QueueList({
               <button
                 type="button"
                 onClick={() => onSelect(e)}
-                className={`flex-1 border-b border-white/[0.05] px-3 py-2.5 text-left transition-colors ${
-                  selectedId === e.id ? "bg-white/[0.06]" : "hover:bg-white/[0.03]"
+                className={`flex-1 border-b border-subtle px-3 py-2.5 text-left transition-colors ${
+                  selectedId === e.id ? "bg-surface-2" : "hover:bg-surface-1"
                 }`}
               >
                 <div className="mb-0.5 flex items-center justify-between gap-2">
-                  <span className="truncate text-[11px] font-medium text-white/80">{e.description}</span>
+                  <span className="truncate text-[11px] font-medium text-secondary">{e.description}</span>
                   <span className={`shrink-0 rounded-full border px-1.5 py-px text-[8px] font-bold uppercase tracking-widest ${statusCls(e.status)}`}>
                     {e.status}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[9px] text-white/35">
+                  <span className="text-[9px] text-muted">
                     #{e.id} · {new Date(e.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                   </span>
-                  <span className="shrink-0 font-mono text-[9px] text-white/45">${e.amount.toFixed(2)}</span>
+                  <span className="shrink-0 font-mono text-[9px] text-tertiary">${e.amount.toFixed(2)}</span>
                 </div>
                 {e.detected_category && (
                   <div className="mt-0.5 flex items-center gap-1">
-                    <ReceiptText className="h-2.5 w-2.5 shrink-0 text-amber-400/40" />
-                    <span className="text-[8px] text-amber-300/50">{e.detected_category}</span>
+                    <ReceiptText className="h-2.5 w-2.5 shrink-0 text-warning/40" />
+                    <span className="text-[8px] text-warning/50">{e.detected_category}</span>
                   </div>
                 )}
               </button>
@@ -214,14 +214,14 @@ function ApprovalDetail({
           <button
             type="button"
             onClick={onBack}
-            className="flex h-11 shrink-0 items-center gap-2 border-b border-white/[0.07] px-4 text-[11px] text-white/40 transition-colors hover:text-white/65"
+            className="flex h-11 shrink-0 items-center gap-2 border-b border-default px-4 text-[11px] text-tertiary transition-colors hover:text-secondary"
           >
             <ChevronLeft className="h-3.5 w-3.5" />
             {t("backToQueue")}
           </button>
         )}
         <div className="flex flex-1 items-center justify-center">
-          <p className="text-xs text-white/22">{t("selectExpense")}</p>
+          <p className="text-xs text-muted">{t("selectExpense")}</p>
         </div>
       </div>
     );
@@ -243,7 +243,7 @@ function ApprovalDetail({
         <button
           type="button"
           onClick={onBack}
-          className="flex h-11 shrink-0 items-center gap-2 border-b border-white/[0.07] px-4 text-[11px] text-white/40 transition-colors hover:text-white/65"
+          className="flex h-11 shrink-0 items-center gap-2 border-b border-default px-4 text-[11px] text-tertiary transition-colors hover:text-secondary"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
           {t("backToQueue")}
@@ -254,18 +254,18 @@ function ApprovalDetail({
 
         {/* Header */}
         <div>
-          <h2 className="text-sm font-semibold text-white">{expense.description}</h2>
-          <p className="mt-0.5 text-xs text-white/35">{t("expenseTitle", { id: expense.id })}</p>
+          <h2 className="text-sm font-semibold text-primary">{expense.description}</h2>
+          <p className="mt-0.5 text-xs text-muted">{t("expenseTitle", { id: expense.id })}</p>
         </div>
 
         <StatusNextAction decision={decision} />
 
         {/* Summary table */}
-        <div className="divide-y divide-white/[0.05] overflow-hidden rounded-xl border border-white/[0.07] bg-black/20">
+        <div className="divide-y divide-white/[0.05] overflow-hidden rounded-xl border border-default bg-black/20">
           {rows.map(([label, value]) => (
             <div key={label} className="flex items-center justify-between gap-4 px-4 py-2">
-              <span className="shrink-0 text-[10px] font-bold uppercase tracking-widest text-white/28">{label}</span>
-              <span className="truncate text-right font-mono text-xs text-white/60">{value}</span>
+              <span className="shrink-0 text-[10px] font-bold uppercase tracking-widest text-muted">{label}</span>
+              <span className="truncate text-right font-mono text-xs text-secondary">{value}</span>
             </div>
           ))}
         </div>
@@ -286,7 +286,7 @@ function ApprovalDetail({
         {actionError && (
           <div className="flex items-start gap-1.5 rounded border border-red-500/20 bg-red-500/[0.07] px-2.5 py-2">
             <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-red-400/60" />
-            <p className="text-[10px] leading-snug text-red-300/65">{actionError}</p>
+            <p className="text-[10px] leading-snug text-error/65">{actionError}</p>
           </div>
         )}
 
@@ -528,20 +528,20 @@ export default function MyApprovalsModule() {
         className={[
           moduleIsNarrow && activeMobilePane === "detail" ? "hidden" : "flex",
           isMobile ? "w-full border-b" : "w-72 border-r",
-          "shrink-0 flex-col overflow-hidden border-white/[0.07]",
+          "shrink-0 flex-col overflow-hidden border-default",
         ].join(" ")}
       >
         {bulkIds.size > 0 && (
           <div className="shrink-0 border-b border-indigo-500/20 bg-indigo-500/[0.06] px-2.5 py-1.5">
             <div className="mb-1 flex items-center justify-between">
-              <span className="text-[9px] font-bold uppercase tracking-widest text-indigo-300/80">
+              <span className="text-[9px] font-bold uppercase tracking-widest text-accent">
                 {t("bulk.selectedCount", { count: bulkIds.size })}
               </span>
               <button
                 type="button"
                 onClick={() => setBulkIds(new Set())}
                 disabled={bulkBusy}
-                className="text-[9px] text-white/40 hover:text-white/65 disabled:opacity-40"
+                className="text-[9px] text-tertiary hover:text-secondary disabled:opacity-40"
               >
                 {t("bulk.clear")}
               </button>
@@ -560,7 +560,7 @@ export default function MyApprovalsModule() {
                 type="button"
                 onClick={() => runBulk("manager_return")}
                 disabled={bulkBusy}
-                className="inline-flex flex-1 items-center justify-center gap-1 rounded border border-amber-500/25 bg-amber-500/[0.08] px-2 py-1 text-[10px] font-semibold text-amber-300/80 hover:bg-amber-500/[0.14] disabled:opacity-40"
+                className="inline-flex flex-1 items-center justify-center gap-1 rounded border border-amber-500/25 bg-amber-500/[0.08] px-2 py-1 text-[10px] font-semibold text-warning/80 hover:bg-amber-500/[0.14] disabled:opacity-40"
               >
                 {t("bulk.return")}
               </button>
@@ -568,13 +568,13 @@ export default function MyApprovalsModule() {
                 type="button"
                 onClick={() => runBulk("manager_reject")}
                 disabled={bulkBusy}
-                className="inline-flex flex-1 items-center justify-center gap-1 rounded border border-red-500/25 bg-red-500/[0.08] px-2 py-1 text-[10px] font-semibold text-red-300/80 hover:bg-red-500/[0.14] disabled:opacity-40"
+                className="inline-flex flex-1 items-center justify-center gap-1 rounded border border-red-500/25 bg-red-500/[0.08] px-2 py-1 text-[10px] font-semibold text-error/80 hover:bg-red-500/[0.14] disabled:opacity-40"
               >
                 {t("bulk.reject")}
               </button>
             </div>
             {bulkError && (
-              <p className="mt-1 text-[9px] leading-snug text-red-300/70">{bulkError}</p>
+              <p className="mt-1 text-[9px] leading-snug text-error/70">{bulkError}</p>
             )}
           </div>
         )}

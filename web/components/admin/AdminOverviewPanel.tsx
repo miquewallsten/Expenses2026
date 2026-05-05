@@ -102,14 +102,14 @@ function SetupCard({
     <button
       type="button"
       onClick={() => onEdit(section)}
-      className={`flex flex-col overflow-hidden rounded-lg border text-left transition-all hover:border-white/[0.20] hover:bg-white/[0.02] hover:shadow-lg ${
-        status === "warn" ? "border-amber-500/20" : "border-white/[0.08]"
+      className={`flex flex-col overflow-hidden rounded-lg border text-left transition-all hover:border-strong hover:bg-surface-1 hover:shadow-lg ${
+        status === "warn" ? "border-amber-500/20" : "border-default"
       } ${fullWidth ? "col-span-2" : ""}`}
     >
-      <div className="flex items-center justify-between border-b border-white/[0.05] bg-black/20 px-4 py-2.5">
+      <div className="flex items-center justify-between border-b border-subtle bg-black/20 px-4 py-2.5">
         <div className="flex items-center gap-2">
-          <span className="text-white/30">{icon}</span>
-          <span className="text-[11px] font-semibold text-white/70">{sectionLabel}</span>
+          <span className="text-muted">{icon}</span>
+          <span className="text-[11px] font-semibold text-secondary">{sectionLabel}</span>
         </div>
         <CardStatusBadge status={status} labels={statusLabels} />
       </div>
@@ -118,12 +118,12 @@ function SetupCard({
         {rows.map(([k, v]) => (
           <div
             key={k}
-            className="flex items-center justify-between border-b border-white/[0.03] px-4 py-1.5 last:border-0"
+            className="flex items-center justify-between border-b border-subtle px-4 py-1.5 last:border-0"
           >
-            <span className="text-[10px] text-white/30">{k}</span>
+            <span className="text-[10px] text-muted">{k}</span>
             <span
               className={`text-[10px] font-medium ${
-                v === "—" ? "text-white/20" : "text-white/55"
+                v === "—" ? "text-muted" : "text-tertiary"
               }`}
             >
               {v}
@@ -132,9 +132,9 @@ function SetupCard({
         ))}
       </div>
 
-      <div className="flex items-center justify-between border-t border-white/[0.04] px-4 py-2">
-        <p className="min-w-0 flex-1 truncate text-[10px] text-white/22">{summary}</p>
-        <span className="ml-3 shrink-0 text-[10px] font-medium text-white/30">
+      <div className="flex items-center justify-between border-t border-subtle px-4 py-2">
+        <p className="min-w-0 flex-1 truncate text-[10px] text-muted">{summary}</p>
+        <span className="ml-3 shrink-0 text-[10px] font-medium text-muted">
           {editLabel}
         </span>
       </div>
@@ -313,29 +313,29 @@ export default function AdminOverviewPanel({
           issueCount > 0
             ? "border-amber-500/[0.12] bg-amber-500/[0.03]"
             : unconfiguredCount > 0
-            ? "border-white/[0.07] bg-white/[0.02]"
+            ? "border-default bg-surface-1"
             : "border-emerald-500/[0.10] bg-emerald-500/[0.02]"
         }`}
       >
         <div className="flex items-center gap-2.5">
           {issueCount > 0 ? (
             <>
-              <AlertTriangle className="h-3.5 w-3.5 text-amber-400/55" />
-              <span className="text-[11px] font-medium text-amber-200/55">
+              <AlertTriangle className="h-3.5 w-3.5 text-warning/55" />
+              <span className="text-[11px] font-medium text-warning/55">
                 {to("issueCount", { count: issueCount })}
               </span>
             </>
           ) : unconfiguredCount > 0 ? (
             <>
-              <Circle className="h-3.5 w-3.5 text-white/20" />
-              <span className="text-[11px] font-medium text-white/40">
+              <Circle className="h-3.5 w-3.5 text-muted" />
+              <span className="text-[11px] font-medium text-tertiary">
                 {to("unconfiguredCount", { count: unconfiguredCount })}
               </span>
             </>
           ) : (
             <>
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400/55" />
-              <span className="text-[11px] font-medium text-white/50">{to("allConfigured")}</span>
+              <CheckCircle2 className="h-3.5 w-3.5 text-success/55" />
+              <span className="text-[11px] font-medium text-secondary">{to("allConfigured")}</span>
             </>
           )}
         </div>
@@ -343,7 +343,7 @@ export default function AdminOverviewPanel({
           <button
             type="button"
             onClick={() => onNavigate(fixTarget)}
-            className="text-[10px] font-semibold text-amber-400/55 transition-colors hover:text-amber-300/80"
+            className="text-[10px] font-semibold text-warning/55 transition-colors hover:text-warning/80"
           >
             {to("fixSetup")}
           </button>
@@ -352,7 +352,7 @@ export default function AdminOverviewPanel({
           <button
             type="button"
             onClick={() => onNavigate("Onboarding")}
-            className="text-[10px] font-semibold text-white/25 transition-colors hover:text-white/50"
+            className="text-[10px] font-semibold text-muted transition-colors hover:text-secondary"
           >
             {to("startSetup")}
           </button>
@@ -416,19 +416,19 @@ function AddOnsTile({
   const premiumCount   = ADDONS.filter((a) => a.premium).length;
 
   return (
-    <div className="mt-5 overflow-hidden rounded-lg border border-white/[0.08]">
-      <div className="flex items-center justify-between border-b border-white/[0.05] bg-black/20 px-4 py-2.5">
+    <div className="mt-5 overflow-hidden rounded-lg border border-default">
+      <div className="flex items-center justify-between border-b border-subtle bg-black/20 px-4 py-2.5">
         <div className="flex items-center gap-2">
-          <Puzzle className="h-3.5 w-3.5 text-white/30" />
-          <span className="text-[11px] font-semibold text-white/70">{tt("title")}</span>
-          <span className="rounded border border-white/[0.08] bg-white/[0.04] px-1.5 py-0.5 font-mono text-[9.5px] text-white/35">
+          <Puzzle className="h-3.5 w-3.5 text-muted" />
+          <span className="text-[11px] font-semibold text-secondary">{tt("title")}</span>
+          <span className="rounded border border-default bg-surface-2 px-1.5 py-0.5 font-mono text-[9.5px] text-muted">
             {installedCount}/{ADDONS.length}
           </span>
         </div>
         <button
           type="button"
           onClick={onOpen}
-          className="text-[10px] font-medium text-white/30 transition-colors hover:text-white/60"
+          className="text-[10px] font-medium text-muted transition-colors hover:text-secondary"
         >
           {tt("manage")}
         </button>
@@ -438,18 +438,18 @@ function AddOnsTile({
           const installed = !!companySetup?.[a.flag];
           const status: AddOnStatus = installed ? "installed" : a.premium ? "premium" : "available";
           return (
-            <li key={a.key} className="flex items-center justify-between gap-3 border-b border-white/[0.03] px-4 py-2 last:border-0">
+            <li key={a.key} className="flex items-center justify-between gap-3 border-b border-subtle px-4 py-2 last:border-0">
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] font-medium text-white/65">{tm(`${a.i18nKey}Name`)}</span>
+                  <span className="text-[11px] font-medium text-secondary">{tm(`${a.i18nKey}Name`)}</span>
                   {a.premium && (
-                    <span className="inline-flex items-center gap-1 rounded border border-amber-500/25 bg-amber-500/[0.07] px-1 py-px text-[8.5px] font-bold uppercase tracking-widest text-amber-300/70">
+                    <span className="inline-flex items-center gap-1 rounded border border-amber-500/25 bg-amber-500/[0.07] px-1 py-px text-[8.5px] font-bold uppercase tracking-widest text-warning/70">
                       <Sparkles className="h-2.5 w-2.5" />
                       Premium
                     </span>
                   )}
                 </div>
-                <p className="truncate text-[9.5px] text-white/28">{tm(`${a.i18nKey}Desc`)}</p>
+                <p className="truncate text-[9.5px] text-muted">{tm(`${a.i18nKey}Desc`)}</p>
               </div>
               <AddOnStatusPill status={status} />
             </li>
@@ -457,11 +457,11 @@ function AddOnsTile({
         })}
       </ul>
       {premiumCount > 0 && (
-        <div className="flex items-center gap-2 border-t border-white/[0.04] bg-amber-500/[0.02] px-4 py-1.5">
-          <Lock className="h-3 w-3 text-amber-400/50" />
-          <p className="text-[9.5px] text-amber-200/45">
+        <div className="flex items-center gap-2 border-t border-subtle bg-amber-500/[0.02] px-4 py-1.5">
+          <Lock className="h-3 w-3 text-warning/50" />
+          <p className="text-[9.5px] text-warning/45">
             {tt.rich("premiumNotice", {
-              accent: (chunks) => <span className="text-amber-200/70">{chunks}</span>,
+              accent: (chunks) => <span className="text-warning/70">{chunks}</span>,
             })}
           </p>
         </div>
@@ -474,7 +474,7 @@ function AddOnStatusPill({ status }: { status: AddOnStatus }) {
   const tt = useTranslations("admin.overview.addOnsTile");
   if (status === "installed") {
     return (
-      <span className="inline-flex items-center gap-1 rounded border border-emerald-500/25 bg-emerald-500/[0.06] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-emerald-400/80">
+      <span className="inline-flex items-center gap-1 rounded border border-emerald-500/25 bg-emerald-500/[0.06] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-success">
         <CheckCircle2 className="h-2.5 w-2.5" />
         {tt("installed")}
       </span>
@@ -482,14 +482,14 @@ function AddOnStatusPill({ status }: { status: AddOnStatus }) {
   }
   if (status === "premium") {
     return (
-      <span className="inline-flex items-center gap-1 rounded border border-amber-500/25 bg-amber-500/[0.06] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-amber-300/70">
+      <span className="inline-flex items-center gap-1 rounded border border-amber-500/25 bg-amber-500/[0.06] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-warning/70">
         <Lock className="h-2.5 w-2.5" />
         {tt("premium")}
       </span>
     );
   }
   return (
-    <span className="rounded border border-white/[0.08] bg-white/[0.02] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-white/30">
+    <span className="rounded border border-default bg-surface-1 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-muted">
       {tt("available")}
     </span>
   );

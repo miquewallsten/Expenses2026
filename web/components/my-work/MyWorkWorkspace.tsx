@@ -45,7 +45,7 @@ function NoVisibleModules({ role }: { role: string | null }) {
     <div className="flex h-full items-center justify-center px-8">
       <div className="max-w-md rounded-lg border border-subtle bg-surface-2 p-6">
         <div className="mb-3 flex items-center gap-2">
-          <AlertCircle className="h-4 w-4 text-amber-400/70" />
+          <AlertCircle className="h-4 w-4 text-warning/70" />
           <h2 className="text-[12px] font-bold uppercase tracking-widest text-secondary">
             {t("title", { role: roleLabel })}
           </h2>
@@ -57,7 +57,7 @@ function NoVisibleModules({ role }: { role: string | null }) {
           {isAdmin ? (
             <Link
               href="/mywork?module=admin"
-              className="inline-flex items-center gap-1.5 rounded border border-accent-muted bg-accent-muted px-3 py-1.5 text-[11px] font-semibold text-sky-300 transition-colors hover:bg-accent-muted/80"
+              className="inline-flex items-center gap-1.5 rounded border bg-accent-muted-muted bg-accent-muted px-3 py-1.5 text-[11px] font-semibold text-accent transition-colors hover:bg-accent-muted/80"
             >
               <ArrowRight className="h-3 w-3" />
               {t("goToAdmin")}
@@ -107,9 +107,12 @@ export default function MyWorkWorkspace() {
   if (configLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
-          <p className="text-[13px] text-tertiary">{tc("loading")}</p>
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="h-10 w-10 animate-spin rounded-xl border-2 border-accent border-t-transparent" />
+            <div className="absolute inset-0 h-10 w-10 animate-pulse rounded-xl bg-accent-muted" />
+          </div>
+          <p className="text-sm text-tertiary">{tc("loading")}</p>
         </div>
       </div>
     );

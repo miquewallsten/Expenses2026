@@ -77,17 +77,17 @@ export default function AgentRail({
   if (!isExpanded) {
     return (
       <div
-        className="flex h-full flex-col items-center border-r border-white/[0.07] bg-zinc-950 py-2"
+        className="flex h-full flex-col items-center border-r border-default bg-surface-0 py-2"
         style={{ width: COLLAPSED_WIDTH }}
       >
         <button
           type="button"
           onClick={toggleExpanded}
-          className="flex h-8 w-8 items-center justify-center rounded transition-colors hover:bg-white/[0.04]"
+          className="flex h-8 w-8 items-center justify-center rounded transition-colors hover:bg-surface-2"
           aria-label="Expand agent rail"
           title="Open assistant"
         >
-          <Bot className="h-4 w-4 text-white/60" />
+          <Bot className="h-4 w-4 text-secondary" />
         </button>
       </div>
     );
@@ -96,22 +96,22 @@ export default function AgentRail({
   // Expanded state — full chat interface
   return (
     <div
-      className="flex h-full flex-col border-r border-white/[0.07] bg-zinc-950"
+      className="flex h-full flex-col border-r border-default bg-surface-0"
       style={{ width: EXPANDED_WIDTH }}
     >
       {/* Header */}
-      <header className="flex h-11 shrink-0 items-center gap-2 border-b border-white/[0.07] px-3">
-        <div className="flex h-6 w-6 items-center justify-center rounded bg-indigo-600/30 ring-1 ring-indigo-500/25">
-          <Sparkles className="h-3 w-3 text-indigo-300/80" />
+      <header className="flex h-11 shrink-0 items-center gap-2 border-b border-default px-3">
+        <div className="flex h-6 w-6 items-center justify-center rounded bg-accent-muted ring-1 ring-blue-500/25">
+          <Sparkles className="h-3 w-3 text-accent" />
         </div>
         <div className="flex flex-col leading-tight">
-          <span className="text-[11px] font-semibold text-white/60">{agentName}</span>
-          <span className="text-[9px] uppercase tracking-widest text-white/28">AI Agent</span>
+          <span className="text-[11px] font-semibold text-secondary">{agentName}</span>
+          <span className="text-[9px] uppercase tracking-widest text-muted">AI Agent</span>
         </div>
         <button
           type="button"
           onClick={toggleExpanded}
-          className="ml-auto flex h-6 w-6 items-center justify-center rounded text-white/35 transition-colors hover:bg-white/[0.04] hover:text-white/65"
+          className="ml-auto flex h-6 w-6 items-center justify-center rounded text-muted transition-colors hover:bg-surface-2 hover:text-secondary"
           aria-label="Collapse agent rail"
         >
           <ChevronRight className="h-3.5 w-3.5" />
@@ -122,10 +122,10 @@ export default function AgentRail({
       <div className="flex-1 overflow-y-auto px-3 py-2">
         {messages.length === 0 && (
           <div className="flex h-full flex-col items-center justify-center text-center">
-            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-indigo-600/20">
-              <Bot className="h-5 w-5 text-indigo-300/80" />
+            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-accent-muted">
+              <Bot className="h-5 w-5 text-accent" />
             </div>
-            <p className="text-[11px] text-white/45">
+            <p className="text-[11px] text-tertiary">
               Start a conversation with {agentName}
             </p>
           </div>
@@ -139,8 +139,8 @@ export default function AgentRail({
             <div
               className={`max-w-[85%] rounded-lg px-2.5 py-1.5 text-[11px] ${
                 message.role === "user"
-                  ? "bg-indigo-600/30 text-white/80"
-                  : "bg-zinc-800 text-white/60"
+                  ? "bg-accent-muted text-secondary"
+                  : "bg-surface-2 text-secondary"
               }`}
             >
               {message.content}
@@ -151,11 +151,11 @@ export default function AgentRail({
         {/* Typing indicator */}
         {isTyping && (
           <div className="mb-2 flex justify-start">
-            <div className="rounded-lg bg-zinc-800 px-2.5 py-1.5 text-[11px] text-white/45">
+            <div className="rounded-lg bg-surface-2 px-2.5 py-1.5 text-[11px] text-tertiary">
               <div className="flex gap-1">
-                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-white/40 [animation-delay:0ms]" />
-                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-white/40 [animation-delay:150ms]" />
-                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-white/40 [animation-delay:300ms]" />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-surface-3 [animation-delay:0ms]" />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-surface-3 [animation-delay:150ms]" />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-surface-3 [animation-delay:300ms]" />
               </div>
             </div>
           </div>
@@ -166,8 +166,8 @@ export default function AgentRail({
 
       {/* Quick actions */}
       {messages.length === 0 && (
-        <div className="shrink-0 border-t border-white/[0.05] px-3 py-2">
-          <div className="text-[9px] uppercase tracking-widest text-white/28 mb-1.5">Quick actions</div>
+        <div className="shrink-0 border-t border-subtle px-3 py-2">
+          <div className="text-[9px] uppercase tracking-widest text-muted mb-1.5">Quick actions</div>
           <div className="flex flex-wrap gap-1.5">
             {["Help me with...", "Explain this", "What can you do?"].map((action) => (
               <button
@@ -177,7 +177,7 @@ export default function AgentRail({
                   setInput(action);
                   inputRef.current?.focus();
                 }}
-                className="rounded border border-white/[0.07] bg-zinc-900 px-2 py-1 text-[10px] text-white/45 transition-colors hover:bg-white/[0.04] hover:text-white/65"
+                className="rounded border border-default bg-surface-1 px-2 py-1 text-[10px] text-tertiary transition-colors hover:bg-surface-2 hover:text-secondary"
               >
                 {action}
               </button>
@@ -187,7 +187,7 @@ export default function AgentRail({
       )}
 
       {/* Input */}
-      <div className="shrink-0 border-t border-white/[0.07] p-2">
+      <div className="shrink-0 border-t border-default p-2">
         <div className="flex items-center gap-2">
           <input
             ref={inputRef}
@@ -197,13 +197,13 @@ export default function AgentRail({
             onKeyDown={handleKeyDown}
             placeholder="Type a message..."
             disabled={isTyping}
-            className="flex-1 rounded border border-white/[0.07] bg-zinc-900 px-2.5 py-1.5 text-[11px] text-white/60 placeholder:text-white/28 focus:border-indigo-500/30 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 disabled:opacity-50"
+            className="flex-1 rounded border border-default bg-surface-1 px-2.5 py-1.5 text-[11px] text-secondary placeholder:text-muted focus:bg-accent-muted focus:outline-none focus:ring-1 focus:ring-blue-500/20 disabled:opacity-50"
           />
           <button
             type="button"
             onClick={handleSend}
             disabled={!input.trim() || isTyping}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-indigo-600/30 text-indigo-300/80 transition-colors hover:bg-indigo-600/50 disabled:opacity-50 disabled:hover:bg-indigo-600/30"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-accent-muted text-accent transition-colors hover:bg-accent-hover disabled:opacity-50 disabled:hover:bg-accent-muted"
             aria-label="Send message"
           >
             <Send className="h-3.5 w-3.5" />

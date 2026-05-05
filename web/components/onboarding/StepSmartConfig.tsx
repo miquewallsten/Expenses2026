@@ -54,8 +54,8 @@ export function StepSmartConfig({
   return (
     <div className="space-y-5 py-4">
       <div>
-        <h2 className="text-[18px] font-semibold text-white/90">{t("title")}</h2>
-        <p className="mt-1.5 text-[12px] leading-relaxed text-white/50">{t("subtitle")}</p>
+        <h2 className="text-[18px] font-semibold text-primary">{t("title")}</h2>
+        <p className="mt-1.5 text-[12px] leading-relaxed text-secondary">{t("subtitle")}</p>
       </div>
 
       {/* AI Configuration Summary */}
@@ -65,10 +65,10 @@ export function StepSmartConfig({
             <Check className="h-4 w-4 text-emerald-300" />
           </div>
           <div>
-            <p className="text-[12px] font-medium text-white/80">
+            <p className="text-[12px] font-medium text-secondary">
               {t("configuredTitle", { count: selectedModules.length })}
             </p>
-            <p className="mt-1 text-[10.5px] leading-relaxed text-white/45">
+            <p className="mt-1 text-[10.5px] leading-relaxed text-tertiary">
               {t("configuredDesc")}
             </p>
           </div>
@@ -87,13 +87,13 @@ export function StepSmartConfig({
           return (
             <div
               key={moduleType}
-              className="rounded-lg border border-white/[0.06] bg-white/[0.01] overflow-hidden"
+              className="rounded-lg border border-subtle bg-surface-0 overflow-hidden"
             >
-              <div className="flex items-center gap-3 border-b border-white/[0.06] bg-white/[0.02] px-4 py-2.5">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-500/15">
-                  <Icon className="h-3.5 w-3.5 text-indigo-300" />
+              <div className="flex items-center gap-3 border-b border-subtle bg-surface-1 px-4 py-2.5">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/15">
+                  <Icon className="h-3.5 w-3.5 text-accent" />
                 </div>
-                <p className="text-[12px] font-medium text-white/80">{module.name}</p>
+                <p className="text-[12px] font-medium text-secondary">{module.name}</p>
                 <div className="ml-auto">
                   <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-medium text-emerald-300">
                     {t("configured")}
@@ -104,8 +104,8 @@ export function StepSmartConfig({
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5">
                   {settings.map(({ setting, value }) => (
                     <div key={setting} className="flex items-center gap-2">
-                      <dt className="text-[10px] text-white/35">{setting}</dt>
-                      <dd className="text-[10.5px] text-white/60">{value}</dd>
+                      <dt className="text-[10px] text-muted">{setting}</dt>
+                      <dd className="text-[10.5px] text-secondary">{value}</dd>
                     </div>
                   ))}
                 </dl>
@@ -116,10 +116,10 @@ export function StepSmartConfig({
       </div>
 
       {/* Customize CTA */}
-      <div className="rounded-lg border border-white/[0.06] bg-white/[0.01] p-3">
+      <div className="rounded-lg border border-subtle bg-surface-0 p-3">
         <div className="flex items-center gap-2.5">
-          <Settings2 className="h-4 w-4 text-white/40" />
-          <p className="text-[10.5px] text-white/50">
+          <Settings2 className="h-4 w-4 text-tertiary" />
+          <p className="text-[10.5px] text-secondary">
             {t("customizeHint")}
           </p>
         </div>

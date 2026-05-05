@@ -53,20 +53,20 @@ export function Drawer({
         role="dialog"
         aria-modal="true"
         className={cn(
-          "absolute top-0 bottom-0 bg-zinc-900 border-white/10 flex flex-col shadow-2xl",
+          "absolute top-0 bottom-0 bg-surface-1 border-subtle flex flex-col shadow-2xl",
           side === "right" ? "right-0 border-l" : "left-0 border-r",
           width,
         )}
       >
         {title && (
-          <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
-            <h2 className="text-[11px] font-bold uppercase tracking-widest text-white/75">
+          <div className="px-4 py-3 border-b border-subtle flex items-center justify-between">
+            <h2 className="text-[11px] font-bold uppercase tracking-widest text-secondary">
               {title}
             </h2>
             <button
               aria-label="Close drawer"
               onClick={onClose}
-              className="text-white/40 hover:text-white/75 text-sm leading-none"
+              className="text-tertiary hover:text-secondary text-sm leading-none"
             >
               ×
             </button>
@@ -74,7 +74,7 @@ export function Drawer({
         )}
         <div className="flex-1 overflow-auto px-4 py-3">{children}</div>
         {footer && (
-          <div className="px-4 py-3 border-t border-white/[0.06] flex justify-end gap-2">
+          <div className="px-4 py-3 border-t border-subtle flex justify-end gap-2">
             {footer}
           </div>
         )}

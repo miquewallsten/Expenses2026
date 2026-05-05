@@ -245,21 +245,21 @@ export default function AgentChat({
   }, [companyId, sessionId]);
 
   const outerCls = variant === "page"
-    ? "flex h-full min-h-[600px] flex-col rounded-lg border border-white/[0.07] bg-zinc-950"
+    ? "flex h-full min-h-[600px] flex-col rounded-lg border border-default bg-surface-0"
     : "flex h-full flex-col";
 
   return (
     <div className={outerCls}>
       {/* presets */}
       {presets.length > 0 && (
-        <div className="flex flex-wrap gap-1 border-b border-white/[0.07] px-2.5 py-2">
+        <div className="flex flex-wrap gap-1 border-b border-default px-2.5 py-2">
           {presets.map((p) => (
             <button
               key={p.label}
               type="button"
               disabled={loading}
               onClick={() => runTurn(p.text)}
-              className="rounded border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[10px] font-medium text-white/35 transition-colors hover:border-indigo-500/30 hover:bg-indigo-500/[0.08] hover:text-indigo-300 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded border border-default bg-surface-1 px-2 py-0.5 text-[10px] font-medium text-muted transition-colors hover:bg-accent-muted hover:bg-accent-hover/[0.08] hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
             >
               {p.label}
             </button>
@@ -281,15 +281,15 @@ export default function AgentChat({
         ))}
         {loading && (
           <div className="flex items-end gap-1.5">
-            <div className="mb-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-600/20 ring-1 ring-indigo-500/20">
-              <Bot className="h-2.5 w-2.5 text-indigo-300/70" />
+            <div className="mb-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent-muted ring-1 ring-blue-500/20">
+              <Bot className="h-2.5 w-2.5 text-accent/70" />
             </div>
-            <div className="rounded-xl rounded-bl-sm border border-white/[0.08] bg-white/[0.05] px-3 py-2">
+            <div className="rounded-xl rounded-bl-sm border border-default bg-surface-2 px-3 py-2">
               <span className="inline-flex gap-1">
                 {[0, 1, 2].map((d) => (
                   <span
                     key={d}
-                    className="h-1.5 w-1.5 animate-bounce rounded-full bg-white/30"
+                    className="h-1.5 w-1.5 animate-bounce rounded-full bg-surface-2"
                     style={{ animationDelay: `${d * 150}ms` }}
                   />
                 ))}
@@ -301,9 +301,9 @@ export default function AgentChat({
 
       {/* uploads pending send */}
       {uploads.length > 0 && (
-        <div className="flex flex-wrap gap-1 border-t border-white/[0.07] px-2.5 py-1.5">
+        <div className="flex flex-wrap gap-1 border-t border-default px-2.5 py-1.5">
           {uploads.map((u) => (
-            <span key={u.file_id} className="rounded border border-indigo-500/25 bg-indigo-500/10 px-2 py-0.5 text-[10px] font-medium text-indigo-300/80">
+            <span key={u.file_id} className="rounded border bg-accent-muted-muted bg-accent-muted px-2 py-0.5 text-[10px] font-medium text-accent">
               {u.filename}
             </span>
           ))}
@@ -318,7 +318,7 @@ export default function AgentChat({
       )}
 
       {/* composer */}
-      <div className="relative shrink-0 border-t border-white/[0.07] px-2.5 py-2.5">
+      <div className="relative shrink-0 border-t border-default px-2.5 py-2.5">
         {slashOpen && (
           <SlashCommandPalette
             commands={slashMatches}
@@ -336,14 +336,14 @@ export default function AgentChat({
             className="hidden"
           />
         )}
-        <div className="flex items-center gap-1.5 rounded-lg border border-white/[0.1] bg-white/[0.03] px-2.5 py-1.5 transition-colors focus-within:border-indigo-500/35 focus-within:bg-indigo-950/10">
+        <div className="flex items-center gap-1.5 rounded-lg border border-default bg-surface-1 px-2.5 py-1.5 transition-colors focus-within:border-blue-500/35 focus-within:bg-blue-950/10">
           {allowUpload && (
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
               disabled={uploading || loading}
               title={t("upload")}
-              className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-white/20 transition-colors hover:text-white/45 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted transition-colors hover:text-tertiary disabled:cursor-not-allowed disabled:opacity-40"
             >
               {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Paperclip className="h-3.5 w-3.5" />}
             </button>
@@ -382,19 +382,19 @@ export default function AgentChat({
             }}
             placeholder={t("placeholder")}
             rows={2}
-            className="min-w-0 flex-1 resize-none bg-transparent text-[11px] text-white/80 placeholder-white/28 outline-none disabled:cursor-not-allowed disabled:opacity-40"
+            className="min-w-0 flex-1 resize-none bg-transparent text-[11px] text-secondary placeholder-white/28 outline-none disabled:cursor-not-allowed disabled:opacity-40"
           />
           <button
             type="button"
             onClick={() => runTurn(input)}
             disabled={loading || !input.trim()}
-            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-indigo-600/30 text-indigo-300/80 transition-colors hover:bg-indigo-600/50 hover:text-indigo-200 disabled:cursor-not-allowed disabled:opacity-35"
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-accent-muted text-accent transition-colors hover:bg-accent-hover hover:text-accent disabled:cursor-not-allowed disabled:opacity-35"
             aria-label={t("send")}
           >
             {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
           </button>
         </div>
-        <p className="mt-1 text-[10px] text-white/18">{t("shortcutHint")}</p>
+        <p className="mt-1 text-[10px] text-muted">{t("shortcutHint")}</p>
       </div>
     </div>
   );
@@ -414,7 +414,7 @@ function TurnView({
   if (turn.kind === "user") {
     return (
       <div className="flex items-end justify-end gap-1.5">
-        <div className="max-w-[84%] rounded-xl rounded-br-sm bg-indigo-600/35 px-3 py-2 text-[11px] leading-relaxed text-white/90">
+        <div className="max-w-[84%] rounded-xl rounded-br-sm bg-blue-600/35 px-3 py-2 text-[11px] leading-relaxed text-primary">
           {turn.content}
         </div>
       </div>
@@ -433,15 +433,15 @@ function TurnView({
   // assistant
   return (
     <div className="flex items-end gap-1.5">
-      <div className="mb-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-600/20 ring-1 ring-indigo-500/20">
-        <Bot className="h-2.5 w-2.5 text-indigo-300/70" />
+      <div className="mb-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent-muted ring-1 ring-blue-500/20">
+        <Bot className="h-2.5 w-2.5 text-accent/70" />
       </div>
       <div className="min-w-0 flex-1 space-y-2">
-        <div className="max-w-[90%] rounded-xl rounded-bl-sm border border-white/[0.08] bg-white/[0.05] px-3 py-2 text-[11px] leading-relaxed text-white/65">
+        <div className="max-w-[90%] rounded-xl rounded-bl-sm border border-default bg-surface-2 px-3 py-2 text-[11px] leading-relaxed text-secondary">
           {renderContent(turn.content, {
-            textClassName: "mb-2 last:mb-0 text-white/65 leading-relaxed",
-            boldClassName: "font-semibold text-white/80",
-            bulletClassName: "text-white/50 text-[11px] leading-relaxed",
+            textClassName: "mb-2 last:mb-0 text-secondary leading-relaxed",
+            boldClassName: "font-semibold text-secondary",
+            bulletClassName: "text-secondary text-[11px] leading-relaxed",
           })}
         </div>
 
@@ -452,10 +452,10 @@ function TurnView({
                 key={i}
                 className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 font-mono text-[10px] ${
                   tc.status === "error"
-                    ? "border-rose-500/30 bg-rose-500/10 text-rose-300"
+                    ? "border-error bg-error-muted text-rose-300"
                     : tc.status === "pending_confirmation"
-                    ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
-                    : "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                    ? "border-amber-500/30 bg-warning-muted text-warning"
+                    : "border-emerald-500/30 bg-success-muted text-emerald-300"
                 }`}
                 title={tc.error ?? (typeof tc.result === "object" ? t("ranOk") : "")}
               >
@@ -472,7 +472,7 @@ function TurnView({
               const r = receipts[rid];
               if (!r) {
                 return (
-                  <div key={rid} className="rounded-lg border border-white/[0.07] bg-black/20 p-2 text-[10px] text-white/28">
+                  <div key={rid} className="rounded-lg border border-default bg-black/20 p-2 text-[10px] text-muted">
                     <Loader2 className="inline h-3 w-3 animate-spin" /> {t("loadingReceipt")}
                   </div>
                 );

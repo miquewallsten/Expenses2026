@@ -59,13 +59,13 @@ type SubTab = "settings" | "log" | "dispatches";
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
-    replied:    "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-    received:   "bg-sky-500/10 text-sky-400 border-sky-500/20",
-    processing: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-    error:      "bg-red-500/10 text-red-400 border-red-500/20",
-    ignored:    "bg-white/5 text-white/28 border-white/10",
+    replied:    "bg-success-muted text-success border-emerald-500/20",
+    received:   "bg-accent/10 text-accent border-sky-500/20",
+    processing: "bg-warning-muted text-warning border-amber-500/20",
+    error:      "bg-red-500/10 text-error border-red-500/20",
+    ignored:    "bg-surface-1 text-muted border-subtle",
   };
-  const cls = map[status] ?? "bg-white/5 text-white/28 border-white/10";
+  const cls = map[status] ?? "bg-surface-1 text-muted border-subtle";
   return (
     <span className={`rounded border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${cls}`}>
       {status}
@@ -76,7 +76,7 @@ function StatusBadge({ status }: { status: string }) {
 function IntentBadge({ intent }: { intent: string | null }) {
   if (!intent) return null;
   return (
-    <span className="rounded border border-indigo-500/20 bg-indigo-500/10 px-1.5 py-0.5 text-[9px] font-medium text-indigo-300/70">
+    <span className="rounded border border-blue-500/20 bg-accent-muted px-1.5 py-0.5 text-[9px] font-medium text-accent/70">
       {intent.replace(/_/g, " ")}
     </span>
   );
@@ -89,10 +89,10 @@ function CopyButton({ value }: { value: string }) {
     <button
       type="button"
       onClick={() => { navigator.clipboard.writeText(value); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-      className="ml-1 text-white/22 hover:text-white/50 transition-colors"
+      className="ml-1 text-muted hover:text-secondary transition-colors"
       title={t("copy")}
     >
-      {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+      {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
     </button>
   );
 }
@@ -107,16 +107,16 @@ function SecretField({ label, value, isSet, onChange }: {
   const [show, setShow] = useState(false);
   return (
     <div>
-      <label className="mb-0.5 block text-[10px] font-medium text-white/40">{label}</label>
+      <label className="mb-0.5 block text-[10px] font-medium text-tertiary">{label}</label>
       <div className="flex items-center gap-1">
         <input
           type={show ? "text" : "password"}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={isSet ? t("secretStored") : t("secretEnter")}
-          className="flex-1 rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-[11px] text-white/75 outline-none placeholder:text-white/18 focus:border-indigo-500/50"
+          className="flex-1 rounded border border-default bg-surface-2 px-2 py-1.5 text-[11px] text-secondary outline-none placeholder:text-muted focus:bg-accent-muted"
         />
-        <button type="button" onClick={() => setShow(!show)} className="text-white/22 hover:text-white/50">
+        <button type="button" onClick={() => setShow(!show)} className="text-muted hover:text-secondary">
           {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
         </button>
       </div>
@@ -194,15 +194,15 @@ function WhatsAppSettingsForm({
   return (
     <div className="space-y-5">
       {/* Enable toggle */}
-      <div className="flex items-center justify-between rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
+      <div className="flex items-center justify-between rounded border border-default bg-surface-1 px-3 py-2.5">
         <div>
-          <p className="text-[11px] font-semibold text-white/75">{tw("title")}</p>
-          <p className="text-[10px] text-white/35">{tw("subtitle")}</p>
+          <p className="text-[11px] font-semibold text-secondary">{tw("title")}</p>
+          <p className="text-[10px] text-muted">{tw("subtitle")}</p>
         </div>
         <button
           type="button"
           onClick={() => setForm((f) => ({ ...f, is_enabled: !f.is_enabled }))}
-          className={`relative h-5 w-9 rounded-full transition-colors ${form.is_enabled ? "bg-emerald-500/70" : "bg-white/15"}`}
+          className={`relative h-5 w-9 rounded-full transition-colors ${form.is_enabled ? "bg-success-muted" : "bg-surface-2"}`}
         >
           <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${form.is_enabled ? "translate-x-4" : "translate-x-0.5"}`} />
         </button>
@@ -211,24 +211,24 @@ function WhatsAppSettingsForm({
       {/* Credentials */}
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="mb-0.5 block text-[10px] font-medium text-white/40">{tw("phoneNumberId")}</label>
+          <label className="mb-0.5 block text-[10px] font-medium text-tertiary">{tw("phoneNumberId")}</label>
           <input value={form.wa_phone_number_id} onChange={field("wa_phone_number_id")}
             placeholder={tw("phoneNumberIdPlaceholder")}
-            className="w-full rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-[11px] text-white/75 outline-none placeholder:text-white/18 focus:border-indigo-500/50"
+            className="w-full rounded border border-default bg-surface-2 px-2 py-1.5 text-[11px] text-secondary outline-none placeholder:text-muted focus:bg-accent-muted"
           />
         </div>
         <div>
-          <label className="mb-0.5 block text-[10px] font-medium text-white/40">{tw("wabaId")}</label>
+          <label className="mb-0.5 block text-[10px] font-medium text-tertiary">{tw("wabaId")}</label>
           <input value={form.wa_waba_id} onChange={field("wa_waba_id")}
             placeholder={tw("wabaIdPlaceholder")}
-            className="w-full rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-[11px] text-white/75 outline-none placeholder:text-white/18 focus:border-indigo-500/50"
+            className="w-full rounded border border-default bg-surface-2 px-2 py-1.5 text-[11px] text-secondary outline-none placeholder:text-muted focus:bg-accent-muted"
           />
         </div>
         <div className="col-span-2">
-          <label className="mb-0.5 block text-[10px] font-medium text-white/40">{tw("displayName")}</label>
+          <label className="mb-0.5 block text-[10px] font-medium text-tertiary">{tw("displayName")}</label>
           <input value={form.wa_display_name} onChange={field("wa_display_name")}
             placeholder={tw("displayNamePlaceholder")}
-            className="w-full rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-[11px] text-white/75 outline-none placeholder:text-white/18 focus:border-indigo-500/50"
+            className="w-full rounded border border-default bg-surface-2 px-2 py-1.5 text-[11px] text-secondary outline-none placeholder:text-muted focus:bg-accent-muted"
           />
         </div>
         <div className="col-span-2">
@@ -242,39 +242,39 @@ function WhatsAppSettingsForm({
       </div>
 
       {/* Webhook info */}
-      <div className="rounded border border-indigo-500/15 bg-indigo-500/[0.04] p-3 space-y-2">
-        <p className="text-[10px] font-semibold text-indigo-300/70 uppercase tracking-wide">{tw("webhookSection")}</p>
+      <div className="rounded border border-blue-500/15 bg-accent-muted p-3 space-y-2">
+        <p className="text-[10px] font-semibold text-accent/70 uppercase tracking-wide">{tw("webhookSection")}</p>
         <div>
-          <p className="text-[10px] text-white/35 mb-0.5">{tw("webhookUrl")}</p>
+          <p className="text-[10px] text-muted mb-0.5">{tw("webhookUrl")}</p>
           <div className="flex items-center gap-1">
-            <code className="flex-1 rounded bg-white/[0.04] px-2 py-1 text-[10px] text-white/60 font-mono truncate">{webhookUrl}</code>
+            <code className="flex-1 rounded bg-surface-2 px-2 py-1 text-[10px] text-secondary font-mono truncate">{webhookUrl}</code>
             <CopyButton value={webhookUrl} />
           </div>
         </div>
         <div>
-          <p className="text-[10px] text-white/35 mb-0.5">{tw("verifyToken")}</p>
+          <p className="text-[10px] text-muted mb-0.5">{tw("verifyToken")}</p>
           <div className="flex items-center gap-1">
             <input
               value={form.wa_webhook_verify_token}
               onChange={field("wa_webhook_verify_token")}
               placeholder={tw("verifyTokenPlaceholder")}
-              className="flex-1 rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1 text-[10px] font-mono text-white/60 outline-none focus:border-indigo-500/50"
+              className="flex-1 rounded border border-default bg-surface-2 px-2 py-1 text-[10px] font-mono text-secondary outline-none focus:bg-accent-muted"
             />
             {form.wa_webhook_verify_token && <CopyButton value={form.wa_webhook_verify_token} />}
           </div>
         </div>
-        <p className="text-[9.5px] text-white/25 leading-relaxed">
+        <p className="text-[9.5px] text-muted leading-relaxed">
           {tw.rich("webhookHelp", {
-            strong: (chunks) => <strong className="text-white/40">{chunks}</strong>,
+            strong: (chunks) => <strong className="text-tertiary">{chunks}</strong>,
           })}
         </p>
       </div>
 
-      {error && <p className="text-[10px] text-red-400">{error}</p>}
+      {error && <p className="text-[10px] text-error">{error}</p>}
 
       <div className="flex items-center gap-2">
         <button onClick={save} disabled={saving}
-          className="flex items-center gap-1.5 rounded bg-indigo-600/70 px-3 py-1.5 text-[11px] font-medium text-white/90 hover:bg-indigo-600/90 disabled:opacity-50">
+          className="flex items-center gap-1.5 rounded bg-accent px-3 py-1.5 text-[11px] font-medium text-primary hover:bg-accent-hover disabled:opacity-50">
           {saving && <Loader2 className="h-3 w-3 animate-spin" />}
           {t("saveSettings")}
         </button>
@@ -282,10 +282,10 @@ function WhatsAppSettingsForm({
         <div className="ml-auto flex items-center gap-1.5">
           <input value={testRecipient} onChange={(e) => setTestRecipient(e.target.value)}
             placeholder={tw("testPlaceholder")}
-            className="w-32 rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-[11px] text-white/75 outline-none placeholder:text-white/18"
+            className="w-32 rounded border border-default bg-surface-2 px-2 py-1.5 text-[11px] text-secondary outline-none placeholder:text-muted"
           />
           <button onClick={sendTest} disabled={testing || !testRecipient.trim()}
-            className="flex items-center gap-1 rounded border border-white/10 px-2.5 py-1.5 text-[11px] text-white/50 hover:bg-white/[0.04] disabled:opacity-40">
+            className="flex items-center gap-1 rounded border border-subtle px-2.5 py-1.5 text-[11px] text-secondary hover:bg-surface-2 disabled:opacity-40">
             {testing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
             {t("test")}
           </button>
@@ -293,7 +293,7 @@ function WhatsAppSettingsForm({
       </div>
 
       {testResult && (
-        <p className={`text-[10px] ${testResult.startsWith("✓") ? "text-emerald-400" : "text-red-400"}`}>{testResult}</p>
+        <p className={`text-[10px] ${testResult.startsWith("✓") ? "text-success" : "text-error"}`}>{testResult}</p>
       )}
     </div>
   );
@@ -375,15 +375,15 @@ function EmailSettingsForm({
   return (
     <div className="space-y-5">
       {/* Enable toggle */}
-      <div className="flex items-center justify-between rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
+      <div className="flex items-center justify-between rounded border border-default bg-surface-1 px-3 py-2.5">
         <div>
-          <p className="text-[11px] font-semibold text-white/75">{te("title")}</p>
-          <p className="text-[10px] text-white/35">{te("subtitle")}</p>
+          <p className="text-[11px] font-semibold text-secondary">{te("title")}</p>
+          <p className="text-[10px] text-muted">{te("subtitle")}</p>
         </div>
         <button
           type="button"
           onClick={() => setForm((f) => ({ ...f, is_enabled: !f.is_enabled }))}
-          className={`relative h-5 w-9 rounded-full transition-colors ${form.is_enabled ? "bg-emerald-500/70" : "bg-white/15"}`}
+          className={`relative h-5 w-9 rounded-full transition-colors ${form.is_enabled ? "bg-success-muted" : "bg-surface-2"}`}
         >
           <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${form.is_enabled ? "translate-x-4" : "translate-x-0.5"}`} />
         </button>
@@ -391,27 +391,27 @@ function EmailSettingsForm({
 
       {/* Inbound address */}
       <div>
-        <label className="mb-0.5 block text-[10px] font-medium text-white/40">{te("inboundAddress")}</label>
+        <label className="mb-0.5 block text-[10px] font-medium text-tertiary">{te("inboundAddress")}</label>
         <input value={form.email_inbound_address} onChange={field("email_inbound_address")}
           placeholder={te("inboundPlaceholder")}
-          className="w-full rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-[11px] text-white/75 outline-none placeholder:text-white/18 focus:border-indigo-500/50"
+          className="w-full rounded border border-default bg-surface-2 px-2 py-1.5 text-[11px] text-secondary outline-none placeholder:text-muted focus:bg-accent-muted"
         />
-        <p className="mt-0.5 text-[9.5px] text-white/25">{te("inboundHelp")}</p>
+        <p className="mt-0.5 text-[9.5px] text-muted">{te("inboundHelp")}</p>
       </div>
 
       {/* Webhook info */}
-      <div className="rounded border border-indigo-500/15 bg-indigo-500/[0.04] p-3 space-y-2">
-        <p className="text-[10px] font-semibold text-indigo-300/70 uppercase tracking-wide">{te("webhookSection")}</p>
+      <div className="rounded border border-blue-500/15 bg-accent-muted p-3 space-y-2">
+        <p className="text-[10px] font-semibold text-accent/70 uppercase tracking-wide">{te("webhookSection")}</p>
         <div>
-          <p className="text-[10px] text-white/35 mb-0.5">{te("webhookUrl")}</p>
+          <p className="text-[10px] text-muted mb-0.5">{te("webhookUrl")}</p>
           <div className="flex items-center gap-1">
-            <code className="flex-1 rounded bg-white/[0.04] px-2 py-1 text-[10px] text-white/60 font-mono truncate">{inboundWebhook}</code>
+            <code className="flex-1 rounded bg-surface-2 px-2 py-1 text-[10px] text-secondary font-mono truncate">{inboundWebhook}</code>
             <CopyButton value={inboundWebhook} />
           </div>
         </div>
-        <p className="text-[9.5px] text-white/25 leading-relaxed">
+        <p className="text-[9.5px] text-muted leading-relaxed">
           {te.rich("webhookHelp", {
-            code: (chunks) => <code className="text-white/40">{chunks}</code>,
+            code: (chunks) => <code className="text-tertiary">{chunks}</code>,
           })}
         </p>
         <div className="col-span-2">
@@ -426,34 +426,34 @@ function EmailSettingsForm({
 
       {/* SMTP */}
       <div>
-        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-white/35">{te("smtpSection")}</p>
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted">{te("smtpSection")}</p>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-0.5 block text-[10px] font-medium text-white/40">{te("smtpHost")}</label>
+            <label className="mb-0.5 block text-[10px] font-medium text-tertiary">{te("smtpHost")}</label>
             <input value={form.email_smtp_host} onChange={field("email_smtp_host")}
               placeholder={te("smtpHostPlaceholder")}
-              className="w-full rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-[11px] text-white/75 outline-none placeholder:text-white/18 focus:border-indigo-500/50"
+              className="w-full rounded border border-default bg-surface-2 px-2 py-1.5 text-[11px] text-secondary outline-none placeholder:text-muted focus:bg-accent-muted"
             />
           </div>
           <div>
-            <label className="mb-0.5 block text-[10px] font-medium text-white/40">{te("smtpPort")}</label>
+            <label className="mb-0.5 block text-[10px] font-medium text-tertiary">{te("smtpPort")}</label>
             <input value={form.email_smtp_port} onChange={field("email_smtp_port")}
               placeholder="587"
-              className="w-full rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-[11px] text-white/75 outline-none placeholder:text-white/18 focus:border-indigo-500/50"
+              className="w-full rounded border border-default bg-surface-2 px-2 py-1.5 text-[11px] text-secondary outline-none placeholder:text-muted focus:bg-accent-muted"
             />
           </div>
           <div>
-            <label className="mb-0.5 block text-[10px] font-medium text-white/40">{te("smtpUser")}</label>
+            <label className="mb-0.5 block text-[10px] font-medium text-tertiary">{te("smtpUser")}</label>
             <input value={form.email_smtp_user} onChange={field("email_smtp_user")}
               placeholder={te("smtpUserPlaceholder")}
-              className="w-full rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-[11px] text-white/75 outline-none placeholder:text-white/18 focus:border-indigo-500/50"
+              className="w-full rounded border border-default bg-surface-2 px-2 py-1.5 text-[11px] text-secondary outline-none placeholder:text-muted focus:bg-accent-muted"
             />
           </div>
           <div>
-            <label className="mb-0.5 block text-[10px] font-medium text-white/40">{te("smtpFrom")}</label>
+            <label className="mb-0.5 block text-[10px] font-medium text-tertiary">{te("smtpFrom")}</label>
             <input value={form.email_smtp_from} onChange={field("email_smtp_from")}
               placeholder={te("smtpFromPlaceholder")}
-              className="w-full rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-[11px] text-white/75 outline-none placeholder:text-white/18 focus:border-indigo-500/50"
+              className="w-full rounded border border-default bg-surface-2 px-2 py-1.5 text-[11px] text-secondary outline-none placeholder:text-muted focus:bg-accent-muted"
             />
           </div>
           <div className="col-span-2">
@@ -467,11 +467,11 @@ function EmailSettingsForm({
         </div>
       </div>
 
-      {error && <p className="text-[10px] text-red-400">{error}</p>}
+      {error && <p className="text-[10px] text-error">{error}</p>}
 
       <div className="flex items-center gap-2">
         <button onClick={save} disabled={saving}
-          className="flex items-center gap-1.5 rounded bg-indigo-600/70 px-3 py-1.5 text-[11px] font-medium text-white/90 hover:bg-indigo-600/90 disabled:opacity-50">
+          className="flex items-center gap-1.5 rounded bg-accent px-3 py-1.5 text-[11px] font-medium text-primary hover:bg-accent-hover disabled:opacity-50">
           {saving && <Loader2 className="h-3 w-3 animate-spin" />}
           {t("saveSettings")}
         </button>
@@ -479,10 +479,10 @@ function EmailSettingsForm({
         <div className="ml-auto flex items-center gap-1.5">
           <input value={testRecipient} onChange={(e) => setTestRecipient(e.target.value)}
             placeholder={te("testPlaceholder")}
-            className="w-40 rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-[11px] text-white/75 outline-none placeholder:text-white/18"
+            className="w-40 rounded border border-default bg-surface-2 px-2 py-1.5 text-[11px] text-secondary outline-none placeholder:text-muted"
           />
           <button onClick={sendTest} disabled={testing || !testRecipient.trim()}
-            className="flex items-center gap-1 rounded border border-white/10 px-2.5 py-1.5 text-[11px] text-white/50 hover:bg-white/[0.04] disabled:opacity-40">
+            className="flex items-center gap-1 rounded border border-subtle px-2.5 py-1.5 text-[11px] text-secondary hover:bg-surface-2 disabled:opacity-40">
             {testing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
             {t("test")}
           </button>
@@ -490,7 +490,7 @@ function EmailSettingsForm({
       </div>
 
       {testResult && (
-        <p className={`text-[10px] ${testResult.startsWith("✓") ? "text-emerald-400" : "text-red-400"}`}>{testResult}</p>
+        <p className={`text-[10px] ${testResult.startsWith("✓") ? "text-success" : "text-error"}`}>{testResult}</p>
       )}
     </div>
   );
@@ -521,20 +521,20 @@ function MessageLog({ channel, companyId }: { channel: ChannelTab | "all"; compa
   useEffect(() => { load(); }, [load]);
 
   if (loading) return (
-    <div className="flex items-center gap-2 py-8 text-white/28">
+    <div className="flex items-center gap-2 py-8 text-muted">
       <Loader2 className="h-4 w-4 animate-spin" /> {t("loading")}
     </div>
   );
 
   if (!messages.length) return (
-    <p className="py-8 text-center text-[11px] text-white/25">{tl("empty")}</p>
+    <p className="py-8 text-center text-[11px] text-muted">{tl("empty")}</p>
   );
 
   return (
     <div className="space-y-0">
       <div className="flex items-center justify-between pb-2">
-        <span className="text-[10px] text-white/30">{tl("countNewest", { n: messages.length })}</span>
-        <button onClick={load} className="flex items-center gap-1 text-[10px] text-white/30 hover:text-white/55">
+        <span className="text-[10px] text-muted">{tl("countNewest", { n: messages.length })}</span>
+        <button onClick={load} className="flex items-center gap-1 text-[10px] text-muted hover:text-tertiary">
           <RefreshCw className="h-3 w-3" /> {t("refresh")}
         </button>
       </div>
@@ -542,38 +542,38 @@ function MessageLog({ channel, companyId }: { channel: ChannelTab | "all"; compa
         const isIn  = msg.direction === "inbound";
         const isExp = expanded === msg.id;
         return (
-          <div key={msg.id} className="border-b border-white/[0.05] last:border-0">
+          <div key={msg.id} className="border-b border-subtle last:border-0">
             <button
               type="button"
               onClick={() => setExpanded(isExp ? null : msg.id)}
-              className="flex w-full items-start gap-2.5 px-0 py-2 text-left hover:bg-white/[0.02]"
+              className="flex w-full items-start gap-2.5 px-0 py-2 text-left hover:bg-surface-1"
             >
-              <span className={`mt-0.5 shrink-0 ${isIn ? "text-sky-400/60" : "text-emerald-400/60"}`}>
+              <span className={`mt-0.5 shrink-0 ${isIn ? "text-accent/60" : "text-success/60"}`}>
                 {isIn ? <ArrowDownLeft className="h-3.5 w-3.5" /> : <ArrowUpRight className="h-3.5 w-3.5" />}
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-medium text-white/65 truncate">{msg.sender_ref}</span>
-                  <span className={`shrink-0 rounded px-1 text-[8.5px] font-medium ${msg.channel === "whatsapp" ? "bg-emerald-500/10 text-emerald-300/60" : "bg-sky-500/10 text-sky-300/60"}`}>
+                  <span className="text-[10px] font-medium text-secondary truncate">{msg.sender_ref}</span>
+                  <span className={`shrink-0 rounded px-1 text-[8.5px] font-medium ${msg.channel === "whatsapp" ? "bg-success-muted text-emerald-300/60" : "bg-accent/10 text-accent/60"}`}>
                     {msg.channel}
                   </span>
                   {msg.intent && <IntentBadge intent={msg.intent} />}
                   <StatusBadge status={msg.status} />
-                  <span className="ml-auto shrink-0 text-[9px] text-white/22">
+                  <span className="ml-auto shrink-0 text-[9px] text-muted">
                     {new Date(msg.created_at).toLocaleString()}
                   </span>
                 </div>
-                <p className="mt-0.5 truncate text-[10px] text-white/35">{msg.body || tl("noText")}</p>
+                <p className="mt-0.5 truncate text-[10px] text-muted">{msg.body || tl("noText")}</p>
               </div>
-              <ChevronRight className={`mt-0.5 h-3 w-3 shrink-0 text-white/20 transition-transform ${isExp ? "rotate-90" : ""}`} />
+              <ChevronRight className={`mt-0.5 h-3 w-3 shrink-0 text-muted transition-transform ${isExp ? "rotate-90" : ""}`} />
             </button>
             {isExp && (
-              <div className="mb-2 ml-6 rounded border border-white/[0.06] bg-white/[0.02] p-2.5 text-[10px] text-white/45 space-y-1">
-                <p><span className="text-white/25">{tl("detailId")}</span> {msg.id}</p>
-                <p><span className="text-white/25">{tl("detailThread")}</span> {msg.thread_id ?? "—"}</p>
-                <p><span className="text-white/25">{tl("detailUserId")}</span> {msg.user_id ?? "—"}</p>
-                {msg.body && <p className="whitespace-pre-wrap"><span className="text-white/25">{tl("detailBody")}</span> {msg.body}</p>}
-                {msg.error_detail && <p className="text-red-400"><span className="text-white/25">{tl("detailError")}</span> {msg.error_detail}</p>}
+              <div className="mb-2 ml-6 rounded border border-subtle bg-surface-1 p-2.5 text-[10px] text-tertiary space-y-1">
+                <p><span className="text-muted">{tl("detailId")}</span> {msg.id}</p>
+                <p><span className="text-muted">{tl("detailThread")}</span> {msg.thread_id ?? "—"}</p>
+                <p><span className="text-muted">{tl("detailUserId")}</span> {msg.user_id ?? "—"}</p>
+                {msg.body && <p className="whitespace-pre-wrap"><span className="text-muted">{tl("detailBody")}</span> {msg.body}</p>}
+                {msg.error_detail && <p className="text-error"><span className="text-muted">{tl("detailError")}</span> {msg.error_detail}</p>}
               </div>
             )}
           </div>
@@ -630,7 +630,7 @@ function DispatchLog({ channel, companyId }: { channel: ChannelTab; companyId: n
   const statusTone = (s: string) =>
     s === "sent" ? "bg-emerald-500/15 text-emerald-300"
       : s === "failed" ? "bg-rose-500/15 text-rose-300"
-      : "bg-amber-500/15 text-amber-300";
+      : "bg-amber-500/15 text-warning";
 
   return (
     <div className="space-y-3">
@@ -643,7 +643,7 @@ function DispatchLog({ channel, companyId }: { channel: ChannelTab; companyId: n
               key={s}
               onClick={() => setStatusFilter(s)}
               className={`rounded px-2 py-0.5 text-[10px] transition-colors ${
-                statusFilter === s ? "bg-white/[0.10] text-white/80" : "text-white/35 hover:bg-white/[0.04] hover:text-white/60"
+                statusFilter === s ? "bg-surface-2 text-secondary" : "text-muted hover:bg-surface-2 hover:text-secondary"
               }`}
             >
               {td(labelKey)}
@@ -655,7 +655,7 @@ function DispatchLog({ channel, companyId }: { channel: ChannelTab; companyId: n
           type="button"
           onClick={() => void load()}
           disabled={loading}
-          className="flex items-center gap-1 rounded border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] text-white/60 transition hover:border-white/20 hover:text-white/80 disabled:opacity-50"
+          className="flex items-center gap-1 rounded border border-subtle bg-surface-2 px-2 py-1 text-[10px] text-secondary transition hover:border-strong hover:text-secondary disabled:opacity-50"
         >
           {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
           {t("refresh")}
@@ -663,24 +663,24 @@ function DispatchLog({ channel, companyId }: { channel: ChannelTab; companyId: n
       </div>
 
       {error && (
-        <div className="rounded border border-rose-500/30 bg-rose-500/[0.08] p-2 text-[10.5px] text-rose-200 break-all">
+        <div className="rounded border border-error bg-rose-500/[0.08] p-2 text-[10.5px] text-rose-200 break-all">
           {error}
         </div>
       )}
 
       {loading ? (
-        <div className="flex items-center gap-2 py-6 text-[11px] text-white/30">
+        <div className="flex items-center gap-2 py-6 text-[11px] text-muted">
           <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("loading")}
         </div>
       ) : rows.length === 0 ? (
-        <div className="rounded border border-white/[0.07] bg-white/[0.02] py-8 text-center text-[11px] text-white/35">
+        <div className="rounded border border-default bg-surface-1 py-8 text-center text-[11px] text-muted">
           {td("empty")}
         </div>
       ) : (
-        <div className="overflow-hidden rounded border border-white/[0.07]">
+        <div className="overflow-hidden rounded border border-default">
           <table className="w-full text-[10.5px]">
             <thead>
-              <tr className="border-b border-white/[0.07] bg-white/[0.02] text-left text-[9.5px] uppercase tracking-wide text-white/35">
+              <tr className="border-b border-default bg-surface-1 text-left text-[9.5px] uppercase tracking-wide text-muted">
                 <th className="px-2 py-1.5 font-medium">{td("colEvent")}</th>
                 <th className="px-2 py-1.5 font-medium">{td("colRecipient")}</th>
                 <th className="px-2 py-1.5 font-medium">{td("colStatus")}</th>
@@ -690,20 +690,20 @@ function DispatchLog({ channel, companyId }: { channel: ChannelTab; companyId: n
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.id} className="border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.02]">
+                <tr key={r.id} className="border-b border-subtle last:border-b-0 hover:bg-surface-1">
                   <td className="px-2 py-1.5">
-                    <span className="font-mono text-white/75">{r.event_type}</span>
+                    <span className="font-mono text-secondary">{r.event_type}</span>
                     {r.resource_type && (
-                      <span className="ml-1 text-[9.5px] text-white/30">
+                      <span className="ml-1 text-[9.5px] text-muted">
                         · {r.resource_type}#{r.resource_id ?? "—"}
                       </span>
                     )}
                   </td>
                   <td className="px-2 py-1.5">
                     {r.recipient_address ? (
-                      <span className="font-mono text-white/65">{r.recipient_address}</span>
+                      <span className="font-mono text-secondary">{r.recipient_address}</span>
                     ) : (
-                      <span className="text-white/30">user#{r.recipient_user_id ?? "—"}</span>
+                      <span className="text-muted">user#{r.recipient_user_id ?? "—"}</span>
                     )}
                   </td>
                   <td className="px-2 py-1.5">
@@ -716,8 +716,8 @@ function DispatchLog({ channel, companyId }: { channel: ChannelTab; companyId: n
                       </div>
                     )}
                   </td>
-                  <td className="px-2 py-1.5 tabular-nums text-white/60">{r.attempts}</td>
-                  <td className="px-2 py-1.5 text-[10px] text-white/40">
+                  <td className="px-2 py-1.5 tabular-nums text-secondary">{r.attempts}</td>
+                  <td className="px-2 py-1.5 text-[10px] text-tertiary">
                     {r.created_at ? new Date(r.created_at).toLocaleString() : "—"}
                   </td>
                 </tr>
@@ -736,24 +736,24 @@ function StatsBar({ stats }: { stats: ChannelStats | null }) {
   const t = useTranslations("admin.channels.stats");
   if (!stats) return null;
   return (
-    <div className="flex items-center gap-4 border-b border-white/[0.06] px-4 py-2">
+    <div className="flex items-center gap-4 border-b border-subtle px-4 py-2">
       <div className="text-center">
-        <p className="text-[10px] text-white/30">{t("total")}</p>
-        <p className="text-[13px] font-semibold text-white/70">{stats.total_messages}</p>
+        <p className="text-[10px] text-muted">{t("total")}</p>
+        <p className="text-[13px] font-semibold text-secondary">{stats.total_messages}</p>
       </div>
-      <div className="h-8 w-px bg-white/[0.07]" />
+      <div className="h-8 w-px bg-surface-3" />
       {Object.entries(stats.by_channel).map(([ch, cnt]) => (
         <div key={ch} className="text-center">
-          <p className="text-[10px] text-white/30 capitalize">{ch}</p>
-          <p className="text-[13px] font-semibold text-white/70">{cnt}</p>
+          <p className="text-[10px] text-muted capitalize">{ch}</p>
+          <p className="text-[13px] font-semibold text-secondary">{cnt}</p>
         </div>
       ))}
       {stats.errors > 0 && (
         <>
-          <div className="h-8 w-px bg-white/[0.07]" />
+          <div className="h-8 w-px bg-surface-3" />
           <div className="text-center">
-            <p className="text-[10px] text-red-400/60">{t("errors")}</p>
-            <p className="text-[13px] font-semibold text-red-400">{stats.errors}</p>
+            <p className="text-[10px] text-error/60">{t("errors")}</p>
+            <p className="text-[13px] font-semibold text-error">{stats.errors}</p>
           </div>
         </>
       )}
@@ -796,7 +796,7 @@ export default function AdminChannelsPanel({ companyId }: { companyId: number })
       <StatsBar stats={stats} />
 
       {/* Channel tabs */}
-      <div className="flex shrink-0 items-center gap-0 border-b border-white/[0.06] px-4">
+      <div className="flex shrink-0 items-center gap-0 border-b border-subtle px-4">
         {(["whatsapp", "email"] as ChannelTab[]).map((ch) => {
           const enabled = ch === "whatsapp" ? waEnabled : emEnabled;
           return (
@@ -805,32 +805,32 @@ export default function AdminChannelsPanel({ companyId }: { companyId: number })
               onClick={() => setChannelTab(ch)}
               className={`flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-[11px] font-medium transition-colors ${
                 channelTab === ch
-                  ? "border-indigo-400/60 text-white/80"
-                  : "border-transparent text-white/35 hover:text-white/55"
+                  ? "bg-accent-muted/60 text-secondary"
+                  : "border-transparent text-muted hover:text-tertiary"
               }`}
             >
               {ch === "whatsapp"
                 ? <MessageSquare className="h-3.5 w-3.5" />
                 : <Mail className="h-3.5 w-3.5" />}
-              {ch === "whatsapp" ? "WhatsApp" : "Email"}
-              <span className={`ml-0.5 h-1.5 w-1.5 rounded-full ${enabled ? "bg-emerald-400" : "bg-white/20"}`} />
+              {ch === "whatsapp" ? t("tabWhatsApp") : t("tabEmail")}
+              <span className={`ml-0.5 h-1.5 w-1.5 rounded-full ${enabled ? "bg-emerald-400" : "bg-surface-2"}`} />
             </button>
           );
         })}
       </div>
 
       {/* Sub-tabs */}
-      <div className="flex shrink-0 items-center gap-2 border-b border-white/[0.06] px-4 py-0">
-        {((["settings", "log", "dispatches"]) as SubTab[]).map((t) => (
+      <div className="flex shrink-0 items-center gap-2 border-b border-subtle px-4 py-0">
+        {((["settings", "log", "dispatches"]) as SubTab[]).map((st) => (
           <button
-            key={t}
-            onClick={() => setSubTab(t)}
+            key={st}
+            onClick={() => setSubTab(st)}
             className={`flex items-center gap-1 px-3 py-2 text-[10.5px] font-medium capitalize transition-colors ${
-              subTab === t ? "text-white/70" : "text-white/28 hover:text-white/50"
+              subTab === st ? "text-secondary" : "text-muted hover:text-secondary"
             }`}
           >
-            {t === "settings" ? <Settings2 className="h-3 w-3" /> : t === "log" ? <MessageSquare className="h-3 w-3" /> : <Send className="h-3 w-3" />}
-            {t === "settings" ? "Configuration" : t === "log" ? "Message Log" : "Dispatches"}
+            {st === "settings" ? <Settings2 className="h-3 w-3" /> : st === "log" ? <MessageSquare className="h-3 w-3" /> : <Send className="h-3 w-3" />}
+            {st === "settings" ? t("subTabSettings") : st === "log" ? t("subTabLog") : t("subTabDispatches")}
           </button>
         ))}
       </div>
@@ -838,8 +838,8 @@ export default function AdminChannelsPanel({ companyId }: { companyId: number })
       {/* Content */}
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         {loading ? (
-          <div className="flex items-center gap-2 py-8 text-white/28">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+          <div className="flex items-center gap-2 py-8 text-muted">
+            <Loader2 className="h-4 w-4 animate-spin" /> {t("loading")}
           </div>
         ) : subTab === "settings" ? (
           current ? (
@@ -847,7 +847,7 @@ export default function AdminChannelsPanel({ companyId }: { companyId: number })
               ? <WhatsAppSettingsForm settings={current} onSaved={handleSaved} companyId={companyId} />
               : <EmailSettingsForm settings={current} onSaved={handleSaved} companyId={companyId} />
           ) : (
-            <p className="py-8 text-center text-[11px] text-white/25">Could not load settings.</p>
+            <p className="py-8 text-center text-[11px] text-muted">Could not load settings.</p>
           )
         ) : subTab === "log" ? (
           <MessageLog channel={channelTab} companyId={companyId} />

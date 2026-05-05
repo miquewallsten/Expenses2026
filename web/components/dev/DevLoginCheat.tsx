@@ -40,21 +40,21 @@ const roleLabel = (r: string) => ROLE_LABELS[r] ?? (r.charAt(0).toUpperCase() + 
 const roleBadge = (r: string) => ROLE_BADGE_ABBR[r] ?? r.slice(0, 3);
 
 const ROLE_COLOR: Record<string, string> = {
-  admin:      "text-rose-300/70",
-  executive:  "text-amber-300/70",
-  manager:    "text-sky-300/70",
-  accounting: "text-emerald-300/70",
-  secretary:  "text-purple-300/70",
-  employee:   "text-white/40",
+  admin:      "text-rose-400",
+  executive:  "text-amber-400",
+  manager:    "text-accent",
+  accounting: "text-emerald-400",
+  secretary:  "text-purple-400",
+  employee:   "text-tertiary",
 };
 
 const ROLE_BADGE: Record<string, string> = {
-  admin:      "border-rose-500/25 bg-rose-500/[0.07] text-rose-300/70",
-  executive:  "border-amber-500/25 bg-amber-500/[0.07] text-amber-300/70",
-  manager:    "border-sky-500/25 bg-sky-500/[0.07] text-sky-300/70",
-  accounting: "border-emerald-500/25 bg-emerald-500/[0.07] text-emerald-300/70",
-  secretary:  "border-purple-500/25 bg-purple-500/[0.07] text-purple-300/70",
-  employee:   "border-white/[0.09] bg-white/[0.03] text-white/35",
+  admin:      "border-rose-500/25 bg-rose-500/10 text-rose-400",
+  executive:  "border-amber-500/25 bg-amber-500/10 text-amber-400",
+  manager:    "border-sky-500/25 bg-sky-500/10 text-accent",
+  accounting: "border-emerald-500/25 bg-emerald-500/10 text-emerald-400",
+  secretary:  "border-purple-500/25 bg-purple-500/10 text-purple-400",
+  employee:   "border-default bg-surface-1 text-muted",
 };
 
 // ── Inner panel (always mounts, gate is outside) ──────────────────────────────
@@ -170,21 +170,21 @@ function DevLoginPanel() {
     <div
       ref={panelRef}
       style={{ left: pos.x, top: pos.y, zIndex: 9999 }}
-      className="fixed w-52 select-none overflow-hidden rounded-lg border border-amber-500/20 bg-zinc-950/95 shadow-xl shadow-black/60 backdrop-blur-sm"
+      className="fixed w-52 select-none overflow-hidden rounded-lg border border-amber-500/20 bg-surface-0/95 shadow-xl shadow-black/60 backdrop-blur-sm"
     >
       {/* Header / drag handle */}
       <div
         onMouseDown={onMouseDown}
-        className="flex cursor-grab items-center gap-1.5 border-b border-amber-500/15 bg-amber-500/[0.06] px-2.5 py-1.5 active:cursor-grabbing"
+        className="flex cursor-grab items-center gap-1.5 border-b border-amber-500/15 bg-amber-500/10 px-2.5 py-1.5 active:cursor-grabbing"
       >
-        <GripVertical className="h-3 w-3 shrink-0 text-amber-400/40" />
-        <span className="flex-1 text-[9px] font-bold uppercase tracking-widest text-amber-400/60">
+        <GripVertical className="h-3 w-3 shrink-0 text-amber-400" />
+        <span className="flex-1 text-[9px] font-bold uppercase tracking-widest text-amber-400">
           Dev Login
         </span>
         <button
           type="button"
           onClick={() => setCollapsed((v) => !v)}
-          className="text-amber-400/40 hover:text-amber-400/70"
+          className="text-amber-400 hover:text-amber-300"
         >
           {collapsed
             ? <ChevronDown className="h-3 w-3" />
@@ -196,18 +196,18 @@ function DevLoginPanel() {
       {!collapsed && (
         <div className="max-h-72 overflow-y-auto">
           {loadingUsers ? (
-            <div className="flex items-center gap-2 px-3 py-3 text-white/25">
+            <div className="flex items-center gap-2 px-3 py-3 text-muted">
               <Loader2 className="h-3 w-3 animate-spin" />
               <span className="text-[10px]">Loading users…</span>
             </div>
           ) : users.length === 0 ? (
-            <p className="px-3 py-3 text-[10px] text-white/25">No users found.</p>
+            <p className="px-3 py-3 text-[10px] text-muted">No users found.</p>
           ) : (
             grouped.map(({ role, members }) => (
               <div key={role}>
                 {/* Role group header */}
-                <div className="border-b border-white/[0.04] bg-white/[0.015] px-2.5 py-1">
-                  <span className={`text-[8px] font-bold uppercase tracking-[0.12em] ${ROLE_COLOR[role] ?? "text-white/30"}`}>
+                <div className="border-b border-subtle bg-surface-1 px-2.5 py-1">
+                  <span className={`text-[8px] font-bold uppercase tracking-[0.12em] ${ROLE_COLOR[role] ?? "text-muted"}`}>
                     {roleLabel(role)}
                   </span>
                 </div>
@@ -219,16 +219,16 @@ function DevLoginPanel() {
                     type="button"
                     onClick={() => handleLogin(user)}
                     disabled={loggingIn !== null}
-                    className="flex w-full items-center gap-2 border-b border-white/[0.03] px-2.5 py-1.5 text-left transition-colors last:border-0 hover:bg-white/[0.04] disabled:opacity-50"
+                    className="flex w-full items-center gap-2 border-b border-subtle px-2.5 py-1.5 text-left transition-colors last:border-0 hover:bg-surface-2 disabled:opacity-50"
                   >
                     {loggingIn === user.id ? (
-                      <Loader2 className="h-3 w-3 shrink-0 animate-spin text-amber-400/60" />
+                      <Loader2 className="h-3 w-3 shrink-0 animate-spin text-amber-400" />
                     ) : (
-                      <LogIn className="h-3 w-3 shrink-0 text-white/15 group-hover:text-white/40" />
+                      <LogIn className="h-3 w-3 shrink-0 text-muted group-hover:text-tertiary" />
                     )}
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[10px] font-medium text-white/60">{user.full_name}</p>
-                      <p className="truncate font-mono text-[8.5px] text-white/25">{user.email}</p>
+                      <p className="truncate text-[10px] font-medium text-secondary">{user.full_name}</p>
+                      <p className="truncate font-mono text-[8.5px] text-muted">{user.email}</p>
                     </div>
                     <span className={`shrink-0 rounded border px-1 py-0.5 text-[7.5px] font-semibold uppercase tracking-wide ${ROLE_BADGE[role] ?? ROLE_BADGE.employee}`}>
                       {roleBadge(role)}
@@ -240,7 +240,7 @@ function DevLoginPanel() {
           )}
 
           {loginError && (
-            <p className="border-t border-red-500/15 bg-red-500/[0.06] px-2.5 py-1.5 text-[9px] text-red-400/70">
+            <p className="border-t border-red-500/15 bg-red-500/[0.06] px-2.5 py-1.5 text-[9px] text-error/70">
               {loginError}
             </p>
           )}

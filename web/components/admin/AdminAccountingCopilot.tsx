@@ -325,9 +325,9 @@ export default function AdminAccountingCopilot({
 
       {/* Header */}
       <div className="flex items-center gap-2">
-        <Bot className="h-4 w-4 shrink-0 text-indigo-400/55" />
-        <span className="text-[11px] font-semibold text-white/45">{t("copilotTitle")}</span>
-        <span className="ml-auto rounded border border-indigo-500/15 bg-indigo-500/[0.06] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-indigo-300/40">
+        <Bot className="h-4 w-4 shrink-0 text-accent/55" />
+        <span className="text-[11px] font-semibold text-tertiary">{t("copilotTitle")}</span>
+        <span className="ml-auto rounded border border-blue-500/15 bg-blue-500/[0.06] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-accent/40">
           {t("copilotAi")}
         </span>
       </div>
@@ -345,11 +345,11 @@ export default function AdminAccountingCopilot({
               }`}
             >
               {c.severity === "critical"
-                ? <AlertCircle   className="mt-0.5 h-3 w-3 shrink-0 text-red-400/55" />
-                : <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-amber-400/45" />
+                ? <AlertCircle   className="mt-0.5 h-3 w-3 shrink-0 text-error/55" />
+                : <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-warning/45" />
               }
               <p className={`text-[10px] leading-snug ${
-                c.severity === "critical" ? "text-red-300/60" : "text-amber-300/55"
+                c.severity === "critical" ? "text-error/60" : "text-warning/55"
               }`}>{c.message}</p>
             </div>
           ))}
@@ -366,13 +366,13 @@ export default function AdminAccountingCopilot({
             if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); }
           }}
           placeholder={t("promptPlaceholder")}
-          className="w-full resize-none rounded border border-white/[0.08] bg-white/[0.03] px-2.5 py-2 text-[10px] text-white/55 placeholder-white/18 outline-none focus:border-indigo-500/35"
+          className="w-full resize-none rounded border border-default bg-surface-1 px-2.5 py-2 text-[10px] text-tertiary placeholder-white/18 outline-none focus:bg-accent-muted"
         />
         <button
           type="button"
           onClick={handleSubmit}
           disabled={loading || !prompt.trim()}
-          className="inline-flex w-full items-center justify-center gap-1.5 rounded border border-indigo-500/25 bg-indigo-600/15 px-3 py-1.5 text-[10px] font-semibold text-indigo-300/70 transition-colors hover:bg-indigo-600/25 disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex w-full items-center justify-center gap-1.5 rounded border bg-accent-muted-muted bg-blue-600/15 px-3 py-1.5 text-[10px] font-semibold text-accent/70 transition-colors hover:bg-blue-600/25 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
           {loading ? t("analysing") : t("analyse")}
@@ -381,7 +381,7 @@ export default function AdminAccountingCopilot({
 
       {/* B — Quick prompts */}
       <div>
-        <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/20">{t("quickPrompts")}</p>
+        <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-muted">{t("quickPrompts")}</p>
         <div className="flex flex-wrap gap-1">
           {QUICK_PROMPTS.map(({ label, text }) => (
             <button
@@ -389,7 +389,7 @@ export default function AdminAccountingCopilot({
               type="button"
               disabled={loading}
               onClick={() => handleQuick(text)}
-              className="rounded border border-white/[0.07] bg-white/[0.02] px-2 py-0.5 text-[9px] text-white/30 transition-colors hover:border-white/[0.14] hover:text-white/50 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded border border-default bg-surface-1 px-2 py-0.5 text-[9px] text-muted transition-colors hover:border-default hover:text-secondary disabled:cursor-not-allowed disabled:opacity-40"
             >
               {label}
             </button>
@@ -399,8 +399,8 @@ export default function AdminAccountingCopilot({
 
       {/* Offline fallback */}
       {offline && !loading && (
-        <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
-          <p className="text-[10px] text-white/30">
+        <div className="rounded border border-default bg-surface-1 px-3 py-2.5">
+          <p className="text-[10px] text-muted">
             {t("offlineMsg")}
           </p>
         </div>
@@ -409,7 +409,7 @@ export default function AdminAccountingCopilot({
       {/* Parse error */}
       {parseError && !loading && (
         <div className="rounded border border-amber-500/15 bg-amber-500/[0.04] px-3 py-2">
-          <p className="text-[10px] text-amber-300/50">{t("parseErrorMsg")}</p>
+          <p className="text-[10px] text-warning/50">{t("parseErrorMsg")}</p>
         </div>
       )}
 
@@ -418,25 +418,25 @@ export default function AdminAccountingCopilot({
         <div className="space-y-3">
 
           {/* Summary */}
-          <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
-            <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-white/22">{t("resultSummary")}</p>
-            <p className="text-[10px] leading-relaxed text-white/45">{result.summary}</p>
+          <div className="rounded border border-default bg-surface-1 px-3 py-2.5">
+            <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-muted">{t("resultSummary")}</p>
+            <p className="text-[10px] leading-relaxed text-tertiary">{result.summary}</p>
           </div>
 
           {/* Accounting setup patch */}
           {patchEntries.length > 0 && (
-            <div className="overflow-hidden rounded border border-white/[0.07] bg-white/[0.02]">
-              <p className="border-b border-white/[0.06] px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-white/22">
+            <div className="overflow-hidden rounded border border-default bg-surface-1">
+              <p className="border-b border-subtle px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-muted">
                 {t("suggestedAccounting")}
               </p>
               <table className="w-full">
                 <tbody>
                   {patchEntries.map(([k, v]) => (
-                    <tr key={k} className="border-b border-white/[0.04] last:border-0">
-                      <td className="px-3 py-1.5 text-[10px] text-white/35">
+                    <tr key={k} className="border-b border-subtle last:border-0">
+                      <td className="px-3 py-1.5 text-[10px] text-muted">
                         {PATCH_LABELS[k] ?? k}
                       </td>
-                      <td className="px-3 py-1.5 text-right text-[10px] font-medium text-white/55">
+                      <td className="px-3 py-1.5 text-right text-[10px] font-medium text-tertiary">
                         {patchValueLabel(v)}
                       </td>
                     </tr>
@@ -448,12 +448,12 @@ export default function AdminAccountingCopilot({
 
           {/* Operational notes */}
           {result.notes.length > 0 && (
-            <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
-              <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/22">{t("operationalNotes")}</p>
+            <div className="rounded border border-default bg-surface-1 px-3 py-2.5">
+              <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-muted">{t("operationalNotes")}</p>
               <ul className="space-y-1">
                 {result.notes.map((n, i) => (
-                  <li key={i} className="flex items-start gap-1.5 text-[10px] text-white/38">
-                    <span className="mt-0.5 text-white/18">·</span>
+                  <li key={i} className="flex items-start gap-1.5 text-[10px] text-muted">
+                    <span className="mt-0.5 text-muted">·</span>
                     {n}
                   </li>
                 ))}
@@ -464,14 +464,14 @@ export default function AdminAccountingCopilot({
           {/* Risks */}
           {result.risks.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-white/20">{t("complianceGaps")}</p>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-muted">{t("complianceGaps")}</p>
               {result.risks.map((r, i) => (
                 <div
                   key={i}
                   className="flex items-start gap-2 rounded border border-amber-500/[0.10] bg-amber-500/[0.03] px-3 py-2"
                 >
-                  <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-amber-400/45" />
-                  <p className="text-[10px] leading-snug text-amber-300/55">{r}</p>
+                  <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-warning/45" />
+                  <p className="text-[10px] leading-snug text-warning/55">{r}</p>
                 </div>
               ))}
             </div>
@@ -483,10 +483,10 @@ export default function AdminAccountingCopilot({
               type="button"
               onClick={handleApply}
               disabled={applied}
-              className="inline-flex w-full items-center justify-center gap-1.5 rounded border border-indigo-500/25 bg-indigo-600/15 px-3 py-1.5 text-[10px] font-semibold text-indigo-300/70 transition-colors hover:bg-indigo-600/25 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded border bg-accent-muted-muted bg-blue-600/15 px-3 py-1.5 text-[10px] font-semibold text-accent/70 transition-colors hover:bg-blue-600/25 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {applied
-                ? <><CheckCircle2 className="h-3 w-3 text-emerald-400/60" /> {t("draftApplied")}</>
+                ? <><CheckCircle2 className="h-3 w-3 text-success/60" /> {t("draftApplied")}</>
                 : <><Zap className="h-3 w-3" /> {t("applyAccountingDraft")}</>
               }
             </button>

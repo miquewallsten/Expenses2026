@@ -19,15 +19,15 @@ const STATUS_CONFIG: Record<
   StatusVariant,
   { dot: string; text: string; badge: string; label?: string }
 > = {
-  draft:            { dot: "bg-zinc-400/50",    text: "text-zinc-400/70",    badge: "border-zinc-500/30 bg-zinc-500/12 text-zinc-400" },
-  submitted:        { dot: "bg-sky-400/65",     text: "text-sky-300/70",     badge: "border-sky-500/30 bg-sky-500/12 text-sky-300" },
+  draft:            { dot: "bg-muted",    text: "text-tertiary",    badge: "border-default bg-surface-2 text-secondary" },
+  submitted:        { dot: "bg-sky-400/65",     text: "text-accent/70",     badge: "border-sky-500/30 bg-accent/12 text-accent" },
   manager_approved: { dot: "bg-violet-400/65",  text: "text-violet-300/70",  badge: "border-violet-500/30 bg-violet-500/12 text-violet-300" },
   approved:         { dot: "bg-emerald-400/70", text: "text-emerald-300/70", badge: "border-emerald-500/30 bg-emerald-500/12 text-emerald-300" },
-  rejected:         { dot: "bg-red-400/65",     text: "text-red-300/70",     badge: "border-red-500/30 bg-red-500/12 text-red-300" },
-  uploading:        { dot: "bg-indigo-400/65",  text: "text-indigo-300/70",  badge: "border-indigo-500/30 bg-indigo-500/12 text-indigo-300" },
-  ok:               { dot: "bg-emerald-400/70", text: "text-emerald-400/65", badge: "border-emerald-500/25 bg-emerald-500/10 text-emerald-300/75" },
-  warn:             { dot: "bg-amber-400/70",   text: "text-amber-400/65",   badge: "border-amber-500/25 bg-amber-500/10 text-amber-300/75" },
-  unconfigured:     { dot: "bg-zinc-500/40",    text: "text-white/30",       badge: "border-white/10 bg-white/[0.04] text-white/35" },
+  rejected:         { dot: "bg-red-400/65",     text: "text-error/70",     badge: "border-error bg-red-500/12 text-error" },
+  uploading:        { dot: "bg-accent/65",  text: "text-accent/70",  badge: "bg-accent-muted bg-blue-500/12 text-accent" },
+  ok:               { dot: "bg-emerald-400/70", text: "text-success/65", badge: "border-emerald-500/25 bg-success-muted text-emerald-300/75" },
+  warn:             { dot: "bg-amber-400/70",   text: "text-warning/65",   badge: "border-amber-500/25 bg-warning-muted text-warning/75" },
+  unconfigured:     { dot: "bg-muted",    text: "text-muted",       badge: "border-subtle bg-surface-2 text-muted" },
 };
 
 function getConfig(status: string) {

@@ -51,20 +51,20 @@ export default function ReceiptCard({ companyId, receipt, onChanged, onConfirmed
   };
 
   return (
-    <div className="rounded-md border border-white/10 bg-zinc-950 p-3">
+    <div className="rounded-md border border-subtle bg-surface-0 p-3">
       {/* header */}
       <div className="mb-2 flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             {isIngestion
               ? <FileSpreadsheet className="h-4 w-4 text-cyan-400" />
-              : <AlertTriangle  className="h-4 w-4 text-amber-400" />
+              : <AlertTriangle  className="h-4 w-4 text-warning" />
             }
-            <span className="truncate font-mono text-xs text-zinc-200">{receipt.tool_name}</span>
+            <span className="truncate font-mono text-xs text-secondary">{receipt.tool_name}</span>
             <StatusBadge status={receipt.status} />
           </div>
           {typeof receipt.preview?.summary === "string" && (
-            <p className="mt-1 line-clamp-3 text-xs text-zinc-400">{receipt.preview.summary as string}</p>
+            <p className="mt-1 line-clamp-3 text-xs text-secondary">{receipt.preview.summary as string}</p>
           )}
         </div>
       </div>
@@ -77,10 +77,10 @@ export default function ReceiptCard({ companyId, receipt, onChanged, onConfirmed
       )}
 
       {receipt.error && (
-        <p className="mt-2 text-xs text-rose-400">{receipt.error}</p>
+        <p className="mt-2 text-xs text-error">{receipt.error}</p>
       )}
       {err && (
-        <p className="mt-2 text-xs text-rose-400">{err}</p>
+        <p className="mt-2 text-xs text-error">{err}</p>
       )}
 
       {/* actions */}
@@ -90,7 +90,7 @@ export default function ReceiptCard({ companyId, receipt, onChanged, onConfirmed
             type="button"
             disabled={busy !== ""}
             onClick={() => act("reject")}
-            className="inline-flex items-center gap-1 rounded border border-white/10 bg-zinc-900 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-800 disabled:opacity-50"
+            className="inline-flex items-center gap-1 rounded border border-subtle bg-surface-1 px-2 py-1 text-xs text-tertiary hover:bg-surface-2 disabled:opacity-50"
           >
             {busy === "reject" ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
             {t("reject")}
@@ -99,7 +99,7 @@ export default function ReceiptCard({ companyId, receipt, onChanged, onConfirmed
             type="button"
             disabled={busy !== ""}
             onClick={() => act("confirm")}
-            className="inline-flex items-center gap-1 rounded bg-cyan-500 px-2 py-1 text-xs font-semibold text-zinc-950 hover:bg-cyan-400 disabled:opacity-50"
+            className="inline-flex items-center gap-1 rounded bg-accent px-2 py-1 text-xs font-semibold text-primary hover:bg-accent disabled:opacity-50"
           >
             {busy === "confirm" ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
             {t("confirm")}
@@ -113,11 +113,11 @@ export default function ReceiptCard({ companyId, receipt, onChanged, onConfirmed
 function StatusBadge({ status }: { status: AgentReceipt["status"] }) {
   const t = useTranslations("agent.receipt.status");
   const cls: Record<AgentReceipt["status"], string> = {
-    pending:   "bg-amber-500/15 text-amber-300 border-amber-500/30",
+    pending:   "bg-amber-500/15 text-warning border-amber-500/30",
     confirmed: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
-    rejected:  "bg-zinc-700/40 text-zinc-400 border-zinc-600/40",
-    expired:   "bg-zinc-700/40 text-zinc-400 border-zinc-600/40",
-    failed:    "bg-rose-500/15 text-rose-300 border-rose-500/30",
+    rejected:  "bg-surface-3/40 text-secondary border-default",
+    expired:   "bg-surface-3/40 text-secondary border-default",
+    failed:    "bg-rose-500/15 text-rose-300 border-error",
   };
   return (
     <span className={`rounded border px-1.5 py-0.5 text-[10px] uppercase tracking-wide ${cls[status]}`}>
@@ -142,18 +142,18 @@ function DiffBlock({ preview }: { preview: Record<string, unknown> }) {
           const isCreate = before === null || before === undefined || before === "";
           return (
             <div key={k} className="contents">
-              <dt className="font-mono text-zinc-500">{k}</dt>
-              <dd className="text-zinc-300">
+              <dt className="font-mono text-muted">{k}</dt>
+              <dd className="text-tertiary">
                 {isCreate ? (
                   <>
-                    <span className="text-zinc-500 italic">{t("empty")}</span>
-                    <span className="mx-1 text-zinc-600">→</span>
+                    <span className="text-muted italic">{t("empty")}</span>
+                    <span className="mx-1 text-muted">→</span>
                     <span className="font-semibold text-emerald-300">{renderVal(after)}</span>
                   </>
                 ) : (
                   <>
-                    <span className="text-zinc-500 line-through">{renderVal(before)}</span>
-                    <span className="mx-1 text-zinc-600">→</span>
+                    <span className="text-muted line-through">{renderVal(before)}</span>
+                    <span className="mx-1 text-muted">→</span>
                     <span className="font-semibold text-emerald-300">{renderVal(after)}</span>
                   </>
                 )}
@@ -168,10 +168,10 @@ function DiffBlock({ preview }: { preview: Record<string, unknown> }) {
   // Fallback: raw JSON (skip "summary" which is rendered above).
   const cleaned = Object.fromEntries(Object.entries(preview ?? {}).filter(([k]) => k !== "summary"));
   if (Object.keys(cleaned).length === 0) {
-    return <p className="text-xs text-zinc-500">{t("noPreview")}</p>;
+    return <p className="text-xs text-muted">{t("noPreview")}</p>;
   }
   return (
-    <pre className="max-h-48 overflow-auto rounded bg-black/40 p-2 text-[11px] leading-relaxed text-zinc-300">
+    <pre className="max-h-48 overflow-auto rounded bg-black/40 p-2 text-[11px] leading-relaxed text-tertiary">
       {JSON.stringify(cleaned, null, 2)}
     </pre>
   );

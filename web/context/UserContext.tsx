@@ -168,6 +168,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
           is_amex_reconciler:          userData.is_amex_reconciler          ?? false,
           requires_time_tracking:      userData.requires_time_tracking      ?? false,
           has_executive_reporting:     userData.has_executive_reporting     ?? false,
+          can_access_accounting:       userData.can_access_accounting        ?? false,
+          can_view_analytics:          userData.can_view_analytics          ?? false,
           delegates_for_user_id:       userData.delegates_for_user_id       ?? null,
           delegates_for_user_name:     userData.delegates_for_user_name     ?? null,
         });

@@ -127,7 +127,7 @@ describe("Table primitives", () => {
       </Table>,
     );
     const row = container.querySelector("tr");
-    expect(row).toHaveClass("hover:bg-white/[0.02]");
+    expect(row).toHaveClass("hover:bg-surface-1");
   });
 });
 

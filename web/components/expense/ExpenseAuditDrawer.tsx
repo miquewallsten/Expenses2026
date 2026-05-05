@@ -106,8 +106,8 @@ export default function ExpenseAuditDrawer({ expenseId, variant = "icon" }: Prop
         aria-label={t("openTitle")}
         className={
           variant === "text"
-            ? "inline-flex items-center gap-1.5 rounded-md border border-white/[0.07] bg-zinc-900 px-2.5 py-1 text-[11px] text-white/70 hover:bg-zinc-800 hover:text-white"
-            : "rounded p-0.5 text-white/18 hover:text-white/55"
+            ? "inline-flex items-center gap-1.5 rounded-md border border-default bg-surface-1 px-2.5 py-1 text-[11px] text-secondary hover:bg-surface-2 hover:text-primary"
+            : "rounded p-0.5 text-muted hover:text-tertiary"
         }
       >
         <History className={variant === "text" ? "h-3.5 w-3.5" : "h-3.5 w-3.5"} />
@@ -124,14 +124,14 @@ export default function ExpenseAuditDrawer({ expenseId, variant = "icon" }: Prop
           <aside
             role="dialog"
             aria-label={t("title")}
-            className="fixed right-0 top-0 z-50 flex h-full w-full max-w-[440px] flex-col border-l border-white/[0.07] bg-zinc-950"
+            className="fixed right-0 top-0 z-50 flex h-full w-full max-w-[440px] flex-col border-l border-default bg-surface-0"
           >
-            <header className="flex h-11 shrink-0 items-center justify-between border-b border-white/[0.07] px-3">
+            <header className="flex h-11 shrink-0 items-center justify-between border-b border-default px-3">
               <div className="flex items-center gap-2">
-                <History className="h-3.5 w-3.5 text-white/55" />
+                <History className="h-3.5 w-3.5 text-tertiary" />
                 <div>
-                  <div className="text-[12px] font-semibold text-white">{t("title")}</div>
-                  <div className="text-[10px] text-white/45">
+                  <div className="text-[12px] font-semibold text-primary">{t("title")}</div>
+                  <div className="text-[10px] text-tertiary">
                     {t("subtitle", { id: expenseId })}
                   </div>
                 </div>
@@ -140,7 +140,7 @@ export default function ExpenseAuditDrawer({ expenseId, variant = "icon" }: Prop
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label={t("close")}
-                className="flex h-7 w-7 items-center justify-center rounded text-white/55 hover:bg-white/[0.05] hover:text-white"
+                className="flex h-7 w-7 items-center justify-center rounded text-tertiary hover:bg-surface-2 hover:text-primary"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -148,26 +148,26 @@ export default function ExpenseAuditDrawer({ expenseId, variant = "icon" }: Prop
 
             <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
               {error && (
-                <div className="mb-2 rounded border border-red-500/20 bg-red-500/[0.06] px-2.5 py-1.5 text-[11px] text-red-300">
+                <div className="mb-2 rounded border border-red-500/20 bg-red-500/[0.06] px-2.5 py-1.5 text-[11px] text-error">
                   {error}
                 </div>
               )}
               {!loading && items.length === 0 && !error && (
-                <div className="py-8 text-center text-[11px] text-white/35">{t("empty")}</div>
+                <div className="py-8 text-center text-[11px] text-muted">{t("empty")}</div>
               )}
               <ul className="space-y-1">
                 {items.map((row) => (
                   <li
                     key={row.id}
-                    className="rounded border border-white/[0.05] bg-white/[0.015] px-2.5 py-1.5"
+                    className="rounded border border-subtle bg-surface-1 px-2.5 py-1.5"
                   >
                     <div className="flex items-baseline justify-between gap-2">
-                      <span className="font-mono text-[11px] font-semibold text-indigo-300">
+                      <span className="font-mono text-[11px] font-semibold text-accent">
                         {row.action}
                       </span>
                       <time
                         dateTime={row.created_at}
-                        className="shrink-0 font-mono text-[10px] text-white/40"
+                        className="shrink-0 font-mono text-[10px] text-tertiary"
                       >
                         {formatTs(row.created_at)}
                       </time>
@@ -175,12 +175,12 @@ export default function ExpenseAuditDrawer({ expenseId, variant = "icon" }: Prop
                     {row.action === "routing.decision" && row.detail_text ? (
                       <RoutingDecision detail={row.detail_text} t={t} />
                     ) : row.detail_text ? (
-                      <pre className="mt-0.5 whitespace-pre-wrap break-words font-mono text-[10.5px] leading-snug text-white/65">
+                      <pre className="mt-0.5 whitespace-pre-wrap break-words font-mono text-[10.5px] leading-snug text-secondary">
                         {row.detail_text}
                       </pre>
                     ) : null}
                     {row.actor_user_id != null && (
-                      <div className="mt-0.5 text-[10px] text-white/30">
+                      <div className="mt-0.5 text-[10px] text-muted">
                         {t("actor", { id: row.actor_user_id })}
                       </div>
                     )}
@@ -189,10 +189,10 @@ export default function ExpenseAuditDrawer({ expenseId, variant = "icon" }: Prop
               </ul>
               <div ref={sentinelRef} />
               {loading && (
-                <div className="py-3 text-center text-[10px] text-white/30">{t("loading")}</div>
+                <div className="py-3 text-center text-[10px] text-muted">{t("loading")}</div>
               )}
               {exhausted && items.length > 0 && (
-                <div className="py-3 text-center text-[10px] text-white/25">{t("end")}</div>
+                <div className="py-3 text-center text-[10px] text-muted">{t("end")}</div>
               )}
             </div>
           </aside>
@@ -240,7 +240,7 @@ function RoutingDecision({
   }
   if (!p || typeof p !== "object") {
     return (
-      <pre className="mt-0.5 whitespace-pre-wrap break-words font-mono text-[10.5px] leading-snug text-white/65">
+      <pre className="mt-0.5 whitespace-pre-wrap break-words font-mono text-[10.5px] leading-snug text-secondary">
         {detail}
       </pre>
     );
@@ -250,30 +250,30 @@ function RoutingDecision({
   return (
     <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[10.5px]">
       {p.rule_id && (
-        <span className="rounded border border-emerald-500/30 bg-emerald-500/[0.10] px-1.5 py-[1px] font-mono text-emerald-200">
+        <span className="rounded border border-emerald-500/30 bg-emerald-500/[0.10] px-1.5 py-[1px] font-mono text-success">
           {p.rule_id}
         </span>
       )}
       {roles.map((r) => (
         <span
           key={`r-${r}`}
-          className="rounded border border-sky-500/30 bg-sky-500/[0.08] px-1.5 py-[1px] font-mono text-sky-200"
+          className="rounded border border-sky-500/30 bg-accent/[0.08] px-1.5 py-[1px] font-mono text-sky-200"
         >
           {r}
         </span>
       ))}
       {userIds.length > 0 && (
-        <span className="rounded border border-white/10 bg-white/[0.04] px-1.5 py-[1px] font-mono text-white/70">
+        <span className="rounded border border-subtle bg-surface-2 px-1.5 py-[1px] font-mono text-secondary">
           #{userIds.join(", #")}
         </span>
       )}
       {p.sla_hours != null && (
-        <span className="rounded border border-amber-500/30 bg-amber-500/[0.08] px-1.5 py-[1px] font-mono text-amber-200">
+        <span className="rounded border border-amber-500/30 bg-amber-500/[0.08] px-1.5 py-[1px] font-mono text-warning">
           {t("routing.sla", { hours: p.sla_hours })}
         </span>
       )}
       {p.escalation_role && (
-        <span className="rounded border border-rose-500/30 bg-rose-500/[0.08] px-1.5 py-[1px] font-mono text-rose-200">
+        <span className="rounded border border-error bg-rose-500/[0.08] px-1.5 py-[1px] font-mono text-rose-200">
           {t("routing.escalates", { role: p.escalation_role })}
         </span>
       )}

@@ -19,7 +19,7 @@ export function Skeleton({ variant = "line", className }: SkeletonProps) {
     <div
       aria-hidden
       className={cn(
-        "animate-pulse bg-white/[0.04]",
+        "animate-pulse bg-surface-2",
         VARIANTS[variant],
         className,
       )}

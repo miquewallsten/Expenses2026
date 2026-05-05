@@ -51,7 +51,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
     const message = error.message || "Unexpected error";
 
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-950 p-6">
+      <div className="flex min-h-screen items-center justify-center bg-surface-0 p-6">
         <ErrorState
           title="Something went wrong"
           message={message}

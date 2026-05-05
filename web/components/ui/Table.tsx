@@ -10,7 +10,7 @@ export function Table({
   return (
     <table
       className={cn(
-        "w-full text-xs text-left text-white/75 border-collapse",
+        "w-full text-xs text-left text-secondary border-collapse",
         className,
       )}
       {...rest}
@@ -25,8 +25,8 @@ export function THead({
   return (
     <thead
       className={cn(
-        "text-[10px] uppercase tracking-widest text-white/45",
-        "bg-white/[0.02] border-b border-white/[0.06]",
+        "text-[10px] uppercase tracking-widest text-tertiary",
+        "bg-surface-1 border-b border-subtle",
         className,
       )}
       {...rest}
@@ -52,7 +52,7 @@ export function TR({
 }: HTMLAttributes<HTMLTableRowElement>) {
   return (
     <tr
-      className={cn("hover:bg-white/[0.02] transition-colors", className)}
+      className={cn("hover:bg-surface-1 transition-colors", className)}
       {...rest}
     />
   );

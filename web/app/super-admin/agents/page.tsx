@@ -10,9 +10,9 @@ import {
 } from "@/lib/api/agent-definitions";
 
 const PERSONA_BADGES: Record<string, string> = {
-  admin: "bg-indigo-500/15 text-indigo-300/80 border-indigo-500/25",
+  admin: "bg-blue-500/15 text-accent bg-accent-muted-muted",
   employee: "bg-emerald-500/15 text-emerald-300/80 border-emerald-500/25",
-  procurement: "bg-amber-500/15 text-amber-300/80 border-amber-500/25",
+  procurement: "bg-amber-500/15 text-warning/80 border-amber-500/25",
 };
 
 const CHANNEL_ICONS: Record<string, React.ReactNode> = {
@@ -109,11 +109,11 @@ export default function AgentBuilderPage() {
   return (
     <div className="flex h-full">
       {/* Left panel */}
-      <div className="w-56 shrink-0 border-r border-white/[0.06] flex flex-col">
-        <div className="flex items-center justify-between px-3 py-2 border-b border-white/[0.05]">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-white/30">Agents</span>
+      <div className="w-56 shrink-0 border-r border-subtle flex flex-col">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-subtle">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Agents</span>
           <button onClick={() => setShowNew(true)}
-            className="flex h-5 w-5 items-center justify-center rounded border border-white/[0.06] bg-white/[0.02] text-white/40 hover:text-white/70 hover:bg-white/[0.05]">
+            className="flex h-5 w-5 items-center justify-center rounded border border-subtle bg-surface-1 text-tertiary hover:text-secondary hover:bg-surface-2">
             <Plus className="h-3 w-3" />
           </button>
         </div>
@@ -121,13 +121,13 @@ export default function AgentBuilderPage() {
           {[["System", grouped.system], ["Channels", grouped.channel], ["Custom", grouped.custom]].map(([label, group]) => (
             (group as AgentDefinition[]).length > 0 && (
               <div key={label as string}>
-                <div className="px-3 py-1 text-[8.5px] font-bold uppercase tracking-widest text-white/22">{label as string}</div>
+                <div className="px-3 py-1 text-[8.5px] font-bold uppercase tracking-widest text-muted">{label as string}</div>
                 {(group as AgentDefinition[]).map(a => (
                   <button key={a.key} onClick={() => selectAgent(a)}
-                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-colors ${selected?.key === a.key ? "bg-indigo-500/10 border-r-2 border-indigo-500/50" : "hover:bg-white/[0.03]"}`}>
-                    <Circle className={`h-1.5 w-1.5 shrink-0 fill-current ${a.is_active ? "text-emerald-400" : "text-white/20"}`} />
-                    <span className="flex-1 truncate text-[11px] text-white/70">{a.name}</span>
-                    {isChannelAgent(a) && <span className="text-white/30">{CHANNEL_ICONS[a.key]}</span>}
+                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-colors ${selected?.key === a.key ? "bg-accent-muted border-r-2 border-blue-500/50" : "hover:bg-surface-1"}`}>
+                    <Circle className={`h-1.5 w-1.5 shrink-0 fill-current ${a.is_active ? "text-success" : "text-muted"}`} />
+                    <span className="flex-1 truncate text-[11px] text-secondary">{a.name}</span>
+                    {isChannelAgent(a) && <span className="text-muted">{CHANNEL_ICONS[a.key]}</span>}
                   </button>
                 ))}
               </div>
@@ -139,7 +139,7 @@ export default function AgentBuilderPage() {
       {/* Right panel */}
       <div className="flex-1 min-w-0 overflow-y-auto">
         {!selected && (
-          <div className="flex h-full items-center justify-center text-[11px] text-white/25">
+          <div className="flex h-full items-center justify-center text-[11px] text-muted">
             Select an agent to configure it
           </div>
         )}
@@ -148,24 +148,24 @@ export default function AgentBuilderPage() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[13px] font-semibold text-white/85">{selected.name}</span>
+                  <span className="text-[13px] font-semibold text-primary">{selected.name}</span>
                   <span className={`text-[9px] px-1.5 py-0.5 rounded border font-medium ${PERSONA_BADGES[selected.persona] || PERSONA_BADGES.admin}`}>
                     {selected.persona}
                   </span>
                   {selected.is_system && (
-                    <span className="text-[9px] px-1.5 py-0.5 rounded border border-white/[0.06] bg-white/[0.02] text-white/35">system</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded border border-subtle bg-surface-1 text-muted">system</span>
                   )}
                 </div>
-                <div className="text-[10px] text-white/35 mt-0.5">{selected.key}</div>
+                <div className="text-[10px] text-muted mt-0.5">{selected.key}</div>
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={() => handleToggle(selected)}
-                  className={`text-[10px] px-2 py-1 rounded border transition-colors ${selected.is_active ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300/70 hover:bg-emerald-500/15" : "border-white/[0.06] bg-white/[0.02] text-white/35 hover:bg-white/[0.05]"}`}>
+                  className={`text-[10px] px-2 py-1 rounded border transition-colors ${selected.is_active ? "border-emerald-500/30 bg-success-muted text-emerald-300/70 hover:bg-emerald-500/15" : "border-subtle bg-surface-1 text-muted hover:bg-surface-2"}`}>
                   {selected.is_active ? "Active" : "Inactive"}
                 </button>
                 {!selected.is_system && (
                   <button onClick={() => handleDelete(selected)}
-                    className="text-[10px] px-2 py-1 rounded border border-rose-500/25 bg-rose-500/10 text-rose-300/70 hover:bg-rose-500/15">
+                    className="text-[10px] px-2 py-1 rounded border border-rose-500/25 bg-error-muted text-rose-300/70 hover:bg-rose-500/15">
                     <Trash2 className="h-3 w-3" />
                   </button>
                 )}
@@ -173,10 +173,10 @@ export default function AgentBuilderPage() {
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-0 border-b border-white/[0.06] mb-4">
+            <div className="flex gap-0 border-b border-subtle mb-4">
               {(["identity", "prompt", "tools", ...(isChannelAgent(selected) ? ["channel" as const] : [])] as const).map(tab => (
                 <button key={tab} onClick={() => setActiveTab(tab)}
-                  className={`px-3 py-1.5 text-[10px] font-medium transition-colors ${activeTab === tab ? "text-indigo-300/80 border-b-2 border-indigo-500/50 -mb-px" : "text-white/40 hover:text-white/60"}`}>
+                  className={`px-3 py-1.5 text-[10px] font-medium transition-colors ${activeTab === tab ? "text-accent border-b-2 border-blue-500/50 -mb-px" : "text-tertiary hover:text-secondary"}`}>
                   {tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </button>
               ))}
@@ -186,20 +186,20 @@ export default function AgentBuilderPage() {
             {activeTab === "identity" && (
               <div className="space-y-3">
                 <div>
-                  <label className="text-[9px] uppercase tracking-widest font-bold text-white/30 block mb-1">Name</label>
+                  <label className="text-[9px] uppercase tracking-widest font-bold text-muted block mb-1">Name</label>
                   <input value={editing.name || ""} onChange={e => setEditing(p => ({ ...p, name: e.target.value }))}
-                    className="w-full rounded border border-white/[0.07] bg-white/[0.02] px-2.5 py-1.5 text-[11px] text-white/80 focus:outline-none focus:border-indigo-500/40" />
+                    className="w-full rounded border border-default bg-surface-1 px-2.5 py-1.5 text-[11px] text-secondary focus:outline-none focus:bg-accent-muted" />
                 </div>
                 <div>
-                  <label className="text-[9px] uppercase tracking-widest font-bold text-white/30 block mb-1">Description</label>
+                  <label className="text-[9px] uppercase tracking-widest font-bold text-muted block mb-1">Description</label>
                   <input value={editing.description || ""} onChange={e => setEditing(p => ({ ...p, description: e.target.value }))}
-                    className="w-full rounded border border-white/[0.07] bg-white/[0.02] px-2.5 py-1.5 text-[11px] text-white/80 focus:outline-none focus:border-indigo-500/40" />
+                    className="w-full rounded border border-default bg-surface-1 px-2.5 py-1.5 text-[11px] text-secondary focus:outline-none focus:bg-accent-muted" />
                 </div>
                 <div>
-                  <label className="text-[9px] uppercase tracking-widest font-bold text-white/30 block mb-1">Persona</label>
+                  <label className="text-[9px] uppercase tracking-widest font-bold text-muted block mb-1">Persona</label>
                   <select value={editing.persona || "admin"} onChange={e => setEditing(p => ({ ...p, persona: e.target.value }))}
                     disabled={selected.is_system}
-                    className="w-full rounded border border-white/[0.07] bg-zinc-900 px-2.5 py-1.5 text-[11px] text-white/80 focus:outline-none disabled:opacity-40">
+                    className="w-full rounded border border-default bg-surface-1 px-2.5 py-1.5 text-[11px] text-secondary focus:outline-none disabled:opacity-40">
                     <option value="admin">admin</option>
                     <option value="employee">employee</option>
                     <option value="procurement">procurement</option>
@@ -211,30 +211,30 @@ export default function AgentBuilderPage() {
             {/* Prompt tab */}
             {activeTab === "prompt" && (
               <div>
-                <label className="text-[9px] uppercase tracking-widest font-bold text-white/30 block mb-1">System Prompt</label>
+                <label className="text-[9px] uppercase tracking-widest font-bold text-muted block mb-1">System Prompt</label>
                 <textarea value={editing.system_prompt || ""} onChange={e => setEditing(p => ({ ...p, system_prompt: e.target.value }))}
                   rows={16}
-                  className="w-full rounded border border-white/[0.07] bg-white/[0.02] px-2.5 py-2 text-[11px] text-white/80 font-mono focus:outline-none focus:border-indigo-500/40 resize-none" />
-                <div className="text-[9px] text-white/25 mt-1">{(editing.system_prompt || "").length} chars</div>
+                  className="w-full rounded border border-default bg-surface-1 px-2.5 py-2 text-[11px] text-secondary font-mono focus:outline-none focus:bg-accent-muted resize-none" />
+                <div className="text-[9px] text-muted mt-1">{(editing.system_prompt || "").length} chars</div>
               </div>
             )}
 
             {/* Tools tab */}
             {activeTab === "tools" && (
               <div>
-                <label className="text-[9px] uppercase tracking-widest font-bold text-white/30 block mb-2">
-                  Allowed Tools <span className="text-white/20 normal-case font-normal">(empty = all persona tools)</span>
+                <label className="text-[9px] uppercase tracking-widest font-bold text-muted block mb-2">
+                  Allowed Tools <span className="text-muted normal-case font-normal">(empty = all persona tools)</span>
                 </label>
                 <div className="space-y-0.5">
                   {Object.entries(
                     tools.reduce((acc, t) => ({ ...acc, [t.category]: [...(acc[t.category] || []), t] }), {} as Record<string, ToolInfo[]>)
                   ).sort().map(([cat, catTools]) => (
                     <div key={cat}>
-                      <div className="text-[8.5px] font-bold uppercase tracking-widest text-white/22 px-1 py-1">{cat}</div>
+                      <div className="text-[8.5px] font-bold uppercase tracking-widest text-muted px-1 py-1">{cat}</div>
                       {catTools.map(tool => {
                         const checked = (editing.allowed_tools || []).includes(tool.name);
                         return (
-                          <label key={tool.name} className="flex items-start gap-2 px-1 py-0.5 rounded hover:bg-white/[0.02] cursor-pointer">
+                          <label key={tool.name} className="flex items-start gap-2 px-1 py-0.5 rounded hover:bg-surface-1 cursor-pointer">
                             <input type="checkbox" checked={checked}
                               onChange={e => {
                                 const list = editing.allowed_tools || [];
@@ -243,11 +243,11 @@ export default function AgentBuilderPage() {
                                   allowed_tools: e.target.checked ? [...list, tool.name] : list.filter(t => t !== tool.name),
                                 }));
                               }}
-                              className="mt-0.5 accent-indigo-500" />
+                              className="mt-0.5 accent-blue-500" />
                             <span>
-                              <span className="text-[10px] text-white/70 font-mono">{tool.name}</span>
-                              {tool.destructive && <span className="ml-1 text-[8px] text-rose-400/70">destructive</span>}
-                              <span className="block text-[9px] text-white/30">{tool.description}</span>
+                              <span className="text-[10px] text-secondary font-mono">{tool.name}</span>
+                              {tool.destructive && <span className="ml-1 text-[8px] text-error/70">destructive</span>}
+                              <span className="block text-[9px] text-muted">{tool.description}</span>
                             </span>
                           </label>
                         );
@@ -264,34 +264,34 @@ export default function AgentBuilderPage() {
               return (
                 <div className="space-y-4">
                   <div>
-                    <label className="text-[9px] uppercase tracking-widest font-bold text-white/30 block mb-1">
-                      Autonomous Threshold <span className="text-white/20 normal-case font-normal">— below this confidence, escalate to human</span>
+                    <label className="text-[9px] uppercase tracking-widest font-bold text-muted block mb-1">
+                      Autonomous Threshold <span className="text-muted normal-case font-normal">— below this confidence, escalate to human</span>
                     </label>
                     <div className="flex items-center gap-3">
                       <input type="range" min={0} max={1} step={0.05}
                         defaultValue={cfg?.autonomous_threshold ?? 0.80}
                         onChange={e => saveChannelConfig(selected.key, { autonomous_threshold: parseFloat(e.target.value), high_stakes_rules: cfg?.high_stakes_rules, test_mode: cfg?.test_mode })}
-                        className="flex-1 accent-indigo-500" />
-                      <span className="text-[11px] text-white/60 w-10 text-right">{((cfg?.autonomous_threshold ?? 0.80) * 100).toFixed(0)}%</span>
+                        className="flex-1 accent-blue-500" />
+                      <span className="text-[11px] text-secondary w-10 text-right">{((cfg?.autonomous_threshold ?? 0.80) * 100).toFixed(0)}%</span>
                     </div>
                   </div>
                   <div>
-                    <label className="text-[9px] uppercase tracking-widest font-bold text-white/30 block mb-1">Test Mode</label>
+                    <label className="text-[9px] uppercase tracking-widest font-bold text-muted block mb-1">Test Mode</label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" defaultChecked={cfg?.test_mode ?? false}
                         onChange={e => saveChannelConfig(selected.key, { autonomous_threshold: cfg?.autonomous_threshold, high_stakes_rules: cfg?.high_stakes_rules, test_mode: e.target.checked })}
-                        className="accent-indigo-500" />
-                      <span className="text-[11px] text-white/60">Log actions but never commit them (safe for testing)</span>
+                        className="accent-blue-500" />
+                      <span className="text-[11px] text-secondary">Log actions but never commit them (safe for testing)</span>
                     </label>
                   </div>
                 </div>
               );
             })()}
 
-            {error && <div className="mt-3 text-[10px] text-rose-400/80">{error}</div>}
+            {error && <div className="mt-3 text-[10px] text-error">{error}</div>}
             <div className="mt-4">
               <button onClick={save} disabled={saving}
-                className="px-3 py-1.5 rounded border border-indigo-500/30 bg-indigo-500/10 text-[11px] text-indigo-300/80 hover:bg-indigo-500/15 disabled:opacity-40">
+                className="px-3 py-1.5 rounded border bg-accent-muted bg-accent-muted text-[11px] text-accent hover:bg-accent-hover/15 disabled:opacity-40">
                 {saving ? "Saving…" : "Save changes"}
               </button>
             </div>
@@ -302,31 +302,31 @@ export default function AgentBuilderPage() {
       {/* New agent modal */}
       {showNew && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="w-96 rounded border border-white/[0.07] bg-zinc-900 p-4">
-            <div className="text-[12px] font-semibold text-white/80 mb-3">New Agent</div>
+          <div className="w-96 rounded border border-default bg-surface-1 p-4">
+            <div className="text-[12px] font-semibold text-secondary mb-3">New Agent</div>
             <div className="space-y-2.5">
               {([["key", "Key (slug)"], ["name", "Display Name"], ["description", "Description"]] as const).map(([field, label]) => (
                 <div key={field}>
-                  <label className="text-[9px] uppercase tracking-widest font-bold text-white/30 block mb-1">{label}</label>
+                  <label className="text-[9px] uppercase tracking-widest font-bold text-muted block mb-1">{label}</label>
                   <input value={newAgent[field as keyof typeof newAgent]}
                     onChange={e => setNewAgent(p => ({ ...p, [field]: e.target.value }))}
-                    className="w-full rounded border border-white/[0.07] bg-white/[0.02] px-2.5 py-1.5 text-[11px] text-white/80 focus:outline-none focus:border-indigo-500/40" />
+                    className="w-full rounded border border-default bg-surface-1 px-2.5 py-1.5 text-[11px] text-secondary focus:outline-none focus:bg-accent-muted" />
                 </div>
               ))}
               <div>
-                <label className="text-[9px] uppercase tracking-widest font-bold text-white/30 block mb-1">System Prompt</label>
+                <label className="text-[9px] uppercase tracking-widest font-bold text-muted block mb-1">System Prompt</label>
                 <textarea value={newAgent.system_prompt} onChange={e => setNewAgent(p => ({ ...p, system_prompt: e.target.value }))}
-                  rows={4} className="w-full rounded border border-white/[0.07] bg-white/[0.02] px-2.5 py-1.5 text-[11px] text-white/80 font-mono focus:outline-none focus:border-indigo-500/40 resize-none" />
+                  rows={4} className="w-full rounded border border-default bg-surface-1 px-2.5 py-1.5 text-[11px] text-secondary font-mono focus:outline-none focus:bg-accent-muted resize-none" />
               </div>
             </div>
-            {error && <div className="mt-2 text-[10px] text-rose-400/80">{error}</div>}
+            {error && <div className="mt-2 text-[10px] text-error">{error}</div>}
             <div className="flex gap-2 mt-4">
               <button onClick={handleCreate}
-                className="px-3 py-1.5 rounded border border-indigo-500/30 bg-indigo-500/10 text-[11px] text-indigo-300/80 hover:bg-indigo-500/15">
+                className="px-3 py-1.5 rounded border bg-accent-muted bg-accent-muted text-[11px] text-accent hover:bg-accent-hover/15">
                 Create
               </button>
               <button onClick={() => { setShowNew(false); setError(null); }}
-                className="px-3 py-1.5 rounded border border-white/[0.07] text-[11px] text-white/40 hover:bg-white/[0.03]">
+                className="px-3 py-1.5 rounded border border-default text-[11px] text-tertiary hover:bg-surface-1">
                 Cancel
               </button>
             </div>

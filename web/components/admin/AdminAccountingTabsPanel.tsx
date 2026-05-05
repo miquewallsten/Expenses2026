@@ -53,15 +53,15 @@ export default function AdminAccountingTabsPanel({
   return (
     <div className="flex flex-col gap-0">
       {/* Tab bar */}
-      <div className="mb-4 flex items-center border-b border-white/[0.07]">
+      <div className="mb-4 flex items-center border-b border-default">
         {tabs.map(({ key, label }) => (
           <button
             key={key}
             onClick={() => selectTab(key)}
             className={`px-3 pb-2 text-[11px] font-medium transition-colors ${
               tab === key
-                ? "border-b-2 border-indigo-400/60 text-white/80"
-                : "text-white/35 hover:text-white/60"
+                ? "border-b-2 bg-accent-muted/60 text-secondary"
+                : "text-muted hover:text-secondary"
             }`}
           >
             {label}

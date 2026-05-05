@@ -636,6 +636,9 @@
     },
     "usersRoles": "Users & Roles",
     "workflow": "Workflow",
+    "integrationsLabel": "Integrations",
+    "platformApiLabel": "Platform API",
+    "exportLabel": "Export",
     "integrations": {
       "title": "Integrations",
       "subtitle": "ERP & external systems",
@@ -915,6 +918,7 @@
     "notifications": "Notifications",
     "sectionSettings": "Settings",
     "sectionOperations": "Operations",
+    "notificationsLabel": "Notifications",
     "quickActions": "Quick Actions",
     "quickActionsDesc": "Send announcements and manage notifications",
     "copilotLabel": "Admin Copilot",

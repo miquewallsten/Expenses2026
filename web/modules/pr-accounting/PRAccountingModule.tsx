@@ -53,12 +53,12 @@ const TYPE_ICONS: Record<string, React.ElementType> = {
 };
 
 const STATUS_STYLES: Record<string, string> = {
-  submitted:    "bg-sky-500/15 text-sky-300",
-  under_review: "bg-amber-500/15 text-amber-300",
+  submitted:    "bg-accent-muted text-accent",
+  under_review: "bg-amber-500/15 text-warning",
   approved:     "bg-emerald-500/15 text-emerald-300",
-  rejected:     "bg-red-500/15 text-red-300",
+  rejected:     "bg-error-muted text-error",
   fulfilled:    "bg-purple-500/15 text-purple-300",
-  cancelled:    "bg-zinc-500/15 text-zinc-400",
+  cancelled:    "bg-surface-2 text-secondary",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -150,21 +150,21 @@ export default function PRAccountingModule() {
   return (
     <div className="flex h-full min-h-0 overflow-hidden">
       {/* ── List pane ── */}
-      <div className="flex w-64 shrink-0 flex-col border-r border-white/[0.06]">
+      <div className="flex w-64 shrink-0 flex-col border-r border-subtle">
         {/* Header */}
-        <div className="flex items-center gap-2 border-b border-white/[0.06] px-3 py-2.5">
-          <ClipboardList className="h-3.5 w-3.5 text-white/40" />
-          <span className="text-[11px] font-semibold text-white/70">Requerimientos de Compra</span>
+        <div className="flex items-center gap-2 border-b border-subtle px-3 py-2.5">
+          <ClipboardList className="h-3.5 w-3.5 text-tertiary" />
+          <span className="text-[11px] font-semibold text-secondary">Requerimientos de Compra</span>
         </div>
 
         {/* Filter tabs */}
-        <div className="flex border-b border-white/[0.05]">
+        <div className="flex border-b border-subtle">
           {(["pending", "done"] as const).map((f) => (
             <button
               key={f}
               onClick={() => { setFilter(f); setSelected(null); }}
               className={`flex-1 py-1.5 text-[10px] font-medium transition-colors ${
-                filter === f ? "border-b border-sky-400 text-sky-300" : "text-white/35 hover:text-white/55"
+                filter === f ? "border-b border-sky-400 text-accent" : "text-muted hover:text-tertiary"
               }`}
             >
               {f === "pending" ? "Pendiente" : "Historial"}
@@ -175,9 +175,9 @@ export default function PRAccountingModule() {
         {/* List */}
         <div className="flex-1 overflow-y-auto">
           {loading ? (
-            <div className="flex justify-center pt-8"><Loader2 className="h-4 w-4 animate-spin text-white/30" /></div>
+            <div className="flex justify-center pt-8"><Loader2 className="h-4 w-4 animate-spin text-muted" /></div>
           ) : visible.length === 0 ? (
-            <p className="px-3 pt-6 text-center text-[10px] text-white/25">Sin requerimientos</p>
+            <p className="px-3 pt-6 text-center text-[10px] text-muted">Sin requerimientos</p>
           ) : visible.map((req) => {
             const Icon = TYPE_ICONS[req.request_type ?? ""] ?? HelpCircle;
             const active = selected?.id === req.id;
@@ -185,25 +185,25 @@ export default function PRAccountingModule() {
               <button
                 key={req.id}
                 onClick={() => { setSelected(req); setShowRejectBox(false); setNotes(""); }}
-                className={`w-full border-b border-white/[0.04] px-3 py-2.5 text-left transition-colors ${
-                  active ? "bg-white/[0.06]" : "hover:bg-white/[0.03]"
+                className={`w-full border-b border-subtle px-3 py-2.5 text-left transition-colors ${
+                  active ? "bg-surface-2" : "hover:bg-surface-1"
                 }`}
               >
                 <div className="flex items-start justify-between gap-1">
                   <div className="flex min-w-0 items-start gap-1.5">
-                    <Icon className="mt-0.5 h-3 w-3 shrink-0 text-white/30" />
+                    <Icon className="mt-0.5 h-3 w-3 shrink-0 text-muted" />
                     <div className="min-w-0">
-                      <p className="truncate text-[11px] font-medium text-white/80">{req.title ?? "Sin título"}</p>
-                      <p className="text-[10px] text-white/35">{req.requester_name ?? "—"}</p>
+                      <p className="truncate text-[11px] font-medium text-secondary">{req.title ?? "Sin título"}</p>
+                      <p className="text-[10px] text-muted">{req.requester_name ?? "—"}</p>
                     </div>
                   </div>
-                  <ChevronRight className="mt-0.5 h-3 w-3 shrink-0 text-white/20" />
+                  <ChevronRight className="mt-0.5 h-3 w-3 shrink-0 text-muted" />
                 </div>
                 <div className="mt-1.5 flex items-center justify-between gap-2">
                   <span className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${STATUS_STYLES[req.status] ?? ""}`}>
                     {STATUS_LABELS[req.status] ?? req.status}
                   </span>
-                  <span className="text-[10px] text-white/30">{fmt(req.submitted_at)}</span>
+                  <span className="text-[10px] text-muted">{fmt(req.submitted_at)}</span>
                 </div>
               </button>
             );
@@ -215,19 +215,19 @@ export default function PRAccountingModule() {
       <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
         {!selected ? (
           <div className="flex h-full items-center justify-center">
-            <p className="text-[11px] text-white/20">Selecciona un requerimiento</p>
+            <p className="text-[11px] text-muted">Selecciona un requerimiento</p>
           </div>
         ) : (
           <div className="flex flex-col gap-4 p-4">
             {/* Status bar */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="font-mono text-xs font-bold text-white/60">{reqNo}</span>
+                <span className="font-mono text-xs font-bold text-secondary">{reqNo}</span>
                 <span className={`rounded px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLES[selected.status] ?? ""}`}>
                   {STATUS_LABELS[selected.status] ?? selected.status}
                 </span>
               </div>
-              <span className="text-[10px] text-white/30">Enviado {fmt(selected.submitted_at)}</span>
+              <span className="text-[10px] text-muted">Enviado {fmt(selected.submitted_at)}</span>
             </div>
 
             {/* Form (read-only) */}
@@ -245,13 +245,13 @@ export default function PRAccountingModule() {
 
             {/* Actions */}
             {["submitted", "under_review", "approved"].includes(selected.status) && (
-              <div className="flex flex-col gap-2 rounded-lg border border-white/[0.07] bg-white/[0.03] p-3">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-white/25">Acciones</p>
+              <div className="flex flex-col gap-2 rounded-lg border border-default bg-surface-1 p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted">Acciones</p>
                 <div className="flex gap-2">
                   <button
                     onClick={handleFulfill}
                     disabled={!!actionLoading}
-                    className="flex items-center gap-1.5 rounded bg-emerald-600 px-3 py-1.5 text-[11px] font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+                    className="flex items-center gap-1.5 rounded bg-emerald-600 px-3 py-1.5 text-[11px] font-medium text-primary hover:bg-emerald-500 disabled:opacity-50"
                   >
                     {actionLoading === "fulfill"
                       ? <Loader2 className="h-3 w-3 animate-spin" />
@@ -261,7 +261,7 @@ export default function PRAccountingModule() {
                   <button
                     onClick={() => setShowRejectBox((v) => !v)}
                     disabled={!!actionLoading}
-                    className="flex items-center gap-1.5 rounded border border-red-500/40 px-3 py-1.5 text-[11px] font-medium text-red-400 hover:bg-red-500/10 disabled:opacity-50"
+                    className="flex items-center gap-1.5 rounded border border-error px-3 py-1.5 text-[11px] font-medium text-error hover:bg-red-500/10 disabled:opacity-50"
                   >
                     <XCircle className="h-3 w-3" />
                     Rechazar
@@ -275,12 +275,12 @@ export default function PRAccountingModule() {
                       onChange={(e) => setNotes(e.target.value)}
                       placeholder="Motivo del rechazo..."
                       rows={2}
-                      className="w-full rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-[11px] text-white/70 placeholder:text-white/25 focus:outline-none focus:ring-1 focus:ring-red-500/50"
+                      className="w-full rounded border border-default bg-surface-2 px-2 py-1.5 text-[11px] text-secondary placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-red-500/50"
                     />
                     <button
                       onClick={handleReject}
                       disabled={!!actionLoading || !notes.trim()}
-                      className="self-start rounded bg-red-600/80 px-3 py-1.5 text-[11px] font-medium text-white hover:bg-red-600 disabled:opacity-40"
+                      className="self-start rounded bg-error px-3 py-1.5 text-[11px] font-medium text-primary hover:bg-red-600 disabled:opacity-40"
                     >
                       {actionLoading === "reject" ? <Loader2 className="h-3 w-3 animate-spin" /> : "Confirmar Rechazo"}
                     </button>
@@ -288,19 +288,19 @@ export default function PRAccountingModule() {
                 )}
 
                 {selected.reviewer_notes && (
-                  <p className="text-[10px] text-white/40">Notas: {selected.reviewer_notes}</p>
+                  <p className="text-[10px] text-tertiary">Notas: {selected.reviewer_notes}</p>
                 )}
               </div>
             )}
 
             {selected.status === "fulfilled" && (
-              <div className="flex items-center gap-1.5 text-[11px] text-emerald-400">
+              <div className="flex items-center gap-1.5 text-[11px] text-success">
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 Cumplido el {fmt(selected.fulfilled_at)}
               </div>
             )}
             {selected.status === "rejected" && selected.rejection_reason && (
-              <div className="flex items-center gap-1.5 text-[11px] text-red-400">
+              <div className="flex items-center gap-1.5 text-[11px] text-error">
                 <XCircle className="h-3.5 w-3.5" />
                 Rechazado: {selected.rejection_reason}
               </div>

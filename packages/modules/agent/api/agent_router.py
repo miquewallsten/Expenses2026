@@ -347,6 +347,12 @@ def confirm(
         user_role=current_user.role,
         persona="admin",
         session_id=row.session_id,
+        # Capability flags — control what modules the user can access
+        can_create_expenses=getattr(current_user, "can_create_expenses", True),
+        can_access_accounting=getattr(current_user, "can_access_accounting", False),
+        can_view_analytics=getattr(current_user, "can_view_analytics", False),
+        is_amex_reconciler=getattr(current_user, "is_amex_reconciler", False),
+        has_executive_reporting=getattr(current_user, "has_executive_reporting", False),
     )
 
     try:

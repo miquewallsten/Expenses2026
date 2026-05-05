@@ -114,9 +114,9 @@ export default function InsightsPage() {
 
   if (!companyId) {
     return (
-      <main className="min-h-screen bg-zinc-950 text-zinc-100">
+      <main className="min-h-screen bg-surface-0 text-primary">
         <div className="mx-auto max-w-5xl px-6 py-10">
-          <div className="rounded border border-amber-500/20 bg-amber-500/[0.05] p-4 text-[12px] text-amber-200/80">
+          <div className="rounded border border-amber-500/20 bg-amber-500/[0.05] p-4 text-[12px] text-warning/80">
             {t("noCompany")}
           </div>
         </div>
@@ -125,24 +125,24 @@ export default function InsightsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-100">
+    <main className="min-h-screen bg-surface-0 text-primary">
       <div className="mx-auto max-w-5xl px-6 py-6">
         {/* Header */}
         <div className="mb-5 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Link
               href="/super-admin"
-              className="flex items-center gap-1 rounded border border-white/10 bg-white/[0.03] px-2 py-1 text-[11px] text-zinc-400 transition hover:border-white/20 hover:text-zinc-200"
+              className="flex items-center gap-1 rounded border border-subtle bg-surface-1 px-2 py-1 text-[11px] text-secondary transition hover:border-strong hover:text-secondary"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
               {t("back")}
             </Link>
             <div>
-              <h1 className="flex items-center gap-2 text-[14px] font-semibold tracking-tight text-zinc-100">
-                <Lightbulb className="h-4 w-4 text-amber-300/70" />
+              <h1 className="flex items-center gap-2 text-[14px] font-semibold tracking-tight text-primary">
+                <Lightbulb className="h-4 w-4 text-warning/70" />
                 {t("title")}
               </h1>
-              <p className="text-[10.5px] text-zinc-500">{t("subtitle")}</p>
+              <p className="text-[10.5px] text-muted">{t("subtitle")}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -150,7 +150,7 @@ export default function InsightsPage() {
               type="button"
               disabled={running || loading}
               onClick={() => void runScan(false)}
-              className="flex items-center gap-1.5 rounded border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-zinc-300 transition hover:border-white/20 hover:bg-white/[0.07] disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded border border-subtle bg-surface-2 px-2.5 py-1 text-[11px] text-tertiary transition hover:border-strong hover:bg-surface-3 disabled:opacity-50"
             >
               {running ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -163,7 +163,7 @@ export default function InsightsPage() {
               type="button"
               disabled={running || loading}
               onClick={() => void runScan(true)}
-              className="flex items-center gap-1.5 rounded border border-amber-500/25 bg-amber-500/[0.08] px-2.5 py-1 text-[11px] text-amber-200 transition hover:border-amber-500/40 hover:bg-amber-500/[0.12] disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded border border-amber-500/25 bg-amber-500/[0.08] px-2.5 py-1 text-[11px] text-warning transition hover:border-amber-500/40 hover:bg-amber-500/[0.12] disabled:opacity-50"
             >
               <Mail className="h-3.5 w-3.5" />
               {t("sendDigest")}
@@ -173,30 +173,30 @@ export default function InsightsPage() {
 
         {/* Error */}
         {error && (
-          <div className="mb-3 flex items-start gap-2 rounded border border-rose-500/30 bg-rose-500/[0.08] p-2.5 text-[11px] text-rose-200">
+          <div className="mb-3 flex items-start gap-2 rounded border border-error bg-rose-500/[0.08] p-2.5 text-[11px] text-rose-200">
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <span className="break-all">{error}</span>
           </div>
         )}
 
         {/* Counts */}
-        <div className="mb-3 text-[10.5px] uppercase tracking-wide text-zinc-500">
+        <div className="mb-3 text-[10.5px] uppercase tracking-wide text-muted">
           {t("openCount", { count: rows.length })}
         </div>
 
         {/* List */}
         {loading ? (
-          <div className="flex items-center gap-2 rounded border border-white/10 bg-white/[0.02] p-6 text-[11px] text-zinc-400">
+          <div className="flex items-center gap-2 rounded border border-subtle bg-surface-1 p-6 text-[11px] text-secondary">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
             {t("loading")}
           </div>
         ) : rows.length === 0 ? (
-          <div className="rounded border border-white/10 bg-white/[0.02] p-8 text-center">
+          <div className="rounded border border-subtle bg-surface-1 p-8 text-center">
             <div className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-500/[0.08]">
               <Check className="h-4 w-4 text-emerald-300" />
             </div>
-            <div className="text-[12px] text-zinc-300">{t("emptyTitle")}</div>
-            <div className="text-[10.5px] text-zinc-500">{t("emptyBody")}</div>
+            <div className="text-[12px] text-tertiary">{t("emptyTitle")}</div>
+            <div className="text-[10.5px] text-muted">{t("emptyBody")}</div>
           </div>
         ) : (
           <ul className="space-y-2">
@@ -243,24 +243,24 @@ function InsightRow({ insight, busy, onAck, onResolve, onDismiss, t }: RowProps)
             >
               {insight.severity}
             </span>
-            <span className="rounded border border-white/10 bg-white/[0.03] px-1.5 py-0.5 text-[9px] text-zinc-400">
+            <span className="rounded border border-subtle bg-surface-1 px-1.5 py-0.5 text-[9px] text-secondary">
               {insight.kind}
             </span>
-            <span className="text-[9.5px] text-zinc-500">
+            <span className="text-[9.5px] text-muted">
               {new Date(insight.created_at).toLocaleString()}
             </span>
           </div>
-          <div className="mt-1.5 text-[12px] font-medium text-zinc-100">
+          <div className="mt-1.5 text-[12px] font-medium text-primary">
             {insight.title}
           </div>
           {insight.body && (
-            <div className="mt-1 whitespace-pre-wrap text-[11px] leading-snug text-zinc-400">
+            <div className="mt-1 whitespace-pre-wrap text-[11px] leading-snug text-secondary">
               {insight.body}
             </div>
           )}
           {insight.suggested_prompt && (
-            <div className="mt-2 rounded border border-white/5 bg-black/20 p-2 font-mono text-[10.5px] text-zinc-400">
-              <span className="text-zinc-600">›</span> {insight.suggested_prompt}
+            <div className="mt-2 rounded border border-subtle bg-black/20 p-2 font-mono text-[10.5px] text-secondary">
+              <span className="text-muted">›</span> {insight.suggested_prompt}
             </div>
           )}
         </div>
@@ -269,7 +269,7 @@ function InsightRow({ insight, busy, onAck, onResolve, onDismiss, t }: RowProps)
             type="button"
             disabled={busy}
             onClick={onAck}
-            className="flex items-center gap-1 rounded border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] text-zinc-300 transition hover:border-white/20 hover:bg-white/[0.07] disabled:opacity-50"
+            className="flex items-center gap-1 rounded border border-subtle bg-surface-2 px-2 py-1 text-[10px] text-tertiary transition hover:border-strong hover:bg-surface-3 disabled:opacity-50"
           >
             {busy ? (
               <Loader2 className="h-3 w-3 animate-spin" />
@@ -282,7 +282,7 @@ function InsightRow({ insight, busy, onAck, onResolve, onDismiss, t }: RowProps)
             type="button"
             disabled={busy}
             onClick={onResolve}
-            className="flex items-center gap-1 rounded border border-emerald-500/25 bg-emerald-500/[0.06] px-2 py-1 text-[10px] text-emerald-300 transition hover:border-emerald-500/40 hover:bg-emerald-500/[0.10] disabled:opacity-50"
+            className="flex items-center gap-1 rounded border border-emerald-500/25 bg-emerald-500/[0.06] px-2 py-1 text-[10px] text-emerald-300 transition hover:border-success hover:bg-emerald-500/[0.10] disabled:opacity-50"
           >
             <Check className="h-3 w-3" />
             {t("actions.resolve")}
@@ -291,7 +291,7 @@ function InsightRow({ insight, busy, onAck, onResolve, onDismiss, t }: RowProps)
             type="button"
             disabled={busy}
             onClick={onDismiss}
-            className="flex items-center gap-1 rounded border border-white/10 bg-white/[0.02] px-2 py-1 text-[10px] text-zinc-500 transition hover:border-white/15 hover:text-zinc-300 disabled:opacity-50"
+            className="flex items-center gap-1 rounded border border-subtle bg-surface-1 px-2 py-1 text-[10px] text-muted transition hover:border-default hover:text-tertiary disabled:opacity-50"
           >
             <X className="h-3 w-3" />
             {t("actions.dismiss")}
@@ -317,16 +317,16 @@ function severityStyles(sev: string) {
         border: "border-amber-500/25",
         bg: "bg-amber-500/[0.04]",
         icon: AlertTriangle,
-        iconColor: "text-amber-300",
-        pill: "bg-amber-500/15 text-amber-200",
+        iconColor: "text-warning",
+        pill: "bg-amber-500/15 text-warning",
       };
     default:
       return {
-        border: "border-white/10",
-        bg: "bg-white/[0.02]",
+        border: "border-subtle",
+        bg: "bg-surface-1",
         icon: Info,
-        iconColor: "text-sky-300",
-        pill: "bg-sky-500/15 text-sky-200",
+        iconColor: "text-accent",
+        pill: "bg-accent-muted text-sky-200",
       };
   }
 }

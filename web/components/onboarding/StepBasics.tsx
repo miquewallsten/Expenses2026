@@ -34,14 +34,14 @@ export function StepBasics({ profile, onUpdate }: StepBasicsProps) {
   return (
     <div className="space-y-5 py-4">
       <div>
-        <h2 className="text-[18px] font-semibold text-white/90">{t("title")}</h2>
-        <p className="mt-1.5 text-[12px] leading-relaxed text-white/50">{t("subtitle")}</p>
+        <h2 className="text-[18px] font-semibold text-primary">{t("title")}</h2>
+        <p className="mt-1.5 text-[12px] leading-relaxed text-secondary">{t("subtitle")}</p>
       </div>
 
       <div className="space-y-3">
         {/* Company Name */}
         <div>
-          <label htmlFor="company-name" className="flex items-center gap-1.5 text-[10px] font-medium text-white/60">
+          <label htmlFor="company-name" className="flex items-center gap-1.5 text-[10px] font-medium text-secondary">
             <Building2 className="h-3 w-3" />
             {t("companyName")}
           </label>
@@ -52,14 +52,14 @@ export function StepBasics({ profile, onUpdate }: StepBasicsProps) {
             onChange={(e) => onUpdate({ name: e.target.value })}
             placeholder={t("companyNamePlaceholder")}
             autoFocus
-            className="mt-1.5 w-full rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-[12px] text-white/85 placeholder:text-white/25 focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/25"
+            className="mt-1.5 w-full rounded-lg border border-default bg-surface-1 px-3 py-2 text-[12px] text-primary placeholder:text-muted focus:bg-accent-muted focus:outline-none focus:ring-1 focus:ring-blue-500/25"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           {/* Currency */}
           <div>
-            <label htmlFor="currency" className="flex items-center gap-1.5 text-[10px] font-medium text-white/60">
+            <label htmlFor="currency" className="flex items-center gap-1.5 text-[10px] font-medium text-secondary">
               <Globe className="h-3 w-3" />
               {t("currency")}
             </label>
@@ -67,7 +67,7 @@ export function StepBasics({ profile, onUpdate }: StepBasicsProps) {
               id="currency"
               value={profile.currency ?? "MXN"}
               onChange={(e) => onUpdate({ currency: e.target.value })}
-              className="mt-1.5 w-full rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-[12px] text-white/85 focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/25"
+              className="mt-1.5 w-full rounded-lg border border-default bg-surface-1 px-3 py-2 text-[12px] text-primary focus:bg-accent-muted focus:outline-none focus:ring-1 focus:ring-blue-500/25"
             >
               {CURRENCIES.map((c) => (
                 <option key={c.value} value={c.value}>
@@ -79,7 +79,7 @@ export function StepBasics({ profile, onUpdate }: StepBasicsProps) {
 
           {/* Timezone */}
           <div>
-            <label htmlFor="timezone" className="flex items-center gap-1.5 text-[10px] font-medium text-white/60">
+            <label htmlFor="timezone" className="flex items-center gap-1.5 text-[10px] font-medium text-secondary">
               <Clock className="h-3 w-3" />
               {t("timezone")}
             </label>
@@ -87,7 +87,7 @@ export function StepBasics({ profile, onUpdate }: StepBasicsProps) {
               id="timezone"
               value={profile.timezone ?? "America/Mexico_City"}
               onChange={(e) => onUpdate({ timezone: e.target.value })}
-              className="mt-1.5 w-full rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-[12px] text-white/85 focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/25"
+              className="mt-1.5 w-full rounded-lg border border-default bg-surface-1 px-3 py-2 text-[12px] text-primary focus:bg-accent-muted focus:outline-none focus:ring-1 focus:ring-blue-500/25"
             >
               {TIMEZONES.map((tz) => (
                 <option key={tz.value} value={tz.value}>
@@ -100,7 +100,7 @@ export function StepBasics({ profile, onUpdate }: StepBasicsProps) {
 
         {/* Country */}
         <div>
-          <label htmlFor="country" className="flex items-center gap-1.5 text-[10px] font-medium text-white/60">
+          <label htmlFor="country" className="flex items-center gap-1.5 text-[10px] font-medium text-secondary">
             <MapPin className="h-3 w-3" />
             {t("country")}
           </label>
@@ -108,7 +108,7 @@ export function StepBasics({ profile, onUpdate }: StepBasicsProps) {
             id="country"
             value={profile.country ?? "MX"}
             onChange={(e) => onUpdate({ country: e.target.value })}
-            className="mt-1.5 w-full rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-[12px] text-white/85 focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/25"
+            className="mt-1.5 w-full rounded-lg border border-default bg-surface-1 px-3 py-2 text-[12px] text-primary focus:bg-accent-muted focus:outline-none focus:ring-1 focus:ring-blue-500/25"
           >
             {COUNTRIES.map((c) => (
               <option key={c.value} value={c.value}>

@@ -168,7 +168,7 @@ export default function AdminAgentManagementPanel() {
 
   const getStatusColor = (enabled: boolean) => {
     return enabled 
-      ? "bg-green-500/20 text-green-400" 
+      ? "bg-success-muted text-success" 
       : "bg-gray-500/20 text-gray-400";
   };
 
@@ -179,7 +179,7 @@ export default function AdminAgentManagementPanel() {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <RefreshCw className="h-6 w-6 animate-spin text-white/40" />
+        <RefreshCw className="h-6 w-6 animate-spin text-tertiary" />
       </div>
     );
   }
@@ -189,13 +189,13 @@ export default function AdminAgentManagementPanel() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-white">{t("title")}</h1>
-          <p className="text-white/60 mt-1">{t("description")}</p>
+          <h1 className="text-2xl font-semibold text-primary">{t("title")}</h1>
+          <p className="text-secondary mt-1">{t("description")}</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={loadData}
-            className="flex items-center gap-1.5 rounded border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/60 hover:bg-white/10"
+            className="flex items-center gap-1.5 rounded border border-subtle bg-surface-1 px-3 py-1.5 text-xs text-secondary hover:bg-surface-2"
           >
             <RefreshCw className="h-3 w-3" />
             {t("refresh")}
@@ -206,8 +206,8 @@ export default function AdminAgentManagementPanel() {
       {error && (
         <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-4">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-red-400" />
-            <p className="text-sm text-red-300">{error}</p>
+            <AlertTriangle className="h-4 w-4 text-error" />
+            <p className="text-sm text-error">{error}</p>
           </div>
         </div>
       )}
@@ -215,20 +215,20 @@ export default function AdminAgentManagementPanel() {
       {/* Stats Overview */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white/5 rounded-lg p-4">
+          <div className="bg-surface-1 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2">
               <Activity className="h-4 w-4 text-blue-400" />
-              <span className="text-xs text-white/60">{t("stats.totalRequests")}</span>
+              <span className="text-xs text-secondary">{t("stats.totalRequests")}</span>
             </div>
-            <div className="text-2xl font-bold text-white">{stats.total_requests.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-primary">{stats.total_requests.toLocaleString()}</div>
           </div>
 
-          <div className="bg-white/5 rounded-lg p-4">
+          <div className="bg-surface-1 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2">
-              <CheckCircle className="h-4 w-4 text-green-400" />
-              <span className="text-xs text-white/60">{t("stats.successRate")}</span>
+              <CheckCircle className="h-4 w-4 text-success" />
+              <span className="text-xs text-secondary">{t("stats.successRate")}</span>
             </div>
-            <div className="text-2xl font-bold text-green-400">
+            <div className="text-2xl font-bold text-success">
               {stats.total_requests > 0 
                 ? `${((stats.successful_requests / stats.total_requests) * 100).toFixed(1)}%`
                 : "0%"
@@ -236,22 +236,22 @@ export default function AdminAgentManagementPanel() {
             </div>
           </div>
 
-          <div className="bg-white/5 rounded-lg p-4">
+          <div className="bg-surface-1 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2">
               <Zap className="h-4 w-4 text-yellow-400" />
-              <span className="text-xs text-white/60">{t("stats.avgResponseTime")}</span>
+              <span className="text-xs text-secondary">{t("stats.avgResponseTime")}</span>
             </div>
-            <div className="text-2xl font-bold text-white">
+            <div className="text-2xl font-bold text-primary">
               {stats.avg_response_time}ms
             </div>
           </div>
 
-          <div className="bg-white/5 rounded-lg p-4">
+          <div className="bg-surface-1 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2">
-              <Play className="h-4 w-4 text-green-400" />
-              <span className="text-xs text-white/60">{t("stats.activeSessions")}</span>
+              <Play className="h-4 w-4 text-success" />
+              <span className="text-xs text-secondary">{t("stats.activeSessions")}</span>
             </div>
-            <div className="text-2xl font-bold text-white">
+            <div className="text-2xl font-bold text-primary">
               {stats.active_sessions}
             </div>
           </div>
@@ -262,7 +262,7 @@ export default function AdminAgentManagementPanel() {
       <div className="space-y-6">
         {/* Core Modules */}
         <div>
-          <h2 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-medium text-primary mb-4 flex items-center gap-2">
             <Settings className="h-5 w-5 text-blue-400" />
             {t("categories.core")}
           </h2>
@@ -280,7 +280,7 @@ export default function AdminAgentManagementPanel() {
 
         {/* AI Assist Modules */}
         <div>
-          <h2 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-medium text-primary mb-4 flex items-center gap-2">
             <Brain className="h-5 w-5 text-purple-400" />
             {t("categories.assist")}
           </h2>
@@ -298,7 +298,7 @@ export default function AdminAgentManagementPanel() {
 
         {/* Integration Modules */}
         <div>
-          <h2 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-medium text-primary mb-4 flex items-center gap-2">
             <Zap className="h-5 w-5 text-yellow-400" />
             {t("categories.integration")}
           </h2>
@@ -316,19 +316,19 @@ export default function AdminAgentManagementPanel() {
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white/5 rounded-lg p-6">
-        <h2 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+      <div className="bg-surface-1 rounded-lg p-6">
+        <h2 className="text-lg font-medium text-primary mb-4 flex items-center gap-2">
           <Zap className="h-5 w-5" />
           {t("quickActions")}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm transition-colors">
+          <button className="bg-accent hover:bg-accent-hover text-primary px-4 py-2 rounded text-sm transition-colors">
             {t("actions.runDiagnostics")}
           </button>
-          <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm transition-colors">
+          <button className="bg-success hover:bg-success text-primary px-4 py-2 rounded text-sm transition-colors">
             {t("actions.performanceReport")}
           </button>
-          <button className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm transition-colors">
+          <button className="bg-accent hover:bg-accent-hover text-primary px-4 py-2 rounded text-sm transition-colors">
             {t("actions.viewLogs")}
           </button>
         </div>
@@ -345,28 +345,28 @@ function ModuleCard({ module, saving, onToggle }: {
   const t = useTranslations("admin.agentManagement");
 
   return (
-    <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+    <div className="bg-surface-1 rounded-lg p-4 border border-subtle">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
-          <div className="text-white/60">{module.icon}</div>
-          <h3 className="font-medium text-white">{module.name}</h3>
+          <div className="text-secondary">{module.icon}</div>
+          <h3 className="font-medium text-primary">{module.name}</h3>
         </div>
-        <div className={`px-2 py-1 rounded text-xs ${module.enabled ? "bg-green-500/20 text-green-400" : "bg-gray-500/20 text-gray-400"}`}>
+        <div className={`px-2 py-1 rounded text-xs ${module.enabled ? "bg-success-muted text-success" : "bg-gray-500/20 text-gray-400"}`}>
           {module.enabled ? t("status.active") : t("status.inactive")}
         </div>
       </div>
 
-      <p className="text-white/60 text-sm mb-4">{module.description}</p>
+      <p className="text-secondary text-sm mb-4">{module.description}</p>
 
       {module.configurable && (
         <div className="flex items-center justify-between">
-          <span className="text-xs text-white/40">{t("toggleLabel")}</span>
+          <span className="text-xs text-tertiary">{t("toggleLabel")}</span>
           <button
             onClick={() => onToggle(module.key, !module.enabled)}
             disabled={saving}
             className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-colors disabled:opacity-50 ${
               module.enabled
-                ? "border-green-500/40 bg-green-600/30"
+                ? "border-green-500/40 bg-success/30"
                 : "border-gray-500/40 bg-gray-600/30"
             }`}
           >

@@ -186,31 +186,31 @@ function docTypeLabel(t: string | null | undefined, labels: Record<string, strin
 }
 function docTypeCls(t: string | null | undefined): string {
   switch (t) {
-    case "cfdi_xml": return "text-sky-400/70";
-    case "cfdi_pdf": case "pdf": case "pdf_unclassified": return "text-indigo-400/60";
-    case "ticket": case "receipt": return "text-amber-400/55";
-    default: return "text-white/28";
+    case "cfdi_xml": return "text-accent/70";
+    case "cfdi_pdf": case "pdf": case "pdf_unclassified": return "text-accent/60";
+    case "ticket": case "receipt": return "text-warning/55";
+    default: return "text-muted";
   }
 }
 
 const TAG_COLOR_CLS: Record<string, string> = {
-  sky: "border-sky-500/20 bg-sky-500/[0.07] text-sky-400/70",
-  indigo: "border-indigo-500/20 bg-indigo-500/[0.07] text-indigo-400/70",
+  sky: "border-sky-500/20 bg-accent/[0.07] text-accent/70",
+  indigo: "border-blue-500/20 bg-blue-500/[0.07] text-accent",
   violet: "border-violet-500/20 bg-violet-500/[0.07] text-violet-400/70",
-  emerald: "border-emerald-500/20 bg-emerald-500/[0.07] text-emerald-400/70",
-  amber: "border-amber-500/20 bg-amber-500/[0.07] text-amber-400/60",
-  rose: "border-rose-500/20 bg-rose-500/[0.07] text-rose-400/65",
-  zinc: "border-white/10 bg-white/[0.04] text-white/40",
+  emerald: "border-emerald-500/20 bg-emerald-500/[0.07] text-success/70",
+  amber: "border-amber-500/20 bg-amber-500/[0.07] text-warning/60",
+  rose: "border-rose-500/20 bg-rose-500/[0.07] text-error/65",
+  zinc: "border-subtle bg-surface-2 text-tertiary",
 };
 
 const TAG_DOT_CLS: Record<string, string> = {
   sky: "bg-sky-400/70",
-  indigo: "bg-indigo-400/70",
+  indigo: "bg-accent/70",
   violet: "bg-violet-400/70",
   emerald: "bg-emerald-400/70",
   amber: "bg-amber-400/70",
   rose: "bg-rose-400/70",
-  zinc: "bg-zinc-500/70",
+  zinc: "bg-surface-3",
 };
 
 function tagCls(color: string | null | undefined): string {
@@ -237,7 +237,7 @@ function SelectField({ value, onChange, options, placeholder }: {
     <select
       value={value ?? ""}
       onChange={(e) => onChange(e.target.value === "" ? null : Number(e.target.value))}
-      className="w-full rounded border border-white/[0.07] bg-white/[0.02] px-1.5 py-1 text-[10px] text-white/55 outline-none focus:border-indigo-500/30"
+      className="w-full rounded border border-default bg-surface-1 px-1.5 py-1 text-[10px] text-tertiary outline-none focus:bg-accent-muted"
     >
       <option value="">{placeholder}</option>
       {options.map((o) => <option key={o.id} value={o.id}>{o.name} ({o.code})</option>)}
@@ -299,20 +299,20 @@ function DocPreview({ docId, filename, docType, onOpenXmlModal }: { docId: numbe
   if (!isPdf && !isImage && !isXml) return null;
 
   // ── Thumbnail tile (always 48×64) ────────────────────────────────────────
-  const tileBase = "group relative flex h-16 w-12 shrink-0 items-center justify-center overflow-hidden rounded border bg-white/[0.02]";
+  const tileBase = "group relative flex h-16 w-12 shrink-0 items-center justify-center overflow-hidden rounded border bg-surface-1";
 
   let tile: React.ReactNode;
   if (isXml) {
     tile = (
-      <div className={`${tileBase} border-white/[0.08] hover:border-sky-400/35 cursor-pointer`} title={filename}>
+      <div className={`${tileBase} border-default hover:border-sky-400/35 cursor-pointer`} title={filename}>
         <div className="flex h-full w-full flex-col items-stretch justify-between bg-gradient-to-b from-sky-500/[0.06] to-white/[0.01] p-1">
           <div className="flex flex-col gap-[2px]">
             <div className="h-[2px] w-3/4 rounded-sm bg-sky-400/30" />
-            <div className="h-[2px] w-full rounded-sm bg-white/10" />
-            <div className="h-[2px] w-5/6 rounded-sm bg-white/10" />
-            <div className="h-[2px] w-2/3 rounded-sm bg-white/10" />
+            <div className="h-[2px] w-full rounded-sm bg-surface-2" />
+            <div className="h-[2px] w-5/6 rounded-sm bg-surface-2" />
+            <div className="h-[2px] w-2/3 rounded-sm bg-surface-2" />
           </div>
-          <div className="self-end rounded-sm bg-sky-500/30 px-1 text-[7px] font-bold tracking-wider text-sky-100/85">
+          <div className="self-end rounded-sm bg-accent/30 px-1 text-[7px] font-bold tracking-wider text-sky-100/85">
             XML
           </div>
         </div>
@@ -320,19 +320,19 @@ function DocPreview({ docId, filename, docType, onOpenXmlModal }: { docId: numbe
     );
   } else if (error) {
     tile = (
-      <div className={`${tileBase} border-white/[0.07] text-[8px] text-white/30`} title={filename}>
+      <div className={`${tileBase} border-default text-[8px] text-muted`} title={filename}>
         N/A
       </div>
     );
   } else if (!blobUrl) {
     tile = (
-      <div className={`${tileBase} border-white/[0.06]`} title={filename}>
-        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white/20" />
+      <div className={`${tileBase} border-subtle`} title={filename}>
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-surface-2" />
       </div>
     );
   } else if (isImage) {
     tile = (
-      <div className={`${tileBase} border-white/[0.08] hover:border-indigo-400/35 cursor-zoom-in`} title={filename}>
+      <div className={`${tileBase} border-default hover:bg-accent-muted/35 cursor-zoom-in`} title={filename}>
         <img src={blobUrl} alt={filename} className="h-full w-full object-cover" />
       </div>
     );
@@ -340,13 +340,13 @@ function DocPreview({ docId, filename, docType, onOpenXmlModal }: { docId: numbe
     // PDF — render a faux first-page card. The browser PDF viewer won't
     // render usefully at this size; instead show a clear "PDF" affordance.
     tile = (
-      <div className={`${tileBase} border-white/[0.08] hover:border-indigo-400/35 cursor-zoom-in`} title={filename}>
+      <div className={`${tileBase} border-default hover:bg-accent-muted/35 cursor-zoom-in`} title={filename}>
         <div className="flex h-full w-full flex-col items-stretch justify-between bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-1">
           <div className="flex flex-col gap-[2px]">
-            <div className="h-[2px] w-3/4 rounded-sm bg-white/15" />
-            <div className="h-[2px] w-full rounded-sm bg-white/10" />
-            <div className="h-[2px] w-5/6 rounded-sm bg-white/10" />
-            <div className="h-[2px] w-2/3 rounded-sm bg-white/10" />
+            <div className="h-[2px] w-3/4 rounded-sm bg-surface-2" />
+            <div className="h-[2px] w-full rounded-sm bg-surface-2" />
+            <div className="h-[2px] w-5/6 rounded-sm bg-surface-2" />
+            <div className="h-[2px] w-2/3 rounded-sm bg-surface-2" />
           </div>
           <div className="self-end rounded-sm bg-rose-500/30 px-1 text-[7px] font-bold tracking-wider text-rose-100/85">
             PDF
@@ -376,29 +376,29 @@ function DocPreview({ docId, filename, docType, onOpenXmlModal }: { docId: numbe
           onClick={() => setOpen(false)}
         >
           <div
-            className="relative flex h-[88vh] w-[min(960px,92vw)] flex-col overflow-hidden rounded-lg border border-white/10 bg-zinc-950 shadow-2xl"
+            className="relative flex h-[88vh] w-[min(960px,92vw)] flex-col overflow-hidden rounded-lg border border-subtle bg-surface-0 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
-              <div className="min-w-0 flex-1 truncate text-[11px] text-white/70">{filename}</div>
+            <div className="flex items-center justify-between border-b border-subtle px-4 py-2">
+              <div className="min-w-0 flex-1 truncate text-[11px] text-secondary">{filename}</div>
               <div className="flex items-center gap-2">
                 <a
                   href={blobUrl}
                   download={filename}
-                  className="rounded border border-white/10 px-2 py-0.5 text-[10px] text-white/55 hover:border-white/25 hover:text-white/80"
+                  className="rounded border border-subtle px-2 py-0.5 text-[10px] text-tertiary hover:border-strong hover:text-secondary"
                 >
                   Download
                 </a>
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="rounded border border-white/10 px-2 py-0.5 text-[10px] text-white/55 hover:border-white/25 hover:text-white/80"
+                  className="rounded border border-subtle px-2 py-0.5 text-[10px] text-tertiary hover:border-strong hover:text-secondary"
                 >
                   Close
                 </button>
               </div>
             </div>
-            <div className="flex flex-1 items-center justify-center bg-zinc-900">
+            <div className="flex flex-1 items-center justify-center bg-surface-1">
               {isImage ? (
                 <img src={blobUrl} alt={filename} className="max-h-full max-w-full object-contain" />
               ) : (
@@ -784,15 +784,15 @@ export default function EmployeeExpenseDetail({
   if (!expenseId || (!loadingExpense && !expense)) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.03]">
-          <FileText className="h-5 w-5 text-white/15" />
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-subtle bg-surface-1">
+          <FileText className="h-5 w-5 text-muted" />
         </div>
-        <p className="text-sm font-medium text-white/25">{tc("noResults")}</p>
+        <p className="text-sm font-medium text-muted">{tc("noResults")}</p>
       </div>
     );
   }
   if (loadingExpense || !expense) {
-    return <div className="flex h-full items-center justify-center"><p className="text-xs text-white/20">{tc("loading")}</p></div>;
+    return <div className="flex h-full items-center justify-center"><p className="text-xs text-muted">{tc("loading")}</p></div>;
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -806,13 +806,13 @@ export default function EmployeeExpenseDetail({
             {/* Back button */}
             {onBack && (
               <button type="button" onClick={onBack}
-                className="flex items-center gap-1 text-[10px] text-white/30 hover:text-white/55">
+                className="flex items-center gap-1 text-[10px] text-muted hover:text-tertiary">
                 <ChevronLeft className="h-3 w-3" /> {td("back")}
               </button>
             )}
 
             {/* ── HEADER CARD ───────────────────────────────────────── */}
-            <div className="rounded-lg border border-white/[0.07] bg-white/[0.025] px-4 py-3">
+            <div className="rounded-lg border border-default bg-surface-1 px-4 py-3">
               {/* Row 1: Title (large) + actions */}
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
@@ -824,30 +824,30 @@ export default function EmployeeExpenseDetail({
                         onChange={(e) => setTitleDraft(e.target.value)}
                         onKeyDown={(e) => { if (e.key === "Enter") saveTitle(); if (e.key === "Escape") setEditingTitle(false); }}
                         onBlur={saveTitle}
-                        className="flex-1 rounded border border-indigo-500/30 bg-transparent px-1 py-0 text-[17px] font-bold text-white/95 outline-none"
+                        className="flex-1 rounded border bg-accent-muted bg-transparent px-1 py-0 text-[17px] font-bold text-primary outline-none"
                       />
-                      {savingTitle && <span className="text-[9px] text-white/25">{td("saving")}</span>}
+                      {savingTitle && <span className="text-[9px] text-muted">{td("saving")}</span>}
                     </div>
                   ) : (
                     <button type="button"
                       onClick={() => { setTitleDraft(sanitizeTitle(expense.description)); setEditingTitle(true); }}
                       className="group text-left">
-                      <h1 className="text-[17px] font-bold leading-tight text-white/95 group-hover:underline group-hover:decoration-white/20">
+                      <h1 className="text-[17px] font-bold leading-tight text-primary group-hover:underline group-hover:decoration-subtle">
                         {sanitizeTitle(expense.description)}
                       </h1>
                     </button>
                   )}
                   {/* Amount — large, right below title */}
-                  <p className="mt-0.5 text-[22px] font-bold tabular-nums leading-none text-white">
+                  <p className="mt-0.5 text-[22px] font-bold tabular-nums leading-none text-primary">
                     ${Number(expense.amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    <span className="ml-1.5 text-[10px] font-normal text-white/30">{parsedXml?.moneda ?? "MXN"}</span>
+                    <span className="ml-1.5 text-[10px] font-normal text-muted">{parsedXml?.moneda ?? "MXN"}</span>
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5 pt-0.5">
                   <ExpenseAuditDrawer expenseId={expense.id} variant="icon" />
                   {employeeActions?.can_delete && (
                     <button type="button" onClick={deleteDraft} disabled={deletingDraft}
-                      className="rounded p-0.5 text-white/18 hover:text-red-400/60 disabled:opacity-40">
+                      className="rounded p-0.5 text-muted hover:text-error/60 disabled:opacity-40">
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   )}
@@ -855,30 +855,30 @@ export default function EmployeeExpenseDetail({
               </div>
 
               {/* Row 2: compact metadata inline */}
-              <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-white/[0.05] pt-2">
+              <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-subtle pt-2">
                 {parsedXml?.emisor_nombre && (
-                  <span className="text-[10px] text-white/50"><span className="text-white/22">{td("vendor")} </span>{parsedXml.emisor_nombre}</span>
+                  <span className="text-[10px] text-secondary"><span className="text-muted">{td("vendor")} </span>{parsedXml.emisor_nombre}</span>
                 )}
                 {(xmlFormattedDate ?? formattedExpenseDate) && (
-                  <span className="text-[10px] text-white/50"><span className="text-white/22">{td("date")} </span>{xmlFormattedDate ?? formattedExpenseDate}</span>
+                  <span className="text-[10px] text-secondary"><span className="text-muted">{td("date")} </span>{xmlFormattedDate ?? formattedExpenseDate}</span>
                 )}
                 {parsedXml?.emisor_rfc && (
-                  <span className="font-mono text-[10px] text-white/45"><span className="font-sans text-white/22">{td("rfc")} </span>{parsedXml.emisor_rfc}</span>
+                  <span className="font-mono text-[10px] text-tertiary"><span className="font-sans text-muted">{td("rfc")} </span>{parsedXml.emisor_rfc}</span>
                 )}
                 {/* SAT dot + Policy dot — same line, pushed right */}
                 <div className="ml-auto flex items-center gap-3">
                   <div className="flex items-center gap-1">
-                    {satStatus === "valid"   && <><span className="h-1.5 w-1.5 rounded-full bg-emerald-400/70" /><span className="text-[9px] text-emerald-400/60">SAT ✓</span></>}
-                    {satStatus === "warning" && <><span className="h-1.5 w-1.5 rounded-full bg-amber-400/70"   /><span className="text-[9px] text-amber-400/60">SAT ⚠</span></>}
-                    {satStatus === "error"   && <><span className="h-1.5 w-1.5 rounded-full bg-red-400/70"     /><span className="text-[9px] text-red-400/55">SAT ✗</span></>}
-                    {!satStatus && hasXml    && <><span className="h-1.5 w-1.5 rounded-full bg-zinc-500/50"    /><span className="text-[9px] text-white/22">XML</span></>}
-                    {!satStatus && !hasXml   && <><span className="h-1.5 w-1.5 rounded-full bg-zinc-700/60"    /><span className="text-[9px] text-white/15">{td("noXml")}</span></>}
+                    {satStatus === "valid"   && <><span className="h-1.5 w-1.5 rounded-full bg-emerald-400/70" /><span className="text-[9px] text-success/60">SAT ✓</span></>}
+                    {satStatus === "warning" && <><span className="h-1.5 w-1.5 rounded-full bg-amber-400/70"   /><span className="text-[9px] text-warning/60">SAT ⚠</span></>}
+                    {satStatus === "error"   && <><span className="h-1.5 w-1.5 rounded-full bg-red-400/70"     /><span className="text-[9px] text-error/55">SAT ✗</span></>}
+                    {!satStatus && hasXml    && <><span className="h-1.5 w-1.5 rounded-full bg-surface-2"    /><span className="text-[9px] text-muted">XML</span></>}
+                    {!satStatus && !hasXml   && <><span className="h-1.5 w-1.5 rounded-full bg-surface-3/60"    /><span className="text-[9px] text-muted">{td("noXml")}</span></>}
                   </div>
                   <div className="flex items-center gap-1">
-                    {policyDotStatus === "passed"  && <><span className="h-1.5 w-1.5 rounded-full bg-emerald-400/70" /><span className="text-[9px] text-emerald-400/60">Policy ✓</span></>}
-                    {policyDotStatus === "warning" && <><span className="h-1.5 w-1.5 rounded-full bg-amber-400/70"   /><span className="text-[9px] text-amber-400/60">Policy ⚠</span></>}
-                    {policyDotStatus === "failed"  && <><span className="h-1.5 w-1.5 rounded-full bg-red-400/70"     /><span className="text-[9px] text-red-400/55">Policy ✗</span></>}
-                    {policyDotStatus === null      && <><span className="h-1.5 w-1.5 rounded-full bg-zinc-700/50"    /><span className="text-[9px] text-white/18">Policy</span></>}
+                    {policyDotStatus === "passed"  && <><span className="h-1.5 w-1.5 rounded-full bg-emerald-400/70" /><span className="text-[9px] text-success/60">Policy ✓</span></>}
+                    {policyDotStatus === "warning" && <><span className="h-1.5 w-1.5 rounded-full bg-amber-400/70"   /><span className="text-[9px] text-warning/60">Policy ⚠</span></>}
+                    {policyDotStatus === "failed"  && <><span className="h-1.5 w-1.5 rounded-full bg-red-400/70"     /><span className="text-[9px] text-error/55">Policy ✗</span></>}
+                    {policyDotStatus === null      && <><span className="h-1.5 w-1.5 rounded-full bg-surface-3/50"    /><span className="text-[9px] text-muted">Policy</span></>}
                   </div>
                 </div>
               </div>
@@ -893,14 +893,14 @@ export default function EmployeeExpenseDetail({
             />
 
             {/* ── Tabs + Submit ─────────────────────────────────────── */}
-            <div className="border-b border-white/[0.07]">
+            <div className="border-b border-default">
               <nav className="-mb-px flex items-end">
                 {(["overview", "documents", "validations"] as const).map((tab) => (
                   <button key={tab} type="button" onClick={() => setActiveTab(tab)}
                     className={`border-b-2 px-3 pb-1.5 pt-0 text-[11px] font-medium capitalize transition-colors ${
                       activeTab === tab
-                        ? "border-indigo-500/70 text-white/80"
-                        : "border-transparent text-white/35 hover:text-white/55"
+                        ? "border-blue-500/70 text-secondary"
+                        : "border-transparent text-muted hover:text-tertiary"
                     }`}>
                     {(() => {
                       if (tab === "validations") return td("validations");
@@ -911,12 +911,12 @@ export default function EmployeeExpenseDetail({
                 ))}
                 {expense.status === "draft" && (
                   <div className="ml-auto flex items-center gap-2 pb-1">
-                    {submitError && <span className="text-[9px] text-red-300/60">{submitError}</span>}
-                    {!readiness.ok && <span className="text-[9px] text-amber-400/50">{readiness.label}</span>}
+                    {submitError && <span className="text-[9px] text-error/60">{submitError}</span>}
+                    {!readiness.ok && <span className="text-[9px] text-warning/50">{readiness.label}</span>}
                     <button type="button" onClick={handleSubmit}
                       disabled={submittingExpense || (employeeActions !== null && !employeeActions.can_submit && !employeeActions.can_resubmit)}
                       title={!readiness.ok ? readiness.label : undefined}
-                      className="inline-flex items-center gap-1 rounded border border-indigo-500/30 bg-indigo-600/20 px-2.5 py-1 text-[10px] font-medium text-indigo-300 hover:bg-indigo-600/30 disabled:cursor-not-allowed disabled:opacity-40">
+                      className="inline-flex items-center gap-1 rounded border bg-accent-muted bg-accent-muted px-2.5 py-1 text-[10px] font-medium text-accent hover:bg-accent-muted disabled:cursor-not-allowed disabled:opacity-40">
                       <Send className="h-2.5 w-2.5" />
                       {submittingExpense ? t("expenseDetail.submitting") : t("expenseDetail.submitExpense")}
                     </button>
@@ -950,16 +950,16 @@ export default function EmployeeExpenseDetail({
                 })()}
 
                 {/* ── Allocation (3/4) + Expense type (1/4) on same row ── */}
-                <div className="rounded-lg border border-white/[0.07] bg-white/[0.02] px-4 py-3">
+                <div className="rounded-lg border border-default bg-surface-1 px-4 py-3">
                   <div className="flex gap-4">
 
                     {/* Allocation — 3/4 */}
                     <div className="min-w-0 flex-[3]">
-                      <h3 className="mb-2 text-[11px] font-semibold text-white/70">
+                      <h3 className="mb-2 text-[11px] font-semibold text-secondary">
                         {activeDims.length === 1 && activeDims[0].key === "project_id" ? t("newExpenseModal.fieldProject") : td("projectAllocation")}
                       </h3>
                       {activeDims.length === 0 ? (
-                        <p className="text-[10px] text-white/25">{td("noAllocationDims")}</p>
+                        <p className="text-[10px] text-muted">{td("noAllocationDims")}</p>
                       ) : (
                         <div className="space-y-2">
                           {/* First row */}
@@ -967,7 +967,7 @@ export default function EmployeeExpenseDetail({
                             {activeDims.map((d) => (
                               <div key={d.key} className="flex-1">
                                 {activeDims.length > 1 && (
-                                  <p className="mb-0.5 text-[8px] uppercase tracking-wider text-white/22">{d.label}</p>
+                                  <p className="mb-0.5 text-[8px] uppercase tracking-wider text-muted">{d.label}</p>
                                 )}
                                 <SelectField
                                   value={allocationRows[0]?.[d.key]}
@@ -982,9 +982,9 @@ export default function EmployeeExpenseDetail({
                                   type="number" min="0" max="100"
                                   value={allocationRows[0]?.percent ?? "100"}
                                   onChange={(e) => updateRow(0, "percent", e.target.value)}
-                                  className="w-full rounded border border-white/[0.07] bg-zinc-900 px-1 py-1 text-[10px] text-white/55 outline-none focus:border-indigo-500/30"
+                                  className="w-full rounded border border-default bg-surface-1 px-1 py-1 text-[10px] text-tertiary outline-none focus:bg-accent-muted"
                                 />
-                                <span className="text-[9px] text-white/22">%</span>
+                                <span className="text-[9px] text-muted">%</span>
                               </div>
                             )}
                           </div>
@@ -1003,19 +1003,19 @@ export default function EmployeeExpenseDetail({
                                   <input
                                     type="number" min="0" max="100" value={row.percent}
                                     onChange={(e) => updateRow(i, "percent", e.target.value)}
-                                    className="w-full rounded border border-white/[0.07] bg-zinc-900 px-1 py-1 text-[10px] text-white/55 outline-none"
+                                    className="w-full rounded border border-default bg-surface-1 px-1 py-1 text-[10px] text-tertiary outline-none"
                                   />
-                                  <span className="text-[9px] text-white/22">%</span>
+                                  <span className="text-[9px] text-muted">%</span>
                                 </div>
                                 <button type="button" onClick={() => setAllocationRows((p) => p.filter((_, ii) => ii !== i))}
-                                  className="shrink-0 text-white/20 hover:text-red-400/50">
+                                  className="shrink-0 text-muted hover:text-error/50">
                                   <X className="h-3 w-3" />
                                 </button>
                               </div>
                             );
                           })}
 
-                          <div className="flex items-center justify-between border-t border-white/[0.05] pt-1.5">
+                          <div className="flex items-center justify-between border-t border-subtle pt-1.5">
                             <div className="flex items-center gap-3">
                               {allowSplit && (
                                 <button type="button"
@@ -1023,19 +1023,19 @@ export default function EmployeeExpenseDetail({
                                     const next = [...allocationRows, { project_id: null, client_id: null, cost_center_id: null, percent: "0" }];
                                     setAllocationRows(next);
                                   }}
-                                  className="flex items-center gap-1 text-[9px] text-white/28 hover:text-white/50">
+                                  className="flex items-center gap-1 text-[9px] text-muted hover:text-secondary">
                                   <Plus className="h-2.5 w-2.5" /> {td("addSplit")}
                                 </button>
                               )}
                               {allowSplit && allocationRows.length > 1 && (
-                                <span className={`text-[9px] font-bold tabular-nums ${splitTotal === 100 ? "text-emerald-400/70" : "text-amber-400/70"}`}>
+                                <span className={`text-[9px] font-bold tabular-nums ${splitTotal === 100 ? "text-success/70" : "text-warning/70"}`}>
                                   {splitTotal.toFixed(0)}%
                                 </span>
                               )}
                             </div>
                             <div className="flex items-center gap-2">
-                              {allocSaveError && <span className="text-[9px] text-red-300/60">{allocSaveError}</span>}
-                              {savingAllocation && <span className="text-[9px] text-white/25">{td("saving")}</span>}
+                              {allocSaveError && <span className="text-[9px] text-error/60">{allocSaveError}</span>}
+                              {savingAllocation && <span className="text-[9px] text-muted">{td("saving")}</span>}
                             </div>
                           </div>
                         </div>
@@ -1043,23 +1043,23 @@ export default function EmployeeExpenseDetail({
                     </div>
 
                     {/* Divider */}
-                    <div className="w-px shrink-0 bg-white/[0.06]" />
+                    <div className="w-px shrink-0 bg-surface-2" />
 
                     {/* Expense type — 1/4 */}
                     <div className="flex-1">
                       <div className="mb-2 flex items-center justify-between gap-2">
-                        <p className="text-[11px] font-semibold text-white/70">{td("expenseType")}</p>
+                        <p className="text-[11px] font-semibold text-secondary">{td("expenseType")}</p>
                         {expense?.detected_category && !expense?.category_code && (
-                          <span className="rounded bg-indigo-500/15 px-1.5 py-0.5 text-[9px] font-medium text-indigo-300/80">
+                          <span className="rounded bg-blue-500/15 px-1.5 py-0.5 text-[9px] font-medium text-accent">
                             {td("aiSuggested")}
                           </span>
                         )}
-                        {savingCategory && <span className="text-[9px] text-white/25">{td("saving")}</span>}
+                        {savingCategory && <span className="text-[9px] text-muted">{td("saving")}</span>}
                       </div>
                       {categories.length === 0 ? (
                         <select
                           disabled
-                          className="w-full cursor-not-allowed rounded border border-white/[0.06] bg-transparent px-2 py-1 text-[10px] text-white/22 outline-none"
+                          className="w-full cursor-not-allowed rounded border border-subtle bg-transparent px-2 py-1 text-[10px] text-muted outline-none"
                         >
                           <option>{td("pendingCatalogue")}</option>
                         </select>
@@ -1068,7 +1068,7 @@ export default function EmployeeExpenseDetail({
                           value={expense?.category_code ?? ""}
                           disabled={savingCategory || expense?.status !== "draft"}
                           onChange={(e) => saveCategory(e.target.value)}
-                          className="w-full rounded border border-white/[0.08] bg-white/[0.02] px-2 py-1 text-[10px] text-white/80 outline-none focus:border-white/25 disabled:cursor-not-allowed disabled:text-white/30"
+                          className="w-full rounded border border-default bg-surface-1 px-2 py-1 text-[10px] text-secondary outline-none focus:border-strong disabled:cursor-not-allowed disabled:text-muted"
                         >
                           <option value="">{td("selectCategory")}</option>
                           {categories.map((c) => (
@@ -1082,7 +1082,7 @@ export default function EmployeeExpenseDetail({
                         <button
                           type="button"
                           onClick={() => saveCategory(expense.detected_category as string)}
-                          className="mt-1 text-[9px] text-indigo-300/70 hover:text-indigo-200 underline underline-offset-2"
+                          className="mt-1 text-[9px] text-accent/70 hover:text-accent underline underline-offset-2"
                         >
                           {td("applyAiSuggestion", { code: expense.detected_category })}
                         </button>
@@ -1093,13 +1093,13 @@ export default function EmployeeExpenseDetail({
                 </div>
 
                 {/* ── Tags + Notes ─────────────────────────────── */}
-                <div className="rounded-lg border border-white/[0.07] bg-white/[0.02] px-4 py-3">
+                <div className="rounded-lg border border-default bg-surface-1 px-4 py-3">
                   <div className="flex gap-4">
                     {/* Tags column */}
                     <div className="w-48 shrink-0">
                       <div className="mb-1.5 flex items-center gap-1.5">
-                        <Tag className="h-3 w-3 text-white/25" />
-                        <span className="text-[10px] font-medium text-white/45">{td("tags")}</span>
+                        <Tag className="h-3 w-3 text-muted" />
+                        <span className="text-[10px] font-medium text-tertiary">{td("tags")}</span>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {activeTags.map((t) => {
@@ -1124,22 +1124,22 @@ export default function EmployeeExpenseDetail({
                               if (e.key === "Escape") setShowTagDropdown(false);
                             }}
                             placeholder={td("addTagPlaceholder")}
-                            className="rounded border border-white/[0.07] bg-transparent px-1.5 py-0.5 text-[9px] text-white/40 placeholder-white/20 outline-none focus:border-indigo-500/30 focus:text-white/60"
+                            className="rounded border border-default bg-transparent px-1.5 py-0.5 text-[9px] text-tertiary placeholder-white/20 outline-none focus:bg-accent-muted focus:text-secondary"
                           />
                           {showTagDropdown && (
-                            <div className="absolute left-0 top-full z-10 mt-1 w-44 overflow-hidden rounded-lg border border-white/[0.09] bg-zinc-900 shadow-xl">
+                            <div className="absolute left-0 top-full z-10 mt-1 w-44 overflow-hidden rounded-lg border border-default bg-surface-1 shadow-xl">
                               {predefinedTags
                                 .filter((p) => !activeTags.includes(p.name) && (tagInput === "" || p.name.toLowerCase().includes(tagInput.toLowerCase())))
                                 .map((p) => (
                                   <button key={p.id} type="button" onMouseDown={() => addTag(p.name)}
-                                    className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[10px] text-white/55 hover:bg-white/[0.06]">
+                                    className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[10px] text-tertiary hover:bg-surface-3">
                                     <span className={`inline-flex h-1.5 w-1.5 rounded-full ${tagDotCls(p.color)}`} />
                                     {p.name}
                                   </button>
                                 ))}
                               {tagInput.trim() && !predefinedTags.find((p) => p.name === tagInput.trim()) && (
                                 <button type="button" onMouseDown={() => addTag(tagInput)}
-                                  className="flex w-full items-center gap-2 border-t border-white/[0.06] px-2.5 py-1.5 text-left text-[10px] text-indigo-400/60 hover:bg-white/[0.05]">
+                                  className="flex w-full items-center gap-2 border-t border-subtle px-2.5 py-1.5 text-left text-[10px] text-accent/60 hover:bg-surface-2">
                                   <Plus className="h-2.5 w-2.5" /> Create &quot;{tagInput.trim()}&quot;
                                 </button>
                               )}
@@ -1150,11 +1150,11 @@ export default function EmployeeExpenseDetail({
                     </div>
 
                     {/* Divider */}
-                    <div className="w-px shrink-0 bg-white/[0.06]" />
+                    <div className="w-px shrink-0 bg-surface-2" />
 
                     {/* Notes column */}
                     <div className="min-w-0 flex-1">
-                      <p className="mb-1 text-[10px] font-medium text-white/45">{td("notes")}</p>
+                      <p className="mb-1 text-[10px] font-medium text-tertiary">{td("notes")}</p>
                       <textarea
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
@@ -1162,13 +1162,13 @@ export default function EmployeeExpenseDetail({
                         readOnly={employeeActions?.can_edit === false}
                         rows={2}
                         placeholder={td("notesPlaceholder")}
-                        className={`w-full resize-none rounded border border-white/[0.07] px-2 py-1.5 text-[11px] placeholder-white/15 outline-none transition-colors ${
+                        className={`w-full resize-none rounded border border-default px-2 py-1.5 text-[11px] placeholder-white/15 outline-none transition-colors ${
                           employeeActions?.can_edit === false
-                            ? "cursor-not-allowed bg-transparent text-white/25"
-                            : "bg-transparent text-white/55 focus:border-indigo-500/30"
+                            ? "cursor-not-allowed bg-transparent text-muted"
+                            : "bg-transparent text-tertiary focus:bg-accent-muted"
                         }`}
                       />
-                      {savingNotes && <p className="mt-0.5 text-[9px] text-white/25">{td("saving")}</p>}
+                      {savingNotes && <p className="mt-0.5 text-[9px] text-muted">{td("saving")}</p>}
                     </div>
                   </div>
                 </div>
@@ -1190,19 +1190,19 @@ export default function EmployeeExpenseDetail({
                     onClick={() => fileInputRef.current?.click()}
                     onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click(); }}
                     className={`flex cursor-pointer items-center gap-2 rounded border border-dashed px-3 py-2 transition-colors select-none ${
-                      dragOver ? "border-indigo-500/50 bg-indigo-500/[0.06]" : "border-white/[0.09] hover:border-white/[0.18]"
+                      dragOver ? "border-blue-500/50 bg-blue-500/[0.06]" : "border-default hover:border-strong"
                     }`}
                   >
-                    <Upload className={`h-3.5 w-3.5 shrink-0 ${dragOver ? "text-indigo-400/70" : "text-white/20"}`} />
+                    <Upload className={`h-3.5 w-3.5 shrink-0 ${dragOver ? "text-accent" : "text-muted"}`} />
                     <div className="min-w-0">
-                      <p className="text-[11px] text-white/45">
+                      <p className="text-[11px] text-tertiary">
                         {(() => {
                           if (xmlRequired && !hasXml) return td("uploadXmlCfdi");
                           if (pdfPairRequired && hasXml && !hasPdf) return td("uploadPdf");
                           return td("uploadFile");
                         })()}
                       </p>
-                      <p className="text-[10px] text-white/22">{td("uploadHint")}</p>
+                      <p className="text-[10px] text-muted">{td("uploadHint")}</p>
                     </div>
                     <input ref={fileInputRef} type="file" multiple accept=".xml,.pdf,application/xml,application/pdf,text/xml" className="hidden"
                       onChange={(e) => { if (e.target.files?.length) { uploadDocuments(e.target.files); e.target.value = ""; } }} />
@@ -1212,32 +1212,32 @@ export default function EmployeeExpenseDetail({
                 {uploadQueue.length > 0 && (
                   <div className="space-y-1">
                     {uploadQueue.map((entry) => (
-                      <div key={entry.localId} className="flex items-center gap-2 rounded border border-white/[0.05] bg-white/[0.01] px-3 py-2">
-                        {entry.status === "uploading" && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-400/60" />}
-                        {entry.status === "done"      && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400/60" />}
-                        {entry.status === "error"     && <XCircle      className="h-3.5 w-3.5 text-red-400/50" />}
-                        <span className="min-w-0 flex-1 truncate text-[10px] text-white/40">{entry.filename}</span>
-                        {entry.status === "error" && <span className="text-[9px] text-red-400/40">{td("uploadFailed")}</span>}
+                      <div key={entry.localId} className="flex items-center gap-2 rounded border border-subtle bg-surface-0 px-3 py-2">
+                        {entry.status === "uploading" && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent/60" />}
+                        {entry.status === "done"      && <CheckCircle2 className="h-3.5 w-3.5 text-success/60" />}
+                        {entry.status === "error"     && <XCircle      className="h-3.5 w-3.5 text-error/50" />}
+                        <span className="min-w-0 flex-1 truncate text-[10px] text-tertiary">{entry.filename}</span>
+                        {entry.status === "error" && <span className="text-[9px] text-error/40">{td("uploadFailed")}</span>}
                       </div>
                     ))}
                   </div>
                 )}
 
-                {loadingDocs && linkedDocs.length === 0 && <p className="text-[10px] text-white/25">{td("loadingDocs")}</p>}
+                {loadingDocs && linkedDocs.length === 0 && <p className="text-[10px] text-muted">{td("loadingDocs")}</p>}
 
                 {/* Confirm-delete overlay */}
                 {confirmDeleteDocId !== null && (
                   <div className="rounded-lg border border-red-500/20 bg-red-500/[0.06] px-4 py-3">
-                    <p className="text-[11px] text-white/70">{td("confirmDeleteMsg")}</p>
+                    <p className="text-[11px] text-secondary">{td("confirmDeleteMsg")}</p>
                     <div className="mt-2 flex items-center gap-2">
                       <button type="button"
                         onClick={() => deleteDocument(confirmDeleteDocId)}
                         disabled={deletingDocId === confirmDeleteDocId}
-                        className="rounded border border-red-500/30 bg-red-500/15 px-2.5 py-1 text-[10px] font-medium text-red-300 hover:bg-red-500/25 disabled:opacity-40">
+                        className="rounded border border-error bg-error-muted px-2.5 py-1 text-[10px] font-medium text-error hover:bg-red-500/25 disabled:opacity-40">
                         {deletingDocId === confirmDeleteDocId ? td("deleting") : td("yesDelete")}
                       </button>
                       <button type="button" onClick={() => setConfirmDeleteDocId(null)}
-                        className="text-[10px] text-white/30 hover:text-white/55">{tc("cancel")}</button>
+                        className="text-[10px] text-muted hover:text-tertiary">{tc("cancel")}</button>
                     </div>
                   </div>
                 )}
@@ -1247,29 +1247,29 @@ export default function EmployeeExpenseDetail({
                     {linkedDocs.map((doc) => {
                       const isXml = doc.document_type === "cfdi_xml";
                       return (
-                        <div key={doc.id} className="flex items-center gap-2.5 rounded-lg border border-white/[0.06] bg-white/[0.015] px-3 py-2">
+                        <div key={doc.id} className="flex items-center gap-2.5 rounded-lg border border-subtle bg-surface-1 px-3 py-2">
                           <DocPreview
                             docId={doc.id}
                             filename={doc.filename ?? ""}
                             docType={doc.document_type ?? null}
                             onOpenXmlModal={isXml && parsedXml ? () => setShowXmlModal(true) : undefined}
                           />
-                          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-white/[0.07] bg-white/[0.02]">
+                          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-default bg-surface-1">
                             <FileText className={`h-3 w-3 ${docTypeCls(doc.document_type)}`} />
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5">
-                              <p className="truncate text-[11px] text-white/65">{doc.filename}</p>
+                              <p className="truncate text-[11px] text-secondary">{doc.filename}</p>
                               {(() => {
                                 const cls = doc.extracted_fields?.classifier;
                                 const label = cls?.label;
                                 if (!label) return null;
                                 const tone: Record<string, string> = {
-                                  receipt:   "border-emerald-500/25 bg-emerald-500/10 text-emerald-200/85",
-                                  invoice:   "border-sky-500/25 bg-sky-500/10 text-sky-200/85",
+                                  receipt:   "border-emerald-500/25 bg-success-muted text-success/85",
+                                  invoice:   "border-sky-500/25 bg-accent/10 text-sky-200/85",
                                   cfdi_xml:  "border-violet-500/25 bg-violet-500/10 text-violet-200/85",
-                                  statement: "border-amber-500/25 bg-amber-500/10 text-amber-200/85",
-                                  other:     "border-white/10 bg-white/[0.04] text-white/55",
+                                  statement: "border-amber-500/25 bg-warning-muted text-warning/85",
+                                  other:     "border-subtle bg-surface-2 text-tertiary",
                                 };
                                 const conf = typeof cls?.confidence === "number" ? Math.round(cls.confidence * 100) : null;
                                 return (
@@ -1282,7 +1282,7 @@ export default function EmployeeExpenseDetail({
                                 );
                               })()}
                             </div>
-                            <p className="text-[9px] text-white/28">
+                            <p className="text-[9px] text-muted">
                               {docTypeLabel(doc.document_type, { receipt: td("docType.receipt"), justification: td("docType.justification"), proof: td("docType.proof"), file: td("docType.file") })} · {new Date(doc.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                             </p>
                             {doc.extracted_fields && (() => {
@@ -1312,14 +1312,14 @@ export default function EmployeeExpenseDetail({
                             })()}
                           </div>
                           <div className="flex shrink-0 items-center gap-2">
-                            {isXml && satStatus === "valid"   && <span className="text-[9px] text-emerald-400/55">SAT ✓</span>}
-                            {isXml && satStatus === "warning" && <span className="text-[9px] text-amber-400/55">SAT ⚠</span>}
-                            {isXml && satStatus === "error"   && <span className="text-[9px] text-red-400/55">SAT ✗</span>}
+                            {isXml && satStatus === "valid"   && <span className="text-[9px] text-success/55">SAT ✓</span>}
+                            {isXml && satStatus === "warning" && <span className="text-[9px] text-warning/55">SAT ⚠</span>}
+                            {isXml && satStatus === "error"   && <span className="text-[9px] text-error/55">SAT ✗</span>}
                             {canUpload && (
                               <button type="button"
                                 onClick={() => setConfirmDeleteDocId(doc.id)}
                                 disabled={deletingDocId === doc.id}
-                                className="rounded p-0.5 text-white/18 hover:text-red-400/60 disabled:opacity-40">
+                                className="rounded p-0.5 text-muted hover:text-error/60 disabled:opacity-40">
                                 <Trash2 className="h-3 w-3" />
                               </button>
                             )}
@@ -1329,7 +1329,7 @@ export default function EmployeeExpenseDetail({
                     })}
                   </div>
                 ) : !loadingDocs ? (
-                  <p className="text-center text-[11px] text-white/25">{t("expenseDetail.noDocuments")}</p>
+                  <p className="text-center text-[11px] text-muted">{t("expenseDetail.noDocuments")}</p>
                 ) : null}
               </div>
             )}
@@ -1352,14 +1352,14 @@ export default function EmployeeExpenseDetail({
 
               const statusBadge = (status: PolicyCheckRow["status"]) => {
                 const cls = status === "passed"
-                  ? "border-emerald-500/20 bg-emerald-500/[0.07] text-emerald-400/70"
+                  ? "border-emerald-500/20 bg-emerald-500/[0.07] text-success/70"
                   : status === "warning"
-                  ? "border-amber-500/20 bg-amber-500/[0.07] text-amber-400/65"
+                  ? "border-amber-500/20 bg-amber-500/[0.07] text-warning/65"
                   : status === "failed"
-                  ? "border-red-500/20 bg-red-500/[0.07] text-red-400/65"
+                  ? "border-red-500/20 bg-red-500/[0.07] text-error/65"
                   : status === "not_applicable"
-                  ? "border-white/[0.07] bg-white/[0.02] text-white/22"
-                  : "border-white/[0.07] bg-white/[0.02] text-white/25";
+                  ? "border-default bg-surface-1 text-muted"
+                  : "border-default bg-surface-1 text-muted";
                 return (
                   <span className={`mt-0.5 shrink-0 rounded border px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide ${cls}`}>
                     {status === "not_applicable" ? "n/a" : status}
@@ -1407,26 +1407,26 @@ export default function EmployeeExpenseDetail({
                   <div className="px-3 py-2.5">
                     <div className="flex items-start gap-2.5">
                       <div className="mt-0.5 shrink-0">
-                        {c.status === "passed"          && <CheckCircle2  className="h-3.5 w-3.5 text-emerald-400/65" />}
-                        {c.status === "warning"         && <AlertTriangle className="h-3.5 w-3.5 text-amber-400/60"  />}
-                        {c.status === "failed"          && <XCircle       className="h-3.5 w-3.5 text-red-400/60"    />}
+                        {c.status === "passed"          && <CheckCircle2  className="h-3.5 w-3.5 text-success/65" />}
+                        {c.status === "warning"         && <AlertTriangle className="h-3.5 w-3.5 text-warning/60"  />}
+                        {c.status === "failed"          && <XCircle       className="h-3.5 w-3.5 text-error/60"    />}
                         {(c.status === "pending" || c.status === "not_applicable") && (
-                          <div className="h-3.5 w-3.5 rounded-full border border-white/[0.12] bg-zinc-800" />
+                          <div className="h-3.5 w-3.5 rounded-full border border-default bg-surface-2" />
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className={`text-[11px] font-medium ${c.status === "not_applicable" || c.status === "pending" ? "text-white/30" : "text-white/70"}`}>{checkLabel(c)}</p>
-                        {c.message && <p className="mt-0.5 text-[10px] text-white/40">{c.message}</p>}
+                        <p className={`text-[11px] font-medium ${c.status === "not_applicable" || c.status === "pending" ? "text-muted" : "text-secondary"}`}>{checkLabel(c)}</p>
+                        {c.message && <p className="mt-0.5 text-[10px] text-tertiary">{c.message}</p>}
                         {c.overridden && c.original_message && (
-                          <p className="mt-0.5 text-[10px] text-white/30 line-through">{c.original_message}</p>
+                          <p className="mt-0.5 text-[10px] text-muted line-through">{c.original_message}</p>
                         )}
-                        {sourceHint && <p className="mt-1 text-[9px] uppercase tracking-widest text-white/22">{sourceHint}</p>}
-                        {stampedV && <p className="mt-1 font-mono text-[9px] text-white/22">Checked: {fmtTs(stampedV.created_at)}</p>}
+                        {sourceHint && <p className="mt-1 text-[9px] uppercase tracking-widest text-muted">{sourceHint}</p>}
+                        {stampedV && <p className="mt-1 font-mono text-[9px] text-muted">Checked: {fmtTs(stampedV.created_at)}</p>}
                         {canJustify && !editingNote && (
                           <button
                             type="button"
                             onClick={() => setEditingNote(true)}
-                            className="mt-1.5 text-[10px] text-amber-300/80 underline underline-offset-2 hover:text-amber-200"
+                            className="mt-1.5 text-[10px] text-warning/80 underline underline-offset-2 hover:text-warning"
                           >
                             {td("addJustification")}
                           </button>
@@ -1438,21 +1438,21 @@ export default function EmployeeExpenseDetail({
                               onChange={(e) => setNoteDraft(e.target.value)}
                               placeholder={td("justificationPlaceholder")}
                               rows={3}
-                              className="w-full rounded border border-white/10 bg-zinc-900/60 px-2 py-1.5 text-[11px] text-white/80 placeholder:text-white/25 focus:border-amber-400/40 focus:outline-none"
+                              className="w-full rounded border border-subtle bg-surface-1 px-2 py-1.5 text-[11px] text-secondary placeholder:text-muted focus:border-amber-400/40 focus:outline-none"
                             />
                             <div className="flex items-center gap-2">
                               <button
                                 type="button"
                                 disabled={savingNote || !noteDraft.trim()}
                                 onClick={saveOverride}
-                                className="rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-300 hover:bg-emerald-500/15 disabled:opacity-40"
+                                className="rounded border border-emerald-500/30 bg-success-muted px-2 py-0.5 text-[10px] font-medium text-emerald-300 hover:bg-emerald-500/15 disabled:opacity-40"
                               >
                                 {td("saveJustification")}
                               </button>
                               <button
                                 type="button"
                                 onClick={() => { setEditingNote(false); setNoteDraft(""); }}
-                                className="text-[10px] text-white/40 hover:text-white/60"
+                                className="text-[10px] text-tertiary hover:text-secondary"
                               >
                                 {td("cancel")}
                               </button>
@@ -1463,7 +1463,7 @@ export default function EmployeeExpenseDetail({
                           <button
                             type="button"
                             onClick={removeOverride}
-                            className="mt-1 text-[10px] text-white/35 underline underline-offset-2 hover:text-red-300/80"
+                            className="mt-1 text-[10px] text-muted underline underline-offset-2 hover:text-error/80"
                           >
                             {td("removeJustification")}
                           </button>
@@ -1492,10 +1492,10 @@ export default function EmployeeExpenseDetail({
                 if (items.length === 0) return null;
                 return (
                   <div>
-                    <p className="mb-1 px-1 text-[9px] font-semibold uppercase tracking-widest text-white/22">{title}</p>
-                    <div className="overflow-hidden rounded-lg border border-white/[0.07]">
+                    <p className="mb-1 px-1 text-[9px] font-semibold uppercase tracking-widest text-muted">{title}</p>
+                    <div className="overflow-hidden rounded-lg border border-default">
                       {items.map((c, i) => (
-                        <div key={c.code} className={i > 0 ? "border-t border-white/[0.05]" : ""}>
+                        <div key={c.code} className={i > 0 ? "border-t border-subtle" : ""}>
                           <CheckRow c={c} showTs={showTs} />
                         </div>
                       ))}
@@ -1506,7 +1506,7 @@ export default function EmployeeExpenseDetail({
 
               return (
                 <div className="space-y-2 pb-20">
-                  {loadingVals && <p className="text-[10px] text-white/25">{tc("loading")}</p>}
+                  {loadingVals && <p className="text-[10px] text-muted">{tc("loading")}</p>}
 
                   <Section title={td("valDocIntegrity")} items={bySource.document} />
 
@@ -1514,13 +1514,13 @@ export default function EmployeeExpenseDetail({
                     <Section title={td("valSatVerification")} items={bySource.sat} showTs />
                   ) : (
                     <div>
-                      <p className="mb-1 px-1 text-[9px] font-semibold uppercase tracking-widest text-white/22">{td("valSatVerification")}</p>
-                      <div className="overflow-hidden rounded-lg border border-white/[0.07]">
+                      <p className="mb-1 px-1 text-[9px] font-semibold uppercase tracking-widest text-muted">{td("valSatVerification")}</p>
+                      <div className="overflow-hidden rounded-lg border border-default">
                         <div className="flex items-start gap-2.5 px-3 py-2.5">
-                          <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full border border-white/[0.12] bg-zinc-800" />
+                          <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full border border-default bg-surface-2" />
                           <div>
-                            <p className="text-[11px] text-white/35">{td("valSatLabel")}</p>
-                            <p className="mt-0.5 text-[10px] text-white/22">{td("valSatNotRunHint")}</p>
+                            <p className="text-[11px] text-muted">{td("valSatLabel")}</p>
+                            <p className="mt-0.5 text-[10px] text-muted">{td("valSatNotRunHint")}</p>
                           </div>
                         </div>
                       </div>
@@ -1531,7 +1531,7 @@ export default function EmployeeExpenseDetail({
                   <Section title={td("valAiPolicies")} items={bySource.ai} />
 
                   {!loadingVals && policyChecks.length === 0 && (
-                    <div className="rounded-lg border border-white/[0.07] px-3 py-3 text-[10px] text-white/25">
+                    <div className="rounded-lg border border-default px-3 py-3 text-[10px] text-muted">
                       {td("valNoPolicyChecks")}
                     </div>
                   )}

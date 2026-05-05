@@ -20,8 +20,8 @@ export function StepSelectModules({
   return (
     <div className="space-y-4 py-4">
       <div>
-        <h2 className="text-[15px] font-semibold text-white/90">{t("title")}</h2>
-        <p className="mt-1 text-[11px] text-white/50">{t("subtitle")}</p>
+        <h2 className="text-[15px] font-semibold text-primary">{t("title")}</h2>
+        <p className="mt-1 text-[11px] text-secondary">{t("subtitle")}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
@@ -35,7 +35,7 @@ export function StepSelectModules({
         ))}
       </div>
 
-      <p className="text-[10px] text-white/35">{t("hint")}</p>
+      <p className="text-[10px] text-muted">{t("hint")}</p>
     </div>
   );
 }

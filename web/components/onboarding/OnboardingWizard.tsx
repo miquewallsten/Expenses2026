@@ -76,10 +76,10 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
           {state.currentStep !== "welcome" && state.currentStep !== "ready" && (
             <div className="mb-6">
               <div className="flex items-center justify-between">
-                <h1 className="text-[16px] font-semibold text-white/90">{t("title")}</h1>
-                <span className="text-[10px] text-white/35">{progressPercent}%</span>
+                <h1 className="text-[16px] font-semibold text-primary">{t("title")}</h1>
+                <span className="text-[10px] text-muted">{progressPercent}%</span>
               </div>
-              <div className="mt-2 h-1 overflow-hidden rounded bg-white/[0.04]">
+              <div className="mt-2 h-1 overflow-hidden rounded bg-surface-2">
                 <div
                   className="h-full bg-emerald-500/65 transition-all duration-300"
                   style={{ width: `${progressPercent}%` }}
@@ -95,7 +95,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
           )}
 
           {/* Step content */}
-          <div className="rounded-lg border border-white/[0.06] bg-zinc-900/50 p-5">
+          <div className="rounded-lg border border-subtle bg-surface-1/50 p-5">
             {state.currentStep === "welcome" && <StepWelcome onStart={handleStart} />}
 
             {state.currentStep === "company-type" && (
@@ -143,12 +143,12 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
 
             {/* Navigation footer */}
             {showNavigation && (
-              <div className="mt-5 flex items-center justify-between border-t border-white/[0.05] pt-4">
+              <div className="mt-5 flex items-center justify-between border-t border-subtle pt-4">
                 <button
                   type="button"
                   onClick={prevStep}
                   disabled={!canGoPrev}
-                  className="flex items-center gap-1 rounded px-3 py-1.5 text-[10.5px] text-white/55 hover:bg-white/[0.04] hover:text-white/80 disabled:cursor-not-allowed disabled:opacity-30"
+                  className="flex items-center gap-1 rounded px-3 py-1.5 text-[10.5px] text-tertiary hover:bg-surface-2 hover:text-secondary disabled:cursor-not-allowed disabled:opacity-30"
                 >
                   <ChevronLeft className="h-3.5 w-3.5" />
                   {t("nav.prev")}
@@ -158,7 +158,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                   type="button"
                   onClick={handleNext}
                   disabled={!canGoNext || saving}
-                  className="flex items-center gap-1.5 rounded-md bg-indigo-500 px-4 py-1.5 text-[10.5px] font-medium text-white shadow-sm hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex items-center gap-1.5 rounded-md bg-blue-500 px-4 py-1.5 text-[10.5px] font-medium text-primary shadow-sm hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {saving ? (
                     <>

@@ -31,11 +31,11 @@ type SortKey = keyof Pick<Expense, "amount" | "description" | "status" | "detect
 type SortDir = "asc" | "desc";
 
 const STATUS_COLORS: Record<string, string> = {
-  draft:     "text-white/35 bg-white/[0.05] border-white/[0.07]",
-  submitted: "text-sky-300/70 bg-sky-500/[0.08] border-sky-500/20",
+  draft:     "text-muted bg-surface-2 border-default",
+  submitted: "text-accent/70 bg-accent/[0.08] border-sky-500/20",
   approved:  "text-emerald-300/70 bg-emerald-500/[0.08] border-emerald-500/20",
-  rejected:  "text-red-300/70 bg-red-500/[0.08] border-red-500/20",
-  processed: "text-indigo-300/70 bg-indigo-500/[0.08] border-indigo-500/20",
+  rejected:  "text-error/70 bg-red-500/[0.08] border-red-500/20",
+  processed: "text-accent/70 bg-indigo-500/[0.08] border-indigo-500/20",
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -97,14 +97,14 @@ function HBarChart({ data }: { data: { label: string; value: number; color: stri
     <div className="space-y-1.5">
       {data.map((d) => (
         <div key={d.label} className="flex items-center gap-2">
-          <span className="w-28 shrink-0 truncate text-right text-[9px] text-white/35">{d.label}</span>
-          <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-white/[0.04]">
+          <span className="w-28 shrink-0 truncate text-right text-[9px] text-muted">{d.label}</span>
+          <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-surface-2">
             <div
               className="h-full rounded-full transition-all duration-500"
               style={{ width: `${(d.value / max) * 100}%`, backgroundColor: d.color }}
             />
           </div>
-          <span className="w-16 shrink-0 text-[9px] tabular-nums text-white/40">{fmt(d.value)}</span>
+          <span className="w-16 shrink-0 text-[9px] tabular-nums text-tertiary">{fmt(d.value)}</span>
         </div>
       ))}
     </div>
@@ -170,10 +170,10 @@ function KpiCard({ label, value, sub, sparkData, color = "#6366f1" }: {
   label: string; value: string; sub?: string; sparkData?: number[]; color?: string;
 }) {
   return (
-    <div className="flex flex-col gap-1 rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-3">
-      <span className="text-[9px] font-semibold uppercase tracking-widest text-white/28">{label}</span>
-      <span className="text-xl font-bold tabular-nums text-white/85">{value}</span>
-      {sub && <span className="text-[9px] text-white/28">{sub}</span>}
+    <div className="flex flex-col gap-1 rounded-lg border border-subtle bg-surface-1 px-4 py-3">
+      <span className="text-[9px] font-semibold uppercase tracking-widest text-muted">{label}</span>
+      <span className="text-xl font-bold tabular-nums text-primary">{value}</span>
+      {sub && <span className="text-[9px] text-muted">{sub}</span>}
       {sparkData && sparkData.length > 1 && (
         <div className="mt-1">
           <Sparkline data={sparkData} color={color} />
@@ -242,16 +242,16 @@ function AiInsightPanel({ expenses, visible, onClose }: {
   if (!visible) return null;
 
   return (
-    <div className="flex h-full w-64 shrink-0 flex-col border-l border-white/[0.06] bg-zinc-950">
-      <div className="flex h-8 shrink-0 items-center justify-between border-b border-white/[0.06] px-3">
+    <div className="flex h-full w-64 shrink-0 flex-col border-l border-subtle bg-surface-0">
+      <div className="flex h-8 shrink-0 items-center justify-between border-b border-subtle px-3">
         <div className="flex items-center gap-1.5">
-          <Bot className="h-3 w-3 text-indigo-300/60" />
-          <span className="text-[9px] font-semibold uppercase tracking-widest text-white/35">{tr("aiAnalyst")}</span>
+          <Bot className="h-3 w-3 text-accent/60" />
+          <span className="text-[9px] font-semibold uppercase tracking-widest text-muted">{tr("aiAnalyst")}</span>
           {aiAvail === false && (
-            <span className="rounded border border-amber-500/20 bg-amber-500/[0.07] px-1 py-px text-[8px] text-amber-400/60">{tr("aiOffline")}</span>
+            <span className="rounded border border-amber-500/20 bg-amber-500/[0.07] px-1 py-px text-[8px] text-warning/60">{tr("aiOffline")}</span>
           )}
         </div>
-        <button onClick={onClose} className="flex h-5 w-5 items-center justify-center rounded text-white/25 hover:text-white/50">
+        <button onClick={onClose} className="flex h-5 w-5 items-center justify-center rounded text-muted hover:text-secondary">
           <X className="h-3 w-3" />
         </button>
       </div>
@@ -259,7 +259,7 @@ function AiInsightPanel({ expenses, visible, onClose }: {
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2 space-y-2">
         {messages.length === 0 && (
           <div className="space-y-1.5 pt-1">
-            <p className="text-[9px] text-white/25">{tr("aiHint")}</p>
+            <p className="text-[9px] text-muted">{tr("aiHint")}</p>
             {[
               tr("aiExample1"),
               tr("aiExample2"),
@@ -269,7 +269,7 @@ function AiInsightPanel({ expenses, visible, onClose }: {
               <button
                 key={s}
                 onClick={() => { setPrompt(s); }}
-                className="block w-full rounded border border-white/[0.07] bg-white/[0.02] px-2 py-1 text-left text-[9px] text-white/40 hover:bg-white/[0.04] hover:text-white/60"
+                className="block w-full rounded border border-default bg-surface-1 px-2 py-1 text-left text-[9px] text-tertiary hover:bg-surface-2 hover:text-secondary"
               >
                 {s}
               </button>
@@ -279,33 +279,33 @@ function AiInsightPanel({ expenses, visible, onClose }: {
         {messages.map((m, i) => (
           <div key={i} className={`rounded px-2.5 py-1.5 text-[10px] leading-relaxed ${
             m.role === "user"
-              ? "ml-4 bg-indigo-600/[0.12] text-white/65"
-              : "mr-4 bg-white/[0.03] text-white/55"
+              ? "ml-4 bg-indigo-600/[0.12] text-secondary"
+              : "mr-4 bg-surface-1 text-tertiary"
           }`}>
             {m.text}
           </div>
         ))}
         {busy && (
-          <div className="mr-4 rounded bg-white/[0.03] px-2.5 py-1.5 text-[10px] text-white/30">
+          <div className="mr-4 rounded bg-surface-1 px-2.5 py-1.5 text-[10px] text-muted">
             {tr("analyzing")}
           </div>
         )}
         <div ref={endRef} />
       </div>
 
-      <div className="shrink-0 border-t border-white/[0.06] p-2">
+      <div className="shrink-0 border-t border-subtle p-2">
         <div className="flex gap-1.5">
           <input
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
             placeholder={tr("askPlaceholder")}
-            className="h-7 flex-1 rounded border border-white/[0.07] bg-white/[0.03] px-2 text-[10px] text-white/70 placeholder:text-white/22 focus:border-indigo-500/30 focus:outline-none"
+            className="h-7 flex-1 rounded border border-default bg-surface-1 px-2 text-[10px] text-secondary placeholder:text-muted focus:bg-accent-muted focus:outline-none"
           />
           <button
             onClick={send}
             disabled={busy || !prompt.trim()}
-            className="flex h-7 w-7 items-center justify-center rounded border border-indigo-500/20 bg-indigo-600/[0.12] text-indigo-300/70 hover:bg-indigo-600/20 disabled:opacity-30"
+            className="flex h-7 w-7 items-center justify-center rounded border border-indigo-500/20 bg-indigo-600/[0.12] text-accent/70 hover:bg-accent-muted disabled:opacity-30"
           >
             <Send className="h-3 w-3" />
           </button>
@@ -491,12 +491,12 @@ export default function MyReportsModule() {
 
   if (loading) return (
     <div className="flex h-full items-center justify-center">
-      <span className="text-[11px] text-white/25">{tr("loadingReports")}</span>
+      <span className="text-[11px] text-muted">{tr("loadingReports")}</span>
     </div>
   );
   if (error) return (
     <div className="flex h-full items-center justify-center">
-      <span className="text-[11px] text-red-400/50">{error}</span>
+      <span className="text-[11px] text-error/50">{error}</span>
     </div>
   );
 
@@ -506,18 +506,18 @@ export default function MyReportsModule() {
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
 
         {/* ── Toolbar ── */}
-        <div className="flex h-10 shrink-0 items-center gap-2 border-b border-white/[0.06] bg-zinc-950 px-4">
+        <div className="flex h-10 shrink-0 items-center gap-2 border-b border-subtle bg-surface-0 px-4">
           {/* View toggle */}
-          <div className="flex items-center rounded border border-white/[0.07] p-px">
+          <div className="flex items-center rounded border border-default p-px">
             <button
               onClick={() => setView("overview")}
-              className={`flex items-center gap-1 rounded px-2 py-1 text-[9px] font-medium transition-colors ${view === "overview" ? "bg-white/[0.07] text-white/70" : "text-white/30 hover:text-white/50"}`}
+              className={`flex items-center gap-1 rounded px-2 py-1 text-[9px] font-medium transition-colors ${view === "overview" ? "bg-surface-3 text-secondary" : "text-muted hover:text-secondary"}`}
             >
               <BarChart2 className="h-3 w-3" /> {tr("overview")}
             </button>
             <button
               onClick={() => setView("table")}
-              className={`flex items-center gap-1 rounded px-2 py-1 text-[9px] font-medium transition-colors ${view === "table" ? "bg-white/[0.07] text-white/70" : "text-white/30 hover:text-white/50"}`}
+              className={`flex items-center gap-1 rounded px-2 py-1 text-[9px] font-medium transition-colors ${view === "table" ? "bg-surface-3 text-secondary" : "text-muted hover:text-secondary"}`}
             >
               <FileText className="h-3 w-3" /> {tr("table")}
             </button>
@@ -525,12 +525,12 @@ export default function MyReportsModule() {
 
           {/* Search */}
           <div className="relative ml-2 flex-1 max-w-xs">
-            <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-white/20" />
+            <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={tr("searchPlaceholder")}
-              className="h-6 w-full rounded border border-white/[0.07] bg-white/[0.03] pl-6 pr-2 text-[10px] text-white/65 placeholder:text-white/20 focus:border-indigo-500/30 focus:outline-none"
+              className="h-6 w-full rounded border border-default bg-surface-1 pl-6 pr-2 text-[10px] text-secondary placeholder:text-muted focus:bg-accent-muted focus:outline-none"
             />
           </div>
 
@@ -540,7 +540,7 @@ export default function MyReportsModule() {
               <button
                 key={p}
                 onClick={() => setDatePreset(p)}
-                className={`rounded px-2 py-0.5 text-[9px] font-medium transition-colors ${datePreset === p ? "bg-indigo-600/20 text-indigo-300/80" : "text-white/28 hover:text-white/50"}`}
+                className={`rounded px-2 py-0.5 text-[9px] font-medium transition-colors ${datePreset === p ? "bg-accent-muted text-accent" : "text-muted hover:text-secondary"}`}
               >
                 {p === "all" ? tr("allTime") : p === "ytd" ? tr("ytd") : p === "custom" ? tr("custom") : p}
               </button>
@@ -549,10 +549,10 @@ export default function MyReportsModule() {
           {datePreset === "custom" && (
             <>
               <input type="date" value={customFrom} onChange={(e)=>setCustomFrom(e.target.value)}
-                className="h-6 rounded border border-white/[0.07] bg-white/[0.03] px-2 text-[9px] text-white/55 focus:outline-none" />
-              <span className="text-[9px] text-white/25">–</span>
+                className="h-6 rounded border border-default bg-surface-1 px-2 text-[9px] text-tertiary focus:outline-none" />
+              <span className="text-[9px] text-muted">–</span>
               <input type="date" value={customTo} onChange={(e)=>setCustomTo(e.target.value)}
-                className="h-6 rounded border border-white/[0.07] bg-white/[0.03] px-2 text-[9px] text-white/55 focus:outline-none" />
+                className="h-6 rounded border border-default bg-surface-1 px-2 text-[9px] text-tertiary focus:outline-none" />
             </>
           )}
 
@@ -560,12 +560,12 @@ export default function MyReportsModule() {
             {/* Filter toggle */}
             <button
               onClick={() => setShowFilters((v) => !v)}
-              className={`flex items-center gap-1 rounded border px-2 py-1 text-[9px] font-medium transition-colors ${showFilters ? "border-indigo-500/25 bg-indigo-600/10 text-indigo-300/70" : "border-white/[0.07] text-white/30 hover:text-white/50"}`}
+              className={`flex items-center gap-1 rounded border px-2 py-1 text-[9px] font-medium transition-colors ${showFilters ? "bg-accent-muted-muted bg-indigo-600/10 text-accent/70" : "border-default text-muted hover:text-secondary"}`}
             >
               <Filter className="h-3 w-3" />
               {tr("filters")}
               {(statusFilter !== "all" || catFilter !== "all") && (
-                <span className="ml-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-indigo-500/40 text-[7px] text-white">
+                <span className="ml-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-indigo-500/40 text-[7px] text-primary">
                   {(statusFilter !== "all" ? 1 : 0) + (catFilter !== "all" ? 1 : 0)}
                 </span>
               )}
@@ -574,7 +574,7 @@ export default function MyReportsModule() {
             {/* AI toggle */}
             <button
               onClick={() => setAiOpen((v) => !v)}
-              className={`flex items-center gap-1 rounded border px-2 py-1 text-[9px] font-medium transition-colors ${aiOpen ? "border-indigo-500/25 bg-indigo-600/10 text-indigo-300/70" : "border-white/[0.07] text-white/30 hover:text-white/50"}`}
+              className={`flex items-center gap-1 rounded border px-2 py-1 text-[9px] font-medium transition-colors ${aiOpen ? "bg-accent-muted-muted bg-indigo-600/10 text-accent/70" : "border-default text-muted hover:text-secondary"}`}
             >
               <Bot className="h-3 w-3" /> AI
             </button>
@@ -582,7 +582,7 @@ export default function MyReportsModule() {
             {/* Export */}
             <button
               onClick={exportCsv}
-              className="flex items-center gap-1 rounded border border-white/[0.07] px-2 py-1 text-[9px] font-medium text-white/30 hover:text-white/55 transition-colors"
+              className="flex items-center gap-1 rounded border border-default px-2 py-1 text-[9px] font-medium text-muted hover:text-tertiary transition-colors"
             >
               <Download className="h-3 w-3" /> CSV
             </button>
@@ -591,25 +591,25 @@ export default function MyReportsModule() {
 
         {/* ── Filter bar ── */}
         {showFilters && (
-          <div className="flex shrink-0 items-center gap-4 border-b border-white/[0.06] bg-zinc-900/50 px-4 py-1.5">
+          <div className="flex shrink-0 items-center gap-4 border-b border-subtle bg-surface-1/50 px-4 py-1.5">
             <div className="flex items-center gap-1.5">
-              <SlidersHorizontal className="h-3 w-3 text-white/25" />
-              <span className="text-[9px] text-white/30">{tr("statusLabel")}</span>
+              <SlidersHorizontal className="h-3 w-3 text-muted" />
+              <span className="text-[9px] text-muted">{tr("statusLabel")}</span>
               <div className="flex gap-1">
                 {["all", ...allStatuses].map((s) => (
                   <button key={s} onClick={() => setStatusFilter(s)}
-                    className={`rounded px-1.5 py-0.5 text-[9px] font-medium capitalize transition-colors ${statusFilter === s ? "bg-white/[0.1] text-white/70" : "text-white/30 hover:text-white/50"}`}>
+                    className={`rounded px-1.5 py-0.5 text-[9px] font-medium capitalize transition-colors ${statusFilter === s ? "bg-surface-2 text-secondary" : "text-muted hover:text-secondary"}`}>
                     {s === "all" ? tc("all") : s}
                   </button>
                 ))}
               </div>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="text-[9px] text-white/30">{tr("categoryLabel")}</span>
+              <span className="text-[9px] text-muted">{tr("categoryLabel")}</span>
               <select
                 value={catFilter}
                 onChange={(e) => setCatFilter(e.target.value)}
-                className="h-5 rounded border border-white/[0.07] bg-zinc-900 px-1.5 text-[9px] text-white/55 focus:outline-none"
+                className="h-5 rounded border border-default bg-surface-1 px-1.5 text-[9px] text-tertiary focus:outline-none"
               >
                 <option value="all">{tr("allCategories")}</option>
                 {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -617,7 +617,7 @@ export default function MyReportsModule() {
             </div>
             {(statusFilter !== "all" || catFilter !== "all") && (
               <button onClick={() => { setStatusFilter("all"); setCatFilter("all"); }}
-                className="ml-auto flex items-center gap-1 text-[9px] text-white/28 hover:text-white/50">
+                className="ml-auto flex items-center gap-1 text-[9px] text-muted hover:text-secondary">
                 <X className="h-2.5 w-2.5" /> {tr("clearFilters")}
               </button>
             )}
@@ -629,13 +629,13 @@ export default function MyReportsModule() {
 
           {/* Result count */}
           <div className="flex items-center justify-between px-4 py-1.5">
-            <span className="text-[9px] text-white/25">
+            <span className="text-[9px] text-muted">
               {expenses.length !== filtered.length
                 ? tr("expenseCountOf", { count: filtered.length, total: expenses.length })
                 : tr("expenseCount", { count: filtered.length })
               }
             </span>
-            <span className="text-[9px] font-semibold tabular-nums text-white/35">{fmt(totalAmt)}</span>
+            <span className="text-[9px] font-semibold tabular-nums text-muted">{fmt(totalAmt)}</span>
           </div>
 
           {view === "overview" && (
@@ -650,10 +650,10 @@ export default function MyReportsModule() {
 
               {/* Monthly chart */}
               {monthlyBuckets.length > 1 && (
-                <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+                <div className="rounded-lg border border-subtle bg-surface-1 px-4 py-3">
                   <div className="mb-2 flex items-center gap-2">
-                    <TrendingUp className="h-3 w-3 text-indigo-300/50" />
-                    <span className="text-[9px] font-semibold uppercase tracking-widest text-white/28">{tr("monthlySpend")}</span>
+                    <TrendingUp className="h-3 w-3 text-accent/50" />
+                    <span className="text-[9px] font-semibold uppercase tracking-widest text-muted">{tr("monthlySpend")}</span>
                   </div>
                   <MonthlyChart buckets={monthlyBuckets} />
                 </div>
@@ -662,18 +662,18 @@ export default function MyReportsModule() {
               {/* Category breakdown + status */}
               <div className="grid grid-cols-2 gap-3">
                 {categoryData.length > 0 && (
-                  <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+                  <div className="rounded-lg border border-subtle bg-surface-1 px-4 py-3">
                     <div className="mb-2 flex items-center gap-2">
-                      <BarChart2 className="h-3 w-3 text-indigo-300/50" />
-                      <span className="text-[9px] font-semibold uppercase tracking-widest text-white/28">{tr("byCategory")}</span>
+                      <BarChart2 className="h-3 w-3 text-accent/50" />
+                      <span className="text-[9px] font-semibold uppercase tracking-widest text-muted">{tr("byCategory")}</span>
                     </div>
                     <HBarChart data={categoryData} />
                   </div>
                 )}
-                <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+                <div className="rounded-lg border border-subtle bg-surface-1 px-4 py-3">
                   <div className="mb-2 flex items-center gap-2">
-                    <Calendar className="h-3 w-3 text-indigo-300/50" />
-                    <span className="text-[9px] font-semibold uppercase tracking-widest text-white/28">{tr("byStatus")}</span>
+                    <Calendar className="h-3 w-3 text-accent/50" />
+                    <span className="text-[9px] font-semibold uppercase tracking-widest text-muted">{tr("byStatus")}</span>
                   </div>
                   <HBarChart data={
                     Object.entries(byStatus)
@@ -684,29 +684,29 @@ export default function MyReportsModule() {
               </div>
 
               {/* Recent expenses mini-table */}
-              <div className="rounded-lg border border-white/[0.06] bg-white/[0.02]">
-                <div className="border-b border-white/[0.05] px-4 py-2">
-                  <span className="text-[9px] font-semibold uppercase tracking-widest text-white/28">{tr("recentExpenses")}</span>
+              <div className="rounded-lg border border-subtle bg-surface-1">
+                <div className="border-b border-subtle px-4 py-2">
+                  <span className="text-[9px] font-semibold uppercase tracking-widest text-muted">{tr("recentExpenses")}</span>
                 </div>
                 <table className="w-full text-[10px]">
                   <thead>
-                    <tr className="border-b border-white/[0.04]">
-                      <th className="px-4 py-1.5 text-left font-medium text-white/28">{tr("colDescription")}</th>
-                      <th className="px-3 py-1.5 text-left font-medium text-white/28">{tr("colCategory")}</th>
-                      <th className="px-3 py-1.5 text-left font-medium text-white/28">{tr("colDate")}</th>
-                      <th className="px-3 py-1.5 text-right font-medium text-white/28">{tr("colAmount")}</th>
-                      <th className="px-3 py-1.5 text-left font-medium text-white/28">{tr("colStatus")}</th>
+                    <tr className="border-b border-subtle">
+                      <th className="px-4 py-1.5 text-left font-medium text-muted">{tr("colDescription")}</th>
+                      <th className="px-3 py-1.5 text-left font-medium text-muted">{tr("colCategory")}</th>
+                      <th className="px-3 py-1.5 text-left font-medium text-muted">{tr("colDate")}</th>
+                      <th className="px-3 py-1.5 text-right font-medium text-muted">{tr("colAmount")}</th>
+                      <th className="px-3 py-1.5 text-left font-medium text-muted">{tr("colStatus")}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {sorted.slice(0, 8).map((e) => (
-                      <tr key={e.id} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
-                        <td className="max-w-[180px] truncate px-4 py-1.5 text-white/60">{e.description}</td>
-                        <td className="px-3 py-1.5 text-white/35">{e.detected_category ?? "—"}</td>
-                        <td className="px-3 py-1.5 text-white/35">{fmtDate(e.expense_date ?? e.created_at)}</td>
-                        <td className="px-3 py-1.5 text-right tabular-nums text-white/60">{fmt(e.amount)}</td>
+                      <tr key={e.id} className="border-b border-subtle hover:bg-surface-1">
+                        <td className="max-w-[180px] truncate px-4 py-1.5 text-secondary">{e.description}</td>
+                        <td className="px-3 py-1.5 text-muted">{e.detected_category ?? "—"}</td>
+                        <td className="px-3 py-1.5 text-muted">{fmtDate(e.expense_date ?? e.created_at)}</td>
+                        <td className="px-3 py-1.5 text-right tabular-nums text-secondary">{fmt(e.amount)}</td>
                         <td className="px-3 py-1.5">
-                          <span className={`rounded border px-1.5 py-px text-[9px] capitalize ${STATUS_COLORS[e.status] ?? "text-white/35 bg-white/[0.04] border-white/[0.06]"}`}>
+                          <span className={`rounded border px-1.5 py-px text-[9px] capitalize ${STATUS_COLORS[e.status] ?? "text-muted bg-surface-2 border-subtle"}`}>
                             {e.status}
                           </span>
                         </td>
@@ -716,7 +716,7 @@ export default function MyReportsModule() {
                 </table>
                 {sorted.length > 8 && (
                   <div className="px-4 py-1.5">
-                    <button onClick={() => setView("table")} className="text-[9px] text-indigo-400/60 hover:text-indigo-400/80">
+                    <button onClick={() => setView("table")} className="text-[9px] text-accent/60 hover:text-accent">
                       {tr("viewAll", { count: sorted.length })}
                     </button>
                   </div>
@@ -729,7 +729,7 @@ export default function MyReportsModule() {
             <div className="px-4 pb-6">
               <table className="w-full text-[10px]">
                 <thead>
-                  <tr className="border-b border-white/[0.06]">
+                  <tr className="border-b border-subtle">
                     {([
                       { key: "description" as SortKey, label: tr("colDescription"), cls: "text-left" },
                       { key: "detected_category" as SortKey, label: tr("colCategory"), cls: "text-left" },
@@ -740,35 +740,35 @@ export default function MyReportsModule() {
                       <th
                         key={key}
                         onClick={() => toggleSort(key)}
-                        className={`cursor-pointer select-none px-3 py-2 font-medium text-white/28 transition-colors hover:text-white/50 ${cls}`}
+                        className={`cursor-pointer select-none px-3 py-2 font-medium text-muted transition-colors hover:text-secondary ${cls}`}
                       >
                         <span className="inline-flex items-center gap-0.5">
                           {label} <SortIcon col={key} />
                         </span>
                       </th>
                     ))}
-                    <th className="px-3 py-2 text-left font-medium text-white/28">{tr("colType")}</th>
-                    <th className="px-3 py-2 text-left font-medium text-white/28">{tr("colAccount")}</th>
+                    <th className="px-3 py-2 text-left font-medium text-muted">{tr("colType")}</th>
+                    <th className="px-3 py-2 text-left font-medium text-muted">{tr("colAccount")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {sorted.map((e) => (
-                    <tr key={e.id} className="border-b border-white/[0.03] hover:bg-white/[0.015] transition-colors">
-                      <td className="max-w-[200px] truncate px-3 py-1.5 text-white/60">{e.description}</td>
-                      <td className="px-3 py-1.5 text-white/35">{e.detected_category ?? "—"}</td>
-                      <td className="px-3 py-1.5 tabular-nums text-white/35">{fmtDate(e.expense_date ?? e.created_at)}</td>
-                      <td className="px-3 py-1.5 text-right tabular-nums text-white/65">{fmt(e.amount)}</td>
+                    <tr key={e.id} className="border-b border-subtle hover:bg-surface-1 transition-colors">
+                      <td className="max-w-[200px] truncate px-3 py-1.5 text-secondary">{e.description}</td>
+                      <td className="px-3 py-1.5 text-muted">{e.detected_category ?? "—"}</td>
+                      <td className="px-3 py-1.5 tabular-nums text-muted">{fmtDate(e.expense_date ?? e.created_at)}</td>
+                      <td className="px-3 py-1.5 text-right tabular-nums text-secondary">{fmt(e.amount)}</td>
                       <td className="px-3 py-1.5">
-                        <span className={`rounded border px-1.5 py-px text-[9px] capitalize ${STATUS_COLORS[e.status] ?? "text-white/35 bg-white/[0.04] border-white/[0.06]"}`}>
+                        <span className={`rounded border px-1.5 py-px text-[9px] capitalize ${STATUS_COLORS[e.status] ?? "text-muted bg-surface-2 border-subtle"}`}>
                           {e.status}
                         </span>
                       </td>
-                      <td className="px-3 py-1.5 text-white/30">{e.expense_type ?? "—"}</td>
-                      <td className="px-3 py-1.5 font-mono text-[9px] text-white/25">{e.account_code ?? "—"}</td>
+                      <td className="px-3 py-1.5 text-muted">{e.expense_type ?? "—"}</td>
+                      <td className="px-3 py-1.5 font-mono text-[9px] text-muted">{e.account_code ?? "—"}</td>
                     </tr>
                   ))}
                   {sorted.length === 0 && (
-                    <tr><td colSpan={7} className="px-3 py-8 text-center text-[10px] text-white/22">{tr("noMatch")}</td></tr>
+                    <tr><td colSpan={7} className="px-3 py-8 text-center text-[10px] text-muted">{tr("noMatch")}</td></tr>
                   )}
                 </tbody>
               </table>

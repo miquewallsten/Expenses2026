@@ -25,10 +25,10 @@ export function renderContent(
   options: RenderOptions = {}
 ): React.ReactNode[] {
   const {
-    textClassName = "mb-2 last:mb-0 text-white/60 leading-relaxed",
-    boldClassName = "font-semibold text-white/75",
-    bulletClassName = "text-white/50 text-[11px] leading-relaxed",
-    numberClassName = "text-white/50 text-[11px] leading-relaxed",
+    textClassName = "mb-2 last:mb-0 text-secondary leading-relaxed",
+    boldClassName = "font-semibold text-secondary",
+    bulletClassName = "text-secondary text-[11px] leading-relaxed",
+    numberClassName = "text-secondary text-[11px] leading-relaxed",
     listClassName = "mb-2",
   } = options;
 
@@ -135,7 +135,7 @@ export function LoadingDots({ className = "" }: { className?: string }) {
       {[0, 1, 2].map((i) => (
         <span
           key={i}
-          className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-400/60"
+          className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent/60"
           style={{ animationDelay: `${i * 150}ms` }}
         />
       ))}
@@ -148,15 +148,15 @@ export function LoadingDots({ className = "" }: { className?: string }) {
  */
 export const bubbleStyles = {
   user: "bg-indigo-500/15 text-indigo-100/90 ring-1 ring-inset ring-indigo-500/20",
-  assistant: "bg-white/[0.03] text-white/60 ring-1 ring-inset ring-white/[0.05]",
+  assistant: "bg-surface-1 text-secondary ring-1 ring-inset ring-white/[0.05]",
   error: "border border-rose-500/20 bg-rose-500/[0.08] text-rose-300/80",
-  system: "border border-white/[0.06] bg-white/[0.02] text-white/50",
+  system: "border border-subtle bg-surface-1 text-secondary",
 };
 
 /**
  * Chat container styling
  */
-export const chatContainerStyles = "flex h-full flex-col bg-zinc-950";
+export const chatContainerStyles = "flex h-full flex-col bg-surface-0";
 
 /**
  * Message area styling
@@ -166,4 +166,4 @@ export const messageAreaStyles = "min-h-0 flex-1 overflow-y-auto px-4 py-4";
 /**
  * Input area styling
  */
-export const inputAreaStyles = "shrink-0 border-t border-white/[0.06] bg-zinc-900/30 px-4 py-3";
+export const inputAreaStyles = "shrink-0 border-t border-subtle bg-surface-1 px-4 py-3";

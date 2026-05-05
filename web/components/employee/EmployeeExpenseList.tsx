@@ -131,8 +131,8 @@ export default function EmployeeExpenseList({
   }, [menuOpen]);
 
   const filtered = useMemo(() => {
-    if (!Array.isArray(expenses)) return [];
-    return expenses.filter((e) => {
+    const safeExpenses = Array.isArray(expenses) ? expenses : [];
+    return safeExpenses.filter((e) => {
       if (!matchesFilterKey(e, activeFilter)) return false;
       if (query.trim()) {
         const q = query.toLowerCase();

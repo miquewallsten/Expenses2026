@@ -251,21 +251,21 @@ export default function RoutingRulesSection() {
 
   if (companyId == null) {
     return (
-      <div className="min-h-screen bg-zinc-950 p-6 text-white/70">
+      <div className="min-h-screen bg-surface-0 p-6 text-secondary">
         <p className="text-[12px]">{t("noCompany")}</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white/85">
+    <div className="min-h-screen bg-surface-0 text-primary">
       {/* Header */}
-      <header className="sticky top-0 z-10 border-b border-white/[0.06] bg-zinc-950/95 backdrop-blur">
+      <header className="sticky top-0 z-10 border-b border-subtle bg-surface-0/95 backdrop-blur">
         <div className="flex items-center justify-between px-4 py-2.5">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <GitBranch className="h-4 w-4 text-amber-300/70" />
-              <h1 className="text-[13px] font-semibold tracking-tight text-white/90">
+              <GitBranch className="h-4 w-4 text-warning/70" />
+              <h1 className="text-[13px] font-semibold tracking-tight text-primary">
                 {t("title")}
               </h1>
             </div>
@@ -274,7 +274,7 @@ export default function RoutingRulesSection() {
             <button
               type="button"
               onClick={() => void load(companyId)}
-              className="flex items-center gap-1 rounded border border-white/[0.08] bg-white/[0.02] px-2 py-1 text-[11px] text-white/60 transition-colors hover:border-white/[0.18] hover:text-white/85"
+              className="flex items-center gap-1 rounded border border-default bg-surface-1 px-2 py-1 text-[11px] text-secondary transition-colors hover:border-strong hover:text-primary"
             >
               <RefreshCw className="h-3.5 w-3.5" />
               {t("refresh")}
@@ -282,7 +282,7 @@ export default function RoutingRulesSection() {
             <button
               type="button"
               onClick={() => setSelectedId("new")}
-              className="flex items-center gap-1 rounded border border-amber-500/30 bg-amber-500/[0.08] px-2 py-1 text-[11px] text-amber-200 transition-colors hover:border-amber-500/50 hover:bg-amber-500/[0.14]"
+              className="flex items-center gap-1 rounded border border-amber-500/30 bg-amber-500/[0.08] px-2 py-1 text-[11px] text-warning transition-colors hover:border-warning hover:bg-amber-500/[0.14]"
             >
               <Plus className="h-3.5 w-3.5" />
               {t("newRule")}
@@ -292,7 +292,7 @@ export default function RoutingRulesSection() {
       </header>
 
       {error && (
-        <div className="m-4 flex items-start gap-2 rounded border border-rose-500/30 bg-rose-500/[0.06] p-3 text-[11.5px] text-rose-200">
+        <div className="m-4 flex items-start gap-2 rounded border border-error bg-rose-500/[0.06] p-3 text-[11.5px] text-rose-200">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>{error}</span>
         </div>
@@ -300,17 +300,17 @@ export default function RoutingRulesSection() {
 
       <div className="grid gap-3 p-4 lg:grid-cols-[340px_1fr]">
         {/* List rail */}
-        <aside className="rounded border border-white/[0.06] bg-white/[0.015]">
-          <div className="border-b border-white/[0.06] px-3 py-2 text-[10.5px] font-semibold uppercase tracking-wider text-white/45">
+        <aside className="rounded border border-subtle bg-surface-1">
+          <div className="border-b border-subtle px-3 py-2 text-[10.5px] font-semibold uppercase tracking-wider text-tertiary">
             {t("rules")} · {rules.length}
           </div>
           {loading ? (
-            <div className="flex items-center gap-2 px-3 py-6 text-[11px] text-white/45">
+            <div className="flex items-center gap-2 px-3 py-6 text-[11px] text-tertiary">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
               {t("loading")}
             </div>
           ) : rules.length === 0 ? (
-            <div className="px-3 py-6 text-[11px] text-white/45">
+            <div className="px-3 py-6 text-[11px] text-tertiary">
               {t("empty")}
             </div>
           ) : (
@@ -325,26 +325,26 @@ export default function RoutingRulesSection() {
                       className={`flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors ${
                         active
                           ? "bg-amber-500/[0.08]"
-                          : "hover:bg-white/[0.025]"
+                          : "hover:bg-surface-1"
                       }`}
                     >
                       <div className="flex w-full items-center gap-2">
                         <span
                           className={`inline-flex h-1.5 w-1.5 rounded-full ${
-                            r.is_enabled ? "bg-emerald-400/80" : "bg-white/20"
+                            r.is_enabled ? "bg-emerald-400/80" : "bg-surface-2"
                           }`}
                         />
-                        <span className="flex-1 truncate text-[12px] font-medium text-white/85">
+                        <span className="flex-1 truncate text-[12px] font-medium text-primary">
                           {r.name}
                         </span>
-                        <span className="rounded bg-white/[0.06] px-1 py-px text-[9.5px] font-mono tabular-nums text-white/55">
+                        <span className="rounded bg-surface-2 px-1 py-px text-[9.5px] font-mono tabular-nums text-tertiary">
                           P{r.priority}
                         </span>
                       </div>
-                      <div className="flex w-full items-center gap-2 text-[10px] text-white/45">
+                      <div className="flex w-full items-center gap-2 text-[10px] text-tertiary">
                         <span className="truncate font-mono">{r.rule_key}</span>
                         {r.sla_hours != null && (
-                          <span className="ml-auto rounded bg-sky-500/[0.10] px-1 py-px text-sky-300/80">
+                          <span className="ml-auto rounded bg-accent/[0.10] px-1 py-px text-accent/80">
                             SLA {r.sla_hours}h
                           </span>
                         )}
@@ -358,16 +358,16 @@ export default function RoutingRulesSection() {
         </aside>
 
         {/* Editor pane */}
-        <section className="rounded border border-white/[0.06] bg-white/[0.015]">
+        <section className="rounded border border-subtle bg-surface-1">
           {selectedId == null ? (
-            <div className="flex h-full min-h-[300px] items-center justify-center px-6 py-12 text-center text-[11.5px] text-white/45">
+            <div className="flex h-full min-h-[300px] items-center justify-center px-6 py-12 text-center text-[11.5px] text-tertiary">
               {t("selectPrompt")}
             </div>
           ) : (
             <div className="flex flex-col">
-              <div className="flex items-center justify-between border-b border-white/[0.06] px-3 py-2">
+              <div className="flex items-center justify-between border-b border-subtle px-3 py-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-semibold text-white/85">
+                  <span className="text-[11px] font-semibold text-primary">
                     {selectedId === "new"
                       ? t("createTitle")
                       : selected?.name ?? ""}
@@ -379,7 +379,7 @@ export default function RoutingRulesSection() {
                       className={`rounded border px-1.5 py-0.5 text-[9.5px] font-medium transition-colors ${
                         selected.is_enabled
                           ? "border-emerald-500/30 bg-emerald-500/[0.08] text-emerald-300"
-                          : "border-white/10 bg-white/[0.04] text-white/55"
+                          : "border-subtle bg-surface-2 text-tertiary"
                       }`}
                     >
                       {selected.is_enabled ? t("enabled") : t("disabled")}
@@ -402,7 +402,7 @@ export default function RoutingRulesSection() {
                     type="button"
                     onClick={() => void handleSave()}
                     disabled={saving}
-                    className="flex items-center gap-1 rounded border border-amber-500/30 bg-amber-500/[0.10] px-2 py-1 text-[10.5px] font-medium text-amber-200 transition-colors hover:border-amber-500/50 hover:bg-amber-500/[0.16] disabled:opacity-50"
+                    className="flex items-center gap-1 rounded border border-amber-500/30 bg-amber-500/[0.10] px-2 py-1 text-[10.5px] font-medium text-warning transition-colors hover:border-warning hover:bg-amber-500/[0.16] disabled:opacity-50"
                   >
                     {saving ? (
                       <Loader2 className="h-3 w-3 animate-spin" />
@@ -414,17 +414,17 @@ export default function RoutingRulesSection() {
                 </div>
               </div>
 
-              <div className="px-3 pt-2 text-[10.5px] text-white/45">
+              <div className="px-3 pt-2 text-[10.5px] text-tertiary">
                 {t("editorHint")}
               </div>
               <textarea
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 spellCheck={false}
-                className="m-3 min-h-[420px] flex-1 resize-y rounded border border-white/[0.08] bg-zinc-950 p-3 font-mono text-[11.5px] leading-[1.55] text-white/85 outline-none focus:border-amber-500/40"
+                className="m-3 min-h-[420px] flex-1 resize-y rounded border border-default bg-surface-0 p-3 font-mono text-[11.5px] leading-[1.55] text-primary outline-none focus:border-amber-500/40"
               />
               {draftError && (
-                <div className="mx-3 mb-3 flex items-start gap-2 rounded border border-rose-500/30 bg-rose-500/[0.06] p-2 text-[11px] text-rose-200">
+                <div className="mx-3 mb-3 flex items-start gap-2 rounded border border-error bg-rose-500/[0.06] p-2 text-[11px] text-rose-200">
                   <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
                   <span className="font-mono">{draftError}</span>
                 </div>
@@ -437,13 +437,13 @@ export default function RoutingRulesSection() {
       {/* Probe panel — preview which rule fires for a hypothetical context */}
       <div className="px-4 pb-6">
         <section className="rounded border border-violet-500/15 bg-violet-500/[0.02]">
-          <div className="flex items-center justify-between border-b border-white/[0.06] px-3 py-2">
+          <div className="flex items-center justify-between border-b border-subtle px-3 py-2">
             <div className="flex items-center gap-2">
               <Sparkles className="h-3.5 w-3.5 text-violet-300/70" />
-              <span className="text-[11px] font-semibold text-white/85">
+              <span className="text-[11px] font-semibold text-primary">
                 {t("probeTitle")}
               </span>
-              <span className="text-[10px] text-white/45">
+              <span className="text-[10px] text-tertiary">
                 · {t("probeHint")}
               </span>
             </div>
@@ -463,49 +463,49 @@ export default function RoutingRulesSection() {
           </div>
           <div className="grid gap-3 p-3 lg:grid-cols-2">
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] uppercase tracking-wider text-white/45">
+              <label className="text-[10px] uppercase tracking-wider text-tertiary">
                 {t("probeContext")}
               </label>
               <textarea
                 value={probeContext}
                 onChange={(e) => setProbeContext(e.target.value)}
                 spellCheck={false}
-                className="min-h-[140px] resize-y rounded border border-white/[0.08] bg-zinc-950 p-2.5 font-mono text-[11px] leading-[1.5] text-white/85 outline-none focus:border-violet-500/40"
+                className="min-h-[140px] resize-y rounded border border-default bg-surface-0 p-2.5 font-mono text-[11px] leading-[1.5] text-primary outline-none focus:border-violet-500/40"
               />
               {probeError && (
-                <div className="flex items-start gap-1.5 rounded border border-rose-500/30 bg-rose-500/[0.06] p-1.5 text-[10.5px] text-rose-200">
+                <div className="flex items-start gap-1.5 rounded border border-error bg-rose-500/[0.06] p-1.5 text-[10.5px] text-rose-200">
                   <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
                   <span className="font-mono">{probeError}</span>
                 </div>
               )}
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] uppercase tracking-wider text-white/45">
+              <label className="text-[10px] uppercase tracking-wider text-tertiary">
                 {t("probeResult")}
               </label>
               {probeResult == null ? (
-                <div className="rounded border border-white/[0.06] bg-white/[0.015] p-3 text-[11px] text-white/40">
+                <div className="rounded border border-subtle bg-surface-1 p-3 text-[11px] text-tertiary">
                   {t("probeEmpty")}
                 </div>
               ) : (
-                <div className="rounded border border-white/[0.06] bg-white/[0.015] p-3 text-[11px]">
+                <div className="rounded border border-subtle bg-surface-1 p-3 text-[11px]">
                   {probeResult.matched_rule_id ? (
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-2">
-                        <span className="text-white/45">{t("matched")}:</span>
+                        <span className="text-tertiary">{t("matched")}:</span>
                         <span className="rounded bg-emerald-500/[0.12] px-1.5 py-px font-mono text-[10.5px] text-emerald-300">
                           {probeResult.matched_rule_id}
                         </span>
                       </div>
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-white/45">{t("roles")}:</span>
+                        <span className="text-tertiary">{t("roles")}:</span>
                         {probeResult.approver_roles.length === 0 ? (
-                          <span className="text-white/35">—</span>
+                          <span className="text-muted">—</span>
                         ) : (
                           probeResult.approver_roles.map((role) => (
                             <span
                               key={role}
-                              className="rounded bg-sky-500/[0.10] px-1.5 py-px text-sky-300"
+                              className="rounded bg-accent/[0.10] px-1.5 py-px text-accent"
                             >
                               {role}
                             </span>
@@ -513,14 +513,14 @@ export default function RoutingRulesSection() {
                         )}
                       </div>
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-white/45">{t("userIds")}:</span>
+                        <span className="text-tertiary">{t("userIds")}:</span>
                         {probeResult.approver_user_ids.length === 0 ? (
-                          <span className="text-white/35">—</span>
+                          <span className="text-muted">—</span>
                         ) : (
                           probeResult.approver_user_ids.map((uid) => (
                             <span
                               key={uid}
-                              className="rounded bg-white/[0.06] px-1.5 py-px font-mono tabular-nums text-white/75"
+                              className="rounded bg-surface-2 px-1.5 py-px font-mono tabular-nums text-secondary"
                             >
                               #{uid}
                             </span>
@@ -528,18 +528,18 @@ export default function RoutingRulesSection() {
                         )}
                       </div>
                       {probeResult.sla_hours != null && (
-                        <div className="text-white/55">
-                          <span className="text-white/45">SLA:</span>{" "}
-                          <span className="font-mono tabular-nums text-amber-300">
+                        <div className="text-tertiary">
+                          <span className="text-tertiary">SLA:</span>{" "}
+                          <span className="font-mono tabular-nums text-warning">
                             {probeResult.sla_hours}h
                           </span>
                           {probeResult.escalation_role && (
                             <>
                               {" · "}
-                              <span className="text-white/45">
+                              <span className="text-tertiary">
                                 {t("escalates")}:
                               </span>{" "}
-                              <span className="text-amber-300">
+                              <span className="text-warning">
                                 {probeResult.escalation_role}
                               </span>
                             </>
@@ -548,9 +548,9 @@ export default function RoutingRulesSection() {
                       )}
                     </div>
                   ) : (
-                    <div className="text-white/55">{t("noMatch")}</div>
+                    <div className="text-tertiary">{t("noMatch")}</div>
                   )}
-                  <div className="mt-2 border-t border-white/[0.06] pt-2 text-[10px] text-white/40">
+                  <div className="mt-2 border-t border-subtle pt-2 text-[10px] text-tertiary">
                     {t("evaluated", { count: probeResult.rules_evaluated })}
                   </div>
                 </div>

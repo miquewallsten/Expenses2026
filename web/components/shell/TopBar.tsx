@@ -77,7 +77,7 @@ export default function TopBar({ title, portal, onMenuOpen, onAiOpen }: TopBarPr
             placeholder={tc("search")}
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
-            className="h-7 w-full rounded border border-default bg-surface-0 pl-8 pr-3 text-sm text-primary placeholder-tertiary outline-none transition-all focus:border-accent focus:bg-surface-2 focus:ring-2 focus:ring-accent-muted"
+            className="h-7 w-full rounded border border-default bg-surface-0 pl-8 pr-3 text-sm text-primary placeholder-tertiary outline-none transition-all focus:bg-accent-muted focus:bg-surface-2 focus:ring-2 focus:ring-accent-muted"
           />
         </div>
       </div>

@@ -134,16 +134,16 @@ function ModuleRow({
   }
 
   return (
-    <div className={`rounded border ${locked ? "border-white/[0.05]" : "border-white/[0.07]"} ${isComing ? "opacity-50" : ""} bg-white/[0.02]`}>
+    <div className={`rounded border ${locked ? "border-subtle" : "border-default"} ${isComing ? "opacity-50" : ""} bg-surface-1`}>
       {/* Main row */}
       <div className="flex items-center gap-3 px-4 py-3">
         {/* Icon */}
         <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded border ${
           isInstalled
-            ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+            ? "border-emerald-500/20 bg-success-muted text-success"
             : locked
-            ? "border-white/[0.06] bg-white/[0.03] text-white/20"
-            : "border-white/[0.08] bg-white/[0.03] text-white/30"
+            ? "border-subtle bg-surface-1 text-muted"
+            : "border-default bg-surface-1 text-muted"
         }`}>
           {mod.icon}
         </div>
@@ -151,30 +151,30 @@ function ModuleRow({
         {/* Name + description */}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-semibold text-white/80">{ta(mod.nameKey)}</span>
+            <span className="text-[11px] font-semibold text-secondary">{ta(mod.nameKey)}</span>
             {isInstalled && (
-              <span className="inline-flex items-center gap-1 rounded border border-emerald-500/25 bg-emerald-500/[0.08] px-1.5 py-0.5 text-[8.5px] font-bold uppercase tracking-widest text-emerald-400">
+              <span className="inline-flex items-center gap-1 rounded border border-emerald-500/25 bg-emerald-500/[0.08] px-1.5 py-0.5 text-[8.5px] font-bold uppercase tracking-widest text-success">
                 <PackageCheck className="h-2.5 w-2.5" />
                 {tm("installed")}
               </span>
             )}
             {!isInstalled && !locked && (
-              <span className="rounded border border-white/[0.07] bg-white/[0.02] px-1.5 py-0.5 text-[8.5px] font-bold uppercase tracking-widest text-white/22">
+              <span className="rounded border border-default bg-surface-1 px-1.5 py-0.5 text-[8.5px] font-bold uppercase tracking-widest text-muted">
                 {tm("notInstalled")}
               </span>
             )}
             {isComing && (
-              <span className="rounded border border-amber-500/15 bg-amber-500/[0.06] px-1.5 py-0.5 text-[8.5px] font-bold uppercase tracking-widest text-amber-400/60">
+              <span className="rounded border border-amber-500/15 bg-amber-500/[0.06] px-1.5 py-0.5 text-[8.5px] font-bold uppercase tracking-widest text-warning/60">
                 {tm("comingSoon")}
               </span>
             )}
             {isPremium && (
-              <span className="inline-flex items-center gap-1 rounded border border-amber-500/30 bg-amber-500/[0.08] px-1.5 py-0.5 text-[8.5px] font-bold uppercase tracking-widest text-amber-300/75">
+              <span className="inline-flex items-center gap-1 rounded border border-amber-500/30 bg-amber-500/[0.08] px-1.5 py-0.5 text-[8.5px] font-bold uppercase tracking-widest text-warning/75">
                 {tm("premium")}
               </span>
             )}
           </div>
-          <p className="mt-0.5 text-[10px] leading-relaxed text-white/30">{ta(mod.descKey)}</p>
+          <p className="mt-0.5 text-[10px] leading-relaxed text-muted">{ta(mod.descKey)}</p>
         </div>
 
         {/* Actions */}
@@ -182,7 +182,7 @@ function ModuleRow({
           <div className="flex shrink-0 items-center">
             <a
               href="mailto:ventas@financial-ops.mx?subject=Contratar%20add-on%20Subcontratistas"
-              className="inline-flex items-center gap-1 rounded border border-amber-500/30 bg-amber-500/[0.08] px-3 py-1 text-[10px] font-semibold text-amber-300/85 transition-colors hover:bg-amber-500/[0.14] hover:text-amber-200"
+              className="inline-flex items-center gap-1 rounded border border-amber-500/30 bg-amber-500/[0.08] px-3 py-1 text-[10px] font-semibold text-warning/85 transition-colors hover:bg-amber-500/[0.14] hover:text-warning"
             >
               {tm("contactSales")}
               <ExternalLink className="h-2.5 w-2.5 opacity-70" />
@@ -197,7 +197,7 @@ function ModuleRow({
                   <button
                     type="button"
                     onClick={handleConfigureClick}
-                    className="inline-flex items-center gap-1 rounded border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[10px] font-medium text-white/45 transition-colors hover:border-white/15 hover:text-white/65"
+                    className="inline-flex items-center gap-1 rounded border border-default bg-surface-1 px-2.5 py-1 text-[10px] font-medium text-tertiary transition-colors hover:border-default hover:text-secondary"
                   >
                     <Settings className="h-2.5 w-2.5" />
                     {tm("configure")}
@@ -212,7 +212,7 @@ function ModuleRow({
                   <button
                     type="button"
                     onClick={() => setPhase("confirmUninstall")}
-                    className="inline-flex items-center gap-1 rounded border border-white/[0.07] bg-white/[0.02] px-2.5 py-1 text-[10px] font-medium text-white/25 transition-colors hover:border-red-500/20 hover:text-red-400/70"
+                    className="inline-flex items-center gap-1 rounded border border-default bg-surface-1 px-2.5 py-1 text-[10px] font-medium text-muted transition-colors hover:border-red-500/20 hover:text-error/70"
                   >
                     <PackageX className="h-2.5 w-2.5" />
                     {tm("uninstall")}
@@ -226,7 +226,7 @@ function ModuleRow({
                   type="button"
                   disabled={companySetupNull}
                   onClick={() => setPhase("confirmInstall")}
-                  className="inline-flex items-center gap-1 rounded border border-indigo-500/30 bg-indigo-600/[0.12] px-3 py-1 text-[10px] font-semibold text-indigo-300/80 transition-colors hover:bg-indigo-600/20 hover:text-indigo-300 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="inline-flex items-center gap-1 rounded border bg-accent-muted bg-blue-600/[0.12] px-3 py-1 text-[10px] font-semibold text-accent transition-colors hover:bg-accent-muted hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Package className="h-2.5 w-2.5" />
                   {tm("install")}
@@ -239,18 +239,18 @@ function ModuleRow({
 
       {/* Confirm / working strip */}
       {phase === "confirmInstall" && (
-        <div className="flex items-center justify-between border-t border-white/[0.05] bg-indigo-950/30 px-4 py-2.5">
-          <p className="text-[10px] text-white/50">
+        <div className="flex items-center justify-between border-t border-subtle bg-blue-950/30 px-4 py-2.5">
+          <p className="text-[10px] text-secondary">
             {tm("confirmInstallText", { name: ta(mod.nameKey) })}
           </p>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => setPhase("idle")} className="text-[10px] text-white/30 hover:text-white/55">
+            <button type="button" onClick={() => setPhase("idle")} className="text-[10px] text-muted hover:text-tertiary">
               {tm("cancel")}
             </button>
             <button
               type="button"
               onClick={confirmInstall}
-              className="rounded border border-indigo-500/30 bg-indigo-600/20 px-3 py-1 text-[10px] font-semibold text-indigo-300 hover:bg-indigo-600/30"
+              className="rounded border bg-accent-muted bg-accent-muted px-3 py-1 text-[10px] font-semibold text-accent hover:bg-accent-muted"
             >
               {tm("confirmInstall")}
             </button>
@@ -259,18 +259,18 @@ function ModuleRow({
       )}
 
       {phase === "confirmUninstall" && (
-        <div className="flex items-center justify-between border-t border-white/[0.05] bg-red-950/20 px-4 py-2.5">
-          <p className="text-[10px] text-white/50">
+        <div className="flex items-center justify-between border-t border-subtle bg-red-950/20 px-4 py-2.5">
+          <p className="text-[10px] text-secondary">
             {tm("confirmUninstallText", { name: ta(mod.nameKey) })}
           </p>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => setPhase("idle")} className="text-[10px] text-white/30 hover:text-white/55">
+            <button type="button" onClick={() => setPhase("idle")} className="text-[10px] text-muted hover:text-tertiary">
               {tm("cancel")}
             </button>
             <button
               type="button"
               onClick={confirmUninstall}
-              className="rounded border border-red-500/25 bg-red-500/[0.1] px-3 py-1 text-[10px] font-semibold text-red-400 hover:bg-red-500/20"
+              className="rounded border border-red-500/25 bg-red-500/[0.1] px-3 py-1 text-[10px] font-semibold text-error hover:bg-error-muted"
             >
               {tm("confirmUninstall")}
             </button>
@@ -279,22 +279,22 @@ function ModuleRow({
       )}
 
       {phase === "working" && (
-        <div className="flex items-center gap-2 border-t border-white/[0.05] px-4 py-2.5">
-          <Loader2 className="h-3 w-3 animate-spin text-white/30" />
-          <span className="text-[10px] text-white/30">{tm("working")}</span>
+        <div className="flex items-center gap-2 border-t border-subtle px-4 py-2.5">
+          <Loader2 className="h-3 w-3 animate-spin text-muted" />
+          <span className="text-[10px] text-muted">{tm("working")}</span>
         </div>
       )}
 
       {/* Inline config panel */}
       {phase === "showConfig" && mod.key === "purchase_requests" && (
-        <div className="border-t border-white/[0.05] bg-black/10 px-4 py-3">
-          <p className="text-[10px] text-white/35">{tm("purchaseRequestsConfigNote")}</p>
+        <div className="border-t border-subtle bg-black/10 px-4 py-3">
+          <p className="text-[10px] text-muted">{tm("purchaseRequestsConfigNote")}</p>
         </div>
       )}
 
       {phase === "showConfig" && mod.key === "amex_reconciliation" && (
-        <div className="border-t border-white/[0.05] bg-black/10 px-4 py-3">
-          <p className="text-[10px] text-white/35">{tm("amexReconciliationConfigNote")}</p>
+        <div className="border-t border-subtle bg-black/10 px-4 py-3">
+          <p className="text-[10px] text-muted">{tm("amexReconciliationConfigNote")}</p>
         </div>
       )}
     </div>
@@ -347,15 +347,15 @@ export default function AdminModulesPanel({ companySetup, onSetupChanged, onNavi
     <div className="max-w-2xl">
       {/* Header */}
       <div className="mb-4 flex items-center gap-2">
-        <Puzzle className="h-4 w-4 text-white/25" />
-        <h2 className="text-sm font-semibold text-white">{tm("title")}</h2>
-        <span className="rounded border border-white/[0.08] bg-white/[0.04] px-1.5 py-0.5 font-mono text-[10px] text-white/30">
+        <Puzzle className="h-4 w-4 text-muted" />
+        <h2 className="text-sm font-semibold text-primary">{tm("title")}</h2>
+        <span className="rounded border border-default bg-surface-2 px-1.5 py-0.5 font-mono text-[10px] text-muted">
           {installedCount} / {availableCount}
         </span>
       </div>
 
       {error && (
-        <p className="mb-3 rounded border border-red-500/20 bg-red-500/[0.08] px-3 py-2 text-[10px] text-red-400">
+        <p className="mb-3 rounded border border-red-500/20 bg-red-500/[0.08] px-3 py-2 text-[10px] text-error">
           {error}
         </p>
       )}
@@ -377,7 +377,7 @@ export default function AdminModulesPanel({ companySetup, onSetupChanged, onNavi
         })}
       </div>
 
-      <p className="mt-4 text-[9.5px] text-white/18">
+      <p className="mt-4 text-[9.5px] text-muted">
         {tm("footerNote")}
       </p>
     </div>

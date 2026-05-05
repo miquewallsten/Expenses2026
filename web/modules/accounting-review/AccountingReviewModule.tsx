@@ -88,14 +88,14 @@ interface PolizaResult {
 
 // ---------------------------------------- Helpers 
 const STATUS_CLS: Record<string, string> = {
-  draft:            "bg-zinc-500/15 text-zinc-400 border-zinc-500/30",
-  submitted:        "bg-sky-500/15 text-sky-300 border-sky-500/30",
+  draft:            "bg-surface-2 text-secondary border-default",
+  submitted:        "bg-accent-muted text-accent border-sky-500/30",
   manager_approved: "bg-violet-500/15 text-violet-300 border-violet-500/30",
   approved:         "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
-  rejected:         "bg-red-500/15 text-red-300 border-red-500/30",
+  rejected:         "bg-error-muted text-error border-error",
 };
 function statusCls(s: string) {
-  return STATUS_CLS[s] ?? "bg-zinc-500/15 text-zinc-400 border-zinc-500/30";
+  return STATUS_CLS[s] ?? "bg-surface-2 text-secondary border-default";
 }
 
 // ---------------------------------------- Collapsible 
@@ -112,17 +112,17 @@ function Collapsible({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="overflow-hidden rounded-lg border border-white/[0.07] bg-zinc-900/70">
+    <div className="overflow-hidden rounded-lg border border-default bg-surface-1/70">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between border-b border-white/[0.05] px-3 py-1.5 text-left"
+        className="flex w-full items-center justify-between border-b border-subtle px-3 py-1.5 text-left"
       >
         <div className="flex items-center gap-2">
-          <span className="text-[9px] font-bold uppercase tracking-widest text-white/28">{title}</span>
+          <span className="text-[9px] font-bold uppercase tracking-widest text-muted">{title}</span>
           {badge}
         </div>
-        <ChevronDown className={`h-3 w-3 text-white/25 transition-transform duration-150 ${open ? "rotate-180" : ""}`} />
+        <ChevronDown className={`h-3 w-3 text-muted transition-transform duration-150 ${open ? "rotate-180" : ""}`} />
       </button>
       {open && <div className="px-3 py-2">{children}</div>}
     </div>
@@ -151,12 +151,12 @@ function QueueList({
     <div className="flex h-full flex-col overflow-hidden">
 
       {summary && summary.total_count > 0 && (
-        <div className="shrink-0 border-b border-white/[0.05] bg-black/10 px-3 py-1.5">
+        <div className="shrink-0 border-b border-subtle bg-black/10 px-3 py-1.5">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
-            <span className="text-[9px] font-semibold tabular-nums text-white/35">
+            <span className="text-[9px] font-semibold tabular-nums text-muted">
               {tm("queuePending", { count: summary.total_count })}
             </span>
-            <span className="font-mono text-[9px] text-white/28">
+            <span className="font-mono text-[9px] text-muted">
               ${summary.total_amount.toFixed(2)}
             </span>
             {Object.entries(summary.statuses).map(([s, n]) => (
@@ -172,10 +172,10 @@ function QueueList({
       )}
 
       {loading ? (
-        <div className="px-4 py-6 text-center text-xs text-white/30">{tc("loading")}</div>
+        <div className="px-4 py-6 text-center text-xs text-muted">{tc("loading")}</div>
       ) : !expenses.length ? (
         <div className="flex flex-1 items-center justify-center">
-          <p className="text-xs text-white/22">{ta("queueEmpty")}</p>
+          <p className="text-xs text-muted">{ta("queueEmpty")}</p>
         </div>
       ) : (
         <ul className="flex-1 overflow-y-auto">
@@ -184,36 +184,36 @@ function QueueList({
               <button
                 type="button"
                 onClick={() => onSelect(e)}
-                className={`w-full border-b border-white/[0.05] px-3 py-2.5 text-left transition-colors ${
-                  selectedId === e.id ? "bg-white/[0.06]" : "hover:bg-white/[0.03]"
+                className={`w-full border-b border-subtle px-3 py-2.5 text-left transition-colors ${
+                  selectedId === e.id ? "bg-surface-2" : "hover:bg-surface-1"
                 }`}
               >
                 <div className="mb-0.5 flex items-center justify-between gap-2">
-                  <span className="truncate text-[11px] font-medium text-white/80">{e.description}</span>
+                  <span className="truncate text-[11px] font-medium text-secondary">{e.description}</span>
                   <span className={`shrink-0 rounded-full border px-1.5 py-px text-[8px] font-bold uppercase tracking-widest ${statusCls(e.status)}`}>
                     {e.status}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[9px] text-white/35">
+                  <span className="text-[9px] text-muted">
                     #{e.id} · {new Date(e.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                   </span>
-                  <span className="shrink-0 font-mono text-[9px] text-white/45">${e.amount.toFixed(2)}</span>
+                  <span className="shrink-0 font-mono text-[9px] text-tertiary">${e.amount.toFixed(2)}</span>
                 </div>
                 <div className="mt-0.5 flex flex-wrap gap-1">
                   {!e.account_code && (
-                    <span className="inline-flex items-center gap-0.5 rounded border border-amber-500/20 bg-amber-500/[0.05] px-1.5 py-px text-[8px] text-amber-300/55">
+                    <span className="inline-flex items-center gap-0.5 rounded border border-amber-500/20 bg-amber-500/[0.05] px-1.5 py-px text-[8px] text-warning/55">
                       <AlertTriangle className="h-2 w-2" /> {ta("noCode")}
                     </span>
                   )}
                   {e.account_code && (
-                    <span className="inline-flex items-center gap-0.5 rounded border border-white/[0.08] bg-white/[0.03] px-1.5 py-px text-[8px] text-white/38">
-                      <Lock className="h-2 w-2 text-white/22" /> {e.account_code}
+                    <span className="inline-flex items-center gap-0.5 rounded border border-default bg-surface-1 px-1.5 py-px text-[8px] text-muted">
+                      <Lock className="h-2 w-2 text-muted" /> {e.account_code}
                     </span>
                   )}
                   {e.detected_category && (
-                    <span className="inline-flex items-center gap-0.5 rounded border border-white/[0.07] bg-white/[0.02] px-1.5 py-px text-[8px] text-white/28">
-                      <ReceiptText className="h-2 w-2 text-amber-400/35" /> {e.detected_category}
+                    <span className="inline-flex items-center gap-0.5 rounded border border-default bg-surface-1 px-1.5 py-px text-[8px] text-muted">
+                      <ReceiptText className="h-2 w-2 text-warning/35" /> {e.detected_category}
                     </span>
                   )}
                 </div>
@@ -234,17 +234,17 @@ function ReadinessBlock({ blockers, defaultOpen }: { blockers: BlockersResult; d
   const ta = useTranslations("accounting");
 
   const badge = ab.length > 0
-    ? <span className="inline-flex items-center gap-0.5 rounded border border-red-500/25 bg-red-500/10 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-red-300/70"><XCircle className="h-2 w-2" /> {ta("readinessBlocked")}</span>
+    ? <span className="inline-flex items-center gap-0.5 rounded border border-red-500/25 bg-red-500/10 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-error/70"><XCircle className="h-2 w-2" /> {ta("readinessBlocked")}</span>
     : pb.length > 0
-    ? <span className="inline-flex items-center gap-0.5 rounded border border-amber-500/25 bg-amber-500/10 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-amber-300/70"><AlertTriangle className="h-2 w-2" /> {ta("readinessReview")}</span>
-    : <span className="inline-flex items-center gap-0.5 rounded border border-emerald-500/25 bg-emerald-500/10 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-emerald-300/70"><CheckCircle2 className="h-2 w-2" /> {ta("readinessReady")}</span>;
+    ? <span className="inline-flex items-center gap-0.5 rounded border border-amber-500/25 bg-warning-muted px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-warning/70"><AlertTriangle className="h-2 w-2" /> {ta("readinessReview")}</span>
+    : <span className="inline-flex items-center gap-0.5 rounded border border-emerald-500/25 bg-success-muted px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-emerald-300/70"><CheckCircle2 className="h-2 w-2" /> {ta("readinessReady")}</span>;
 
   return (
     <Collapsible title={ta("readiness")} badge={badge} defaultOpen={defaultOpen ?? !allClear}>
       <div className="space-y-1.5">
         {allClear && (
           <div className="flex items-center gap-1.5">
-            <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-400/70" />
+            <CheckCircle2 className="h-3 w-3 shrink-0 text-success/70" />
             <span className="text-[10px] font-semibold text-emerald-300/70">{ta("noBlockers")}</span>
           </div>
         )}
@@ -254,8 +254,8 @@ function ReadinessBlock({ blockers, defaultOpen }: { blockers: BlockersResult; d
           <ul className="space-y-0.5">
             {ab.map((msg, i) => (
               <li key={i} className="flex items-start gap-1.5">
-                <XCircle className="mt-0.5 h-2.5 w-2.5 shrink-0 text-red-400/55" />
-                <span className="text-[9px] leading-snug text-red-300/60">{msg}</span>
+                <XCircle className="mt-0.5 h-2.5 w-2.5 shrink-0 text-error/55" />
+                <span className="text-[9px] leading-snug text-error/60">{msg}</span>
               </li>
             ))}
           </ul>
@@ -266,8 +266,8 @@ function ReadinessBlock({ blockers, defaultOpen }: { blockers: BlockersResult; d
           <ul className={`space-y-0.5${ab.length > 0 ? " mt-1" : ""}`}>
             {pb.map((msg, i) => (
               <li key={i} className="flex items-start gap-1.5">
-                <AlertTriangle className="mt-0.5 h-2.5 w-2.5 shrink-0 text-amber-400/50" />
-                <span className="text-[9px] leading-snug text-amber-300/55">{msg}</span>
+                <AlertTriangle className="mt-0.5 h-2.5 w-2.5 shrink-0 text-warning/50" />
+                <span className="text-[9px] leading-snug text-warning/55">{msg}</span>
               </li>
             ))}
           </ul>
@@ -279,7 +279,7 @@ function ReadinessBlock({ blockers, defaultOpen }: { blockers: BlockersResult; d
             <button
               type="button"
               onClick={() => setShowInfo((v) => !v)}
-              className="flex items-center gap-1 text-[9px] text-white/22 hover:text-white/40"
+              className="flex items-center gap-1 text-[9px] text-muted hover:text-tertiary"
             >
               <ChevronDown className={`h-2.5 w-2.5 transition-transform duration-150 ${showInfo ? "rotate-180" : ""}`} />
               {showInfo ? ta("hideNotices") : ta("noticeCount", { count: ws.length })}
@@ -288,8 +288,8 @@ function ReadinessBlock({ blockers, defaultOpen }: { blockers: BlockersResult; d
               <ul className="mt-0.5 space-y-0.5">
                 {ws.map((msg, i) => (
                   <li key={i} className="flex items-start gap-1.5">
-                    <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-white/22" />
-                    <span className="text-[9px] leading-snug text-white/30">{msg}</span>
+                    <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-surface-2" />
+                    <span className="text-[9px] leading-snug text-muted">{msg}</span>
                   </li>
                 ))}
               </ul>
@@ -341,19 +341,19 @@ function RequiredFields({
   if (showCC)      dims.push({ key: "costCenter", label: ta("dimensions.costCenter"), present: allocationPresence?.has_cost_center ?? false });
 
   return (
-    <div className="overflow-hidden rounded-lg border border-white/[0.07] bg-zinc-900/70">
-      <div className="border-b border-white/[0.05] px-3 py-1.5">
-        <span className="text-[9px] font-bold uppercase tracking-widest text-white/28">{ta("requiredFields")}</span>
+    <div className="overflow-hidden rounded-lg border border-default bg-surface-1/70">
+      <div className="border-b border-subtle px-3 py-1.5">
+        <span className="text-[9px] font-bold uppercase tracking-widest text-muted">{ta("requiredFields")}</span>
       </div>
       <div className="space-y-2.5 px-3 py-2">
 
         {/* Account code */}
         <div>
           <div className="mb-1 flex items-center justify-between">
-            <span className="text-[9px] font-bold uppercase tracking-widest text-white/28">{ta("accountCode")}</span>
+            <span className="text-[9px] font-bold uppercase tracking-widest text-muted">{ta("accountCode")}</span>
             {expense.account_code
               ? <span className="font-mono text-[9px] text-emerald-300/60">{expense.account_code}</span>
-              : <span className="rounded border border-amber-500/20 bg-amber-500/[0.06] px-1.5 py-px text-[8px] font-semibold uppercase tracking-wider text-amber-300/55">{ta("unassigned")}</span>
+              : <span className="rounded border border-amber-500/20 bg-amber-500/[0.06] px-1.5 py-px text-[8px] font-semibold uppercase tracking-wider text-warning/55">{ta("unassigned")}</span>
             }
           </div>
           {actions?.can_assign_account_code && (
@@ -364,13 +364,13 @@ function RequiredFields({
                 onChange={(e) => onAccountCodeChange(e.target.value)}
                 placeholder="e.g. 6010"
                 disabled={codesSaving}
-                className="min-w-0 flex-1 rounded border border-white/[0.08] bg-white/[0.04] px-2 py-2 font-mono text-xs text-white/80 placeholder-white/20 outline-none transition-colors focus:border-white/[0.15] disabled:opacity-40 md:py-1"
+                className="min-w-0 flex-1 rounded border border-default bg-surface-2 px-2 py-2 font-mono text-xs text-secondary placeholder-white/20 outline-none transition-colors focus:border-default disabled:opacity-40 md:py-1"
               />
               <button
                 type="button"
                 onClick={onSaveAccountCode}
                 disabled={codesSaving || !accountCodeDraft.trim()}
-                className="shrink-0 rounded border border-sky-500/30 bg-sky-500/[0.08] px-3 text-xs font-semibold text-sky-300/70 transition-colors hover:bg-sky-500/[0.14] disabled:opacity-30 min-h-[40px] md:min-h-0 md:px-2.5 md:py-1 md:text-[10px]"
+                className="shrink-0 rounded border border-sky-500/30 bg-accent/[0.08] px-3 text-xs font-semibold text-accent/70 transition-colors hover:bg-accent/[0.14] disabled:opacity-30 min-h-[40px] md:min-h-0 md:px-2.5 md:py-1 md:text-[10px]"
               >
                 {tc("save")}
               </button>
@@ -379,7 +379,7 @@ function RequiredFields({
                   type="button"
                   onClick={onClearAccountCode}
                   disabled={codesSaving}
-                  className="shrink-0 rounded border border-white/[0.07] bg-white/[0.03] px-2.5 text-xs text-white/35 transition-colors hover:bg-white/[0.06] disabled:opacity-30 min-h-[40px] md:min-h-0 md:px-2 md:py-1 md:text-[10px]"
+                  className="shrink-0 rounded border border-default bg-surface-1 px-2.5 text-xs text-muted transition-colors hover:bg-surface-3 disabled:opacity-30 min-h-[40px] md:min-h-0 md:px-2 md:py-1 md:text-[10px]"
                 >
                   {tc("clear")}
                 </button>
@@ -387,14 +387,14 @@ function RequiredFields({
             </div>
           )}
           {codesError && (
-            <p className="mt-1 text-[9px] text-red-300/60">{codesError}</p>
+            <p className="mt-1 text-[9px] text-error/60">{codesError}</p>
           )}
         </div>
 
         {/* Allocation dimensions */}
         {dims.length > 0 && (
           <div>
-            <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-white/28">{ta("allocations")}</p>
+            <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-muted">{ta("allocations")}</p>
             <div
               className="grid gap-1.5"
               style={{ gridTemplateColumns: `repeat(${dims.length}, minmax(0, 1fr))` }}
@@ -405,16 +405,16 @@ function RequiredFields({
                   className={`rounded border px-2 py-1.5 ${
                     present
                       ? "border-emerald-500/20 bg-emerald-500/[0.04]"
-                      : "border-white/[0.05] bg-black/10"
+                      : "border-subtle bg-black/10"
                   }`}
                 >
-                  <p className="text-[8px] font-bold uppercase tracking-widest text-white/22">{label}</p>
-                  <p className={`mt-0.5 text-[9px] ${present ? "text-white/45" : "italic text-white/22"}`}>
+                  <p className="text-[8px] font-bold uppercase tracking-widest text-muted">{label}</p>
+                  <p className={`mt-0.5 text-[9px] ${present ? "text-tertiary" : "italic text-muted"}`}>
                     {present ? tc("assigned") : ta("missing")}
                   </p>
                   {present
-                    ? <CheckCircle2 className="mt-0.5 h-2.5 w-2.5 text-emerald-400/55" />
-                    : <AlertTriangle className="mt-0.5 h-2.5 w-2.5 text-amber-400/40" />
+                    ? <CheckCircle2 className="mt-0.5 h-2.5 w-2.5 text-success/55" />
+                    : <AlertTriangle className="mt-0.5 h-2.5 w-2.5 text-warning/40" />
                   }
                 </div>
               ))}
@@ -424,9 +424,9 @@ function RequiredFields({
 
         {/* Póliza flag */}
         {showPoliza && (
-          <div className="flex items-center gap-1.5 rounded border border-white/[0.05] bg-black/10 px-2.5 py-1.5">
-            <Clock className="h-2.5 w-2.5 shrink-0 text-white/22" />
-            <span className="text-[9px] text-white/35">{ta("polizaRequiredNote")}</span>
+          <div className="flex items-center gap-1.5 rounded border border-subtle bg-black/10 px-2.5 py-1.5">
+            <Clock className="h-2.5 w-2.5 shrink-0 text-muted" />
+            <span className="text-[9px] text-muted">{ta("polizaRequiredNote")}</span>
           </div>
         )}
 
@@ -494,14 +494,14 @@ function AccountingDetail({
           <button
             type="button"
             onClick={onBack}
-            className="flex h-11 shrink-0 items-center gap-2 border-b border-white/[0.07] px-4 text-[11px] text-white/40 transition-colors hover:text-white/65"
+            className="flex h-11 shrink-0 items-center gap-2 border-b border-default px-4 text-[11px] text-tertiary transition-colors hover:text-secondary"
           >
             <ChevronLeft className="h-3.5 w-3.5" />
             {tm("backToQueue")}
           </button>
         )}
         <div className="flex flex-1 items-center justify-center">
-          <p className="text-xs text-white/22">{tm("selectExpense")}</p>
+          <p className="text-xs text-muted">{tm("selectExpense")}</p>
         </div>
       </div>
     );
@@ -522,7 +522,7 @@ function AccountingDetail({
         <button
           type="button"
           onClick={onBack}
-          className="flex h-11 shrink-0 items-center gap-2 border-b border-white/[0.07] px-4 text-[11px] text-white/40 transition-colors hover:text-white/65"
+          className="flex h-11 shrink-0 items-center gap-2 border-b border-default px-4 text-[11px] text-tertiary transition-colors hover:text-secondary"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
           {tm("backToQueue")}
@@ -533,18 +533,18 @@ function AccountingDetail({
 
         {/* Header */}
         <div>
-          <h2 className="text-sm font-semibold text-white">{expense.description}</h2>
-          <p className="mt-0.5 text-xs text-white/35">{tm("expenseTitle", { id: expense.id })}</p>
+          <h2 className="text-sm font-semibold text-primary">{expense.description}</h2>
+          <p className="mt-0.5 text-xs text-muted">{tm("expenseTitle", { id: expense.id })}</p>
         </div>
 
         <StatusNextAction decision={decision} />
 
         {/* Summary table */}
-        <div className="divide-y divide-white/[0.05] overflow-hidden rounded-xl border border-white/[0.07] bg-black/20">
+        <div className="divide-y divide-white/[0.05] overflow-hidden rounded-xl border border-default bg-black/20">
           {summaryRows.map(([label, value]) => (
             <div key={label} className="flex items-center justify-between gap-4 px-4 py-2">
-              <span className="shrink-0 text-[10px] font-bold uppercase tracking-widest text-white/28">{label}</span>
-              <span className="truncate text-right font-mono text-xs text-white/60">{value}</span>
+              <span className="shrink-0 text-[10px] font-bold uppercase tracking-widest text-muted">{label}</span>
+              <span className="truncate text-right font-mono text-xs text-secondary">{value}</span>
             </div>
           ))}
         </div>
@@ -593,7 +593,7 @@ function AccountingDetail({
         {actionError && (
           <div className="flex items-start gap-1.5 rounded border border-red-500/20 bg-red-500/[0.07] px-2.5 py-2">
             <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-red-400/60" />
-            <p className="text-[10px] leading-snug text-red-300/65">{actionError}</p>
+            <p className="text-[10px] leading-snug text-error/65">{actionError}</p>
           </div>
         )}
 
@@ -605,19 +605,19 @@ function AccountingDetail({
             defaultOpen={decision.expandedSections.includes("ai_category_explanation")}
           >
             <div className="space-y-1">
-              <p className="text-[10px] leading-snug text-white/55">{expense.accounting_explanation.category_reason}</p>
-              <p className="text-[9px] leading-snug text-white/35">{expense.accounting_explanation.account_reason}</p>
+              <p className="text-[10px] leading-snug text-tertiary">{expense.accounting_explanation.category_reason}</p>
+              <p className="text-[9px] leading-snug text-muted">{expense.accounting_explanation.account_reason}</p>
               <div className="flex items-center gap-1.5 pt-0.5">
                 <span className={`rounded border px-1.5 py-px text-[8px] font-bold uppercase tracking-wider ${
-                  expense.accounting_explanation.source === "learning" ? "border-indigo-500/25 bg-indigo-500/10 text-indigo-300/70"
-                  : expense.accounting_explanation.source === "keyword"  ? "border-sky-500/25 bg-sky-500/10 text-sky-300/70"
+                  expense.accounting_explanation.source === "learning" ? "bg-accent-muted-muted bg-accent-muted text-accent/70"
+                  : expense.accounting_explanation.source === "keyword"  ? "border-sky-500/25 bg-accent/10 text-accent/70"
                   : expense.accounting_explanation.source === "manual"   ? "border-violet-500/25 bg-violet-500/10 text-violet-300/70"
-                  : "border-zinc-500/25 bg-zinc-500/10 text-zinc-400/70"
+                  : "border-subtle bg-surface-2 text-tertiary"
                 }`}>{expense.accounting_explanation.source}</span>
                 <span className={`rounded border px-1.5 py-px text-[8px] font-bold uppercase tracking-wider ${
-                  expense.accounting_explanation.confidence === "high"   ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-300/70"
-                  : expense.accounting_explanation.confidence === "medium" ? "border-amber-500/25 bg-amber-500/10 text-amber-300/70"
-                  : "border-zinc-500/25 bg-zinc-500/10 text-zinc-400/70"
+                  expense.accounting_explanation.confidence === "high"   ? "border-emerald-500/25 bg-success-muted text-emerald-300/70"
+                  : expense.accounting_explanation.confidence === "medium" ? "border-amber-500/25 bg-warning-muted text-warning/70"
+                  : "border-subtle bg-surface-2 text-tertiary"
                 }`}>{expense.accounting_explanation.confidence}</span>
               </div>
             </div>
@@ -637,19 +637,19 @@ function AccountingDetail({
                 {polizaGenerating ? ta("generating") : ta("generatePoliza")}
               </button>
             ) : (
-              <p className="text-[9px] text-white/28">
+              <p className="text-[9px] text-muted">
                 {blockers && blockers.poliza_blockers.length > 0
                   ? blockers.poliza_blockers[0]
                   : ta("polizaNotAvailable")}
               </p>
             )}
             {polizaResult && (
-              <pre className="overflow-x-auto rounded border border-white/[0.07] bg-black/30 p-2 font-mono text-[9px] leading-relaxed text-white/50 whitespace-pre-wrap break-all">
+              <pre className="overflow-x-auto rounded border border-default bg-black/30 p-2 font-mono text-[9px] leading-relaxed text-secondary whitespace-pre-wrap break-all">
                 {JSON.stringify(polizaResult, null, 2)}
               </pre>
             )}
             {polizaError && (
-              <p className="text-[9px] text-red-300/60">{polizaError}</p>
+              <p className="text-[9px] text-error/60">{polizaError}</p>
             )}
           </div>
         </Collapsible>
@@ -890,7 +890,7 @@ export default function AccountingReviewModule() {
         className={[
           moduleIsNarrow && activeMobilePane === "detail" ? "hidden" : "flex",
           isMobile ? "w-full border-b" : "w-72 border-r",
-          "shrink-0 flex-col overflow-hidden border-white/[0.07]",
+          "shrink-0 flex-col overflow-hidden border-default",
         ].join(" ")}
       >
         <QueueList

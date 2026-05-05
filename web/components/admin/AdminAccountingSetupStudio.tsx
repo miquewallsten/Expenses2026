@@ -22,7 +22,7 @@ interface Props {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mb-1 px-1 text-[9px] font-bold uppercase tracking-widest text-white/22">
+    <p className="mb-1 px-1 text-[9px] font-bold uppercase tracking-widest text-muted">
       {children}
     </p>
   );
@@ -30,7 +30,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 function Panel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-white/[0.07] bg-white/[0.02] divide-y divide-white/[0.05]">
+    <div className="overflow-hidden rounded-lg border border-default bg-surface-1 divide-y divide-white/[0.05]">
       {children}
     </div>
   );
@@ -52,13 +52,13 @@ function SelectRow({
   return (
     <div className="flex items-center justify-between gap-4 px-4 py-2.5">
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium text-white/68">{label}</p>
-        {description && <p className="text-[10px] text-white/28">{description}</p>}
+        <p className="text-[11px] font-medium text-secondary">{label}</p>
+        {description && <p className="text-[10px] text-muted">{description}</p>}
       </div>
       <select
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
-        className="shrink-0 rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 text-[10px] text-white/55 outline-none focus:border-indigo-500/40"
+        className="shrink-0 rounded border border-default bg-surface-1 px-2 py-1 text-[10px] text-tertiary outline-none focus:bg-accent-muted"
       >
         <option value="">—</option>
         {options.map((o) => (
@@ -85,8 +85,8 @@ function NumberRow({
   return (
     <div className="flex items-center justify-between gap-4 px-4 py-2.5">
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium text-white/68">{label}</p>
-        {description && <p className="text-[10px] text-white/28">{description}</p>}
+        <p className="text-[11px] font-medium text-secondary">{label}</p>
+        {description && <p className="text-[10px] text-muted">{description}</p>}
       </div>
       <input
         type="number"
@@ -96,7 +96,7 @@ function NumberRow({
           const v = e.target.value;
           onChange(v === "" ? null : parseFloat(v));
         }}
-        className="w-28 shrink-0 rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 text-[10px] text-white/55 placeholder:text-white/20 outline-none focus:border-indigo-500/40"
+        className="w-28 shrink-0 rounded border border-default bg-surface-1 px-2 py-1 text-[10px] text-tertiary placeholder:text-muted outline-none focus:bg-accent-muted"
       />
     </div>
   );
@@ -120,10 +120,10 @@ function ToggleRow({
   return (
     <div className={`flex items-center justify-between gap-4 px-4 py-2.5 ${disabled ? "opacity-50" : ""}`}>
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium text-white/68">{label}</p>
+        <p className="text-[11px] font-medium text-secondary">{label}</p>
         {disabled && disabledHint
-          ? <p className="text-[10px] text-amber-300/50">{disabledHint}</p>
-          : description && <p className="text-[10px] text-white/28">{description}</p>
+          ? <p className="text-[10px] text-warning/50">{disabledHint}</p>
+          : description && <p className="text-[10px] text-muted">{description}</p>
         }
       </div>
       <button
@@ -134,13 +134,13 @@ function ToggleRow({
           disabled ? "cursor-not-allowed" : "cursor-pointer"
         } ${
           checked
-            ? "border-indigo-500/40 bg-indigo-600/30"
-            : "border-white/[0.1] bg-white/[0.04]"
+            ? "bg-accent-muted bg-accent-muted"
+            : "border-default bg-surface-2"
         }`}
       >
         <span
           className={`absolute top-0.5 h-3 w-3 rounded-full transition-transform ${
-            checked ? "translate-x-3 bg-indigo-400" : "translate-x-0.5 bg-white/20"
+            checked ? "translate-x-3 bg-accent" : "translate-x-0.5 bg-surface-2"
           }`}
         />
       </button>
@@ -281,15 +281,15 @@ export default function AdminAccountingSetupStudio({ companyId, setup, companySe
     <div className="max-w-2xl space-y-4">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <h2 className="text-sm font-semibold text-white">{t("title")}</h2>
+        <h2 className="text-sm font-semibold text-primary">{t("title")}</h2>
         <DraftBadge patch={draftPatch} label={t("aiDraftCount", { count: Object.keys(draftPatch || {}).length }).replace(/\s*\(\d+\)$/, "")} />
       </div>
 
       {/* Warnings */}
       {warnings.map((w, i) => (
         <div key={i} className="flex items-start gap-2 rounded border border-amber-500/20 bg-amber-950/20 px-3 py-2">
-          <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-amber-400/60" />
-          <p className="text-[11px] text-amber-300/60 leading-relaxed">{w}</p>
+          <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-warning/60" />
+          <p className="text-[11px] text-warning/60 leading-relaxed">{w}</p>
         </div>
       ))}
 
@@ -305,8 +305,8 @@ export default function AdminAccountingSetupStudio({ companyId, setup, companySe
             onChange={setAccountingReviewMode}
           />
         </Panel>
-        <p className="mt-1 px-1 text-[9.5px] text-white/22 leading-relaxed">
-          La preaprobación de gerente y los umbrales se configuran en <span className="text-white/40">Aprobaciones</span>. La retención de archivo se gestiona en el módulo de Archivo.
+        <p className="mt-1 px-1 text-[9.5px] text-muted leading-relaxed">
+          La preaprobación de gerente y los umbrales se configuran en <span className="text-tertiary">Aprobaciones</span>. La retención de archivo se gestiona en el módulo de Archivo.
         </p>
       </div>
 
@@ -350,7 +350,7 @@ export default function AdminAccountingSetupStudio({ companyId, setup, companySe
             disabledHint="Habilita Cliente en Política de gastos → Dimensiones de distribución."
           />
         </Panel>
-        <p className="mt-1 px-1 text-[9.5px] text-white/22 leading-relaxed">
+        <p className="mt-1 px-1 text-[9.5px] text-muted leading-relaxed">
           Cada toggle activado bloquea el envío y la generación de póliza si el campo no está asignado.
         </p>
       </div>
@@ -369,13 +369,13 @@ export default function AdminAccountingSetupStudio({ companyId, setup, companySe
       </div>
 
       {/* Sticky Save bar */}
-      <div className="sticky bottom-0 -mx-4 mt-6 border-t border-white/[0.08] bg-zinc-950/95 px-4 py-2.5 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/80">
+      <div className="sticky bottom-0 -mx-4 mt-6 border-t border-default bg-surface-0/95 px-4 py-2.5 backdrop-blur supports-[backdrop-filter]:bg-surface-0/80">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="inline-flex items-center gap-1.5 rounded border border-indigo-500/30 bg-indigo-500/[0.10] px-3 py-1.5 text-[10px] font-semibold text-indigo-200/80 transition-colors hover:bg-indigo-500/[0.18] disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded border bg-accent-muted bg-blue-500/[0.10] px-3 py-1.5 text-[10px] font-semibold text-accent/80 transition-colors hover:bg-accent-hover/[0.18] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving
               ? <><Loader2 className="h-3 w-3 animate-spin" /> {tc("saving")}</>
@@ -383,11 +383,11 @@ export default function AdminAccountingSetupStudio({ companyId, setup, companySe
             }
           </button>
           {saved && (
-            <span className="flex items-center gap-1 text-[10px] text-emerald-400/60">
+            <span className="flex items-center gap-1 text-[10px] text-success/60">
               <CheckCircle2 className="h-3 w-3" /> {tc("saved")}
             </span>
           )}
-          {error && <span className="text-[10px] text-red-400/60">{error}</span>}
+          {error && <span className="text-[10px] text-error/60">{error}</span>}
         </div>
       </div>
     </div>

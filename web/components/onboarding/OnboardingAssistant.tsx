@@ -93,15 +93,15 @@ export function OnboardingAssistant({
   const quickActions = STEP_QUICK_ACTIONS[currentStep] || [];
 
   return (
-    <div className="flex h-full flex-col border-l border-white/[0.06] bg-zinc-950/50">
+    <div className="flex h-full flex-col border-l border-subtle bg-surface-0/50">
       {/* Header */}
-      <div className="flex items-center gap-2.5 border-b border-white/[0.06] px-4 py-3">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/15">
-          <Sparkles className="h-4 w-4 text-indigo-300" />
+      <div className="flex items-center gap-2.5 border-b border-subtle px-4 py-3">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/15">
+          <Sparkles className="h-4 w-4 text-accent" />
         </div>
         <div>
-          <p className="text-[11px] font-medium text-white/80">Setup Assistant</p>
-          <p className="text-[9px] text-white/35">
+          <p className="text-[11px] font-medium text-secondary">Setup Assistant</p>
+          <p className="text-[9px] text-muted">
             Step {completedSteps.length + 1} of 6
           </p>
         </div>
@@ -111,8 +111,8 @@ export function OnboardingAssistant({
       <div className="flex-1 overflow-y-auto p-4">
         <div className="space-y-3">
           {/* Initial greeting from AI context */}
-          <div className="rounded-lg bg-indigo-500/[0.06] p-3">
-            <p className="text-[11px] leading-relaxed text-white/80">
+          <div className="rounded-lg bg-blue-500/[0.06] p-3">
+            <p className="text-[11px] leading-relaxed text-secondary">
               {aiContext.greeting}
             </p>
           </div>
@@ -123,8 +123,8 @@ export function OnboardingAssistant({
               key={message.id}
               className={`rounded-xl px-3.5 py-2.5 ${
                 message.role === "user"
-                  ? "ml-4 bg-indigo-500/15 text-indigo-100/90 ring-1 ring-inset ring-indigo-500/20"
-                  : "mr-4 bg-white/[0.03] text-white/60 ring-1 ring-inset ring-white/[0.05]"
+                  ? "ml-4 bg-blue-500/15 text-indigo-100/90 ring-1 ring-inset ring-blue-500/20"
+                  : "mr-4 bg-surface-1 text-secondary ring-1 ring-inset ring-white/[0.05]"
               }`}
             >
               <div className="text-[11px] leading-relaxed">
@@ -135,18 +135,18 @@ export function OnboardingAssistant({
 
           {/* Typing indicator */}
           {isTyping && (
-            <div className="mr-4 rounded-xl bg-white/[0.03] px-3.5 py-2.5 ring-1 ring-inset ring-white/[0.05]">
+            <div className="mr-4 rounded-xl bg-surface-1 px-3.5 py-2.5 ring-1 ring-inset ring-white/[0.05]">
               <div className="flex items-center gap-2">
                 <span className="inline-flex gap-1">
                   {[0, 1, 2].map((d) => (
                     <span
                       key={d}
-                      className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-400/60"
+                      className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent/60"
                       style={{ animationDelay: `${d * 150}ms` }}
                     />
                   ))}
                 </span>
-                <span className="text-[10px] text-white/40">Thinking...</span>
+                <span className="text-[10px] text-tertiary">Thinking...</span>
               </div>
             </div>
           )}
@@ -157,8 +157,8 @@ export function OnboardingAssistant({
 
       {/* Quick Actions */}
       {quickActions.length > 0 && !isTyping && (
-        <div className="border-t border-white/[0.06] px-4 py-3">
-          <p className="mb-2 text-[9px] font-medium uppercase tracking-wide text-white/35">
+        <div className="border-t border-subtle px-4 py-3">
+          <p className="mb-2 text-[9px] font-medium uppercase tracking-wide text-muted">
             Quick questions
           </p>
           <div className="space-y-1">
@@ -167,10 +167,10 @@ export function OnboardingAssistant({
                 key={index}
                 type="button"
                 onClick={() => handleQuestionClick(action)}
-                className="flex w-full items-center gap-2 rounded bg-white/[0.02] px-2.5 py-1.5 text-left transition-colors hover:bg-white/[0.04]"
+                className="flex w-full items-center gap-2 rounded bg-surface-1 px-2.5 py-1.5 text-left transition-colors hover:bg-surface-2"
               >
-                <ChevronRight className="h-3 w-3 shrink-0 text-white/30" />
-                <span className="text-[10px] text-white/60">{action}</span>
+                <ChevronRight className="h-3 w-3 shrink-0 text-muted" />
+                <span className="text-[10px] text-secondary">{action}</span>
               </button>
             ))}
           </div>
@@ -178,7 +178,7 @@ export function OnboardingAssistant({
       )}
 
       {/* Input */}
-      <div className="border-t border-white/[0.06] p-3">
+      <div className="border-t border-subtle p-3">
         <form onSubmit={handleSubmit} className="flex items-center gap-2">
           <input
             type="text"
@@ -186,12 +186,12 @@ export function OnboardingAssistant({
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="Ask me anything..."
             disabled={isTyping}
-            className="flex-1 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-[11px] text-white/80 placeholder:text-white/30 focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/25 disabled:opacity-50"
+            className="flex-1 rounded-lg border border-subtle bg-surface-1 px-3 py-2 text-[11px] text-secondary placeholder:text-muted focus:bg-accent-muted focus:outline-none focus:ring-1 focus:ring-blue-500/25 disabled:opacity-50"
           />
           <button
             type="submit"
             disabled={isTyping || !inputValue.trim()}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-300 transition-colors hover:bg-indigo-500/30 disabled:opacity-50"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-muted text-accent transition-colors hover:bg-accent-muted disabled:opacity-50"
           >
             <Send className="h-4 w-4" />
           </button>

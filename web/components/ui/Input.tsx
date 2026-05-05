@@ -4,10 +4,10 @@ import { forwardRef, type InputHTMLAttributes } from "react";
 import { cn } from "@/lib/cn";
 
 const BASE = cn(
-  "w-full rounded-md border bg-white/[0.03] text-white/85",
-  "border-white/10 placeholder:text-white/30",
-  "focus:outline-none focus:border-indigo-400/50 focus:bg-white/[0.05]",
-  "focus:ring-2 focus:ring-indigo-400/20 focus:ring-offset-0",
+  "w-full rounded-md border bg-surface-1 text-primary",
+  "border-subtle placeholder:text-muted",
+  "focus:outline-none focus:bg-accent-muted/50 focus:bg-surface-2",
+  "focus:ring-2 focus:ring-blue-400/20 focus:ring-offset-0",
   "transition-colors duration-150",
   "disabled:opacity-60 disabled:cursor-not-allowed",
 );

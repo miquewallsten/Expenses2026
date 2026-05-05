@@ -57,10 +57,10 @@ export function OnboardingGuard({ children, companyId }: OnboardingGuardProps) {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-zinc-950">
+      <div className="flex h-screen items-center justify-center bg-surface-0">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-500/30 border-t-indigo-500" />
-          <p className="text-[11px] text-white/40">Loading...</p>
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+          <p className="text-[11px] text-tertiary">Loading...</p>
         </div>
       </div>
     );

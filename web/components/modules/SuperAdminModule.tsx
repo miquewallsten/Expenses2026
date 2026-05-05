@@ -51,7 +51,7 @@ export default function SuperAdminModule() {
   if (!isSuperAdmin) {
     return (
       <div className="flex h-full items-center justify-center" data-testid="super-admin-module">
-        <p className="text-[11px] text-white/40">Super admin access required.</p>
+        <p className="text-[11px] text-tertiary">Super admin access required.</p>
       </div>
     );
   }
@@ -59,8 +59,8 @@ export default function SuperAdminModule() {
   return (
     <div className="mx-auto max-w-2xl px-5 py-5" data-testid="super-admin-module">
       <header className="mb-4">
-        <h1 className="text-[13px] font-bold tracking-[-0.01em] text-white/85">Platform Operations</h1>
-        <p className="mt-0.5 text-[10.5px] text-white/40">
+        <h1 className="text-[13px] font-bold tracking-[-0.01em] text-primary">Platform Operations</h1>
+        <p className="mt-0.5 text-[10.5px] text-tertiary">
           Cross-tenant surfaces. Customer admins do not see this tree.
         </p>
       </header>
@@ -70,18 +70,18 @@ export default function SuperAdminModule() {
           <Link
             key={t.href}
             href={t.href}
-            className="group flex items-center gap-2.5 rounded border border-white/[0.06] bg-white/[0.015] px-3 py-2 transition-colors hover:bg-rose-500/[0.05]"
+            className="group flex items-center gap-2.5 rounded border border-subtle bg-surface-1 px-3 py-2 transition-colors hover:bg-rose-500/[0.05]"
           >
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-white/[0.06] bg-white/[0.02] text-rose-300/65 group-hover:border-rose-500/30 group-hover:text-rose-200">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-subtle bg-surface-1 text-rose-300/65 group-hover:border-error group-hover:text-rose-200">
               {t.icon}
             </span>
             <span className="min-w-0 flex-1">
-              <div className="truncate text-[11.5px] font-semibold text-white/78 group-hover:text-white/95">
+              <div className="truncate text-[11.5px] font-semibold text-secondary group-hover:text-primary">
                 {t.title}
               </div>
-              <div className="truncate text-[9.5px] text-white/35">{t.subtitle}</div>
+              <div className="truncate text-[9.5px] text-muted">{t.subtitle}</div>
             </span>
-            <span className="text-[10px] text-white/22 group-hover:text-rose-300/55">→</span>
+            <span className="text-[10px] text-muted group-hover:text-rose-300/55">→</span>
           </Link>
         ))}
       </div>

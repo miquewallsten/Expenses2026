@@ -47,11 +47,11 @@ export function ProgressIndicator({
               disabled={!isClickable}
               className={`group relative flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-semibold transition-colors ${
                 isCompleted
-                  ? "bg-emerald-500/25 text-emerald-200"
+                  ? "bg-emerald-500/25 text-success"
                   : isCurrent
-                    ? "bg-indigo-500/30 text-indigo-200 ring-1 ring-indigo-500/50"
-                    : "bg-white/[0.04] text-white/35"
-              } ${isClickable ? "cursor-pointer hover:bg-white/[0.08]" : "cursor-default"}`}
+                    ? "bg-accent-muted text-accent ring-1 ring-blue-500/50"
+                    : "bg-surface-2 text-muted"
+              } ${isClickable ? "cursor-pointer hover:bg-surface-3" : "cursor-default"}`}
               aria-current={isCurrent ? "step" : undefined}
             >
               {isCompleted ? (
@@ -66,7 +66,7 @@ export function ProgressIndicator({
                 className={`mx-1 h-px w-4 ${
                   completedSteps.includes(visibleSteps[index]) || isCurrent
                     ? "bg-emerald-500/30"
-                    : "bg-white/[0.06]"
+                    : "bg-surface-2"
                 }`}
               />
             )}

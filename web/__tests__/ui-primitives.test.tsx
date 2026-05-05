@@ -38,16 +38,16 @@ describe("Button", () => {
 
   it("applies variant classes correctly", () => {
     const { rerender } = render(<Button variant="primary">Primary</Button>);
-    expect(screen.getByRole("button")).toHaveClass("bg-indigo-600/85");
+    expect(screen.getByRole("button")).toHaveClass("bg-accent");
 
     rerender(<Button variant="secondary">Secondary</Button>);
-    expect(screen.getByRole("button")).toHaveClass("bg-white/[0.04]");
+    expect(screen.getByRole("button")).toHaveClass("bg-surface-2");
 
     rerender(<Button variant="ghost">Ghost</Button>);
     expect(screen.getByRole("button")).toHaveClass("bg-transparent");
 
     rerender(<Button variant="danger">Danger</Button>);
-    expect(screen.getByRole("button")).toHaveClass("bg-red-600/80");
+    expect(screen.getByRole("button")).toHaveClass("bg-error");
   });
 
   it("applies size classes correctly", () => {

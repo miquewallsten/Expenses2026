@@ -43,7 +43,7 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className="antialiased dark"
+      className="antialiased"
       suppressHydrationWarning
     >
       <body className="h-full overflow-hidden bg-surface-0 text-primary">

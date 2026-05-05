@@ -126,9 +126,9 @@ export default function CategoryMemoryPage() {
 
   if (!companyId) {
     return (
-      <main className="min-h-screen bg-zinc-950 text-zinc-100">
+      <main className="min-h-screen bg-surface-0 text-primary">
         <div className="mx-auto max-w-5xl px-6 py-10">
-          <div className="rounded border border-amber-500/20 bg-amber-500/[0.05] p-4 text-[12px] text-amber-200/80">
+          <div className="rounded border border-amber-500/20 bg-amber-500/[0.05] p-4 text-[12px] text-warning/80">
             {t("noCompany")}
           </div>
         </div>
@@ -137,31 +137,31 @@ export default function CategoryMemoryPage() {
   }
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-100">
+    <main className="min-h-screen bg-surface-0 text-primary">
       <div className="mx-auto max-w-5xl px-6 py-6">
         {/* Header */}
         <div className="mb-5 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Link
               href="/super-admin"
-              className="flex items-center gap-1 rounded border border-white/10 bg-white/[0.03] px-2 py-1 text-[11px] text-zinc-400 transition hover:border-white/20 hover:text-zinc-200"
+              className="flex items-center gap-1 rounded border border-subtle bg-surface-1 px-2 py-1 text-[11px] text-secondary transition hover:border-strong hover:text-secondary"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
               {t("back")}
             </Link>
             <div>
-              <h1 className="flex items-center gap-2 text-[14px] font-semibold tracking-tight text-zinc-100">
+              <h1 className="flex items-center gap-2 text-[14px] font-semibold tracking-tight text-primary">
                 <Brain className="h-4 w-4 text-violet-300/70" />
                 {t("title")}
               </h1>
-              <p className="text-[10.5px] text-zinc-500">{t("subtitle")}</p>
+              <p className="text-[10.5px] text-muted">{t("subtitle")}</p>
             </div>
           </div>
           <button
             type="button"
             disabled={loading}
             onClick={() => companyId && void load(companyId)}
-            className="flex items-center gap-1.5 rounded border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-zinc-300 transition hover:border-white/20 hover:bg-white/[0.07] disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded border border-subtle bg-surface-2 px-2.5 py-1 text-[11px] text-tertiary transition hover:border-strong hover:bg-surface-3 disabled:opacity-50"
           >
             {loading ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -173,7 +173,7 @@ export default function CategoryMemoryPage() {
         </div>
 
         {error && (
-          <div className="mb-3 flex items-start gap-2 rounded border border-rose-500/30 bg-rose-500/[0.08] p-2.5 text-[11px] text-rose-200">
+          <div className="mb-3 flex items-start gap-2 rounded border border-error bg-rose-500/[0.08] p-2.5 text-[11px] text-rose-200">
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <span className="break-all">{error}</span>
           </div>
@@ -194,7 +194,7 @@ export default function CategoryMemoryPage() {
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !probing && probeText.trim()) void probe();
               }}
-              className="flex-1 rounded border border-white/10 bg-zinc-950 px-2.5 py-1.5 text-[11px] text-zinc-100 placeholder:text-zinc-600 focus:border-violet-400/50 focus:outline-none"
+              className="flex-1 rounded border border-subtle bg-surface-0 px-2.5 py-1.5 text-[11px] text-primary placeholder:text-muted focus:bg-accent-muted focus:outline-none"
             />
             <button
               type="button"
@@ -211,19 +211,19 @@ export default function CategoryMemoryPage() {
             </button>
           </div>
           {suggestion === undefined ? null : suggestion === null ? (
-            <div className="mt-2 text-[10.5px] text-zinc-500">
+            <div className="mt-2 text-[10.5px] text-muted">
               {t("probe.noMatch")}
             </div>
           ) : (
             <div className="mt-2 space-y-1.5">
               <div className="flex items-baseline gap-2">
-                <span className="text-[10.5px] uppercase tracking-wide text-zinc-500">
+                <span className="text-[10.5px] uppercase tracking-wide text-muted">
                   {t("probe.predicted")}:
                 </span>
                 <span className="rounded bg-violet-500/15 px-1.5 py-0.5 font-mono text-[10.5px] text-violet-200">
                   {suggestion.category}
                 </span>
-                <span className="text-[10px] text-zinc-500">
+                <span className="text-[10px] text-muted">
                   {t("probe.confidence", {
                     pct: Math.round(suggestion.confidence * 100),
                   })}
@@ -235,15 +235,15 @@ export default function CategoryMemoryPage() {
                 {suggestion.neighbours.map((n, i) => (
                   <div
                     key={i}
-                    className="flex items-center gap-2 text-[10px] text-zinc-500"
+                    className="flex items-center gap-2 text-[10px] text-muted"
                   >
-                    <span className="font-mono text-zinc-400">
+                    <span className="font-mono text-secondary">
                       {n.score.toFixed(3)}
                     </span>
-                    <span className="rounded bg-zinc-800/60 px-1 text-zinc-300">
+                    <span className="rounded bg-surface-2/60 px-1 text-tertiary">
                       {n.category}
                     </span>
-                    <span className="truncate text-zinc-500">{n.description}</span>
+                    <span className="truncate text-muted">{n.description}</span>
                   </div>
                 ))}
               </div>
@@ -257,36 +257,36 @@ export default function CategoryMemoryPage() {
             {data.by_category.map((b) => (
               <span
                 key={b.category}
-                className="flex items-center gap-1 rounded border border-white/10 bg-white/[0.03] px-1.5 py-0.5 font-mono text-[10px] text-zinc-300"
+                className="flex items-center gap-1 rounded border border-subtle bg-surface-1 px-1.5 py-0.5 font-mono text-[10px] text-tertiary"
               >
                 {b.category}
-                <span className="text-zinc-500">·</span>
+                <span className="text-muted">·</span>
                 <span className="tabular-nums text-violet-300/80">{b.count}</span>
               </span>
             ))}
           </div>
         )}
 
-        <div className="mb-3 text-[10.5px] uppercase tracking-wide text-zinc-500">
+        <div className="mb-3 text-[10.5px] uppercase tracking-wide text-muted">
           {t("rowCount", { count: data?.total ?? 0 })}
         </div>
 
         {/* Rows */}
         {loading ? (
-          <div className="flex items-center gap-2 rounded border border-white/10 bg-white/[0.02] p-6 text-[11px] text-zinc-400">
+          <div className="flex items-center gap-2 rounded border border-subtle bg-surface-1 p-6 text-[11px] text-secondary">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
             {t("loading")}
           </div>
         ) : !data || data.items.length === 0 ? (
-          <div className="rounded border border-white/10 bg-white/[0.02] p-8 text-center">
-            <div className="text-[12px] text-zinc-300">{t("emptyTitle")}</div>
-            <div className="text-[10.5px] text-zinc-500">{t("emptyBody")}</div>
+          <div className="rounded border border-subtle bg-surface-1 p-8 text-center">
+            <div className="text-[12px] text-tertiary">{t("emptyTitle")}</div>
+            <div className="text-[10.5px] text-muted">{t("emptyBody")}</div>
           </div>
         ) : (
-          <div className="overflow-hidden rounded border border-white/10 bg-white/[0.02]">
+          <div className="overflow-hidden rounded border border-subtle bg-surface-1">
             <table className="w-full text-[11px]">
               <thead>
-                <tr className="border-b border-white/10 bg-white/[0.02] text-left text-[9.5px] uppercase tracking-wide text-zinc-500">
+                <tr className="border-b border-subtle bg-surface-1 text-left text-[9.5px] uppercase tracking-wide text-muted">
                   <th className="px-3 py-2 font-medium">{t("th.description")}</th>
                   <th className="px-3 py-2 font-medium">{t("th.original")}</th>
                   <th className="px-3 py-2 font-medium">{t("th.corrected")}</th>
@@ -300,17 +300,17 @@ export default function CategoryMemoryPage() {
                 {data.items.map((r) => (
                   <tr
                     key={r.id}
-                    className="border-b border-white/5 last:border-b-0 hover:bg-white/[0.02]"
+                    className="border-b border-subtle last:border-b-0 hover:bg-surface-1"
                   >
                     <td className="px-3 py-2">
-                      <span className="text-zinc-200">{r.description_text}</span>
+                      <span className="text-secondary">{r.description_text}</span>
                       {r.expense_id && (
-                        <span className="ml-1.5 text-[9.5px] text-zinc-500">
+                        <span className="ml-1.5 text-[9.5px] text-muted">
                           (#{r.expense_id})
                         </span>
                       )}
                     </td>
-                    <td className="px-3 py-2 font-mono text-[10px] text-zinc-500">
+                    <td className="px-3 py-2 font-mono text-[10px] text-muted">
                       {r.original_category ?? "—"}
                     </td>
                     <td className="px-3 py-2">
@@ -318,7 +318,7 @@ export default function CategoryMemoryPage() {
                         {r.corrected_category}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-[10px] text-zinc-500">
+                    <td className="px-3 py-2 text-[10px] text-muted">
                       {r.created_at
                         ? new Date(r.created_at).toLocaleString()
                         : "—"}

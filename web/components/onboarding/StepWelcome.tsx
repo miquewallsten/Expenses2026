@@ -12,22 +12,22 @@ export function StepWelcome({ onStart }: StepWelcomeProps) {
 
   return (
     <div className="flex flex-col items-center py-8 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-500/20 text-indigo-300/80">
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent-muted text-accent">
         <Sparkles className="h-6 w-6" />
       </div>
 
-      <h2 className="mt-4 text-[18px] font-semibold text-white/90">
+      <h2 className="mt-4 text-[18px] font-semibold text-primary">
         {t("title")}
       </h2>
 
-      <p className="mt-2 max-w-sm text-[12px] leading-relaxed text-white/55">
+      <p className="mt-2 max-w-sm text-[12px] leading-relaxed text-tertiary">
         {t("description")}
       </p>
 
-      <ul className="mt-6 space-y-2 text-left text-[11px] text-white/50">
+      <ul className="mt-6 space-y-2 text-left text-[11px] text-secondary">
         {(["step1", "step2", "step3", "step4"] as const).map((key) => (
           <li key={key} className="flex items-start gap-2">
-            <span className="mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-[9px] text-white/40">
+            <span className="mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-surface-2 text-[9px] text-tertiary">
               {key.slice(-1)}
             </span>
             <span>{t(key)}</span>
@@ -38,7 +38,7 @@ export function StepWelcome({ onStart }: StepWelcomeProps) {
       <button
         type="button"
         onClick={onStart}
-        className="mt-6 rounded-md bg-indigo-500 px-5 py-2 text-[11px] font-medium text-white shadow-sm hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-2 focus:ring-offset-zinc-950"
+        className="mt-6 rounded-md bg-blue-500 px-5 py-2 text-[11px] font-medium text-primary shadow-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 focus:ring-offset-zinc-950"
       >
         {t("startButton")}
       </button>

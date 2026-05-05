@@ -47,7 +47,7 @@ export default function ReviewActionBar({
   const primaryIs = approve ? "approve" : reject ? "reject" : "return";
 
   return (
-    <div className="flex flex-col gap-2 border-t border-white/[0.06] pt-3 md:flex-row md:flex-wrap md:items-center">
+    <div className="flex flex-col gap-2 border-t border-subtle pt-3 md:flex-row md:flex-wrap md:items-center">
 
       {/* Approve — always PRIMARY when available */}
       {approve && (
@@ -55,7 +55,7 @@ export default function ReviewActionBar({
           type="button"
           disabled={acting}
           onClick={onApprove}
-          className={`${BASE} border-emerald-500/40 bg-emerald-600/30 text-emerald-200 hover:bg-emerald-600/40`}
+          className={`${BASE} border-success bg-emerald-600/30 text-success hover:bg-emerald-600/40`}
         >
           <CheckCircle2 className={ICON} />
           {t("approve")}
@@ -70,8 +70,8 @@ export default function ReviewActionBar({
           onClick={onReject}
           className={`${BASE} ${
             primaryIs === "reject"
-              ? "border-red-500/35 bg-red-500/20 text-red-300/85 hover:bg-red-500/28"
-              : "border-red-500/20 bg-transparent text-red-300/50 hover:border-red-500/30 hover:text-red-300/70"
+              ? "border-red-500/35 bg-error-muted text-error/85 hover:bg-red-500/28"
+              : "border-red-500/20 bg-transparent text-error/50 hover:border-error hover:text-error/70"
           }`}
         >
           <XCircle className={ICON} />
@@ -87,8 +87,8 @@ export default function ReviewActionBar({
           onClick={onReturn}
           className={`${BASE} ${
             primaryIs === "return"
-              ? "border-white/[0.12] bg-white/[0.04] text-white/60 hover:bg-white/[0.08]"
-              : "border-transparent text-white/28 hover:bg-white/[0.04] hover:text-white/45"
+              ? "border-default bg-surface-2 text-secondary hover:bg-surface-3"
+              : "border-transparent text-muted hover:bg-surface-2 hover:text-tertiary"
           }`}
         >
           <Undo2 className={ICON} />
@@ -97,7 +97,7 @@ export default function ReviewActionBar({
       )}
 
       {reasons.length > 0 && (
-        <p className="w-full text-[9px] leading-snug text-white/25 md:w-auto">
+        <p className="w-full text-[9px] leading-snug text-muted md:w-auto">
           {reasons.length === 1
             ? reasons[0]
             : reasons.join(" · ")}

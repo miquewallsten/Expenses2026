@@ -264,7 +264,7 @@ export default function PurchaseRequisitionForm({
                 onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
               />
             ) : (
-              <div className="flex h-10 w-10 items-center justify-center rounded bg-slate-800 text-[10px] font-bold uppercase text-white">
+              <div className="flex h-10 w-10 items-center justify-center rounded bg-slate-800 text-[10px] font-bold uppercase text-primary">
                 CO
               </div>
             )}
@@ -429,7 +429,7 @@ export default function PurchaseRequisitionForm({
                     {editable && (
                       <td className="py-1.5 pl-1">
                         <button type="button" onClick={() => removeItem(i)}
-                          className="text-slate-300 hover:text-red-400">
+                          className="text-slate-300 hover:text-error">
                           <X className="h-3 w-3" />
                         </button>
                       </td>
@@ -452,7 +452,7 @@ export default function PurchaseRequisitionForm({
                   <tr>
                     <td colSpan={7} className="pt-1.5 pb-0.5">
                       <button type="button" onClick={addItem}
-                        className="flex items-center gap-1 text-[9px] font-medium text-indigo-500 hover:text-indigo-700">
+                        className="flex items-center gap-1 text-[9px] font-medium text-accent hover:text-indigo-700">
                         <Plus className="h-3 w-3" /> Add row
                       </button>
                     </td>
@@ -553,7 +553,7 @@ export default function PurchaseRequisitionForm({
                               ? `${API}/requests/${companyId}/attachments/${att.id}/download`
                               : (att.url ?? "#")}
                             target="_blank" rel="noopener noreferrer"
-                            className="text-indigo-500 hover:text-indigo-700"
+                            className="text-accent hover:text-indigo-700"
                           >
                             <ExternalLink className="h-2.5 w-2.5" />
                           </a>

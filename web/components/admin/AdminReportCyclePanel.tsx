@@ -40,7 +40,7 @@ function fmtDt(iso: string | null): string {
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mb-1 text-[8.5px] font-bold uppercase tracking-[0.1em] text-white/25">
+    <p className="mb-1 text-[8.5px] font-bold uppercase tracking-[0.1em] text-muted">
       {children}
     </p>
   );
@@ -48,8 +48,8 @@ function Label({ children }: { children: React.ReactNode }) {
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-3 py-1.5 border-b border-white/[0.04] last:border-0">
-      <span className="text-[10px] text-white/40">{label}</span>
+    <div className="flex items-center justify-between gap-3 py-1.5 border-b border-subtle last:border-0">
+      <span className="text-[10px] text-tertiary">{label}</span>
       <div className="flex items-center gap-2">{children}</div>
     </div>
   );
@@ -61,11 +61,11 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
       type="button"
       onClick={() => onChange(!value)}
       className={`relative inline-flex h-4 w-7 shrink-0 rounded-full transition-colors ${
-        value ? "bg-violet-600/60" : "bg-white/10"
+        value ? "bg-violet-600/60" : "bg-surface-2"
       }`}
     >
       <span
-        className={`absolute top-0.5 h-3 w-3 rounded-full bg-white/80 shadow transition-transform ${
+        className={`absolute top-0.5 h-3 w-3 rounded-full bg-surface-4 shadow transition-transform ${
           value ? "translate-x-3.5" : "translate-x-0.5"
         }`}
       />
@@ -86,7 +86,7 @@ function Select({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="rounded border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[10px] text-white/55 outline-none focus:border-violet-500/40"
+      className="rounded border border-default bg-surface-1 px-2 py-0.5 text-[10px] text-tertiary outline-none focus:border-violet-500/40"
     >
       {options.map((o) => (
         <option key={o.value} value={o.value}>
@@ -185,7 +185,7 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
   if (!settings) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-4 w-4 animate-spin text-white/20" />
+        <Loader2 className="h-4 w-4 animate-spin text-muted" />
       </div>
     );
   }
@@ -196,10 +196,10 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
   return (
     <div className="space-y-4">
       {/* Master toggle */}
-      <div className="flex items-center justify-between rounded border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+      <div className="flex items-center justify-between rounded border border-subtle bg-surface-1 px-3 py-2">
         <div>
-          <p className="text-[10px] font-semibold text-white/55">{t("autoReportGeneration")}</p>
-          <p className="text-[9px] text-white/28">
+          <p className="text-[10px] font-semibold text-tertiary">{t("autoReportGeneration")}</p>
+          <p className="text-[9px] text-muted">
             {settings.enabled ? t("cyclesActive") : t("cyclesDisabled")}
           </p>
         </div>
@@ -207,7 +207,7 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
       </div>
 
       {/* Schedule */}
-      <div className="rounded border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 space-y-0">
+      <div className="rounded border border-subtle bg-surface-1 px-3 py-2.5 space-y-0">
         <Label>{t("schedule")}</Label>
         <Row label={t("frequency")}>
           <Select
@@ -251,14 +251,14 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
               type="time"
               value={settings.time_of_day}
               onChange={(e) => patch("time_of_day", e.target.value)}
-              className="rounded border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[10px] text-white/55 outline-none focus:border-violet-500/40"
+              className="rounded border border-default bg-surface-1 px-2 py-0.5 text-[10px] text-tertiary outline-none focus:border-violet-500/40"
             />
           </Row>
         )}
       </div>
 
       {/* Behaviour */}
-      <div className="rounded border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 space-y-0">
+      <div className="rounded border border-subtle bg-surface-1 px-3 py-2.5 space-y-0">
         <Label>{t("behaviour")}</Label>
         <Row label={t("autoSubmitApproval")}>
           <Toggle value={settings.auto_submit} onChange={(v) => patch("auto_submit", v)} />
@@ -267,26 +267,26 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
           <input
             value={settings.bundle_statuses}
             onChange={(e) => patch("bundle_statuses", e.target.value)}
-            className="w-44 rounded border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[10px] text-white/55 outline-none focus:border-violet-500/40"
+            className="w-44 rounded border border-default bg-surface-1 px-2 py-0.5 text-[10px] text-tertiary outline-none focus:border-violet-500/40"
           />
         </Row>
         <Row label={t("reportTitleTemplate")}>
           <input
             value={settings.report_name_template}
             onChange={(e) => patch("report_name_template", e.target.value)}
-            className="w-44 rounded border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[10px] text-white/55 outline-none focus:border-violet-500/40"
+            className="w-44 rounded border border-default bg-surface-1 px-2 py-0.5 text-[10px] text-tertiary outline-none focus:border-violet-500/40"
           />
         </Row>
       </div>
 
       {/* Status */}
-      <div className="rounded border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 space-y-0">
+      <div className="rounded border border-subtle bg-surface-1 px-3 py-2.5 space-y-0">
         <Label>{t("status")}</Label>
         <Row label={t("lastRun")}>
-          <span className="text-[10px] text-white/35">{fmtDt(settings.last_run_at)}</span>
+          <span className="text-[10px] text-muted">{fmtDt(settings.last_run_at)}</span>
         </Row>
         <Row label={t("nextScheduledRun")}>
-          <span className="text-[10px] text-white/35">{fmtDt(settings.next_run_at)}</span>
+          <span className="text-[10px] text-muted">{fmtDt(settings.next_run_at)}</span>
         </Row>
       </div>
 
@@ -294,12 +294,12 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
       {lastResult && (
         <div className="rounded border border-emerald-500/20 bg-emerald-500/[0.04] px-3 py-2 space-y-0.5">
           <div className="flex items-center gap-1.5 mb-1">
-            <CheckCircle2 className="h-3 w-3 text-emerald-400/60" />
+            <CheckCircle2 className="h-3 w-3 text-success/60" />
             <span className="text-[9px] font-semibold uppercase tracking-widest text-emerald-300/55">
               {t("cycleComplete")}
             </span>
           </div>
-          <p className="text-[10px] text-emerald-200/50">
+          <p className="text-[10px] text-success/50">
             {t("reportsCreated", { count: lastResult.reports_created })}
             {" · "}
             {t("expensesBundled", { count: lastResult.expenses_bundled })}
@@ -307,7 +307,7 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
             {t("usersProcessed", { count: lastResult.users_processed })}
           </p>
           {lastResult.skipped_users > 0 && (
-            <p className="text-[9px] text-white/25">
+            <p className="text-[9px] text-muted">
               {t("usersSkipped", { count: lastResult.skipped_users })}
             </p>
           )}
@@ -316,8 +316,8 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
 
       {error && (
         <div className="flex items-start gap-1.5 rounded border border-red-500/20 bg-red-500/[0.04] px-2.5 py-2">
-          <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-red-400/60" />
-          <p className="text-[9.5px] text-red-300/60">{error}</p>
+          <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-error/60" />
+          <p className="text-[9.5px] text-error/60">{error}</p>
         </div>
       )}
 
@@ -327,7 +327,7 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
           type="button"
           onClick={handleSave}
           disabled={saving || !dirty}
-          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded border border-white/[0.1] bg-white/[0.04] px-3 py-1.5 text-[10px] font-semibold text-white/45 transition-colors hover:bg-white/[0.07] hover:text-white/60 disabled:cursor-not-allowed disabled:opacity-30"
+          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded border border-default bg-surface-2 px-3 py-1.5 text-[10px] font-semibold text-tertiary transition-colors hover:bg-surface-3 hover:text-secondary disabled:cursor-not-allowed disabled:opacity-30"
         >
           {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
           {saving ? tc("saving") : t("saveSettings")}
@@ -342,7 +342,7 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
           {triggering ? t("running") : t("runNow")}
         </button>
       </div>
-      <p className="text-[8px] text-white/15">
+      <p className="text-[8px] text-muted">
         {t("templateTokensNote", { user: "{user}", month: "{month}", year: "{year}", date: "{date}" })}
       </p>
     </div>

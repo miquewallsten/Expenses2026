@@ -65,7 +65,7 @@ export default function AnomalyBanner({
   const Icon = hasAlert ? AlertTriangle : Info;
   const tone = hasAlert
     ? "border-red-500/25 bg-red-500/[0.07] text-red-200/85"
-    : "border-amber-500/25 bg-amber-500/[0.07] text-amber-200/85";
+    : "border-amber-500/25 bg-amber-500/[0.07] text-warning/85";
 
   return (
     <div className={`rounded-md border px-2.5 py-1.5 text-[10.5px] ${tone}`}>
@@ -79,7 +79,7 @@ export default function AnomalyBanner({
             <button
               type="button"
               onClick={() => setDismissed(true)}
-              className="text-[9px] text-white/35 hover:text-white/65"
+              className="text-[9px] text-muted hover:text-secondary"
             >
               {t("dismiss")}
             </button>

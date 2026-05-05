@@ -413,9 +413,9 @@ export default function AdminCompanySetupCopilot({
 
       {/* Header */}
       <div className="flex items-center gap-2">
-        <Bot className="h-4 w-4 shrink-0 text-indigo-400/55" />
-        <span className="text-[11px] font-semibold text-white/45">{t("copilotTitle")}</span>
-        <span className="ml-auto rounded border border-indigo-500/15 bg-indigo-500/[0.06] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-indigo-300/40">
+        <Bot className="h-4 w-4 shrink-0 text-accent/55" />
+        <span className="text-[11px] font-semibold text-tertiary">{t("copilotTitle")}</span>
+        <span className="ml-auto rounded border border-blue-500/15 bg-blue-500/[0.06] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-accent/40">
           {t("copilotAi")}
         </span>
       </div>
@@ -433,11 +433,11 @@ export default function AdminCompanySetupCopilot({
               }`}
             >
               {issue.level === "critical"
-                ? <AlertCircle   className="mt-0.5 h-2.5 w-2.5 shrink-0 text-red-400/60" />
-                : <AlertTriangle className="mt-0.5 h-2.5 w-2.5 shrink-0 text-amber-400/55" />
+                ? <AlertCircle   className="mt-0.5 h-2.5 w-2.5 shrink-0 text-error/60" />
+                : <AlertTriangle className="mt-0.5 h-2.5 w-2.5 shrink-0 text-warning/55" />
               }
               <p className={`text-[9.5px] leading-snug ${
-                issue.level === "critical" ? "text-red-300/65" : "text-amber-300/65"
+                issue.level === "critical" ? "text-error/65" : "text-warning/65"
               }`}>{issue.text}</p>
             </div>
           ))}
@@ -452,13 +452,13 @@ export default function AdminCompanySetupCopilot({
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
           placeholder={t("promptPlaceholder")}
-          className="w-full resize-none rounded border border-white/[0.08] bg-white/[0.03] px-2.5 py-2 text-[10px] text-white/55 placeholder-white/18 outline-none focus:border-indigo-500/35"
+          className="w-full resize-none rounded border border-default bg-surface-1 px-2.5 py-2 text-[10px] text-tertiary placeholder-white/18 outline-none focus:bg-accent-muted"
         />
         <button
           type="button"
           onClick={handleSubmit}
           disabled={loading || !prompt.trim()}
-          className="inline-flex w-full items-center justify-center gap-1.5 rounded border border-indigo-500/25 bg-indigo-600/15 px-3 py-1.5 text-[10px] font-semibold text-indigo-300/70 transition-colors hover:bg-indigo-600/25 disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex w-full items-center justify-center gap-1.5 rounded border bg-accent-muted-muted bg-blue-600/15 px-3 py-1.5 text-[10px] font-semibold text-accent/70 transition-colors hover:bg-blue-600/25 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
           {loading ? t("analysing") : t("analyse")}
@@ -467,7 +467,7 @@ export default function AdminCompanySetupCopilot({
 
       {/* B — Quick prompts */}
       <div>
-        <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/20">{t("quickPrompts")}</p>
+        <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-muted">{t("quickPrompts")}</p>
         <div className="flex flex-wrap gap-1">
           {QUICK_PROMPTS.map(({ label, text }) => (
             <button
@@ -475,7 +475,7 @@ export default function AdminCompanySetupCopilot({
               type="button"
               disabled={loading}
               onClick={() => handleQuick(text)}
-              className="rounded border border-white/[0.07] bg-white/[0.02] px-2 py-0.5 text-[9px] text-white/30 transition-colors hover:border-white/[0.14] hover:text-white/50 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded border border-default bg-surface-1 px-2 py-0.5 text-[9px] text-muted transition-colors hover:border-default hover:text-secondary disabled:cursor-not-allowed disabled:opacity-40"
             >
               {label}
             </button>
@@ -485,8 +485,8 @@ export default function AdminCompanySetupCopilot({
 
       {/* Offline fallback */}
       {offline && (
-        <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
-          <p className="text-[10px] text-white/30">
+        <div className="rounded border border-default bg-surface-1 px-3 py-2.5">
+          <p className="text-[10px] text-muted">
             {t("offlineMsg")}
           </p>
         </div>
@@ -495,7 +495,7 @@ export default function AdminCompanySetupCopilot({
       {/* Parse error */}
       {parseError && (
         <div className="rounded border border-amber-500/15 bg-amber-500/[0.04] px-3 py-2">
-          <p className="text-[10px] text-amber-300/50">{t("parseErrorMsg")}</p>
+          <p className="text-[10px] text-warning/50">{t("parseErrorMsg")}</p>
         </div>
       )}
 
@@ -504,25 +504,25 @@ export default function AdminCompanySetupCopilot({
         <div className="space-y-3">
 
           {/* Summary */}
-          <div className="rounded border border-indigo-500/[0.12] bg-indigo-500/[0.04] px-3 py-2.5">
-            <p className="mb-0.5 text-[9px] font-bold uppercase tracking-widest text-indigo-300/40">{t("resultSummary")}</p>
-            <p className="text-[10px] leading-snug text-white/40">{result.summary}</p>
+          <div className="rounded border border-blue-500/[0.12] bg-accent-muted px-3 py-2.5">
+            <p className="mb-0.5 text-[9px] font-bold uppercase tracking-widest text-accent/40">{t("resultSummary")}</p>
+            <p className="text-[10px] leading-snug text-tertiary">{result.summary}</p>
           </div>
 
           {/* Company profile */}
           {(result.company_profile.company_type || result.company_profile.operating_notes.length > 0) && (
-            <div className="overflow-hidden rounded border border-white/[0.07]">
-              <div className="border-b border-white/[0.05] bg-black/15 px-3 py-1.5">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-white/22">{t("companyProfileLabel")}</p>
+            <div className="overflow-hidden rounded border border-default">
+              <div className="border-b border-subtle bg-black/15 px-3 py-1.5">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-muted">{t("companyProfileLabel")}</p>
               </div>
               <div className="px-3 py-2.5 space-y-1">
                 {result.company_profile.company_type && (
-                  <p className="text-[10px] text-white/50">
-                    <span className="text-white/25">{t("profileTypeLabel")} </span>{result.company_profile.company_type}
+                  <p className="text-[10px] text-secondary">
+                    <span className="text-muted">{t("profileTypeLabel")} </span>{result.company_profile.company_type}
                   </p>
                 )}
                 {result.company_profile.operating_notes.map((note, i) => (
-                  <p key={i} className="text-[10px] text-white/38 leading-snug">· {note}</p>
+                  <p key={i} className="text-[10px] text-muted leading-snug">· {note}</p>
                 ))}
               </div>
             </div>
@@ -530,16 +530,16 @@ export default function AdminCompanySetupCopilot({
 
           {/* Setup patch */}
           {setupPatchEntries.length > 0 && (
-            <div className="overflow-hidden rounded border border-white/[0.07]">
-              <div className="border-b border-white/[0.05] bg-black/15 px-3 py-1.5">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-white/22">
+            <div className="overflow-hidden rounded border border-default">
+              <div className="border-b border-subtle bg-black/15 px-3 py-1.5">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-muted">
                   {t("suggestedChanges")}
                 </p>
               </div>
               {setupPatchEntries.map(([k, v]) => (
-                <div key={k} className="flex items-center justify-between gap-3 border-b border-white/[0.04] px-3 py-2 last:border-0">
-                  <span className="text-[10px] text-white/38">{SETUP_PATCH_LABELS[k] ?? k}</span>
-                  <span className="font-mono text-[10px] text-indigo-300/70">{patchValueLabel(v, t("valueOn"), t("valueOff"))}</span>
+                <div key={k} className="flex items-center justify-between gap-3 border-b border-subtle px-3 py-2 last:border-0">
+                  <span className="text-[10px] text-muted">{SETUP_PATCH_LABELS[k] ?? k}</span>
+                  <span className="font-mono text-[10px] text-accent/70">{patchValueLabel(v, t("valueOn"), t("valueOff"))}</span>
                 </div>
               ))}
             </div>
@@ -547,22 +547,22 @@ export default function AdminCompanySetupCopilot({
 
           {/* Expense Policy suggestion card */}
           {policyPatchLines.length > 0 && (
-            <div className="overflow-hidden rounded border border-sky-500/[0.10] bg-sky-500/[0.03]">
+            <div className="overflow-hidden rounded border border-sky-500/[0.10] bg-accent/[0.03]">
               <div className="border-b border-sky-500/[0.08] bg-black/10 px-3 py-1.5">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-sky-300/40">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-accent/40">
                   {t("alsoForPolicy")}
                 </p>
               </div>
               <div className="px-3 py-2 space-y-1">
                 {policyPatchLines.map((line, i) => (
-                  <p key={i} className="text-[10px] text-white/35 leading-snug">· {line}</p>
+                  <p key={i} className="text-[10px] text-muted leading-snug">· {line}</p>
                 ))}
               </div>
               <div className="border-t border-sky-500/[0.06] px-3 py-1.5">
-                <p className="text-[9px] text-white/20">
+                <p className="text-[9px] text-muted">
                   {t.rich("alsoForPolicyHint", {
                     accent: (chunks) => (
-                      <span className="text-sky-300/40">{chunks}</span>
+                      <span className="text-accent/40">{chunks}</span>
                     ),
                   })}
                 </p>
@@ -572,16 +572,16 @@ export default function AdminCompanySetupCopilot({
 
           {/* Legal entity suggestions */}
           {result.legal_entity_suggestions.length > 0 && (
-            <div className="overflow-hidden rounded border border-white/[0.07]">
-              <div className="border-b border-white/[0.05] bg-black/15 px-3 py-1.5">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-white/22">
+            <div className="overflow-hidden rounded border border-default">
+              <div className="border-b border-subtle bg-black/15 px-3 py-1.5">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-muted">
                   {t("recommendedEntities")}
                 </p>
               </div>
               {result.legal_entity_suggestions.map((e, i) => (
-                <div key={i} className="border-b border-white/[0.04] px-3 py-2.5 last:border-0">
-                  <p className="text-[11px] font-medium text-white/55">{e.entity_name}</p>
-                  <p className="mt-0.5 text-[9px] text-white/28">
+                <div key={i} className="border-b border-subtle px-3 py-2.5 last:border-0">
+                  <p className="text-[11px] font-medium text-tertiary">{e.entity_name}</p>
+                  <p className="mt-0.5 text-[9px] text-muted">
                     {[
                       e.country_code,
                       e.base_currency,
@@ -598,11 +598,11 @@ export default function AdminCompanySetupCopilot({
           {/* Risks */}
           {result.risks.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-white/20">{t("riskNotes")}</p>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-muted">{t("riskNotes")}</p>
               {result.risks.map((r, i) => (
                 <div key={i} className="flex items-start gap-2 rounded border border-amber-500/[0.10] bg-amber-500/[0.03] px-3 py-2">
-                  <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-amber-400/45" />
-                  <p className="text-[10px] leading-snug text-amber-300/55">{r}</p>
+                  <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-warning/45" />
+                  <p className="text-[10px] leading-snug text-warning/55">{r}</p>
                 </div>
               ))}
             </div>
@@ -614,7 +614,7 @@ export default function AdminCompanySetupCopilot({
               type="button"
               onClick={handleApply}
               disabled={applied}
-              className="inline-flex w-full items-center justify-center gap-1.5 rounded border border-indigo-500/30 bg-indigo-600/20 px-3 py-1.5 text-[10px] font-semibold text-indigo-300/80 transition-colors hover:bg-indigo-600/30 disabled:opacity-40"
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded border bg-accent-muted bg-accent-muted px-3 py-1.5 text-[10px] font-semibold text-accent transition-colors hover:bg-accent-muted disabled:opacity-40"
             >
               {applied
                 ? <><CheckCircle2 className="h-3 w-3" /> {t("draftApplied")}</>

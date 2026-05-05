@@ -274,9 +274,9 @@ export default function PlatformApiSection() {
 
   if (!companyId) {
     return (
-      <main className="min-h-screen bg-zinc-950 text-zinc-100">
+      <main className="min-h-screen bg-surface-0 text-primary">
         <div className="mx-auto max-w-5xl px-6 py-10">
-          <div className="rounded border border-amber-500/20 bg-amber-500/[0.05] p-4 text-[12px] text-amber-200/80">
+          <div className="rounded border border-amber-500/20 bg-amber-500/[0.05] p-4 text-[12px] text-warning/80">
             {t("noCompany")}
           </div>
         </div>
@@ -285,23 +285,23 @@ export default function PlatformApiSection() {
   }
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-100">
+    <main className="min-h-screen bg-surface-0 text-primary">
       <div className="mx-auto max-w-5xl px-6 py-6">
         {/* Header */}
         <div className="mb-5 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
               <KeyRound className="h-3.5 w-3.5 text-cyan-300/70" />
-              <h1 className="text-[12px] font-semibold uppercase tracking-[0.08em] text-white/85">
+              <h1 className="text-[12px] font-semibold uppercase tracking-[0.08em] text-primary">
                 {t("title")}
               </h1>
             </div>
           </div>
-          <div className="text-[10px] text-white/30">{t("subtitle")}</div>
+          <div className="text-[10px] text-muted">{t("subtitle")}</div>
         </div>
 
         {error && (
-          <div className="mb-3 flex items-start gap-2 rounded border border-rose-500/30 bg-rose-500/[0.06] px-3 py-2 text-[10.5px] text-rose-200/85">
+          <div className="mb-3 flex items-start gap-2 rounded border border-error bg-rose-500/[0.06] px-3 py-2 text-[10.5px] text-rose-200/85">
             <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
             <span className="break-all">{error}</span>
           </div>
@@ -309,7 +309,7 @@ export default function PlatformApiSection() {
 
         {/* Reveal banner — plaintext key */}
         {revealedKey && (
-          <div className="mb-5 rounded border border-cyan-500/30 bg-cyan-500/[0.06] p-3">
+          <div className="mb-5 rounded border border-cyan-500/30 bg-accent/[0.06] p-3">
             <div className="mb-1 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wide text-cyan-200/85">
               <span>{t("keys.revealHeader")}</span>
               <button
@@ -321,14 +321,14 @@ export default function PlatformApiSection() {
               </button>
             </div>
             <p className="mb-2 text-[10px] text-cyan-200/55">{t("keys.revealBody")}</p>
-            <div className="flex items-center gap-2 rounded border border-cyan-500/20 bg-zinc-950/60 px-2 py-1.5">
+            <div className="flex items-center gap-2 rounded border border-cyan-500/20 bg-surface-0/60 px-2 py-1.5">
               <code className="flex-1 break-all font-mono text-[11px] text-cyan-100">
                 {revealedKey}
               </code>
               <button
                 type="button"
                 onClick={() => copy(revealedKey)}
-                className="flex items-center gap-1 rounded border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] text-white/65 transition hover:border-white/20 hover:text-white/85"
+                className="flex items-center gap-1 rounded border border-subtle bg-surface-2 px-2 py-1 text-[10px] text-secondary transition hover:border-strong hover:text-primary"
               >
                 {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
                 {copied ? t("copied") : t("copy")}
@@ -340,14 +340,14 @@ export default function PlatformApiSection() {
         {/* ── API Keys ─────────────────────────────────────────────────── */}
         <section className="mb-7">
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-white/60">
+            <h2 className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-secondary">
               {t("keys.title")}
             </h2>
             <button
               type="button"
               onClick={() => companyId && void loadKeys(companyId)}
               disabled={keysLoading}
-              className="flex items-center gap-1 rounded border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] text-white/55 transition hover:border-white/20 hover:text-white/80 disabled:opacity-50"
+              className="flex items-center gap-1 rounded border border-subtle bg-surface-2 px-2 py-1 text-[10px] text-tertiary transition hover:border-strong hover:text-secondary disabled:opacity-50"
             >
               {keysLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
               {t("refresh")}
@@ -355,10 +355,10 @@ export default function PlatformApiSection() {
           </div>
 
           {/* New key form */}
-          <div className="mb-3 rounded border border-white/[0.07] bg-white/[0.02] p-3">
+          <div className="mb-3 rounded border border-default bg-surface-1 p-3">
             <div className="mb-2 grid grid-cols-1 gap-2 md:grid-cols-3">
               <label className="flex flex-col gap-1">
-                <span className="text-[9.5px] uppercase tracking-wide text-white/35">
+                <span className="text-[9.5px] uppercase tracking-wide text-muted">
                   {t("keys.name")}
                 </span>
                 <input
@@ -366,11 +366,11 @@ export default function PlatformApiSection() {
                   value={keyName}
                   onChange={(e) => setKeyName(e.target.value)}
                   placeholder="ERP Bridge"
-                  className="rounded border border-white/[0.08] bg-zinc-950 px-2 py-1 text-[11px] text-white/85 outline-none focus:border-cyan-500/40"
+                  className="rounded border border-default bg-surface-0 px-2 py-1 text-[11px] text-primary outline-none focus:border-cyan-500/40"
                 />
               </label>
               <div className="flex flex-col gap-1 md:col-span-2">
-                <span className="text-[9.5px] uppercase tracking-wide text-white/35">
+                <span className="text-[9.5px] uppercase tracking-wide text-muted">
                   {t("keys.scopes")}
                 </span>
                 <div className="flex flex-wrap gap-1">
@@ -383,8 +383,8 @@ export default function PlatformApiSection() {
                         onClick={() => toggleScope(s)}
                         className={`rounded border px-1.5 py-0.5 font-mono text-[10px] transition ${
                           on
-                            ? "border-cyan-500/40 bg-cyan-500/[0.10] text-cyan-200/90"
-                            : "border-white/10 bg-white/[0.03] text-white/45 hover:border-white/20 hover:text-white/70"
+                            ? "border-cyan-500/40 bg-accent/[0.10] text-cyan-200/90"
+                            : "border-subtle bg-surface-1 text-tertiary hover:border-strong hover:text-secondary"
                         }`}
                       >
                         {s}
@@ -398,7 +398,7 @@ export default function PlatformApiSection() {
               type="button"
               onClick={() => void createKey()}
               disabled={busyId === "new-key" || !keyName.trim() || keyScopes.length === 0}
-              className="flex items-center gap-1 rounded border border-cyan-500/40 bg-cyan-500/[0.10] px-3 py-1 text-[10.5px] font-medium text-cyan-200/90 transition hover:bg-cyan-500/[0.18] disabled:opacity-40"
+              className="flex items-center gap-1 rounded border border-cyan-500/40 bg-accent/[0.10] px-3 py-1 text-[10.5px] font-medium text-cyan-200/90 transition hover:bg-accent/[0.18] disabled:opacity-40"
             >
               {busyId === "new-key" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
               {t("keys.create")}
@@ -407,18 +407,18 @@ export default function PlatformApiSection() {
 
           {/* Keys table */}
           {keysLoading ? (
-            <div className="flex items-center gap-2 py-6 text-[11px] text-white/30">
+            <div className="flex items-center gap-2 py-6 text-[11px] text-muted">
               <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("loading")}
             </div>
           ) : keys.length === 0 ? (
-            <div className="rounded border border-white/[0.07] bg-white/[0.02] py-8 text-center text-[11px] text-white/35">
+            <div className="rounded border border-default bg-surface-1 py-8 text-center text-[11px] text-muted">
               {t("keys.empty")}
             </div>
           ) : (
-            <div className="overflow-hidden rounded border border-white/[0.07]">
+            <div className="overflow-hidden rounded border border-default">
               <table className="w-full text-[10.5px]">
                 <thead>
-                  <tr className="border-b border-white/[0.07] bg-white/[0.02] text-left text-[9.5px] uppercase tracking-wide text-white/35">
+                  <tr className="border-b border-default bg-surface-1 text-left text-[9.5px] uppercase tracking-wide text-muted">
                     <th className="px-2 py-1.5 font-medium">{t("keys.th.name")}</th>
                     <th className="px-2 py-1.5 font-medium">{t("keys.th.prefix")}</th>
                     <th className="px-2 py-1.5 font-medium">{t("keys.th.scopes")}</th>
@@ -429,22 +429,22 @@ export default function PlatformApiSection() {
                 </thead>
                 <tbody>
                   {keys.map((k) => (
-                    <tr key={k.id} className="border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.02]">
-                      <td className="px-2 py-1.5 text-white/80">{k.name}</td>
-                      <td className="px-2 py-1.5 font-mono text-white/55">{k.key_prefix}…</td>
+                    <tr key={k.id} className="border-b border-subtle last:border-b-0 hover:bg-surface-1">
+                      <td className="px-2 py-1.5 text-secondary">{k.name}</td>
+                      <td className="px-2 py-1.5 font-mono text-tertiary">{k.key_prefix}…</td>
                       <td className="px-2 py-1.5">
                         <div className="flex flex-wrap gap-1">
                           {k.scopes.map((s) => (
                             <span
                               key={s}
-                              className="rounded bg-white/[0.06] px-1 py-0 font-mono text-[9.5px] text-white/55"
+                              className="rounded bg-surface-2 px-1 py-0 font-mono text-[9.5px] text-tertiary"
                             >
                               {s}
                             </span>
                           ))}
                         </div>
                       </td>
-                      <td className="px-2 py-1.5 text-white/40">
+                      <td className="px-2 py-1.5 text-tertiary">
                         {k.last_used_at ? new Date(k.last_used_at).toLocaleString() : "—"}
                       </td>
                       <td className="px-2 py-1.5">
@@ -464,7 +464,7 @@ export default function PlatformApiSection() {
                             type="button"
                             onClick={() => void revokeKey(k)}
                             disabled={busyId === `key-${k.id}`}
-                            className="rounded border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[10px] text-rose-300/80 transition hover:border-rose-500/40 hover:bg-rose-500/[0.10] disabled:opacity-40"
+                            className="rounded border border-subtle bg-surface-2 px-1.5 py-0.5 text-[10px] text-rose-300/80 transition hover:border-rose-500/40 hover:bg-rose-500/[0.10] disabled:opacity-40"
                           >
                             {busyId === `key-${k.id}` ? (
                               <Loader2 className="h-3 w-3 animate-spin" />
@@ -485,15 +485,15 @@ export default function PlatformApiSection() {
         {/* ── Webhooks ─────────────────────────────────────────────────── */}
         <section>
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-white/60">
-              <Webhook className="h-3 w-3 text-white/40" />
+            <h2 className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-secondary">
+              <Webhook className="h-3 w-3 text-tertiary" />
               {t("webhooks.title")}
             </h2>
             <button
               type="button"
               onClick={() => companyId && void loadHooks(companyId)}
               disabled={hooksLoading}
-              className="flex items-center gap-1 rounded border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] text-white/55 transition hover:border-white/20 hover:text-white/80 disabled:opacity-50"
+              className="flex items-center gap-1 rounded border border-subtle bg-surface-2 px-2 py-1 text-[10px] text-tertiary transition hover:border-strong hover:text-secondary disabled:opacity-50"
             >
               {hooksLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
               {t("refresh")}
@@ -502,7 +502,7 @@ export default function PlatformApiSection() {
 
           {/* Reveal banner — webhook secret */}
           {revealedSecret && (
-            <div className="mb-3 rounded border border-cyan-500/30 bg-cyan-500/[0.06] p-3">
+            <div className="mb-3 rounded border border-cyan-500/30 bg-accent/[0.06] p-3">
               <div className="mb-1 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wide text-cyan-200/85">
                 <span>{t("webhooks.revealHeader")}</span>
                 <button
@@ -514,14 +514,14 @@ export default function PlatformApiSection() {
                 </button>
               </div>
               <p className="mb-2 text-[10px] text-cyan-200/55">{t("webhooks.revealBody")}</p>
-              <div className="flex items-center gap-2 rounded border border-cyan-500/20 bg-zinc-950/60 px-2 py-1.5">
+              <div className="flex items-center gap-2 rounded border border-cyan-500/20 bg-surface-0/60 px-2 py-1.5">
                 <code className="flex-1 break-all font-mono text-[11px] text-cyan-100">
                   {revealedSecret}
                 </code>
                 <button
                   type="button"
                   onClick={() => copy(revealedSecret)}
-                  className="flex items-center gap-1 rounded border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] text-white/65 transition hover:border-white/20 hover:text-white/85"
+                  className="flex items-center gap-1 rounded border border-subtle bg-surface-2 px-2 py-1 text-[10px] text-secondary transition hover:border-strong hover:text-primary"
                 >
                   {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
                   {copied ? t("copied") : t("copy")}
@@ -531,16 +531,16 @@ export default function PlatformApiSection() {
           )}
 
           {/* New webhook form */}
-          <div className="mb-3 rounded border border-white/[0.07] bg-white/[0.02] p-3">
+          <div className="mb-3 rounded border border-default bg-surface-1 p-3">
             <div className="mb-2 grid grid-cols-1 gap-2 md:grid-cols-3">
               <label className="flex flex-col gap-1">
-                <span className="text-[9.5px] uppercase tracking-wide text-white/35">
+                <span className="text-[9.5px] uppercase tracking-wide text-muted">
                   {t("webhooks.event")}
                 </span>
                 <select
                   value={hookEvent}
                   onChange={(e) => setHookEvent(e.target.value)}
-                  className="rounded border border-white/[0.08] bg-zinc-950 px-2 py-1 font-mono text-[11px] text-white/85 outline-none focus:border-cyan-500/40"
+                  className="rounded border border-default bg-surface-0 px-2 py-1 font-mono text-[11px] text-primary outline-none focus:border-cyan-500/40"
                 >
                   {EVENT_PRESETS.map((e) => (
                     <option key={e} value={e}>{e}</option>
@@ -548,7 +548,7 @@ export default function PlatformApiSection() {
                 </select>
               </label>
               <label className="flex flex-col gap-1 md:col-span-2">
-                <span className="text-[9.5px] uppercase tracking-wide text-white/35">
+                <span className="text-[9.5px] uppercase tracking-wide text-muted">
                   {t("webhooks.targetUrl")}
                 </span>
                 <input
@@ -556,18 +556,18 @@ export default function PlatformApiSection() {
                   value={hookUrl}
                   onChange={(e) => setHookUrl(e.target.value)}
                   placeholder="https://erp.example.com/webhooks/foplat"
-                  className="rounded border border-white/[0.08] bg-zinc-950 px-2 py-1 text-[11px] text-white/85 outline-none focus:border-cyan-500/40"
+                  className="rounded border border-default bg-surface-0 px-2 py-1 text-[11px] text-primary outline-none focus:border-cyan-500/40"
                 />
               </label>
               <label className="flex flex-col gap-1 md:col-span-3">
-                <span className="text-[9.5px] uppercase tracking-wide text-white/35">
+                <span className="text-[9.5px] uppercase tracking-wide text-muted">
                   {t("webhooks.description")}
                 </span>
                 <input
                   type="text"
                   value={hookDesc}
                   onChange={(e) => setHookDesc(e.target.value)}
-                  className="rounded border border-white/[0.08] bg-zinc-950 px-2 py-1 text-[11px] text-white/85 outline-none focus:border-cyan-500/40"
+                  className="rounded border border-default bg-surface-0 px-2 py-1 text-[11px] text-primary outline-none focus:border-cyan-500/40"
                 />
               </label>
             </div>
@@ -575,7 +575,7 @@ export default function PlatformApiSection() {
               type="button"
               onClick={() => void createHook()}
               disabled={busyId === "new-hook" || !hookUrl.trim()}
-              className="flex items-center gap-1 rounded border border-cyan-500/40 bg-cyan-500/[0.10] px-3 py-1 text-[10.5px] font-medium text-cyan-200/90 transition hover:bg-cyan-500/[0.18] disabled:opacity-40"
+              className="flex items-center gap-1 rounded border border-cyan-500/40 bg-accent/[0.10] px-3 py-1 text-[10.5px] font-medium text-cyan-200/90 transition hover:bg-accent/[0.18] disabled:opacity-40"
             >
               {busyId === "new-hook" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
               {t("webhooks.create")}
@@ -584,18 +584,18 @@ export default function PlatformApiSection() {
 
           {/* Webhooks table */}
           {hooksLoading ? (
-            <div className="flex items-center gap-2 py-6 text-[11px] text-white/30">
+            <div className="flex items-center gap-2 py-6 text-[11px] text-muted">
               <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("loading")}
             </div>
           ) : hooks.length === 0 ? (
-            <div className="rounded border border-white/[0.07] bg-white/[0.02] py-8 text-center text-[11px] text-white/35">
+            <div className="rounded border border-default bg-surface-1 py-8 text-center text-[11px] text-muted">
               {t("webhooks.empty")}
             </div>
           ) : (
-            <div className="overflow-hidden rounded border border-white/[0.07]">
+            <div className="overflow-hidden rounded border border-default">
               <table className="w-full text-[10.5px]">
                 <thead>
-                  <tr className="border-b border-white/[0.07] bg-white/[0.02] text-left text-[9.5px] uppercase tracking-wide text-white/35">
+                  <tr className="border-b border-default bg-surface-1 text-left text-[9.5px] uppercase tracking-wide text-muted">
                     <th className="px-2 py-1.5 font-medium">{t("webhooks.th.event")}</th>
                     <th className="px-2 py-1.5 font-medium">{t("webhooks.th.target")}</th>
                     <th className="px-2 py-1.5 font-medium">{t("webhooks.th.secret")}</th>
@@ -605,22 +605,22 @@ export default function PlatformApiSection() {
                 </thead>
                 <tbody>
                   {hooks.map((h) => (
-                    <tr key={h.id} className="border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.02]">
-                      <td className="px-2 py-1.5 font-mono text-white/75">{h.event_type}</td>
+                    <tr key={h.id} className="border-b border-subtle last:border-b-0 hover:bg-surface-1">
+                      <td className="px-2 py-1.5 font-mono text-secondary">{h.event_type}</td>
                       <td className="px-2 py-1.5">
-                        <div className="font-mono text-white/65 break-all">{h.target_url}</div>
+                        <div className="font-mono text-secondary break-all">{h.target_url}</div>
                         {h.description && (
-                          <div className="text-[9.5px] text-white/35">{h.description}</div>
+                          <div className="text-[9.5px] text-muted">{h.description}</div>
                         )}
                       </td>
-                      <td className="px-2 py-1.5 font-mono text-white/45">{h.secret_preview}</td>
+                      <td className="px-2 py-1.5 font-mono text-tertiary">{h.secret_preview}</td>
                       <td className="px-2 py-1.5">
                         {h.is_enabled ? (
                           <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[9.5px] text-emerald-300">
                             {t("webhooks.statusEnabled")}
                           </span>
                         ) : (
-                          <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-[9.5px] text-white/45">
+                          <span className="rounded bg-surface-2 px-1.5 py-0.5 text-[9.5px] text-tertiary">
                             {t("webhooks.statusDisabled")}
                           </span>
                         )}
@@ -631,7 +631,7 @@ export default function PlatformApiSection() {
                             type="button"
                             onClick={() => void toggleHook(h)}
                             disabled={busyId === `hook-${h.id}`}
-                            className="rounded border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[10px] text-white/65 transition hover:border-white/20 hover:text-white/85 disabled:opacity-40"
+                            className="rounded border border-subtle bg-surface-2 px-1.5 py-0.5 text-[10px] text-secondary transition hover:border-strong hover:text-primary disabled:opacity-40"
                             title={h.is_enabled ? t("webhooks.disable") : t("webhooks.enable")}
                           >
                             {busyId === `hook-${h.id}` ? (
@@ -646,7 +646,7 @@ export default function PlatformApiSection() {
                             type="button"
                             onClick={() => void deleteHook(h)}
                             disabled={busyId === `hook-${h.id}`}
-                            className="rounded border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[10px] text-rose-300/80 transition hover:border-rose-500/40 hover:bg-rose-500/[0.10] disabled:opacity-40"
+                            className="rounded border border-subtle bg-surface-2 px-1.5 py-0.5 text-[10px] text-rose-300/80 transition hover:border-rose-500/40 hover:bg-rose-500/[0.10] disabled:opacity-40"
                             title={t("webhooks.delete")}
                           >
                             <Trash2 className="h-3 w-3" />

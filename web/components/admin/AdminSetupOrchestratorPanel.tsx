@@ -256,9 +256,9 @@ function getFixHint(
 }
 
 const COMPLEXITY_COLOR: Record<string, string> = {
-  simple:  "text-emerald-400/60 border-emerald-500/20 bg-emerald-500/[0.05]",
-  medium:  "text-amber-400/60  border-amber-500/20  bg-amber-500/[0.05]",
-  complex: "text-red-400/60    border-red-500/20    bg-red-500/[0.05]",
+  simple:  "text-success/60 border-emerald-500/20 bg-emerald-500/[0.05]",
+  medium:  "text-warning/60  border-amber-500/20  bg-amber-500/[0.05]",
+  complex: "text-error/60    border-red-500/20    bg-red-500/[0.05]",
 };
 
 // ── Operational impact derivation ────────────────────────────────────────────
@@ -358,7 +358,7 @@ function deriveOperationalImpact(
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-white/20">
+    <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-muted">
       {children}
     </p>
   );
@@ -386,12 +386,12 @@ function CollapsibleSection({
       >
         <SectionLabel>{label}</SectionLabel>
         <span className="flex items-center gap-1">
-          <span className="rounded border border-white/[0.07] bg-white/[0.03] px-1 py-0 text-[9px] text-white/30">
+          <span className="rounded border border-default bg-surface-1 px-1 py-0 text-[9px] text-muted">
             {count}
           </span>
           {open
-            ? <ChevronDown className="h-2.5 w-2.5 text-white/20" />
-            : <ChevronRight className="h-2.5 w-2.5 text-white/20" />
+            ? <ChevronDown className="h-2.5 w-2.5 text-muted" />
+            : <ChevronRight className="h-2.5 w-2.5 text-muted" />
           }
         </span>
       </button>
@@ -615,12 +615,12 @@ export default function AdminSetupOrchestratorPanel({
           {hasAnalysis && (
           <div className="flex items-center gap-2">
             <span className={`rounded border px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest ${
-              result.engine_mode === "DIAGNOSE" ? "border-indigo-500/20 bg-indigo-500/[0.06] text-indigo-300/55"
+              result.engine_mode === "DIAGNOSE" ? "border-blue-500/20 bg-blue-500/[0.06] text-accent/55"
               : result.engine_mode === "ADAPT"  ? "border-emerald-500/20 bg-emerald-500/[0.06] text-emerald-300/55"
               :                                   "border-violet-500/20 bg-violet-500/[0.06] text-violet-300/55"
             }`}>{result.engine_mode ?? "CONFIGURE"}</span>
             {result.company_profile?.company_type && (
-              <span className="text-[9px] text-white/25">{result.company_profile.company_type}</span>
+              <span className="text-[9px] text-muted">{result.company_profile.company_type}</span>
             )}
             <span className={`ml-auto rounded border px-1.5 py-0.5 text-[8px] font-semibold capitalize ${
               COMPLEXITY_COLOR[result.company_profile?.complexity] ?? COMPLEXITY_COLOR.simple
@@ -628,15 +628,15 @@ export default function AdminSetupOrchestratorPanel({
           </div>
           )}
           {(result.understanding || result.summary) && (
-            <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2.5">
-              <p className="text-[10px] leading-relaxed text-white/50">{result.understanding ?? result.summary}</p>
+            <div className="rounded border border-default bg-surface-1 px-3 py-2.5">
+              <p className="text-[10px] leading-relaxed text-secondary">{result.understanding ?? result.summary}</p>
             </div>
           )}
           {(result.company_profile?.notes?.length ?? 0) > 0 && hasAnalysis && (
             <ul className="space-y-0.5 px-0.5">
               {result.company_profile.notes.map((n, i) => (
-                <li key={i} className="flex items-start gap-1.5 text-[10px] text-white/30">
-                  <span className="mt-0.5 text-white/18">·</span>{n}
+                <li key={i} className="flex items-start gap-1.5 text-[10px] text-muted">
+                  <span className="mt-0.5 text-muted">·</span>{n}
                 </li>
               ))}
             </ul>
@@ -650,7 +650,7 @@ export default function AdminSetupOrchestratorPanel({
 
           if (st?.status === "done") return (
             <div key={action.action_id} className="flex items-center gap-2 rounded border border-emerald-500/20 bg-emerald-500/[0.04] px-2.5 py-2">
-              <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-400/60" />
+              <CheckCircle2 className="h-3 w-3 shrink-0 text-success/60" />
               <div className="min-w-0">
                 <p className="text-[10px] text-emerald-300/70">{action.label}</p>
                 {st.result && (
@@ -668,11 +668,11 @@ export default function AdminSetupOrchestratorPanel({
               ? (Array.isArray(draft.users) ? draft.users : [{ full_name: draft.full_name ?? "", email: "", role: draft.role ?? "employee" }])
               : [draft];
             return (
-              <div key={action.action_id} className="rounded border border-white/[0.08] bg-white/[0.02] px-3 py-2.5 space-y-2.5">
+              <div key={action.action_id} className="rounded border border-default bg-surface-1 px-3 py-2.5 space-y-2.5">
                 <div className="flex items-center gap-2">
-                  <UserPlus className="h-3 w-3 shrink-0 text-white/30" />
-                  <p className="flex-1 text-[10px] font-medium text-white/60">{action.label}</p>
-                  {st?.status === "running" && <Loader2 className="h-3 w-3 shrink-0 animate-spin text-white/30" />}
+                  <UserPlus className="h-3 w-3 shrink-0 text-muted" />
+                  <p className="flex-1 text-[10px] font-medium text-secondary">{action.label}</p>
+                  {st?.status === "running" && <Loader2 className="h-3 w-3 shrink-0 animate-spin text-muted" />}
                 </div>
                 {!isBulk && (
                   <div className="grid grid-cols-2 gap-x-3 gap-y-2">
@@ -683,22 +683,22 @@ export default function AdminSetupOrchestratorPanel({
                       { key: "job_title",  label: t("userFormJobTitle"),   type: "text",  required: false },
                     ] as { key: string; label: string; type: string; required: boolean }[]).map(({ key, label, type, required }) => (
                       <label key={key} className="flex flex-col gap-0.5">
-                        <span className="text-[8.5px] font-semibold uppercase tracking-wider text-white/25">{label}{required ? " *" : ""}</span>
+                        <span className="text-[8.5px] font-semibold uppercase tracking-wider text-muted">{label}{required ? " *" : ""}</span>
                         <input
                           type={type}
                           value={String(draft[key] ?? "")}
                           onChange={(e) => setDraftField(msg.id, action.action_id, key, e.target.value)}
-                          className="rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1 text-[10px] text-white/70 outline-none placeholder:text-white/20 focus:border-white/20"
+                          className="rounded border border-default bg-surface-2 px-2 py-1 text-[10px] text-secondary outline-none placeholder:text-muted focus:border-strong"
                           placeholder={required ? t("fieldRequired") : t("fieldOptional")}
                         />
                       </label>
                     ))}
                     <label className="flex flex-col gap-0.5">
-                      <span className="text-[8.5px] font-semibold uppercase tracking-wider text-white/25">{t("userFormRole")} *</span>
+                      <span className="text-[8.5px] font-semibold uppercase tracking-wider text-muted">{t("userFormRole")} *</span>
                       <select
                         value={String(draft.role ?? "employee")}
                         onChange={(e) => setDraftField(msg.id, action.action_id, "role", e.target.value)}
-                        className="rounded border border-white/[0.08] bg-[#1a1a1f] px-2 py-1 text-[10px] text-white/70 outline-none focus:border-white/20"
+                        className="rounded border border-default bg-[#1a1a1f] px-2 py-1 text-[10px] text-secondary outline-none focus:border-strong"
                       >
                         {["employee","manager","accounting","admin","executive","secretary"].map((r) => (
                           <option key={r} value={r}>{r}</option>
@@ -707,11 +707,11 @@ export default function AdminSetupOrchestratorPanel({
                     </label>
                     {legalEntities.length > 0 && (
                       <label className="flex flex-col gap-0.5">
-                        <span className="text-[8.5px] font-semibold uppercase tracking-wider text-white/25">{t("userFormCompany")}</span>
+                        <span className="text-[8.5px] font-semibold uppercase tracking-wider text-muted">{t("userFormCompany")}</span>
                         <select
                           value={String(draft.legal_entity_id ?? "")}
                           onChange={(e) => setDraftField(msg.id, action.action_id, "legal_entity_id", e.target.value ? Number(e.target.value) : null)}
-                          className="rounded border border-white/[0.08] bg-[#1a1a1f] px-2 py-1 text-[10px] text-white/70 outline-none focus:border-white/20"
+                          className="rounded border border-default bg-[#1a1a1f] px-2 py-1 text-[10px] text-secondary outline-none focus:border-strong"
                         >
                           <option value="">{t("entityNone")}</option>
                           {legalEntities.map((le) => (
@@ -727,16 +727,16 @@ export default function AdminSetupOrchestratorPanel({
                         onChange={(e) => setDraftField(msg.id, action.action_id, "send_invite", e.target.checked)}
                         className="h-3 w-3 accent-violet-500"
                       />
-                      <span className="text-[9px] text-white/35">{t("userFormSendInvite")}</span>
+                      <span className="text-[9px] text-muted">{t("userFormSendInvite")}</span>
                     </label>
                   </div>
                 )}
-                {st?.status === "error" && <p className="text-[9px] text-red-400/60">{st.error}</p>}
+                {st?.status === "error" && <p className="text-[9px] text-error/60">{st.error}</p>}
                 <button
                   type="button"
                   disabled={st?.status === "running" || (!isBulk && (!draft.email?.trim() || !draft.full_name?.trim()))}
                   onClick={() => executeAction(msg.id, action, draft)}
-                  className="w-full rounded border border-emerald-500/25 bg-emerald-500/[0.07] py-1 text-[9px] font-semibold text-emerald-300/70 transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/[0.13] hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-30"
+                  className="w-full rounded border border-emerald-500/25 bg-emerald-500/[0.07] py-1 text-[9px] font-semibold text-emerald-300/70 transition-colors hover:border-success hover:bg-emerald-500/[0.13] hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-30"
                 >
                   {st?.status === "running" ? t("creatingBtn") : isBulk ? t("inviteUsersBtn", { count: userRows.length }) : t("createUserBtn")}
                 </button>
@@ -748,31 +748,31 @@ export default function AdminSetupOrchestratorPanel({
             const isBulk = action.action_type === "bulk_create_accounting_categories";
             const cats: Record<string,any>[] = isBulk ? (Array.isArray(draft.categories) ? draft.categories : []) : [draft];
             return (
-              <div key={action.action_id} className="rounded border border-white/[0.08] bg-white/[0.02] px-3 py-2.5 space-y-2">
+              <div key={action.action_id} className="rounded border border-default bg-surface-1 px-3 py-2.5 space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-white/30">{t("categoryLabel")}</span>
-                  <p className="flex-1 text-[10px] text-white/55">{action.label}</p>
-                  {st?.status === "running" && <Loader2 className="h-3 w-3 shrink-0 animate-spin text-white/30" />}
+                  <span className="rounded bg-surface-2 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-muted">{t("categoryLabel")}</span>
+                  <p className="flex-1 text-[10px] text-tertiary">{action.label}</p>
+                  {st?.status === "running" && <Loader2 className="h-3 w-3 shrink-0 animate-spin text-muted" />}
                 </div>
                 {isBulk ? (
-                  <p className="text-[9px] text-white/30">{t("categoriesReadyCount", { count: cats.length })}</p>
+                  <p className="text-[9px] text-muted">{t("categoriesReadyCount", { count: cats.length })}</p>
                 ) : (
                   <div className="grid grid-cols-2 gap-x-3 gap-y-2">
                     {([{key:"code",label:t("catFormCode"),required:true},{key:"name",label:t("catFormName"),required:true},{key:"expense_account_code",label:t("catFormAccountCode"),required:false}] as {key:string;label:string;required:boolean}[]).map(({key,label,required}) => (
                       <label key={key} className="flex flex-col gap-0.5">
-                        <span className="text-[8.5px] font-semibold uppercase tracking-wider text-white/25">{label}{required ? " *" : ""}</span>
+                        <span className="text-[8.5px] font-semibold uppercase tracking-wider text-muted">{label}{required ? " *" : ""}</span>
                         <input
                           type="text" value={String(draft[key] ?? "")}
                           onChange={(e) => setDraftField(msg.id, action.action_id, key, e.target.value)}
-                          className="rounded border border-white/[0.08] bg-white/[0.04] px-2 py-1 text-[10px] text-white/70 outline-none placeholder:text-white/20 focus:border-white/20"
+                          className="rounded border border-default bg-surface-2 px-2 py-1 text-[10px] text-secondary outline-none placeholder:text-muted focus:border-strong"
                           placeholder={required ? t("fieldRequired") : t("fieldOptional")}
                         />
                       </label>
                     ))}
                     <label className="flex flex-col gap-0.5">
-                      <span className="text-[8.5px] font-semibold uppercase tracking-wider text-white/25">{t("catFormTaxBehavior")}</span>
+                      <span className="text-[8.5px] font-semibold uppercase tracking-wider text-muted">{t("catFormTaxBehavior")}</span>
                       <select value={String(draft.tax_behavior ?? "none")} onChange={(e) => setDraftField(msg.id, action.action_id, "tax_behavior", e.target.value)}
-                        className="rounded border border-white/[0.08] bg-[#1a1a1f] px-2 py-1 text-[10px] text-white/70 outline-none focus:border-white/20">
+                        className="rounded border border-default bg-[#1a1a1f] px-2 py-1 text-[10px] text-secondary outline-none focus:border-strong">
                         <option value="none">{t("taxBehaviorNone")}</option>
                         <option value="creditable">{t("taxBehaviorCreditable")}</option>
                         <option value="non_creditable">{t("taxBehaviorNonCreditable")}</option>
@@ -780,9 +780,9 @@ export default function AdminSetupOrchestratorPanel({
                     </label>
                   </div>
                 )}
-                {st?.status === "error" && <p className="text-[9px] text-red-400/60">{st.error}</p>}
+                {st?.status === "error" && <p className="text-[9px] text-error/60">{st.error}</p>}
                 <button type="button" disabled={st?.status === "running"} onClick={() => executeAction(msg.id, action, draft)}
-                  className="w-full rounded border border-emerald-500/25 bg-emerald-500/[0.07] py-1 text-[9px] font-semibold text-emerald-300/70 transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/[0.13] hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-30">
+                  className="w-full rounded border border-emerald-500/25 bg-emerald-500/[0.07] py-1 text-[9px] font-semibold text-emerald-300/70 transition-colors hover:border-success hover:bg-emerald-500/[0.13] hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-30">
                   {st?.status === "running" ? t("creatingBtn") : isBulk ? t("createCategoriesBtn", { count: cats.length }) : t("createCategoryBtn")}
                 </button>
               </div>
@@ -791,11 +791,11 @@ export default function AdminSetupOrchestratorPanel({
 
           // update_user_role and fallback
           return (
-            <div key={action.action_id} className="rounded border border-white/[0.08] bg-white/[0.02] px-3 py-2.5 space-y-2">
-              <p className="text-[10px] text-white/55">{action.label}</p>
-              {st?.status === "error" && <p className="text-[9px] text-red-400/60">{st.error}</p>}
+            <div key={action.action_id} className="rounded border border-default bg-surface-1 px-3 py-2.5 space-y-2">
+              <p className="text-[10px] text-tertiary">{action.label}</p>
+              {st?.status === "error" && <p className="text-[9px] text-error/60">{st.error}</p>}
               <button type="button" disabled={st?.status === "running"} onClick={() => executeAction(msg.id, action, draft)}
-                className="w-full rounded border border-emerald-500/25 bg-emerald-500/[0.07] py-1 text-[9px] font-semibold text-emerald-300/70 transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/[0.13] hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-30">
+                className="w-full rounded border border-emerald-500/25 bg-emerald-500/[0.07] py-1 text-[9px] font-semibold text-emerald-300/70 transition-colors hover:border-success hover:bg-emerald-500/[0.13] hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-30">
                 {st?.status === "running" ? t("runningBtn") : t("executeBtn")}
               </button>
             </div>
@@ -807,7 +807,7 @@ export default function AdminSetupOrchestratorPanel({
         {/* Next steps */}
         {(result.next_steps?.length ?? 0) > 0 && (
           <div className="space-y-1">
-            <p className="text-[8.5px] font-bold uppercase tracking-widest text-white/18">{t("whatToDoNext")}</p>
+            <p className="text-[8.5px] font-bold uppercase tracking-widest text-muted">{t("whatToDoNext")}</p>
             <div className="flex flex-col gap-1">
               {result.next_steps!.map((step, i) => (
                 <button key={i} type="button"
@@ -825,14 +825,14 @@ export default function AdminSetupOrchestratorPanel({
         {result.current_state_assessment && (
           <div className="space-y-1">
             <SectionLabel>{t("currentState")}</SectionLabel>
-            <p className="px-0.5 text-[10px] leading-relaxed text-white/38">{result.current_state_assessment}</p>
+            <p className="px-0.5 text-[10px] leading-relaxed text-muted">{result.current_state_assessment}</p>
           </div>
         )}
 
         {result.action_state === "no_changes" && totalPatches === 0 && (
           <div className="flex items-center gap-2 px-0.5">
-            <CheckCircle2 className="h-3 w-3 text-white/25" />
-            <span className="text-[10px] text-white/30">{t("noChangesNeeded")}</span>
+            <CheckCircle2 className="h-3 w-3 text-muted" />
+            <span className="text-[10px] text-muted">{t("noChangesNeeded")}</span>
           </div>
         )}
 
@@ -842,11 +842,11 @@ export default function AdminSetupOrchestratorPanel({
           {(result.impact?.length ?? 0) > 0 ? (
             <div>
               <SectionLabel>{t("impact")}</SectionLabel>
-              <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2 space-y-1">
+              <div className="rounded border border-default bg-surface-1 px-3 py-2 space-y-1">
                 {result.impact!.map((item, i) => (
                   <div key={i} className="flex items-start gap-2">
-                    <span className="mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full bg-white/22" />
-                    <p className="text-[10px] leading-snug text-white/42">{item}</p>
+                    <span className="mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full bg-surface-2" />
+                    <p className="text-[10px] leading-snug text-tertiary">{item}</p>
                   </div>
                 ))}
               </div>
@@ -854,18 +854,18 @@ export default function AdminSetupOrchestratorPanel({
           ) : impactItems.length > 0 && (
             <div>
               <SectionLabel>{t("operationalImpact")}</SectionLabel>
-              <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2 space-y-1">
+              <div className="rounded border border-default bg-surface-1 px-3 py-2 space-y-1">
                 {impactItems.map((item, i) => (
                   <div key={i} className="flex items-start gap-2">
                     <span className={`mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full ${
                       item.kind === "ok"       ? "bg-emerald-400/50" :
                       item.kind === "warn"     ? "bg-amber-400/55"   :
-                      item.kind === "inactive" ? "bg-white/14"       : "bg-white/22"
+                      item.kind === "inactive" ? "bg-surface-1"       : "bg-surface-2"
                     }`} />
                     <p className={`text-[10px] leading-snug ${
                       item.kind === "ok"       ? "text-emerald-300/60" :
-                      item.kind === "warn"     ? "text-amber-300/55"   :
-                      item.kind === "inactive" ? "text-white/28"       : "text-white/42"
+                      item.kind === "warn"     ? "text-warning/55"   :
+                      item.kind === "inactive" ? "text-muted"       : "text-tertiary"
                     }`}>{item.text}</p>
                   </div>
                 ))}
@@ -882,13 +882,13 @@ export default function AdminSetupOrchestratorPanel({
                   c.severity === "critical" ? "border-red-500/25 bg-red-500/[0.07]" : "border-amber-500/[0.10] bg-amber-500/[0.025]"
                 }`}>
                   {c.severity === "critical"
-                    ? <AlertCircle   className="mt-0.5 h-3 w-3 shrink-0 text-red-400/70" />
-                    : <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-amber-400/40" />
+                    ? <AlertCircle   className="mt-0.5 h-3 w-3 shrink-0 text-error/70" />
+                    : <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-warning/40" />
                   }
                   <div className="min-w-0 space-y-0.5">
-                    <p className="text-[9px] font-mono text-white/22">{c.code}</p>
-                    <p className={`text-[10px] leading-snug ${c.severity === "critical" ? "font-medium text-red-300/75" : "text-amber-300/50"}`}>{c.message}</p>
-                    {fixHint && <p className="text-[9px] italic text-white/28">{t("fixDirection", { hint: fixHint })}</p>}
+                    <p className="text-[9px] font-mono text-muted">{c.code}</p>
+                    <p className={`text-[10px] leading-snug ${c.severity === "critical" ? "font-medium text-error/75" : "text-warning/50"}`}>{c.message}</p>
+                    {fixHint && <p className="text-[9px] italic text-muted">{t("fixDirection", { hint: fixHint })}</p>}
                   </div>
                 </div>
               );
@@ -898,12 +898,12 @@ export default function AdminSetupOrchestratorPanel({
           {/* Missing decisions */}
           <CollapsibleSection label={t("missingDecisions")} count={result.missing_decisions?.length ?? 0} defaultOpen>
             {(result.missing_decisions ?? []).map((d, i) => (
-              <div key={i} className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2.5 space-y-1.5">
+              <div key={i} className="rounded border border-default bg-surface-1 px-3 py-2.5 space-y-1.5">
                 <div className="flex items-start gap-2">
-                  <HelpCircle className="mt-0.5 h-3 w-3 shrink-0 text-indigo-400/40" />
+                  <HelpCircle className="mt-0.5 h-3 w-3 shrink-0 text-accent/40" />
                   <div className="space-y-1">
-                    <p className="text-[9px] font-mono text-white/22">{d.key}</p>
-                    <p className="text-[10px] leading-snug text-white/45">{d.question}</p>
+                    <p className="text-[9px] font-mono text-muted">{d.key}</p>
+                    <p className="text-[10px] leading-snug text-tertiary">{d.question}</p>
                   </div>
                 </div>
                 {d.suggested_options.length > 0 && (
@@ -911,7 +911,7 @@ export default function AdminSetupOrchestratorPanel({
                     {d.suggested_options.map((opt, j) => (
                       <button key={j} type="button"
                         onClick={() => handleSubmit(`${d.question} → ${opt}`)}
-                        className="rounded border border-indigo-500/20 bg-indigo-500/[0.06] px-2 py-0.5 text-[9px] text-indigo-300/55 transition-colors hover:border-indigo-500/40 hover:bg-indigo-500/[0.12] hover:text-indigo-300/80"
+                        className="rounded border border-blue-500/20 bg-blue-500/[0.06] px-2 py-0.5 text-[9px] text-accent/55 transition-colors hover:bg-accent-muted hover:bg-accent-hover/[0.12] hover:text-accent"
                       >{opt}</button>
                     ))}
                   </div>
@@ -927,8 +927,8 @@ export default function AdminSetupOrchestratorPanel({
               <div className="rounded border border-amber-500/[0.08] bg-amber-500/[0.02] px-3 py-2 space-y-1.5">
                 {result.risks_gaps!.map((item, i) => (
                   <div key={i} className="flex items-start gap-2">
-                    <AlertTriangle className="mt-0.5 h-2.5 w-2.5 shrink-0 text-amber-400/35" />
-                    <p className="text-[10px] leading-snug text-amber-300/50">{item}</p>
+                    <AlertTriangle className="mt-0.5 h-2.5 w-2.5 shrink-0 text-warning/35" />
+                    <p className="text-[10px] leading-snug text-warning/50">{item}</p>
                   </div>
                 ))}
               </div>
@@ -939,21 +939,21 @@ export default function AdminSetupOrchestratorPanel({
           {(result.generated_categories?.length ?? 0) > 0 && (
             <div className="space-y-1.5">
               <SectionLabel>{t("generatedCategories")}</SectionLabel>
-              <div className="overflow-hidden rounded border border-white/[0.07] bg-white/[0.02]">
+              <div className="overflow-hidden rounded border border-default bg-surface-1">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-white/[0.05]">
-                      <th className="px-3 py-1.5 text-left text-[9px] font-bold uppercase tracking-widest text-white/20">{t("colCode")}</th>
-                      <th className="px-3 py-1.5 text-left text-[9px] font-bold uppercase tracking-widest text-white/20">{t("colAccount")}</th>
-                      <th className="px-3 py-1.5 text-left text-[9px] font-bold uppercase tracking-widest text-white/20">{t("colProjReq")}</th>
+                    <tr className="border-b border-subtle">
+                      <th className="px-3 py-1.5 text-left text-[9px] font-bold uppercase tracking-widest text-muted">{t("colCode")}</th>
+                      <th className="px-3 py-1.5 text-left text-[9px] font-bold uppercase tracking-widest text-muted">{t("colAccount")}</th>
+                      <th className="px-3 py-1.5 text-left text-[9px] font-bold uppercase tracking-widest text-muted">{t("colProjReq")}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {result.generated_categories!.map((cat, i) => (
-                      <tr key={i} className="border-b border-white/[0.04] last:border-0">
-                        <td className="px-3 py-1.5 font-mono text-[10px] text-white/55">{cat.code}</td>
-                        <td className="px-3 py-1.5 text-[10px] text-white/38">{cat.expense_account_code ?? <span className="text-white/18">—</span>}</td>
-                        <td className="px-3 py-1.5 text-[10px] text-white/38">{cat.requires_project ? t("colYes") : t("colNo")}</td>
+                      <tr key={i} className="border-b border-subtle last:border-0">
+                        <td className="px-3 py-1.5 font-mono text-[10px] text-tertiary">{cat.code}</td>
+                        <td className="px-3 py-1.5 text-[10px] text-muted">{cat.expense_account_code ?? <span className="text-muted">—</span>}</td>
+                        <td className="px-3 py-1.5 text-[10px] text-muted">{cat.requires_project ? t("colYes") : t("colNo")}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -961,18 +961,18 @@ export default function AdminSetupOrchestratorPanel({
               </div>
               <button type="button" onClick={() => handleApplyCategories(msg.id, result.generated_categories!)}
                 disabled={categoriesApplying || categoriesApplied}
-                className="inline-flex w-full items-center justify-center gap-1.5 rounded border border-white/[0.1] bg-white/[0.04] px-3 py-1.5 text-[10px] font-semibold text-white/55 transition-colors hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-50">
+                className="inline-flex w-full items-center justify-center gap-1.5 rounded border border-default bg-surface-2 px-3 py-1.5 text-[10px] font-semibold text-tertiary transition-colors hover:bg-surface-3 disabled:cursor-not-allowed disabled:opacity-50">
                 {categoriesApplying ? <><Loader2 className="h-3 w-3 animate-spin" /> {t("applying")}</>
-                  : categoriesApplied ? <><CheckCircle2 className="h-3 w-3 text-emerald-400/60" /> {t("categoriesApplied")}</>
+                  : categoriesApplied ? <><CheckCircle2 className="h-3 w-3 text-success/60" /> {t("categoriesApplied")}</>
                   : t("applyCategories")}
               </button>
-              {categoriesError && <p className="text-[10px] text-red-400/60">{categoriesError}</p>}
+              {categoriesError && <p className="text-[10px] text-error/60">{categoriesError}</p>}
             </div>
           )}
 
           {/* Suggested patches */}
           {hasDiscardedKeys && (
-            <p className="text-[9px] text-white/22 italic">{t("discardedKeysNote")}</p>
+            <p className="text-[9px] text-muted italic">{t("discardedKeysNote")}</p>
           )}
           {totalPatches > 0 && (
             <div className="space-y-1.5">
@@ -983,9 +983,9 @@ export default function AdminSetupOrchestratorPanel({
                 if (entries.length === 0) return null;
                 const sectionApplied = appliedSections.has(key);
                 return (
-                  <div key={key} className="overflow-hidden rounded border border-white/[0.07] bg-white/[0.02]">
-                    <div className="flex items-center justify-between border-b border-white/[0.05] px-3 py-1.5">
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-white/22">{t(i18nKey)}</p>
+                  <div key={key} className="overflow-hidden rounded border border-default bg-surface-1">
+                    <div className="flex items-center justify-between border-b border-subtle px-3 py-1.5">
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-muted">{t(i18nKey)}</p>
                       <button type="button" onClick={() => handleApplySection(msg.id, key, result.suggested_patches)}
                         disabled={sectionApplied}
                         className="text-[9px] font-medium text-violet-300/55 transition-colors hover:text-violet-300/80 disabled:cursor-not-allowed disabled:opacity-40">
@@ -995,9 +995,9 @@ export default function AdminSetupOrchestratorPanel({
                     <table className="w-full">
                       <tbody>
                         {entries.map(([field, value]) => (
-                          <tr key={field} className="border-b border-white/[0.04] last:border-0">
-                            <td className="px-3 py-1.5 text-[10px] text-white/32">{field.replace(/_/g, " ")}</td>
-                            <td className="px-3 py-1.5 text-right text-[10px] font-medium text-white/55">{patchValueLabel(value, t)}</td>
+                          <tr key={field} className="border-b border-subtle last:border-0">
+                            <td className="px-3 py-1.5 text-[10px] text-muted">{field.replace(/_/g, " ")}</td>
+                            <td className="px-3 py-1.5 text-right text-[10px] font-medium text-tertiary">{patchValueLabel(value, t)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1010,11 +1010,11 @@ export default function AdminSetupOrchestratorPanel({
 
           {/* Approval gate */}
           {totalPatches > 0 && (
-            <div className="space-y-1.5 border-t border-white/[0.06] pt-3">
+            <div className="space-y-1.5 border-t border-subtle pt-3">
               <SectionLabel>{t("actionSection")}</SectionLabel>
               {approvalState === "pending" && (
                 <div className="flex items-center justify-between rounded border border-amber-500/[0.15] bg-amber-500/[0.04] px-3 py-2">
-                  <span className="text-[10px] text-amber-300/55">{t("awaitingApproval")}</span>
+                  <span className="text-[10px] text-warning/55">{t("awaitingApproval")}</span>
                   <button type="button" onClick={() => handleApprove(msg.id)}
                     className="text-[10px] font-semibold text-violet-300/65 transition-colors hover:text-violet-300/90">{t("approveBtn")}</button>
                 </div>
@@ -1027,7 +1027,7 @@ export default function AdminSetupOrchestratorPanel({
               )}
               {approvalState === "applied" && (
                 <div className="flex items-center gap-2 px-1 py-1">
-                  <CheckCircle2 className="h-3 w-3 text-emerald-400/60" />
+                  <CheckCircle2 className="h-3 w-3 text-success/60" />
                   <span className="text-[10px] text-emerald-300/60">{t("changesApplied")}</span>
                 </div>
               )}
@@ -1035,9 +1035,9 @@ export default function AdminSetupOrchestratorPanel({
           )}
 
           {totalPatches === 0 && result.engine_mode === "DIAGNOSE" && (
-            <div className="flex items-center gap-2 border-t border-white/[0.06] pt-3 px-0.5">
-              <CheckCircle2 className="h-3 w-3 text-white/25" />
-              <span className="text-[10px] text-white/30">{t("diagnosisComplete")}</span>
+            <div className="flex items-center gap-2 border-t border-subtle pt-3 px-0.5">
+              <CheckCircle2 className="h-3 w-3 text-muted" />
+              <span className="text-[10px] text-muted">{t("diagnosisComplete")}</span>
             </div>
           )}
 
@@ -1047,22 +1047,22 @@ export default function AdminSetupOrchestratorPanel({
 
         {/* Save summary — only when there's substantive analysis */}
         {hasAnalysis && result.summary && (
-          <div className="space-y-1.5 border-t border-white/[0.06] pt-3">
+          <div className="space-y-1.5 border-t border-subtle pt-3">
             <SectionLabel>{t("saveToCompanySetup")}</SectionLabel>
             <textarea rows={2} value={msg.notes}
               onChange={(e) => updateMsg(msg.id, (m) => ({ ...m, notes: e.target.value, saved: false }))}
               placeholder={t("notesPlaceholder")}
-              className="w-full resize-none rounded border border-white/[0.08] bg-white/[0.03] px-2.5 py-2 text-[10px] text-white/55 placeholder-white/18 outline-none focus:border-violet-500/35"
+              className="w-full resize-none rounded border border-default bg-surface-1 px-2.5 py-2 text-[10px] text-tertiary placeholder-white/18 outline-none focus:border-violet-500/35"
             />
             <div className="flex items-center gap-2">
               <button type="button" onClick={() => handleSaveSummary(msg.id, result.summary!, msg.notes)}
                 disabled={msg.saving || msg.saved}
-                className="inline-flex items-center gap-1.5 rounded border border-white/[0.1] bg-white/[0.04] px-3 py-1.5 text-[10px] font-semibold text-white/55 transition-colors hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-50">
+                className="inline-flex items-center gap-1.5 rounded border border-default bg-surface-2 px-3 py-1.5 text-[10px] font-semibold text-tertiary transition-colors hover:bg-surface-3 disabled:cursor-not-allowed disabled:opacity-50">
                 {msg.saving ? <><Loader2 className="h-3 w-3 animate-spin" /> {t("saving")}</>
-                  : msg.saved ? <><CheckCircle2 className="h-3 w-3 text-emerald-400/60" /> {t("saved")}</>
+                  : msg.saved ? <><CheckCircle2 className="h-3 w-3 text-success/60" /> {t("saved")}</>
                   : t("saveSummaryNotes")}
               </button>
-              {msg.saveError && <p className="text-[10px] text-red-400/60">{msg.saveError}</p>}
+              {msg.saveError && <p className="text-[10px] text-error/60">{msg.saveError}</p>}
             </div>
           </div>
         )}
@@ -1081,16 +1081,16 @@ export default function AdminSetupOrchestratorPanel({
       {/* Header */}
       <div className="flex shrink-0 items-center gap-2 px-1 py-2">
         <Bot className="h-4 w-4 shrink-0 text-violet-400/55" />
-        <span className="text-[11px] font-semibold text-white/45">{t("title")}</span>
+        <span className="text-[11px] font-semibold text-tertiary">{t("title")}</span>
         {sessionId && (
           <span className="rounded border border-emerald-500/15 bg-emerald-500/[0.04] px-1.5 py-0.5 text-[8px] text-emerald-300/35">{t("sessionActive")}</span>
         )}
         <span className="ml-auto flex items-center gap-1.5">
           {managerQueueCount !== null && (
-            <span className="rounded border border-white/[0.07] bg-white/[0.02] px-1.5 py-0.5 text-[8px] text-white/28">{t("mgrQueue", { count: managerQueueCount })}</span>
+            <span className="rounded border border-default bg-surface-1 px-1.5 py-0.5 text-[8px] text-muted">{t("mgrQueue", { count: managerQueueCount })}</span>
           )}
           {accountingQueueCount !== null && (
-            <span className="rounded border border-white/[0.07] bg-white/[0.02] px-1.5 py-0.5 text-[8px] text-white/28">{t("acctQueue", { count: accountingQueueCount })}</span>
+            <span className="rounded border border-default bg-surface-1 px-1.5 py-0.5 text-[8px] text-muted">{t("acctQueue", { count: accountingQueueCount })}</span>
           )}
           <span className="rounded border border-violet-500/15 bg-violet-500/[0.06] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-violet-300/40">{t("ai")}</span>
         </span>
@@ -1102,25 +1102,25 @@ export default function AdminSetupOrchestratorPanel({
         {/* Pre-flight conflicts — only before first message */}
         {messages.length === 0 && preflightConflicts.length > 0 && (
           <div className="space-y-1">
-            <p className="text-[8.5px] font-bold uppercase tracking-[0.12em] text-white/20">
-              {t("currentConfigIssues")} <span className="text-white/30">({preflightConflicts.length})</span>
+            <p className="text-[8.5px] font-bold uppercase tracking-[0.12em] text-muted">
+              {t("currentConfigIssues")} <span className="text-muted">({preflightConflicts.length})</span>
             </p>
             {preflightConflicts.map((c, i) => (
-              <div key={i} className={`group rounded border ${c.severity === "critical" ? "border-red-500/20 bg-red-500/[0.06]" : "border-white/[0.06] bg-white/[0.01]"}`}>
+              <div key={i} className={`group rounded border ${c.severity === "critical" ? "border-red-500/20 bg-red-500/[0.06]" : "border-subtle bg-surface-0"}`}>
                 <button type="button" onClick={() => onNavigate?.(c.section)}
                   className="flex w-full items-start gap-2 px-2.5 py-1.5 text-left">
                   {c.severity === "critical"
-                    ? <AlertCircle   className="mt-0.5 h-2.5 w-2.5 shrink-0 text-red-400/65" />
-                    : <AlertTriangle className="mt-0.5 h-2.5 w-2.5 shrink-0 text-amber-400/35" />
+                    ? <AlertCircle   className="mt-0.5 h-2.5 w-2.5 shrink-0 text-error/65" />
+                    : <AlertTriangle className="mt-0.5 h-2.5 w-2.5 shrink-0 text-warning/35" />
                   }
-                  <p className={`flex-1 text-[9.5px] leading-snug ${c.severity === "critical" ? "text-red-300/70" : "text-white/35"}`}>{c.message}</p>
+                  <p className={`flex-1 text-[9.5px] leading-snug ${c.severity === "critical" ? "text-error/70" : "text-muted"}`}>{c.message}</p>
                 </button>
-                <div className="flex items-center justify-between border-t border-white/[0.04] px-2.5 py-1">
-                  <span className="text-[8px] text-white/20">{c.section}</span>
+                <div className="flex items-center justify-between border-t border-subtle px-2.5 py-1">
+                  <span className="text-[8px] text-muted">{c.section}</span>
                   <div className="flex gap-1">
                     {onNavigate && (
                       <button type="button" onClick={() => onNavigate(c.section)}
-                        className="rounded px-1.5 py-0.5 text-[8px] font-medium text-white/25 transition-colors hover:bg-white/[0.05] hover:text-white/50">
+                        className="rounded px-1.5 py-0.5 text-[8px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-secondary">
                         {t("goToSection")}
                       </button>
                     )}
@@ -1141,12 +1141,12 @@ export default function AdminSetupOrchestratorPanel({
           <div key={msg.id}>
             {msg.role === "user" ? (
               <div className="flex justify-end">
-                <div className="max-w-[90%] rounded border border-white/[0.06] bg-white/[0.04] px-3 py-2">
-                  <p className="text-[10px] leading-relaxed text-white/55">{msg.text}</p>
+                <div className="max-w-[90%] rounded border border-subtle bg-surface-2 px-3 py-2">
+                  <p className="text-[10px] leading-relaxed text-tertiary">{msg.text}</p>
                 </div>
               </div>
             ) : (
-              <div className="rounded border border-white/[0.06] bg-white/[0.015] px-3 py-2.5">
+              <div className="rounded border border-subtle bg-surface-1 px-3 py-2.5">
                 {renderAssistantMsg(msg)}
               </div>
             )}
@@ -1156,13 +1156,13 @@ export default function AdminSetupOrchestratorPanel({
         {loading && (
           <div className="flex items-center gap-2 px-1 py-2">
             <Loader2 className="h-3 w-3 animate-spin text-violet-400/50" />
-            <span className="text-[10px] text-white/30">{t("thinking")}</span>
+            <span className="text-[10px] text-muted">{t("thinking")}</span>
           </div>
         )}
 
         {apiError && (
           <div className="rounded border border-red-500/15 bg-red-500/[0.04] px-3 py-2">
-            <p className="text-[10px] text-red-300/55">{apiError}</p>
+            <p className="text-[10px] text-error/55">{apiError}</p>
           </div>
         )}
 
@@ -1170,14 +1170,14 @@ export default function AdminSetupOrchestratorPanel({
       </div>
 
       {/* Input — pinned at bottom */}
-      <div className="shrink-0 border-t border-white/[0.06] px-1 pt-2 pb-1 space-y-1.5">
+      <div className="shrink-0 border-t border-subtle px-1 pt-2 pb-1 space-y-1.5">
         <textarea
           rows={2}
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
           placeholder={messages.length === 0 ? t("promptPlaceholderNew") : t("promptPlaceholderContinue")}
-          className="w-full resize-none rounded border border-white/[0.08] bg-white/[0.03] px-2.5 py-2 text-[10px] text-white/55 placeholder-white/18 outline-none focus:border-violet-500/35"
+          className="w-full resize-none rounded border border-default bg-surface-1 px-2.5 py-2 text-[10px] text-tertiary placeholder-white/18 outline-none focus:border-violet-500/35"
         />
         <button type="button" onClick={() => handleSubmit()} disabled={loading || !prompt.trim()}
           className="inline-flex w-full items-center justify-center gap-1.5 rounded border border-violet-500/25 bg-violet-600/15 px-3 py-1.5 text-[10px] font-semibold text-violet-300/70 transition-colors hover:bg-violet-600/25 disabled:cursor-not-allowed disabled:opacity-40">

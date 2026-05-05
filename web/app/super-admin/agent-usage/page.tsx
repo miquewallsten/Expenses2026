@@ -85,22 +85,22 @@ export default function AgentUsagePage() {
   const totalToolCalls = data?.tool_breakdown.reduce((a, r) => a + r.count, 0) ?? 0;
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-white/85">
-      <header className="border-b border-white/[0.07] bg-zinc-900/40">
+    <main className="min-h-screen bg-surface-0 text-primary">
+      <header className="border-b border-default bg-surface-1">
         <div className="mx-auto flex max-w-5xl items-center gap-3 px-5 py-3">
           <Link
             href="/super-admin"
-            className="flex h-7 items-center gap-1 rounded text-[10px] text-white/45 transition-colors hover:text-white/70"
+            className="flex h-7 items-center gap-1 rounded text-[10px] text-tertiary transition-colors hover:text-secondary"
           >
             <ChevronLeft className="h-3 w-3" />
             {t("back")}
           </Link>
           <div className="flex h-6 w-6 items-center justify-center rounded bg-amber-600/20 ring-1 ring-amber-500/25">
-            <Activity className="h-3 w-3 text-amber-300/90" />
+            <Activity className="h-3 w-3 text-warning/90" />
           </div>
           <div className="flex flex-col leading-tight">
             <span className="text-[12px] font-semibold">{t("title")}</span>
-            <span className="text-[9px] uppercase tracking-widest text-white/30">
+            <span className="text-[9px] uppercase tracking-widest text-muted">
               {t("subtitle")}
             </span>
           </div>
@@ -108,7 +108,7 @@ export default function AgentUsagePage() {
             type="button"
             onClick={load}
             disabled={loading || companyId == null}
-            className="ml-auto flex h-6 items-center gap-1 rounded border border-white/[0.08] bg-white/[0.03] px-2 text-[10px] text-white/55 transition-colors hover:border-amber-500/30 hover:text-amber-300 disabled:opacity-40"
+            className="ml-auto flex h-6 items-center gap-1 rounded border border-default bg-surface-1 px-2 text-[10px] text-tertiary transition-colors hover:border-warning hover:text-warning disabled:opacity-40"
           >
             {loading ? (
               <Loader2 className="h-3 w-3 animate-spin" />
@@ -123,7 +123,7 @@ export default function AgentUsagePage() {
       <div className="mx-auto max-w-5xl px-5 py-5">
         {/* range selector */}
         <div className="mb-4 flex items-center gap-1.5">
-          <span className="text-[10px] uppercase tracking-widest text-white/35">
+          <span className="text-[10px] uppercase tracking-widest text-muted">
             {t("range")}
           </span>
           {DAY_PRESETS.map((d) => (
@@ -134,8 +134,8 @@ export default function AgentUsagePage() {
               className={[
                 "rounded px-2 py-0.5 text-[10px] font-medium transition-colors",
                 d === days
-                  ? "border border-amber-500/35 bg-amber-500/[0.10] text-amber-200"
-                  : "border border-white/[0.08] bg-white/[0.03] text-white/45 hover:border-white/[0.15] hover:text-white/70",
+                  ? "border border-amber-500/35 bg-amber-500/[0.10] text-warning"
+                  : "border border-default bg-surface-1 text-tertiary hover:border-default hover:text-secondary",
               ].join(" ")}
             >
               {t("daysShort", { days: d })}
@@ -151,11 +151,11 @@ export default function AgentUsagePage() {
         )}
 
         {companyId == null ? (
-          <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2 text-[11px] text-white/45">
+          <div className="rounded border border-default bg-surface-1 px-3 py-2 text-[11px] text-tertiary">
             {t("noCompany")}
           </div>
         ) : loading && !data ? (
-          <div className="flex items-center gap-2 rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2 text-[11px] text-white/45">
+          <div className="flex items-center gap-2 rounded border border-default bg-surface-1 px-3 py-2 text-[11px] text-tertiary">
             <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("loading")}
           </div>
         ) : data ? (
@@ -211,7 +211,7 @@ export default function AgentUsagePage() {
               />
             </div>
 
-            <p className="mt-4 text-[10px] text-white/28">
+            <p className="mt-4 text-[10px] text-muted">
               {t("since", { date: new Date(data.since).toISOString().slice(0, 10) })}
             </p>
           </>
@@ -235,14 +235,14 @@ function KpiTile({
 }) {
   const toneCls =
     tone === "ok"   ? "text-emerald-300"
-    : tone === "warn" ? "text-amber-300"
+    : tone === "warn" ? "text-warning"
     : tone === "bad"  ? "text-rose-300"
-    : "text-white/85";
+    : "text-primary";
   return (
-    <div className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2">
-      <div className="text-[9px] uppercase tracking-widest text-white/35">{label}</div>
+    <div className="rounded border border-default bg-surface-1 px-3 py-2">
+      <div className="text-[9px] uppercase tracking-widest text-muted">{label}</div>
       <div className={`mt-1 text-[16px] font-semibold ${toneCls}`}>{value}</div>
-      {hint && <div className="mt-0.5 text-[9px] text-white/28">{hint}</div>}
+      {hint && <div className="mt-0.5 text-[9px] text-muted">{hint}</div>}
     </div>
   );
 }
@@ -256,33 +256,33 @@ function BreakdownCard({
   empty: string;
 }) {
   return (
-    <div className="rounded border border-white/[0.07] bg-white/[0.02]">
-      <div className="border-b border-white/[0.06] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-white/45">
+    <div className="rounded border border-default bg-surface-1">
+      <div className="border-b border-subtle px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-tertiary">
         {title}
       </div>
       {rows.length === 0 ? (
-        <div className="px-3 py-3 text-[10px] text-white/30">{empty}</div>
+        <div className="px-3 py-3 text-[10px] text-muted">{empty}</div>
       ) : (
         <ul className="divide-y divide-white/[0.04]">
           {rows.map((r) => {
             const pct = total > 0 ? Math.round((r.count / total) * 100) : 0;
             return (
               <li key={r.name} className="flex items-center gap-2 px-3 py-1.5">
-                <div className="min-w-0 flex-1 truncate font-mono text-[10.5px] text-white/75">
+                <div className="min-w-0 flex-1 truncate font-mono text-[10.5px] text-secondary">
                   {r.name}
                 </div>
-                <div className="w-12 shrink-0 text-right text-[10px] text-white/55">
+                <div className="w-12 shrink-0 text-right text-[10px] text-tertiary">
                   {r.count.toLocaleString()}
                 </div>
                 <div className="w-16 shrink-0">
-                  <div className="h-1 overflow-hidden rounded bg-white/[0.05]">
+                  <div className="h-1 overflow-hidden rounded bg-surface-2">
                     <div
                       className="h-full bg-amber-400/45"
                       style={{ width: `${pct}%` }}
                     />
                   </div>
                 </div>
-                <div className="w-8 shrink-0 text-right text-[9px] tabular-nums text-white/35">
+                <div className="w-8 shrink-0 text-right text-[9px] tabular-nums text-muted">
                   {pct}%
                 </div>
               </li>

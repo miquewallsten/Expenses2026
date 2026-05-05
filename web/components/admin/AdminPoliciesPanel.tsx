@@ -51,12 +51,12 @@ function ToggleRow({
   return (
     <div className="flex items-center justify-between gap-3 px-3.5 py-2">
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium text-white/65">{label}</p>
-        <p className="text-[10px] text-white/28">{desc}</p>
+        <p className="text-[11px] font-medium text-secondary">{label}</p>
+        <p className="text-[10px] text-muted">{desc}</p>
       </div>
       <button type="button" onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-4 w-7 shrink-0 rounded-full border transition-colors ${checked ? "border-indigo-500/40 bg-indigo-600/30" : "border-white/[0.10] bg-white/[0.04]"}`}>
-        <span className={`absolute top-0.5 h-3 w-3 rounded-full transition-transform ${checked ? "translate-x-3 bg-indigo-400" : "translate-x-0.5 bg-white/20"}`} />
+        className={`relative inline-flex h-4 w-7 shrink-0 rounded-full border transition-colors ${checked ? "bg-accent-muted bg-accent-muted" : "border-strong bg-surface-2"}`}>
+        <span className={`absolute top-0.5 h-3 w-3 rounded-full transition-transform ${checked ? "translate-x-3 bg-accent" : "translate-x-0.5 bg-surface-2"}`} />
       </button>
     </div>
   );
@@ -67,9 +67,9 @@ function SelectRow({
 }: { label: string; value: string; options: { value: string; label: string }[]; onChange: (v: string) => void }) {
   return (
     <div className="flex items-center justify-between gap-3 px-3.5 py-2">
-      <p className="text-[11px] font-medium text-white/65">{label}</p>
+      <p className="text-[11px] font-medium text-secondary">{label}</p>
       <select value={value} onChange={(e) => onChange(e.target.value)}
-        className="rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 text-[10px] text-white/55 outline-none focus:border-indigo-500/40">
+        className="rounded border border-default bg-surface-1 px-2 py-1 text-[10px] text-tertiary outline-none focus:bg-accent-muted">
         {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
     </div>
@@ -213,44 +213,44 @@ export default function AdminPoliciesPanel({ companyId, expensePolicy, onExpense
     <div className="flex h-full min-h-0 gap-0">
 
       {/* ── LEFT: Rule list ─────────────────────────────────────────────── */}
-      <div className="flex w-[40%] min-w-0 flex-col border-r border-white/[0.07]">
-        <div className="flex items-center justify-between border-b border-white/[0.07] px-3.5 py-2.5">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-white/30">{t("rulesLabel")} · {rules.filter(r => r.enabled).length}/{rules.length}</span>
+      <div className="flex w-[40%] min-w-0 flex-col border-r border-default">
+        <div className="flex items-center justify-between border-b border-default px-3.5 py-2.5">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted">{t("rulesLabel")} · {rules.filter(r => r.enabled).length}/{rules.length}</span>
           <button type="button" onClick={() => { setSelectedRule(null); setTab("create"); }}
-            className="inline-flex items-center gap-1 rounded border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[9.5px] text-white/45 hover:bg-white/[0.07] hover:text-white/75">
+            className="inline-flex items-center gap-1 rounded border border-default bg-surface-1 px-2 py-0.5 text-[9.5px] text-tertiary hover:bg-surface-3 hover:text-secondary">
             <Plus className="h-2.5 w-2.5" /> {t("newRule")}
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto">
           {loadingRules ? (
-            <div className="flex items-center gap-1.5 px-3.5 py-4 text-[10px] text-white/28">
+            <div className="flex items-center gap-1.5 px-3.5 py-4 text-[10px] text-muted">
               <Loader2 className="h-3 w-3 animate-spin" /> {tc("loading")}
             </div>
           ) : rules.length === 0 ? (
-            <div className="px-3.5 py-4 text-[10px] text-white/28">{t("noRules")}</div>
+            <div className="px-3.5 py-4 text-[10px] text-muted">{t("noRules")}</div>
           ) : (
             <ul className="divide-y divide-white/[0.05]">
               {rules.map((rule) => (
                 <li key={rule.id}
                   onClick={() => { setSelectedRule(rule); setTab("rule"); }}
-                  className={`group flex cursor-pointer items-start gap-2 px-3.5 py-2.5 transition-colors ${selectedRule?.id === rule.id ? "bg-white/[0.06]" : "hover:bg-white/[0.03]"} ${!rule.enabled ? "opacity-45" : ""}`}>
+                  className={`group flex cursor-pointer items-start gap-2 px-3.5 py-2.5 transition-colors ${selectedRule?.id === rule.id ? "bg-surface-2" : "hover:bg-surface-1"} ${!rule.enabled ? "opacity-45" : ""}`}>
                   <span className={`mt-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full ${rule.severity === "block" ? "bg-rose-400" : "bg-amber-400"}`} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[11px] font-medium text-white/75">{rule.summary}</p>
-                    <p className="truncate text-[10px] text-white/30">{rule.scope}</p>
+                    <p className="truncate text-[11px] font-medium text-secondary">{rule.summary}</p>
+                    <p className="truncate text-[10px] text-muted">{rule.scope}</p>
                   </div>
                   <div className="hidden shrink-0 items-center gap-0.5 group-hover:flex">
                     <button type="button" onClick={(e) => { e.stopPropagation(); toggleRule(rule); }}
-                      className="rounded p-1 text-white/30 hover:bg-white/[0.06] hover:text-white/70">
+                      className="rounded p-1 text-muted hover:bg-surface-3 hover:text-secondary">
                       <Power className="h-3 w-3" />
                     </button>
                     <button type="button" onClick={(e) => { e.stopPropagation(); reExtract(rule); }}
-                      className="rounded p-1 text-white/30 hover:bg-white/[0.06] hover:text-white/70">
+                      className="rounded p-1 text-muted hover:bg-surface-3 hover:text-secondary">
                       <RefreshCw className="h-3 w-3" />
                     </button>
                     <button type="button" onClick={(e) => { e.stopPropagation(); deleteRule(rule); }}
-                      className="rounded p-1 text-white/30 hover:bg-red-500/10 hover:text-red-400">
+                      className="rounded p-1 text-muted hover:bg-red-500/10 hover:text-error">
                       <Trash2 className="h-3 w-3" />
                     </button>
                   </div>
@@ -261,11 +261,11 @@ export default function AdminPoliciesPanel({ companyId, expensePolicy, onExpense
         </div>
 
         {/* Settings compact summary */}
-        <div className="border-t border-white/[0.07]">
+        <div className="border-t border-default">
           <button type="button" onClick={() => { setSelectedRule(null); setTab("settings"); }}
-            className={`w-full px-3.5 py-2.5 text-left transition-colors hover:bg-white/[0.03] ${tab === "settings" ? "bg-white/[0.06]" : ""}`}>
-            <p className="text-[9.5px] font-bold uppercase tracking-widest text-white/25">{t("expenseSettings")}</p>
-            <p className="mt-0.5 text-[10px] text-white/40">
+            className={`w-full px-3.5 py-2.5 text-left transition-colors hover:bg-surface-1 ${tab === "settings" ? "bg-surface-2" : ""}`}>
+            <p className="text-[9.5px] font-bold uppercase tracking-widest text-muted">{t("expenseSettings")}</p>
+            <p className="mt-0.5 text-[10px] text-tertiary">
               {form.xml_required_mode ? `XML: ${form.xml_required_mode}` : "—"}
               {" · "}
               {form.tickets_allowed ? t("ticketsOn") : t("ticketsOff")}
@@ -277,14 +277,14 @@ export default function AdminPoliciesPanel({ companyId, expensePolicy, onExpense
       {/* ── RIGHT: Detail / editor ──────────────────────────────────────── */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Tabs */}
-        <div className="flex items-center gap-0 border-b border-white/[0.07]">
+        <div className="flex items-center gap-0 border-b border-default">
           {([["create", t("tabCreate")], ["rule", t("tabRule")], ["settings", t("tabSettings")]] as [RightTab, string][]).map(([key, label]) => (
             <button key={key} type="button"
               onClick={() => { if (key === "rule" && !selectedRule) return; setTab(key); }}
               className={`border-b-2 px-4 py-2.5 text-[10px] font-semibold transition-colors ${
                 tab === key
-                  ? "border-indigo-400/60 text-white/85"
-                  : "border-transparent text-white/35 hover:text-white/55"
+                  ? "bg-accent-muted/60 text-primary"
+                  : "border-transparent text-muted hover:text-tertiary"
               } ${key === "rule" && !selectedRule ? "cursor-not-allowed opacity-30" : ""}`}>
               {label}
             </button>
@@ -297,13 +297,13 @@ export default function AdminPoliciesPanel({ companyId, expensePolicy, onExpense
           {tab === "create" && (
             <div className="space-y-4">
               <div>
-                <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-white/25">{t("promptLabel")}</p>
+                <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-muted">{t("promptLabel")}</p>
                 <textarea
                   value={prompt}
                   onChange={(e) => { setPrompt(e.target.value); setPreview(null); setGenError(null); }}
                   rows={4}
                   placeholder={t("promptPlaceholder")}
-                  className="w-full resize-none rounded border border-white/[0.08] bg-black/30 px-3 py-2 text-[11px] text-white/75 placeholder:text-white/22 focus:border-white/20 focus:outline-none"
+                  className="w-full resize-none rounded border border-default bg-black/30 px-3 py-2 text-[11px] text-secondary placeholder:text-muted focus:border-strong focus:outline-none"
                 />
               </div>
 
@@ -315,32 +315,32 @@ export default function AdminPoliciesPanel({ companyId, expensePolicy, onExpense
               </button>
 
               {genError && (
-                <div className="flex items-start gap-2 rounded border border-red-500/20 bg-red-500/[0.05] px-3 py-2 text-[10px] text-red-400/80">
+                <div className="flex items-start gap-2 rounded border border-red-500/20 bg-red-500/[0.05] px-3 py-2 text-[10px] text-error/80">
                   <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" /> {genError}
                 </div>
               )}
 
               {preview && (
-                <div className="space-y-3 rounded border border-white/[0.08] bg-white/[0.02] p-3">
+                <div className="space-y-3 rounded border border-default bg-surface-1 p-3">
                   {preview.notice && (
-                    <div className="flex items-start gap-2 rounded border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2 text-[10px] text-amber-300/80">
+                    <div className="flex items-start gap-2 rounded border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2 text-[10px] text-warning/80">
                       <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" /> {preview.notice}
                     </div>
                   )}
 
                   <div>
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-white/22">{t("previewSummary")}</p>
-                    <p className="mt-1 text-[11px] text-white/70">{preview.summary}</p>
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-muted">{t("previewSummary")}</p>
+                    <p className="mt-1 text-[11px] text-secondary">{preview.summary}</p>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className={`rounded border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${preview.severity === "block" ? "border-rose-500/25 bg-rose-500/10 text-rose-300/80" : "border-amber-500/25 bg-amber-500/10 text-amber-300/80"}`}>
+                    <span className={`rounded border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${preview.severity === "block" ? "border-rose-500/25 bg-error-muted text-rose-300/80" : "border-amber-500/25 bg-warning-muted text-warning/80"}`}>
                       {preview.severity}
                     </span>
                   </div>
 
                   {Object.keys(preview.rule_json).length > 0 && (
-                    <pre className="overflow-x-auto rounded border border-white/[0.07] bg-black/30 px-3 py-2 text-[9.5px] text-white/45">
+                    <pre className="overflow-x-auto rounded border border-default bg-black/30 px-3 py-2 text-[9.5px] text-tertiary">
                       {JSON.stringify(preview.rule_json, null, 2)}
                     </pre>
                   )}
@@ -356,12 +356,12 @@ export default function AdminPoliciesPanel({ companyId, expensePolicy, onExpense
                     {preview.setting_suggestion && (
                       <button type="button"
                         onClick={() => applySetting(preview.setting_suggestion!.setting_key, preview.setting_suggestion!.value)}
-                        className="inline-flex items-center gap-1.5 rounded border border-sky-500/25 bg-sky-600/10 px-3 py-1.5 text-[10px] font-semibold text-sky-300/80 transition-colors hover:bg-sky-600/20">
+                        className="inline-flex items-center gap-1.5 rounded border border-sky-500/25 bg-sky-600/10 px-3 py-1.5 text-[10px] font-semibold text-accent/80 transition-colors hover:bg-sky-600/20">
                         {t("applyAsSetting")}: {String(preview.setting_suggestion.setting_key).replace(/_/g, " ")}
                       </button>
                     )}
                     <button type="button" onClick={() => { setPreview(null); }}
-                      className="text-[10px] text-white/30 hover:text-white/60">
+                      className="text-[10px] text-muted hover:text-secondary">
                       <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
@@ -375,38 +375,38 @@ export default function AdminPoliciesPanel({ companyId, expensePolicy, onExpense
             <div className="space-y-4">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="text-[12px] font-semibold text-white/85">{selectedRule.summary}</p>
-                  <p className="mt-0.5 text-[10px] text-white/35">{selectedRule.scope}</p>
+                  <p className="text-[12px] font-semibold text-primary">{selectedRule.summary}</p>
+                  <p className="mt-0.5 text-[10px] text-muted">{selectedRule.scope}</p>
                 </div>
-                <span className={`shrink-0 rounded border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${selectedRule.severity === "block" ? "border-rose-500/25 bg-rose-500/10 text-rose-300/80" : "border-amber-500/25 bg-amber-500/10 text-amber-300/80"}`}>
+                <span className={`shrink-0 rounded border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${selectedRule.severity === "block" ? "border-rose-500/25 bg-error-muted text-rose-300/80" : "border-amber-500/25 bg-warning-muted text-warning/80"}`}>
                   {selectedRule.severity}
                 </span>
               </div>
 
               <div>
-                <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-white/22">{t("sourceText")}</p>
-                <p className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2 text-[11px] text-white/55 leading-relaxed">{selectedRule.source_text}</p>
+                <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-muted">{t("sourceText")}</p>
+                <p className="rounded border border-default bg-surface-1 px-3 py-2 text-[11px] text-tertiary leading-relaxed">{selectedRule.source_text}</p>
               </div>
 
               <div>
-                <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-white/22">{t("ruleJson")}</p>
-                <pre className="overflow-x-auto rounded border border-white/[0.07] bg-black/30 px-3 py-2 text-[9.5px] text-white/40">
+                <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-muted">{t("ruleJson")}</p>
+                <pre className="overflow-x-auto rounded border border-default bg-black/30 px-3 py-2 text-[9.5px] text-tertiary">
                   {JSON.stringify(selectedRule.rule_json, null, 2)}
                 </pre>
               </div>
 
               <div className="flex items-center gap-2">
                 <button type="button" onClick={() => toggleRule(selectedRule)}
-                  className={`inline-flex items-center gap-1.5 rounded border px-3 py-1.5 text-[10px] font-semibold transition-colors ${selectedRule.enabled ? "border-white/[0.08] bg-white/[0.04] text-white/45 hover:bg-white/[0.08]" : "border-emerald-500/25 bg-emerald-600/10 text-emerald-300/70 hover:bg-emerald-600/20"}`}>
+                  className={`inline-flex items-center gap-1.5 rounded border px-3 py-1.5 text-[10px] font-semibold transition-colors ${selectedRule.enabled ? "border-default bg-surface-2 text-tertiary hover:bg-surface-3" : "border-emerald-500/25 bg-emerald-600/10 text-emerald-300/70 hover:bg-emerald-600/20"}`}>
                   <Power className="h-3 w-3" />
                   {selectedRule.enabled ? t("disableRule") : t("enableRule")}
                 </button>
                 <button type="button" onClick={() => reExtract(selectedRule)}
-                  className="inline-flex items-center gap-1.5 rounded border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[10px] font-semibold text-white/45 transition-colors hover:bg-white/[0.07]">
+                  className="inline-flex items-center gap-1.5 rounded border border-default bg-surface-1 px-3 py-1.5 text-[10px] font-semibold text-tertiary transition-colors hover:bg-surface-3">
                   <RefreshCw className="h-3 w-3" /> {t("reExtract")}
                 </button>
                 <button type="button" onClick={() => deleteRule(selectedRule)}
-                  className="inline-flex items-center gap-1.5 rounded border border-rose-500/15 px-3 py-1.5 text-[10px] font-semibold text-rose-400/60 transition-colors hover:bg-rose-500/10">
+                  className="inline-flex items-center gap-1.5 rounded border border-rose-500/15 px-3 py-1.5 text-[10px] font-semibold text-error/60 transition-colors hover:bg-error-muted">
                   <Trash2 className="h-3 w-3" /> {tc("delete")}
                 </button>
               </div>
@@ -416,7 +416,7 @@ export default function AdminPoliciesPanel({ companyId, expensePolicy, onExpense
           {/* ── Settings tab ───────────────────────────────────────────── */}
           {tab === "settings" && (
             <div className="space-y-4 max-w-md">
-              <div className="overflow-hidden rounded border border-white/[0.07] divide-y divide-white/[0.05]">
+              <div className="overflow-hidden rounded border border-default divide-y divide-white/[0.05]">
                 <SelectRow label={tm("xmlCfdiRequired")} value={form.xml_required_mode ?? "mxn_only"} options={XML_OPTIONS} onChange={(v) => set("xml_required_mode", v)} />
                 <ToggleRow label={tm("pdfPairRequired")} desc={tm("pdfPairDesc")} checked={!!form.pdf_pair_required_for_cfdi} onChange={(v) => set("pdf_pair_required_for_cfdi", v)} />
                 <ToggleRow label={tm("internationalAllowed")} desc={tm("internationalDesc")} checked={!!form.international_expenses_allowed} onChange={(v) => set("international_expenses_allowed", v)} />
@@ -428,12 +428,12 @@ export default function AdminPoliciesPanel({ companyId, expensePolicy, onExpense
 
               <div className="flex items-center gap-3">
                 <button type="button" onClick={saveSettings} disabled={settingsSaving || !settingsDirty}
-                  className="inline-flex items-center gap-1.5 rounded border border-indigo-500/30 bg-indigo-600/20 px-3 py-1.5 text-[10px] font-semibold text-indigo-300/80 transition-colors hover:bg-indigo-600/30 disabled:cursor-not-allowed disabled:opacity-40">
+                  className="inline-flex items-center gap-1.5 rounded border bg-accent-muted bg-accent-muted px-3 py-1.5 text-[10px] font-semibold text-accent transition-colors hover:bg-accent-muted disabled:cursor-not-allowed disabled:opacity-40">
                   {settingsSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
                   {settingsSaving ? tc("saving") : tc("save")}
                 </button>
-                {settingsSaved && <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400/70"><CheckCircle2 className="h-3 w-3" /> {tc("saved")}</span>}
-                {settingsError && <span className="text-[10px] text-red-400/70">{settingsError}</span>}
+                {settingsSaved && <span className="inline-flex items-center gap-1 text-[10px] text-success/70"><CheckCircle2 className="h-3 w-3" /> {tc("saved")}</span>}
+                {settingsError && <span className="text-[10px] text-error/70">{settingsError}</span>}
               </div>
             </div>
           )}

@@ -12,10 +12,18 @@ def svc():
 
 
 def test_resolve_global_default(db_session, svc):
-    # No configs in DB — fallback auto-detects Ollama or uses hardcoded default
-    config = svc.resolve_provider(db_session, company_id=None)
-    assert config.provider == "ollama"
-    assert config.model_name  # non-empty (auto-detected or hardcoded)
+    # Clear env vars to test pure fallback behavior
+    env_vars_to_clear = [k for k in os.environ if k.startswith("LLM_")]
+    saved = {k: os.environ.pop(k, None) for k in env_vars_to_clear}
+    try:
+        # No configs in DB — fallback auto-detects Ollama or uses hardcoded default
+        config = svc.resolve_provider(db_session, company_id=None)
+        assert config.provider == "ollama"
+        assert config.model_name  # non-empty (auto-detected or hardcoded)
+    finally:
+        for k, v in saved.items():
+            if v is not None:
+                os.environ[k] = v
 
 
 def test_resolve_company_override(db_session, svc):
@@ -35,19 +43,27 @@ def test_resolve_company_override(db_session, svc):
 
 
 def test_resolve_inactive_fallback(db_session, svc):
-    # Create an inactive company override
-    config = LLMProviderConfig(
-        company_id=1,
-        provider="anthropic",
-        model_name="claude-3-5-sonnet",
-        is_active=False
-    )
-    db_session.add(config)
-    db_session.commit()
+    # Clear env vars to test pure fallback behavior
+    env_vars_to_clear = [k for k in os.environ if k.startswith("LLM_")]
+    saved = {k: os.environ.pop(k, None) for k in env_vars_to_clear}
+    try:
+        # Create an inactive company override
+        config = LLMProviderConfig(
+            company_id=1,
+            provider="anthropic",
+            model_name="claude-3-5-sonnet",
+            is_active=False
+        )
+        db_session.add(config)
+        db_session.commit()
 
-    # Should fallback to global default
-    resolved = svc.resolve_provider(db_session, company_id=1)
-    assert resolved.provider == "ollama"
+        # Should fallback to global default
+        resolved = svc.resolve_provider(db_session, company_id=1)
+        assert resolved.provider == "ollama"
+    finally:
+        for k, v in saved.items():
+            if v is not None:
+                os.environ[k] = v
 
 
 def test_resolve_api_key_from_env(svc):

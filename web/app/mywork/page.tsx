@@ -196,14 +196,14 @@ function UnifiedSidebar({
     { id: "approval-workflow", label: ta("workflow"), icon: GitBranch },
     { id: "users-roles", label: ta("usersRoles"), icon: Users },
     { id: "accounting-setup", label: ta("accountingSetup.title"), icon: Calculator },
-    { id: "integrations", label: ta("integrations"), icon: Plug },
-    { id: "platform-api", label: ta("platformApi"), icon: KeyRound },
-    { id: "export", label: ta("export"), icon: Download },
+    { id: "integrations", label: ta("integrationsLabel"), icon: Plug },
+    { id: "platform-api", label: ta("platformApiLabel"), icon: KeyRound },
+    { id: "export", label: ta("exportLabel"), icon: Download },
   ];
   const ADMIN_OPS_SECTIONS: { id: AdminSection; label: string; icon: LucideIcon }[] = [
     { id: "audit-log", label: ta("auditLog.title"), icon: ScrollText },
     { id: "cfdi-watcher", label: ta("cfdiWatcher.title"), icon: XOctagon },
-    { id: "notifications", label: ta("notifications"), icon: Bell },
+    { id: "notifications", label: ta("notificationsLabel"), icon: Bell },
   ];
 
   return (

@@ -26,14 +26,14 @@ export function ModuleCard({ module, selected, onToggle }: ModuleCardProps) {
       onClick={onToggle}
       className={`group relative flex flex-col items-start rounded-lg border p-3 text-left transition-colors ${
         selected
-          ? "border-indigo-500/40 bg-indigo-500/[0.06] text-white/90"
-          : "border-white/[0.06] bg-white/[0.015] text-white/60 hover:border-white/[0.12] hover:bg-white/[0.03]"
+          ? "bg-accent-muted bg-blue-500/[0.06] text-primary"
+          : "border-subtle bg-surface-1 text-secondary hover:border-default hover:bg-surface-1"
       }`}
     >
       <div className="flex w-full items-start justify-between">
         <div
           className={`flex h-8 w-8 items-center justify-center rounded-lg ${
-            selected ? "bg-indigo-500/20 text-indigo-300/80" : "bg-white/[0.04] text-white/40"
+            selected ? "bg-accent-muted text-accent" : "bg-surface-2 text-tertiary"
           }`}
         >
           <Icon className="h-4 w-4" />
@@ -41,8 +41,8 @@ export function ModuleCard({ module, selected, onToggle }: ModuleCardProps) {
         <div
           className={`flex h-5 w-5 items-center justify-center rounded-full border text-[10px] ${
             selected
-              ? "border-indigo-500/50 bg-indigo-500/25 text-indigo-200"
-              : "border-white/[0.08] bg-transparent"
+              ? "border-blue-500/50 bg-blue-500/25 text-accent"
+              : "border-default bg-transparent"
           }`}
         >
           {selected && <Check className="h-3 w-3" />}
@@ -50,7 +50,7 @@ export function ModuleCard({ module, selected, onToggle }: ModuleCardProps) {
       </div>
 
       <h3 className="mt-2 text-[12px] font-medium">{module.name}</h3>
-      <p className="mt-0.5 text-[10px] leading-relaxed text-white/45">{module.description}</p>
+      <p className="mt-0.5 text-[10px] leading-relaxed text-tertiary">{module.description}</p>
     </button>
   );
 }

@@ -30,10 +30,10 @@ interface ToastApi {
 const ToastContext = createContext<ToastApi | null>(null);
 
 const VARIANT_COLOR: Record<ToastVariant, string> = {
-  info: "border-sky-500/30 bg-sky-500/10 text-sky-100",
-  success: "border-emerald-500/30 bg-emerald-500/10 text-emerald-100",
-  warn: "border-amber-500/30 bg-amber-500/10 text-amber-100",
-  error: "border-red-500/30 bg-red-500/10 text-red-100",
+  info: "border-sky-500/30 bg-accent/10 text-sky-100",
+  success: "border-emerald-500/30 bg-success-muted text-emerald-100",
+  warn: "border-amber-500/30 bg-warning-muted text-amber-100",
+  error: "border-error bg-red-500/10 text-red-100",
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {

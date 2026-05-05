@@ -206,19 +206,19 @@ function StateBullets({ ac }: { ac: AssistantContext }) {
   const bullets: Bullet[] = [];
 
   if (ac.hasXml) {
-    bullets.push({ text: tb("xmlValid"), cls: "text-emerald-400", icon: "ok" });
+    bullets.push({ text: tb("xmlValid"), cls: "text-success", icon: "ok" });
   }
   if (ac.satStatus === "valid") {
-    bullets.push({ text: tb("satPassed"), cls: "text-emerald-400", icon: "ok" });
+    bullets.push({ text: tb("satPassed"), cls: "text-success", icon: "ok" });
   } else if (ac.satStatus === "warning") {
-    bullets.push({ text: tb("satWarning"), cls: "text-amber-400", icon: "warn" });
+    bullets.push({ text: tb("satWarning"), cls: "text-warning", icon: "warn" });
   } else if (ac.satStatus === "error") {
-    bullets.push({ text: tb("satFailed"), cls: "text-rose-400", icon: "warn" });
+    bullets.push({ text: tb("satFailed"), cls: "text-error", icon: "warn" });
   }
   if (ac.pdfPairRequired && ac.hasXml && !ac.hasPdf) {
     bullets.push({ text: tb("pdfRequired"), cls: "text-tertiary", icon: "info" });
   } else if (ac.pdfPairRequired && ac.hasPdf) {
-    bullets.push({ text: tb("pdfUploaded"), cls: "text-emerald-400", icon: "ok" });
+    bullets.push({ text: tb("pdfUploaded"), cls: "text-success", icon: "ok" });
   }
 
   if (!bullets.length) return null;
@@ -256,7 +256,7 @@ function Chip({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="rounded-md border border-default bg-surface-2 px-3 py-1.5 text-[12px] font-medium text-secondary transition-all hover:border-accent hover:bg-accent-muted hover:text-accent active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
+      className="rounded-md border border-default bg-surface-2 px-3 py-1.5 text-[12px] font-medium text-secondary transition-all hover:bg-accent-muted hover:bg-accent-muted hover:text-accent active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
     >
       {label}
     </button>
@@ -530,7 +530,7 @@ export default function MyWorkAssistant() {
 
       {/* Header — desktop only */}
       <div className="hidden h-10 shrink-0 items-center gap-2 border-b border-subtle bg-surface-1 px-3 lg:flex">
-        <div className="flex h-6 w-6 items-center justify-center rounded-md bg-accent text-white shadow-[var(--shadow-glow)]">
+        <div className="flex h-6 w-6 items-center justify-center rounded-md bg-accent text-primary shadow-[var(--shadow-glow)]">
           <Bot className="h-3.5 w-3.5" />
         </div>
         <span className="flex-1 truncate text-[12px] font-semibold text-primary">

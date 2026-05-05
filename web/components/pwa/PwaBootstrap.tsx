@@ -99,25 +99,25 @@ export default function PwaBootstrap() {
     <div
       role="dialog"
       aria-label={t("installTitle")}
-      className="fixed bottom-4 left-1/2 z-40 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 rounded-lg border border-white/[0.07] bg-zinc-900 p-3 shadow-xl"
+      className="fixed bottom-4 left-1/2 z-40 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 rounded-lg border border-default bg-surface-1 p-3 shadow-xl"
     >
       <div className="flex items-start gap-3">
-        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-indigo-500/10 text-indigo-300">
+        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-accent-muted text-accent">
           <Download className="h-4 w-4" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-[13px] font-semibold text-white">{t("installTitle")}</div>
-          <div className="mt-0.5 text-[12px] leading-snug text-white/60">{t("installSubtitle")}</div>
+          <div className="text-[13px] font-semibold text-primary">{t("installTitle")}</div>
+          <div className="mt-0.5 text-[12px] leading-snug text-secondary">{t("installSubtitle")}</div>
           <div className="mt-3 flex items-center gap-2">
             <button
               onClick={onInstall}
-              className="inline-flex h-7 items-center rounded-md bg-indigo-500 px-3 text-[12px] font-medium text-white hover:bg-indigo-600"
+              className="inline-flex h-7 items-center rounded-md bg-blue-500 px-3 text-[12px] font-medium text-primary hover:bg-blue-600"
             >
               {t("install")}
             </button>
             <button
               onClick={onDismiss}
-              className="inline-flex h-7 items-center rounded-md border border-white/[0.07] bg-zinc-800 px-3 text-[12px] text-white/70 hover:bg-zinc-700 hover:text-white"
+              className="inline-flex h-7 items-center rounded-md border border-default bg-surface-2 px-3 text-[12px] text-secondary hover:bg-surface-3 hover:text-primary"
             >
               {t("notNow")}
             </button>
@@ -126,7 +126,7 @@ export default function PwaBootstrap() {
         <button
           onClick={onDismiss}
           aria-label={t("close")}
-          className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded text-white/50 hover:bg-white/[0.05] hover:text-white"
+          className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded text-secondary hover:bg-surface-2 hover:text-primary"
         >
           <X className="h-3.5 w-3.5" />
         </button>

@@ -1,25 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Megaphone, Send, CheckSquare } from "lucide-react";
 import { executeAction } from "@/lib/mywork/actions";
 import { useToast } from "@/components/ui/Toast";
 
-const TARGET_OPTIONS = [
-  { value: "all", label: "All Users" },
-  { value: "employees", label: "Employees" },
-  { value: "managers", label: "Managers" },
-  { value: "accounting", label: "Accounting" },
-  { value: "departments", label: "Departments" },
-];
-
-const CHANNEL_OPTIONS = [
-  { value: "mywork", label: "MyWork", defaultChecked: true },
-  { value: "email", label: "Email", defaultChecked: false },
-  { value: "whatsapp", label: "WhatsApp", defaultChecked: false },
-];
-
 export default function AnnouncementPanel() {
+  const t = useTranslations("admin.announcement");
   const toast = useToast();
   const [message, setMessage] = useState("");
   const [target, setTarget] = useState("all");
@@ -30,20 +18,34 @@ export default function AnnouncementPanel() {
   });
   const [sending, setSending] = useState(false);
 
+  const TARGET_OPTIONS = [
+    { value: "all", label: t("targetAll") },
+    { value: "employees", label: t("targetEmployees") },
+    { value: "managers", label: t("targetManagers") },
+    { value: "accounting", label: t("targetAccounting") },
+    { value: "departments", label: t("targetDepartments") },
+  ];
+
+  const CHANNEL_OPTIONS = [
+    { value: "mywork", label: t("channelMyWork"), defaultChecked: true },
+    { value: "email", label: t("channelEmail"), defaultChecked: false },
+    { value: "whatsapp", label: t("channelWhatsApp"), defaultChecked: false },
+  ];
+
   const toggleChannel = (key: string) => {
     setChannels((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
   const handleSend = async () => {
     if (!message.trim()) {
-      toast.error("Please enter a message");
+      toast.error(t("errorNoMessage"));
       return;
     }
     const activeChannels = Object.entries(channels)
       .filter(([, v]) => v)
       .map(([k]) => k);
     if (activeChannels.length === 0) {
-      toast.error("Select at least one channel");
+      toast.error(t("errorNoChannel"));
       return;
     }
     setSending(true);
@@ -54,13 +56,13 @@ export default function AnnouncementPanel() {
         channels: activeChannels,
       });
       if (res.success) {
-        toast.success("Announcement sent", `${activeChannels.join(", ")}`);
+        toast.success(t("successSent"), `${activeChannels.join(", ")}`);
         setMessage("");
       } else {
-        toast.error(res.error?.message ?? "Failed to send announcement");
+        toast.error(res.error?.message ?? t("errorSend"));
       }
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Failed to send announcement";
+      const msg = e instanceof Error ? e.message : t("errorSend");
       toast.error(msg);
     } finally {
       setSending(false);
@@ -70,31 +72,31 @@ export default function AnnouncementPanel() {
   return (
     <div className="mx-auto max-w-xl p-4" data-testid="announcement-panel">
       <header className="mb-4">
-        <h1 className="text-[13px] font-bold tracking-[-0.01em] text-white/85">
-          Announcements
+        <h1 className="text-[13px] font-bold tracking-[-0.01em] text-primary">
+          {t("title")}
         </h1>
-        <p className="mt-0.5 text-[10.5px] text-white/40">
-          Send targeted messages to your organization.
+        <p className="mt-0.5 text-[10.5px] text-tertiary">
+          {t("subtitle")}
         </p>
       </header>
 
       <div className="space-y-3">
-        <div className="rounded border border-white/[0.07] bg-white/[0.02] p-3">
-          <label className="mb-1 block text-[9px] font-bold uppercase tracking-widest text-white/30">
-            Message
+        <div className="rounded border border-default bg-surface-1 p-3">
+          <label className="mb-1 block text-[9px] font-bold uppercase tracking-widest text-muted">
+            {t("messageLabel")}
           </label>
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             rows={4}
-            placeholder="Type your announcement…"
-            className="w-full rounded border border-white/[0.07] bg-white/[0.02] px-2.5 py-2 text-[11px] text-white/80 placeholder:text-white/20 focus:outline-none focus:border-indigo-500/40 resize-none"
+            placeholder={t("messagePlaceholder")}
+            className="w-full rounded border border-default bg-surface-1 px-2.5 py-2 text-[11px] text-secondary placeholder:text-muted focus:outline-none focus:bg-accent-muted resize-none"
           />
         </div>
 
-        <div className="rounded border border-white/[0.07] bg-white/[0.02] p-3">
-          <label className="mb-1 block text-[9px] font-bold uppercase tracking-widest text-white/30">
-            Target Audience
+        <div className="rounded border border-default bg-surface-1 p-3">
+          <label className="mb-1 block text-[9px] font-bold uppercase tracking-widest text-muted">
+            {t("targetLabel")}
           </label>
           <div className="grid grid-cols-2 gap-2">
             {TARGET_OPTIONS.map((opt) => (
@@ -104,12 +106,12 @@ export default function AnnouncementPanel() {
                 onClick={() => setTarget(opt.value)}
                 className={`flex items-center gap-2 rounded border px-2.5 py-1.5 text-[11px] transition-colors ${
                   target === opt.value
-                    ? "border-indigo-500/40 bg-indigo-500/10 text-indigo-300/80"
-                    : "border-white/[0.06] bg-white/[0.02] text-white/55 hover:bg-white/[0.04]"
+                    ? "bg-accent-muted bg-accent-muted text-accent"
+                    : "border-subtle bg-surface-1 text-tertiary hover:bg-surface-2"
                 }`}
               >
                 <CheckSquare
-                  className={`h-3 w-3 ${target === opt.value ? "text-indigo-300/80" : "text-white/20"}`}
+                  className={`h-3 w-3 ${target === opt.value ? "text-accent" : "text-muted"}`}
                 />
                 {opt.label}
               </button>
@@ -117,21 +119,21 @@ export default function AnnouncementPanel() {
           </div>
         </div>
 
-        <div className="rounded border border-white/[0.07] bg-white/[0.02] p-3">
-          <label className="mb-1 block text-[9px] font-bold uppercase tracking-widest text-white/30">
-            Channels
+        <div className="rounded border border-default bg-surface-1 p-3">
+          <label className="mb-1 block text-[9px] font-bold uppercase tracking-widest text-muted">
+            {t("channelsLabel")}
           </label>
           <div className="flex flex-wrap gap-3">
             {CHANNEL_OPTIONS.map((opt) => (
               <label
                 key={opt.value}
-                className="flex cursor-pointer items-center gap-2 text-[11px] text-white/60"
+                className="flex cursor-pointer items-center gap-2 text-[11px] text-secondary"
               >
                 <input
                   type="checkbox"
                   checked={channels[opt.value]}
                   onChange={() => toggleChannel(opt.value)}
-                  className="accent-indigo-500"
+                  className="accent-blue-500"
                 />
                 {opt.label}
               </label>
@@ -139,19 +141,19 @@ export default function AnnouncementPanel() {
           </div>
         </div>
 
-        <div className="rounded border border-white/[0.07] bg-white/[0.02] p-3">
-          <label className="mb-1 block text-[9px] font-bold uppercase tracking-widest text-white/30">
-            Preview
+        <div className="rounded border border-default bg-surface-1 p-3">
+          <label className="mb-1 block text-[9px] font-bold uppercase tracking-widest text-muted">
+            {t("previewLabel")}
           </label>
-          <div className="rounded border border-white/[0.06] bg-zinc-900 p-3">
+          <div className="rounded border border-subtle bg-surface-1 p-3">
             <div className="flex items-center gap-2 mb-2">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-indigo-500/25">
-                <Megaphone className="h-3 w-3 text-indigo-300/80" />
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-blue-500/25">
+                <Megaphone className="h-3 w-3 text-accent" />
               </span>
-              <span className="text-[10px] font-medium text-white/60">Announcement</span>
+              <span className="text-[10px] font-medium text-secondary">{t("previewTitle")}</span>
             </div>
-            <p className="text-[11px] text-white/45 whitespace-pre-wrap">
-              {message.trim() || <span className="italic text-white/25">Your message will appear here…</span>}
+            <p className="text-[11px] text-tertiary whitespace-pre-wrap">
+              {message.trim() || <span className="italic text-muted">{t("previewPlaceholder")}</span>}
             </p>
           </div>
         </div>
@@ -160,11 +162,11 @@ export default function AnnouncementPanel() {
           type="button"
           onClick={handleSend}
           disabled={sending || !message.trim()}
-          className="flex w-full items-center justify-center gap-1.5 rounded border border-indigo-500/30 bg-indigo-500/10 px-3 py-2 text-[11px] font-medium text-indigo-300/80 transition-colors hover:bg-indigo-500/15 disabled:opacity-40"
+          className="flex w-full items-center justify-center gap-1.5 rounded border bg-accent-muted bg-accent-muted px-3 py-2 text-[11px] font-medium text-accent transition-colors hover:bg-accent-hover/15 disabled:opacity-40"
           data-testid="announcement-send"
         >
           <Send className="h-3 w-3" />
-          {sending ? "Sending…" : "Send Announcement"}
+          {sending ? t("sending") : t("sendButton")}
         </button>
       </div>
     </div>

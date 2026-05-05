@@ -82,7 +82,7 @@ export default function CopilotLauncher() {
         onClick={toggle}
         title={t("openTitle")}
         aria-label={t("openTitle")}
-        className="fixed bottom-4 right-4 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-indigo-500/30 bg-indigo-600/30 text-indigo-200 shadow-lg shadow-black/40 transition-all hover:scale-105 hover:bg-indigo-600/50 hover:text-white"
+        className="fixed bottom-4 right-4 z-40 flex h-10 w-10 items-center justify-center rounded-full border bg-accent-muted bg-accent-muted text-accent shadow-lg shadow-black/40 transition-all hover:scale-105 hover:bg-accent-hover hover:text-primary"
       >
         <Bot className="h-4 w-4" />
       </button>
@@ -99,22 +99,22 @@ export default function CopilotLauncher() {
           <aside
             role="dialog"
             aria-label={t("title")}
-            className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[440px] flex-col border-l border-white/[0.07] bg-zinc-950 shadow-2xl"
+            className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[440px] flex-col border-l border-default bg-surface-0 shadow-2xl"
           >
-            <header className="flex h-11 shrink-0 items-center gap-2 border-b border-white/[0.07] px-3">
-              <div className="flex h-5 w-5 items-center justify-center rounded bg-indigo-600/20 ring-1 ring-indigo-500/20">
-                <Bot className="h-3 w-3 text-indigo-300/80" />
+            <header className="flex h-11 shrink-0 items-center gap-2 border-b border-default px-3">
+              <div className="flex h-5 w-5 items-center justify-center rounded bg-accent-muted ring-1 ring-blue-500/20">
+                <Bot className="h-3 w-3 text-accent" />
               </div>
               <div className="flex flex-col leading-tight">
-                <span className="text-[11px] font-semibold text-white/60">{t("title")}</span>
-                <span className="text-[9px] uppercase tracking-widest text-white/28">
+                <span className="text-[11px] font-semibold text-secondary">{t("title")}</span>
+                <span className="text-[9px] uppercase tracking-widest text-muted">
                   {t("subtitle")}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="ml-auto flex h-6 w-6 items-center justify-center rounded text-white/35 transition-colors hover:bg-white/[0.04] hover:text-white/65"
+                className="ml-auto flex h-6 w-6 items-center justify-center rounded text-muted transition-colors hover:bg-surface-2 hover:text-secondary"
                 aria-label={t("close")}
               >
                 <X className="h-3.5 w-3.5" />

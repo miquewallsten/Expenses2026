@@ -319,6 +319,12 @@ def run_turn(
         locale=locale,
         session_id=session.session_id,
         allowed_tools=allowed_tools_list,
+        # Capability flags — control what modules the user can access
+        can_create_expenses=getattr(user, "can_create_expenses", True),
+        can_access_accounting=getattr(user, "can_access_accounting", False),
+        can_view_analytics=getattr(user, "can_view_analytics", False),
+        is_amex_reconciler=getattr(user, "is_amex_reconciler", False),
+        has_executive_reporting=getattr(user, "has_executive_reporting", False),
     )
 
     # ── executor closure ──────────────────────────────────────────────────

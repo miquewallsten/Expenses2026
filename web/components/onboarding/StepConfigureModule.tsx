@@ -56,7 +56,7 @@ export function StepConfigureModule({
   if (selectedModules.length === 0) {
     return (
       <div className="py-8 text-center">
-        <p className="text-[11px] text-white/50">{t("noModulesSelected")}</p>
+        <p className="text-[11px] text-secondary">{t("noModulesSelected")}</p>
       </div>
     );
   }
@@ -64,8 +64,8 @@ export function StepConfigureModule({
   return (
     <div className="space-y-4 py-4">
       <div>
-        <h2 className="text-[15px] font-semibold text-white/90">{t("title")}</h2>
-        <p className="mt-1 text-[11px] text-white/50">{t("subtitle")}</p>
+        <h2 className="text-[15px] font-semibold text-primary">{t("title")}</h2>
+        <p className="mt-1 text-[11px] text-secondary">{t("subtitle")}</p>
       </div>
 
       {/* Module tabs */}
@@ -84,14 +84,14 @@ export function StepConfigureModule({
               onClick={() => onSetActiveModule(moduleType)}
               className={`flex shrink-0 items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[10.5px] font-medium transition-colors ${
                 isActive
-                  ? "border-indigo-500/40 bg-indigo-500/[0.08] text-white/90"
-                  : "border-white/[0.06] bg-white/[0.015] text-white/55 hover:border-white/[0.12] hover:bg-white/[0.03]"
+                  ? "bg-accent-muted bg-blue-500/[0.08] text-primary"
+                  : "border-subtle bg-surface-1 text-tertiary hover:border-default hover:bg-surface-1"
               }`}
             >
               <Icon className="h-3.5 w-3.5" />
               <span>{def.name}</span>
               {isConfigured && (
-                <Check className="h-3 w-3 text-emerald-400/70" />
+                <Check className="h-3 w-3 text-success/70" />
               )}
             </button>
           );
@@ -100,13 +100,13 @@ export function StepConfigureModule({
 
       {/* Questions for active module */}
       {activeModuleDef && (
-        <div className="space-y-4 rounded-lg border border-white/[0.06] bg-white/[0.015] p-4">
+        <div className="space-y-4 rounded-lg border border-subtle bg-surface-1 p-4">
           <div className="flex items-center gap-2">
             {(() => {
               const Icon = ICON_MAP[activeModuleDef.type];
-              return <Icon className="h-4 w-4 text-indigo-300/70" />;
+              return <Icon className="h-4 w-4 text-accent/70" />;
             })()}
-            <h3 className="text-[12px] font-medium text-white/80">{activeModuleDef.name}</h3>
+            <h3 className="text-[12px] font-medium text-secondary">{activeModuleDef.name}</h3>
           </div>
 
           <div className="space-y-4">
@@ -134,7 +134,7 @@ export function StepConfigureModule({
               }
             }}
             disabled={selectedModules.indexOf(activeModule) === 0}
-            className="flex items-center gap-1 text-[10px] text-white/45 hover:text-white/70 disabled:cursor-not-allowed disabled:opacity-30"
+            className="flex items-center gap-1 text-[10px] text-tertiary hover:text-secondary disabled:cursor-not-allowed disabled:opacity-30"
           >
             <ChevronLeft className="h-3 w-3" />
             {t("prevModule")}
@@ -148,7 +148,7 @@ export function StepConfigureModule({
               }
             }}
             disabled={selectedModules.indexOf(activeModule) === selectedModules.length - 1}
-            className="flex items-center gap-1 text-[10px] text-white/45 hover:text-white/70 disabled:cursor-not-allowed disabled:opacity-30"
+            className="flex items-center gap-1 text-[10px] text-tertiary hover:text-secondary disabled:cursor-not-allowed disabled:opacity-30"
           >
             {t("nextModule")}
             <ChevronRight className="h-3 w-3" />

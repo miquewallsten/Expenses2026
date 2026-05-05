@@ -340,7 +340,7 @@ export default function AmexReconciliationModule() {
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center text-zinc-500">
+      <div className="flex h-full items-center justify-center text-muted">
         <Loader2 className="h-5 w-5 animate-spin" />
       </div>
     );
@@ -369,7 +369,7 @@ export default function AmexReconciliationModule() {
   }
 
   return (
-    <div className="flex h-full flex-col bg-zinc-950 text-zinc-200">
+    <div className="flex h-full flex-col bg-surface-0 text-secondary">
       <input
         ref={csvInputRef}
         type="file"
@@ -394,8 +394,8 @@ export default function AmexReconciliationModule() {
       />
 
       {/* ── Statements strip ─────────────────────────────────────────────── */}
-      <div className="flex shrink-0 items-center gap-2 overflow-x-auto border-b border-zinc-800 bg-zinc-900/60 px-4 py-2">
-        <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-zinc-500">
+      <div className="flex shrink-0 items-center gap-2 overflow-x-auto border-b border-subtle bg-surface-1 px-4 py-2">
+        <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted">
           <CreditCard className="h-3.5 w-3.5" />
           {maybeT("amex.statements", "Estados de cuenta")}
         </div>
@@ -406,14 +406,14 @@ export default function AmexReconciliationModule() {
               onClick={() => setSelectedId(s.id)}
               className={`flex shrink-0 items-center gap-2 rounded border px-3 py-1.5 text-xs transition ${
                 s.id === selectedId
-                  ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
-                  : "border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
+                  ? "border-amber-500/40 bg-warning-muted text-warning"
+                  : "border-subtle bg-surface-1 text-secondary hover:border-default hover:text-secondary"
               }`}
             >
               <span className="font-mono text-[10px] opacity-60">#{s.id}</span>
               <span className="truncate max-w-[10rem]">{s.filename}</span>
               {s.card_last4 && (
-                <span className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[10px]">
+                <span className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[10px]">
                   •{s.card_last4}
                 </span>
               )}
@@ -424,7 +424,7 @@ export default function AmexReconciliationModule() {
         <button
           onClick={() => csvInputRef.current?.click()}
           disabled={busy}
-          className="ml-auto flex shrink-0 items-center gap-1.5 rounded border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-200 transition hover:border-amber-500/50 hover:bg-amber-500/10 hover:text-amber-200 disabled:opacity-50"
+          className="ml-auto flex shrink-0 items-center gap-1.5 rounded border border-default bg-surface-2 px-3 py-1.5 text-xs font-medium text-secondary transition hover:border-warning hover:bg-warning-muted hover:text-warning disabled:opacity-50"
         >
           <Plus className="h-3.5 w-3.5" />
           {maybeT("amex.uploadCsv", "Nuevo estado de cuenta (CSV)")}
@@ -545,17 +545,17 @@ function StatementDetailView(props: DetailProps) {
   return (
     <>
       {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div className="flex shrink-0 items-center gap-4 border-b border-zinc-800 bg-zinc-900/40 px-4 py-3">
+      <div className="flex shrink-0 items-center gap-4 border-b border-subtle bg-surface-1 px-4 py-3">
         <div className="flex min-w-0 flex-col">
-          <div className="flex items-center gap-2 text-xs font-medium text-zinc-400">
+          <div className="flex items-center gap-2 text-xs font-medium text-secondary">
             <span className="truncate">{s.filename}</span>
             <StatusBadge status={s.status} />
           </div>
-          <div className="flex items-baseline gap-3 text-zinc-200">
+          <div className="flex items-baseline gap-3 text-secondary">
             <span className="font-mono text-2xl font-semibold tabular-nums">
               {fmtMoney(s.total_amount, s.currency)}
             </span>
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-muted">
               {s.line_count} {t("amex.charges", "cargos")}
               {s.period_start && s.period_end
                 ? ` · ${fmtDate(s.period_start)} – ${fmtDate(s.period_end)}`
@@ -609,7 +609,7 @@ function StatementDetailView(props: DetailProps) {
               ? t("amex.submitBlockedHint", "Resuelve todas las líneas para poder enviar")
               : undefined
           }
-          className="flex shrink-0 items-center gap-1.5 rounded border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-200 transition hover:border-emerald-500/70 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:border-zinc-700 disabled:bg-zinc-800 disabled:text-zinc-500"
+          className="flex shrink-0 items-center gap-1.5 rounded border border-success bg-success-muted px-3 py-1.5 text-xs font-semibold text-success transition hover:border-success hover:bg-success-muted disabled:cursor-not-allowed disabled:border-default disabled:bg-surface-2 disabled:text-muted"
         >
           <Send className="h-3.5 w-3.5" />
           {isDraft
@@ -621,8 +621,8 @@ function StatementDetailView(props: DetailProps) {
       {/* ── Main split ──────────────────────────────────────────────────── */}
       <div className="flex min-h-0 flex-1">
         {/* Lines pane */}
-        <div className="flex min-w-0 flex-1 flex-col border-r border-zinc-800">
-          <div className="flex shrink-0 items-center gap-2 border-b border-zinc-800 bg-zinc-900/30 px-3 py-2">
+        <div className="flex min-w-0 flex-1 flex-col border-r border-subtle">
+          <div className="flex shrink-0 items-center gap-2 border-b border-subtle bg-surface-1 px-3 py-2">
             {selectedLines.size > 0 ? (
               <BulkBar
                 count={selectedLines.size}
@@ -637,7 +637,7 @@ function StatementDetailView(props: DetailProps) {
                 <button
                   onClick={onAutoMatch}
                   disabled={busy || !isDraft}
-                  className="flex items-center gap-1.5 rounded border border-indigo-500/40 bg-indigo-500/10 px-2.5 py-1 text-[11px] font-medium text-indigo-200 transition hover:border-indigo-500/70 hover:bg-indigo-500/20 disabled:opacity-50"
+                  className="flex items-center gap-1.5 rounded border bg-accent-muted bg-accent-muted px-2.5 py-1 text-[11px] font-medium text-accent transition hover:border-indigo-500/70 hover:bg-accent-muted disabled:opacity-50"
                 >
                   {busy ? (
                     <Loader2 className="h-3 w-3 animate-spin" />
@@ -646,7 +646,7 @@ function StatementDetailView(props: DetailProps) {
                   )}
                   {t("amex.autoMatch", "Conciliar automáticamente")}
                 </button>
-                <span className="text-[11px] text-zinc-500">
+                <span className="text-[11px] text-muted">
                   {filteredLines.length}/{detail.lines.length}{" "}
                   {t("amex.shown", "visibles")}
                 </span>
@@ -656,9 +656,9 @@ function StatementDetailView(props: DetailProps) {
 
           <div className="min-h-0 flex-1 overflow-auto">
             <table className="w-full border-collapse text-[12px]">
-              <thead className="sticky top-0 z-10 bg-zinc-900/80 backdrop-blur">
-                <tr className="text-left text-[10px] font-medium uppercase tracking-wider text-zinc-500">
-                  <th className="w-8 border-b border-zinc-800 px-2 py-2">
+              <thead className="sticky top-0 z-10 bg-surface-1/80 backdrop-blur">
+                <tr className="text-left text-[10px] font-medium uppercase tracking-wider text-muted">
+                  <th className="w-8 border-b border-subtle px-2 py-2">
                     <input
                       type="checkbox"
                       checked={
@@ -673,25 +673,25 @@ function StatementDetailView(props: DetailProps) {
                       className="h-3.5 w-3.5 accent-amber-500"
                     />
                   </th>
-                  <th className="border-b border-zinc-800 px-2 py-2">
+                  <th className="border-b border-subtle px-2 py-2">
                     {t("amex.date", "Fecha")}
                   </th>
-                  <th className="border-b border-zinc-800 px-2 py-2">
+                  <th className="border-b border-subtle px-2 py-2">
                     {t("amex.merchant", "Comercio")}
                   </th>
-                  <th className="border-b border-zinc-800 px-2 py-2 text-right">
+                  <th className="border-b border-subtle px-2 py-2 text-right">
                     {t("amex.amount", "Importe")}
                   </th>
-                  <th className="border-b border-zinc-800 px-2 py-2">
+                  <th className="border-b border-subtle px-2 py-2">
                     {t("amex.project", "Proyecto")}
                   </th>
-                  <th className="border-b border-zinc-800 px-2 py-2">
+                  <th className="border-b border-subtle px-2 py-2">
                     {t("amex.category", "Categoría")}
                   </th>
-                  <th className="border-b border-zinc-800 px-2 py-2">
+                  <th className="border-b border-subtle px-2 py-2">
                     {t("amex.invoice", "Factura")}
                   </th>
-                  <th className="w-6 border-b border-zinc-800 px-2 py-2"></th>
+                  <th className="w-6 border-b border-subtle px-2 py-2"></th>
                 </tr>
               </thead>
               <tbody>
@@ -714,7 +714,7 @@ function StatementDetailView(props: DetailProps) {
                 ))}
                 {filteredLines.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-3 py-8 text-center text-xs text-zinc-500">
+                    <td colSpan={8} className="px-3 py-8 text-center text-xs text-muted">
                       {t("amex.noLinesInFilter", "No hay cargos con este filtro.")}
                     </td>
                   </tr>
@@ -725,19 +725,19 @@ function StatementDetailView(props: DetailProps) {
         </div>
 
         {/* Docs pane */}
-        <div className="flex w-[24rem] shrink-0 flex-col bg-zinc-950">
-          <div className="flex shrink-0 items-center justify-between border-b border-zinc-800 bg-zinc-900/30 px-3 py-2">
-            <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-zinc-400">
+        <div className="flex w-[24rem] shrink-0 flex-col bg-surface-0">
+          <div className="flex shrink-0 items-center justify-between border-b border-subtle bg-surface-1 px-3 py-2">
+            <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-secondary">
               <FileText className="h-3 w-3" />
               {t("amex.cfdiPool", "Facturas (XML + PDF)")}
-              <span className="ml-1 rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[10px] text-zinc-300">
+              <span className="ml-1 rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[10px] text-tertiary">
                 {unmatchedDocs.length}/{detail.documents.length}
               </span>
             </div>
             <button
               onClick={onOpenDocsPicker}
               disabled={busy || !isDraft}
-              className="flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[10px] font-medium text-amber-200 hover:bg-amber-500/20 disabled:opacity-50"
+              className="flex items-center gap-1 rounded border border-amber-500/40 bg-warning-muted px-2 py-1 text-[10px] font-medium text-warning hover:bg-warning-muted disabled:opacity-50"
             >
               <Upload className="h-3 w-3" />
               {t("amex.upload", "Subir")}
@@ -748,13 +748,13 @@ function StatementDetailView(props: DetailProps) {
             {detail.documents.length === 0 ? (
               <div
                 onClick={onOpenDocsPicker}
-                className="flex h-full min-h-[10rem] cursor-pointer flex-col items-center justify-center rounded border border-dashed border-zinc-700 p-4 text-center text-xs text-zinc-500 transition hover:border-amber-500/50 hover:text-amber-200"
+                className="flex h-full min-h-[10rem] cursor-pointer flex-col items-center justify-center rounded border border-dashed border-default p-4 text-center text-xs text-muted transition hover:border-warning hover:text-warning"
               >
                 <Upload className="mb-2 h-5 w-5" />
                 <div className="font-medium">
                   {t("amex.dropCfdi", "Suelta los XMLs + PDFs aquí")}
                 </div>
-                <div className="mt-1 text-[10px] text-zinc-600">
+                <div className="mt-1 text-[10px] text-muted">
                   {t(
                     "amex.dropCfdiHint",
                     "Las facturas se validan y se emparejan por monto y fecha.",
@@ -815,8 +815,8 @@ function LineRow(props: LineRowProps) {
 
   return (
     <tr
-      className={`border-b border-zinc-800/60 transition ${
-        selected ? "bg-amber-500/5" : "hover:bg-zinc-900/40"
+      className={`border-b border-subtle/60 transition ${
+        selected ? "bg-amber-500/5" : "hover:bg-surface-1"
       } ${line.status === "matched" ? "" : ""}`}
     >
       <td className="px-2 py-1.5 align-middle">
@@ -827,16 +827,16 @@ function LineRow(props: LineRowProps) {
           className="h-3.5 w-3.5 accent-amber-500"
         />
       </td>
-      <td className="whitespace-nowrap px-2 py-1.5 text-[11px] text-zinc-400 tabular-nums">
+      <td className="whitespace-nowrap px-2 py-1.5 text-[11px] text-secondary tabular-nums">
         {line.posted_date ? fmtDate(line.posted_date) : "—"}
       </td>
-      <td className="max-w-[16rem] truncate px-2 py-1.5 text-zinc-200" title={line.description}>
+      <td className="max-w-[16rem] truncate px-2 py-1.5 text-secondary" title={line.description}>
         <div className="flex items-center gap-2">
           <LineStatusDot status={line.status} />
           <span className="truncate">{line.merchant ?? line.description}</span>
         </div>
       </td>
-      <td className="whitespace-nowrap px-2 py-1.5 text-right font-mono text-zinc-200 tabular-nums">
+      <td className="whitespace-nowrap px-2 py-1.5 text-right font-mono text-secondary tabular-nums">
         {fmtMoney(line.amount, line.currency)}
       </td>
       <td className="px-2 py-1.5">
@@ -846,7 +846,7 @@ function LineRow(props: LineRowProps) {
           onChange={(e) =>
             onPatch({ project_id: e.target.value ? Number(e.target.value) : null })
           }
-          className="w-full rounded border border-zinc-800 bg-zinc-900 px-1.5 py-1 text-[11px] text-zinc-200 focus:border-amber-500/50 focus:outline-none disabled:opacity-50"
+          className="w-full rounded border border-subtle bg-surface-1 px-1.5 py-1 text-[11px] text-secondary focus:border-amber-500/50 focus:outline-none disabled:opacity-50"
         >
           <option value="">—</option>
           {projects.map((p) => (
@@ -862,7 +862,7 @@ function LineRow(props: LineRowProps) {
           value={line.category_code ?? ""}
           disabled={disabled}
           onChange={(e) => onPatch({ category_code: e.target.value || null })}
-          className="w-full rounded border border-zinc-800 bg-zinc-900 px-1.5 py-1 text-[11px] text-zinc-200 focus:border-amber-500/50 focus:outline-none disabled:opacity-50"
+          className="w-full rounded border border-subtle bg-surface-1 px-1.5 py-1 text-[11px] text-secondary focus:border-amber-500/50 focus:outline-none disabled:opacity-50"
         >
           <option value="">—</option>
           {categories.map((c) => (
@@ -875,14 +875,14 @@ function LineRow(props: LineRowProps) {
       <td className="px-2 py-1.5">
         {line.status === "matched" && doc ? (
           <div className="flex items-center gap-1">
-            <CheckCircle2 className="h-3 w-3 text-emerald-400" />
-            <span className="truncate text-[11px] text-zinc-300" title={doc.emisor_name ?? ""}>
+            <CheckCircle2 className="h-3 w-3 text-success" />
+            <span className="truncate text-[11px] text-tertiary" title={doc.emisor_name ?? ""}>
               {doc.emisor_name ?? doc.emisor_rfc ?? doc.uuid?.slice(0, 8)}
             </span>
             <button
               onClick={onUnmatch}
               disabled={disabled}
-              className="ml-1 rounded px-1 text-[10px] text-zinc-500 hover:bg-zinc-800 hover:text-rose-300 disabled:opacity-50"
+              className="ml-1 rounded px-1 text-[10px] text-muted hover:bg-surface-2 hover:text-rose-300 disabled:opacity-50"
               title={t("amex.unmatch", "Desvincular")}
             >
               ×
@@ -899,12 +899,12 @@ function LineRow(props: LineRowProps) {
               else if (v === "unmatched") onPatch({ status: "unmatched" });
               else if (v) onManualMatch(Number(v));
             }}
-            className={`w-full rounded border bg-zinc-900 px-1.5 py-1 text-[11px] focus:outline-none disabled:opacity-50 ${
+            className={`w-full rounded border bg-surface-1 px-1.5 py-1 text-[11px] focus:outline-none disabled:opacity-50 ${
               line.status === "missing"
                 ? "border-rose-500/40 text-rose-200"
                 : line.status === "no_invoice"
-                  ? "border-zinc-700 text-zinc-400"
-                  : "border-amber-500/30 text-amber-200"
+                  ? "border-default text-secondary"
+                  : "border-amber-500/30 text-warning"
             }`}
           >
             <option value="">
@@ -943,7 +943,7 @@ function LineRow(props: LineRowProps) {
       <td className="px-2 py-1.5 text-right">
         {line.match_confidence !== "none" && (
           <span
-            className="inline-block rounded bg-zinc-800 px-1 py-0.5 font-mono text-[9px] uppercase text-zinc-400"
+            className="inline-block rounded bg-surface-2 px-1 py-0.5 font-mono text-[9px] uppercase text-secondary"
             title={`match: ${line.match_confidence}`}
           >
             {line.match_confidence === "manual" ? "M" : "A"}
@@ -968,7 +968,7 @@ interface BulkBarProps {
 function BulkBar({ count, projects, categories, onBulkAssign, onClear, t }: BulkBarProps) {
   return (
     <div className="flex flex-1 items-center gap-2">
-      <span className="rounded border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-200">
+      <span className="rounded border border-amber-500/40 bg-warning-muted px-2 py-0.5 text-[11px] font-semibold text-warning">
         {count} {t("amex.selected", "seleccionados")}
       </span>
       <select
@@ -978,7 +978,7 @@ function BulkBar({ count, projects, categories, onBulkAssign, onClear, t }: Bulk
             e.target.value = "";
           }
         }}
-        className="rounded border border-zinc-800 bg-zinc-900 px-2 py-1 text-[11px] text-zinc-200"
+        className="rounded border border-subtle bg-surface-1 px-2 py-1 text-[11px] text-secondary"
       >
         <option value="">{t("amex.bulkProject", "Asignar proyecto…")}</option>
         {projects.map((p) => (
@@ -994,7 +994,7 @@ function BulkBar({ count, projects, categories, onBulkAssign, onClear, t }: Bulk
             e.target.value = "";
           }
         }}
-        className="rounded border border-zinc-800 bg-zinc-900 px-2 py-1 text-[11px] text-zinc-200"
+        className="rounded border border-subtle bg-surface-1 px-2 py-1 text-[11px] text-secondary"
       >
         <option value="">{t("amex.bulkCategory", "Asignar categoría…")}</option>
         {categories.map((c) => (
@@ -1005,13 +1005,13 @@ function BulkBar({ count, projects, categories, onBulkAssign, onClear, t }: Bulk
       </select>
       <button
         onClick={() => onBulkAssign({ status: "no_invoice" })}
-        className="rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-[11px] text-zinc-300 hover:bg-zinc-700"
+        className="rounded border border-default bg-surface-2 px-2 py-1 text-[11px] text-tertiary hover:bg-surface-3"
       >
         {t("amex.bulkNoInvoice", "Marcar sin factura")}
       </button>
       <button
         onClick={onClear}
-        className="ml-auto rounded px-1.5 py-0.5 text-[11px] text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
+        className="ml-auto rounded px-1.5 py-0.5 text-[11px] text-muted hover:bg-surface-2 hover:text-secondary"
       >
         {t("amex.clear", "Limpiar")}
       </button>
@@ -1038,24 +1038,24 @@ function DocCard({
         isMatched
           ? "border-emerald-500/30 bg-emerald-500/5"
           : isInvalid
-            ? "border-rose-500/30 bg-rose-500/5"
-            : "border-zinc-800 bg-zinc-900/50 hover:border-zinc-700"
+            ? "border-error bg-rose-500/5"
+            : "border-subtle bg-surface-1/50 hover:border-default"
       }`}
     >
       <div className="flex items-start gap-1.5">
         <div className="mt-0.5 flex flex-col items-center gap-0.5">
           {doc.xml_filename && (
-            <span className="rounded bg-zinc-800 px-1 py-0.5 font-mono text-[9px] text-zinc-300">XML</span>
+            <span className="rounded bg-surface-2 px-1 py-0.5 font-mono text-[9px] text-tertiary">XML</span>
           )}
           {doc.pdf_filename && (
-            <span className="rounded bg-zinc-800 px-1 py-0.5 font-mono text-[9px] text-zinc-300">PDF</span>
+            <span className="rounded bg-surface-2 px-1 py-0.5 font-mono text-[9px] text-tertiary">PDF</span>
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="truncate font-medium text-zinc-200">
+          <div className="truncate font-medium text-secondary">
             {doc.emisor_name ?? doc.emisor_rfc ?? "—"}
           </div>
-          <div className="flex items-center gap-2 text-zinc-500">
+          <div className="flex items-center gap-2 text-muted">
             <span className="font-mono tabular-nums">
               {doc.total ? fmtMoney(doc.total, "MXN") : "—"}
             </span>
@@ -1063,7 +1063,7 @@ function DocCard({
             <span>{doc.invoice_date ? fmtDate(doc.invoice_date) : "—"}</span>
           </div>
           {doc.uuid && (
-            <div className="truncate font-mono text-[9px] text-zinc-600" title={doc.uuid}>
+            <div className="truncate font-mono text-[9px] text-muted" title={doc.uuid}>
               {doc.uuid}
             </div>
           )}
@@ -1083,7 +1083,7 @@ function DocCard({
         <button
           onClick={onDelete}
           disabled={disabled}
-          className="opacity-0 transition group-hover:opacity-100 text-zinc-500 hover:text-rose-300 disabled:opacity-0"
+          className="opacity-0 transition group-hover:opacity-100 text-muted hover:text-rose-300 disabled:opacity-0"
         >
           <Trash2 className="h-3 w-3" />
         </button>
@@ -1106,16 +1106,16 @@ function EmptyState({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-4 bg-zinc-950 p-8 text-center">
+    <div className="flex h-full flex-col items-center justify-center gap-4 bg-surface-0 p-8 text-center">
       {children}
-      <div className="flex h-12 w-12 items-center justify-center rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-300">
+      <div className="flex h-12 w-12 items-center justify-center rounded-full border border-amber-500/30 bg-warning-muted text-warning">
         <CreditCard className="h-6 w-6" />
       </div>
       <div>
-        <h2 className="text-base font-semibold text-zinc-100">
+        <h2 className="text-base font-semibold text-primary">
           Conciliación Amex
         </h2>
-        <p className="mx-auto mt-1 max-w-md text-sm text-zinc-500">
+        <p className="mx-auto mt-1 max-w-md text-sm text-muted">
           Sube el estado de cuenta mensual en CSV. Luego podrás subir los XMLs
           y PDFs que correspondan a cada cargo y conciliarlos uno por uno o en
           lote.
@@ -1124,13 +1124,13 @@ function EmptyState({
       <button
         onClick={onPickCsv}
         disabled={busy}
-        className="flex items-center gap-2 rounded border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-200 transition hover:border-amber-500/70 hover:bg-amber-500/20 disabled:opacity-50"
+        className="flex items-center gap-2 rounded border border-amber-500/40 bg-warning-muted px-4 py-2 text-sm font-medium text-warning transition hover:border-amber-500/70 hover:bg-warning-muted disabled:opacity-50"
       >
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
         Subir estado de cuenta (CSV)
       </button>
       {error && (
-        <div className="mt-2 rounded border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
+        <div className="mt-2 rounded border border-rose-500/40 bg-error-muted px-3 py-2 text-xs text-rose-200">
           {error}
         </div>
       )}
@@ -1142,13 +1142,13 @@ function EmptyState({
 
 function StatusDot({ status }: { status: string }) {
   const map: Record<string, string> = {
-    draft: "bg-zinc-500",
+    draft: "bg-surface-2",
     submitted: "bg-amber-400",
     manager_approved: "bg-sky-400",
     approved: "bg-emerald-400",
     rejected: "bg-rose-500",
   };
-  return <span className={`h-1.5 w-1.5 rounded-full ${map[status] ?? "bg-zinc-500"}`} />;
+  return <span className={`h-1.5 w-1.5 rounded-full ${map[status] ?? "bg-surface-2"}`} />;
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -1160,7 +1160,7 @@ function StatusBadge({ status }: { status: string }) {
     rejected: "Rechazado",
   };
   return (
-    <span className="flex items-center gap-1 rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[10px] uppercase text-zinc-300">
+    <span className="flex items-center gap-1 rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[10px] uppercase text-tertiary">
       <StatusDot status={status} />
       {label[status] ?? status}
     </span>
@@ -1171,7 +1171,7 @@ function LineStatusDot({ status }: { status: LineStatus }) {
   const map: Record<LineStatus, string> = {
     matched: "bg-emerald-400",
     unmatched: "bg-amber-400",
-    no_invoice: "bg-zinc-500",
+    no_invoice: "bg-surface-2",
     missing: "bg-rose-500",
   };
   return <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${map[status]}`} />;
@@ -1194,17 +1194,17 @@ function ProgressPill({
 }) {
   const tones: Record<string, string> = {
     emerald: active
-      ? "border-emerald-500/60 bg-emerald-500/20 text-emerald-100"
-      : "border-emerald-500/20 bg-emerald-500/5 text-emerald-300 hover:bg-emerald-500/10",
+      ? "border-emerald-500/60 bg-success-muted text-emerald-100"
+      : "border-emerald-500/20 bg-emerald-500/5 text-emerald-300 hover:bg-success-muted",
     amber: active
-      ? "border-amber-500/60 bg-amber-500/20 text-amber-100"
-      : "border-amber-500/20 bg-amber-500/5 text-amber-300 hover:bg-amber-500/10",
+      ? "border-amber-500/60 bg-warning-muted text-amber-100"
+      : "border-amber-500/20 bg-amber-500/5 text-warning hover:bg-warning-muted",
     zinc: active
-      ? "border-zinc-500/60 bg-zinc-700 text-zinc-100"
-      : "border-zinc-700 bg-zinc-800/40 text-zinc-400 hover:bg-zinc-800",
+      ? "border-default bg-surface-3 text-primary"
+      : "border-default bg-surface-2/40 text-secondary hover:bg-surface-2",
     rose: active
-      ? "border-rose-500/60 bg-rose-500/20 text-rose-100"
-      : "border-rose-500/20 bg-rose-500/5 text-rose-300 hover:bg-rose-500/10",
+      ? "border-rose-500/60 bg-error-muted text-rose-100"
+      : "border-rose-500/20 bg-rose-500/5 text-rose-300 hover:bg-error-muted",
   };
   const pct = total > 0 ? Math.round((count / total) * 100) : 0;
   return (

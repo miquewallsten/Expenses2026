@@ -84,7 +84,7 @@ function NotificationPreferences() {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-[11px] text-white/45">
+      <div className="flex items-center gap-2 text-[11px] text-tertiary">
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
         {t("loading")}
       </div>
@@ -94,14 +94,14 @@ function NotificationPreferences() {
   return (
     <div className="space-y-2.5">
       {error && (
-        <div className="rounded border border-rose-500/30 bg-rose-500/[0.08] p-2 text-[10.5px] text-rose-200 break-all">
+        <div className="rounded border border-error bg-rose-500/[0.08] p-2 text-[10.5px] text-rose-200 break-all">
           {error}
         </div>
       )}
-      <div className="overflow-hidden rounded border border-white/[0.07]">
+      <div className="overflow-hidden rounded border border-default">
         <table className="w-full text-[11px]">
           <thead>
-            <tr className="border-b border-white/[0.07] bg-white/[0.02] text-left text-[9.5px] uppercase tracking-wide text-white/35">
+            <tr className="border-b border-default bg-surface-1 text-left text-[9.5px] uppercase tracking-wide text-muted">
               <th className="px-2.5 py-2 font-medium">{t("th.event")}</th>
               <th className="px-2 py-2 text-center font-medium">{t("th.email")}</th>
               <th className="px-2 py-2 text-center font-medium">
@@ -123,13 +123,13 @@ function NotificationPreferences() {
               return (
                 <tr
                   key={evt}
-                  className="border-b border-white/[0.04] last:border-b-0"
+                  className="border-b border-subtle last:border-b-0"
                 >
                   <td className="px-2.5 py-1.5">
-                    <div className="text-[11px] text-white/80">
+                    <div className="text-[11px] text-secondary">
                       {t(`events.${evt}.label` as Parameters<typeof t>[0])}
                     </div>
-                    <div className="font-mono text-[9.5px] text-white/30">
+                    <div className="font-mono text-[9.5px] text-muted">
                       {evt}
                     </div>
                   </td>
@@ -146,7 +146,7 @@ function NotificationPreferences() {
                         disabled={busy === `${evt}:${field}`}
                         onClick={() => void toggle(evt, field)}
                         className={`relative inline-block h-4 w-7 rounded-full transition-colors disabled:opacity-50 ${
-                          r[field] ? "bg-emerald-500/70" : "bg-white/10"
+                          r[field] ? "bg-success-muted" : "bg-surface-2"
                         }`}
                         aria-label={`${t(`events.${evt}.label` as Parameters<typeof t>[0])} · ${t(`th.${field === "email_enabled" ? "email" : field === "whatsapp_enabled" ? "whatsapp" : "digestOnly"}`)}`}
                       >
@@ -164,7 +164,7 @@ function NotificationPreferences() {
           </tbody>
         </table>
       </div>
-      <p className="text-[10px] text-white/30">{t("footnote")}</p>
+      <p className="text-[10px] text-muted">{t("footnote")}</p>
     </div>
   );
 }
@@ -219,21 +219,21 @@ function SettingsDetail({ sectionKey }: { sectionKey: SectionKey }) {
     setAiOpen(false);
   };
 
-  const labelCls = "block text-[10px] font-bold uppercase tracking-widest text-white/35 mb-1.5";
-  const selectCls = "w-full rounded border border-white/10 bg-zinc-900 px-3 py-2 text-xs text-white outline-none focus:border-white/20 transition-colors";
+  const labelCls = "block text-[10px] font-bold uppercase tracking-widest text-muted mb-1.5";
+  const selectCls = "w-full rounded border border-subtle bg-surface-1 px-3 py-2 text-xs text-primary outline-none focus:border-strong transition-colors";
 
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-sm font-semibold text-white">
+        <h2 className="text-sm font-semibold text-primary">
           {t(`sections.${sectionKey}` as Parameters<typeof t>[0])}
         </h2>
-        <p className="mt-0.5 text-xs text-white/35">
+        <p className="mt-0.5 text-xs text-muted">
           {t(`hints.${sectionKey}` as Parameters<typeof t>[0])}
         </p>
       </div>
 
-      <div className="space-y-4 rounded border border-white/[0.07] bg-black/20 p-4">
+      <div className="space-y-4 rounded border border-default bg-black/20 p-4">
         {(sectionKey === "languageRegion" || sectionKey === "profile") && (
           <>
             <div>
@@ -257,7 +257,7 @@ function SettingsDetail({ sectionKey }: { sectionKey: SectionKey }) {
         {sectionKey === "appearance" && (
           <div>
             <label className={labelCls}>{t("theme")}</label>
-            <div className="flex gap-1 rounded border border-white/[0.08] bg-black/[0.15] p-1">
+            <div className="flex gap-1 rounded border border-default bg-black/[0.15] p-1">
               {(["dark", "light", "system"] as const).map((opt) => (
                 <button
                   key={opt}
@@ -265,8 +265,8 @@ function SettingsDetail({ sectionKey }: { sectionKey: SectionKey }) {
                   onClick={() => handleThemeChange(opt)}
                   className={`flex-1 rounded px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider transition-colors ${
                     localTheme === opt
-                      ? "bg-indigo-600 text-white shadow-sm"
-                      : "text-white/40 hover:text-white/70"
+                      ? "bg-blue-600 text-primary shadow-sm"
+                      : "text-tertiary hover:text-secondary"
                   }`}
                 >
                   {t(`themeOptions.${opt}` as Parameters<typeof t>[0])}
@@ -281,12 +281,12 @@ function SettingsDetail({ sectionKey }: { sectionKey: SectionKey }) {
         {sectionKey === "aiPreferences" && (
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-xs text-white/75 font-medium">{t("aiPanelDefault")}</div>
-              <div className="text-[11px] text-white/35 mt-0.5">{t("aiPanelDesc")}</div>
+              <div className="text-xs text-secondary font-medium">{t("aiPanelDefault")}</div>
+              <div className="text-[11px] text-muted mt-0.5">{t("aiPanelDesc")}</div>
             </div>
             <button
               onClick={() => setAiOpen((v) => !v)}
-              className={`relative h-5 w-9 rounded-full transition-colors ${aiOpen ? "bg-emerald-500/70" : "bg-white/10"}`}
+              className={`relative h-5 w-9 rounded-full transition-colors ${aiOpen ? "bg-success-muted" : "bg-surface-2"}`}
             >
               <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${aiOpen ? "translate-x-4" : "translate-x-0.5"}`} />
             </button>
@@ -298,14 +298,14 @@ function SettingsDetail({ sectionKey }: { sectionKey: SectionKey }) {
         {/* Primary */}
         <button
           onClick={handleSave}
-          className="rounded-md bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-indigo-500 active:bg-indigo-700"
+          className="rounded-md bg-blue-600 px-4 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-accent-hover active:bg-accent"
         >
           {saved ? `✓ ${t("saved")}` : t("saveChanges")}
         </button>
         {/* Tertiary */}
         <button
           onClick={handleReset}
-          className="rounded-md px-4 py-1.5 text-xs font-medium text-white/40 transition-colors hover:bg-white/[0.06] hover:text-white/65"
+          className="rounded-md px-4 py-1.5 text-xs font-medium text-tertiary transition-colors hover:bg-surface-3 hover:text-secondary"
         >
           {t("resetDefault")}
         </button>
@@ -348,18 +348,18 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
         role="dialog"
         aria-modal="true"
         aria-label={tn("settings")}
-        className="animate-slide-in-right fixed inset-y-0 right-0 z-50 flex w-[min(680px,100vw)] flex-col overflow-hidden bg-zinc-950 shadow-2xl ring-1 ring-white/[0.07]"
+        className="animate-slide-in-right fixed inset-y-0 right-0 z-50 flex w-[min(680px,100vw)] flex-col overflow-hidden bg-surface-0 shadow-2xl ring-1 ring-white/[0.07]"
       >
         {/* Header */}
-        <div className="flex h-9 shrink-0 items-center justify-between border-b border-white/[0.07] px-4">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-white/50">
+        <div className="flex h-9 shrink-0 items-center justify-between border-b border-default px-4">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-secondary">
             {tn("settings")}
           </span>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close settings"
-            className="flex h-7 w-7 items-center justify-center rounded text-white/30 transition-colors hover:bg-white/[0.06] hover:text-white/65"
+            className="flex h-7 w-7 items-center justify-center rounded text-muted transition-colors hover:bg-surface-3 hover:text-secondary"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -369,9 +369,9 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
         <div className="flex min-h-0 flex-1 overflow-hidden">
 
           {/* Sections sidebar */}
-          <div className="flex w-44 shrink-0 flex-col border-r border-white/[0.07]">
-            <div className="flex h-8 shrink-0 items-center border-b border-white/[0.07] px-3">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-white/30">
+          <div className="flex w-44 shrink-0 flex-col border-r border-default">
+            <div className="flex h-8 shrink-0 items-center border-b border-default px-3">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">
                 {t("title")}
               </span>
             </div>
@@ -382,8 +382,8 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
                     onClick={() => setActiveSection(key)}
                     className={`relative w-full rounded-md px-3 py-2 text-left text-xs transition-colors ${
                       activeSection === key
-                        ? "bg-indigo-600/[0.15] font-semibold text-white"
-                        : "text-white/45 hover:bg-white/[0.06] hover:text-white/75"
+                        ? "bg-accent-muted font-semibold text-primary"
+                        : "text-tertiary hover:bg-surface-3 hover:text-secondary"
                     }`}
                   >
                     {t(`sections.${key}` as Parameters<typeof t>[0])}

@@ -64,8 +64,9 @@ export const MY_WORK_MODULES: readonly MyWorkModule[] = [
   },
 
   // ── My Approvals ────────────────────────────────────────────────────────────
-  // Visible to managers, executives, admins, and anyone with approve_expense,
-  // but only when the approvals module is enabled AND the manager flow is active.
+  // Managers approve expense submissions. Admins do NOT see this by default —
+  // they must have the manager role or approve_expense permission. This keeps
+  // configuration-only admins focused on setup, not approval workflows.
   {
     id: "my_approvals",
     label: "My Approvals",
@@ -73,14 +74,15 @@ export const MY_WORK_MODULES: readonly MyWorkModule[] = [
     isVisible: (ctx) =>
       hasModule(ctx, "approvals") &&
       (ctx.derived?.manager_flow_enabled ?? false) &&
-      (hasRole(ctx, "manager", "admin", "executive") ||
+      (hasRole(ctx, "manager", "executive") ||
         hasPermission(ctx, "approve_expense")),
     component: React.lazy(() => import("@/modules/my-approvals/MyApprovalsModule")),
   },
 
   // ── Accounting Review ────────────────────────────────────────────────────────
-  // Visible to accountants, admins, and anyone with assign_account permission
-  // when the accounting module is enabled AND the accounting review flow is active.
+  // Accountants review expense accounting assignments. Admins do NOT see this
+  // by default — they must have the accounting role OR can_access_accounting flag.
+  // This keeps configuration-only admins focused on setup, not accounting work.
   {
     id: "accounting_review",
     label: "Accounting Review",
@@ -88,7 +90,8 @@ export const MY_WORK_MODULES: readonly MyWorkModule[] = [
     isVisible: (ctx) =>
       hasModule(ctx, "accounting") &&
       (ctx.derived?.accounting_flow_enabled ?? false) &&
-      (hasRole(ctx, "accounting", "admin") ||
+      (hasRole(ctx, "accounting") ||
+        (ctx.capabilities?.can_access_accounting ?? false) ||
         hasPermission(ctx, "assign_account")),
     component: React.lazy(() => import("@/modules/accounting-review/AccountingReviewModule")),
   },
@@ -112,8 +115,10 @@ export const MY_WORK_MODULES: readonly MyWorkModule[] = [
   },
 
   // ── My Reports ───────────────────────────────────────────────────────────────
-  // Executives with has_executive_reporting always see this.  Others follow
-  // the standard role/permission rules.
+  // Executives with has_executive_reporting always see this. Others follow
+  // the standard role/permission rules. Admins do NOT see this by default —
+  // they must have a functional role (employee, manager, accounting) or
+  // appropriate permissions. Configuration-only admins focus on setup.
   {
     id: "my_reports",
     label: "My Reports",
@@ -121,7 +126,7 @@ export const MY_WORK_MODULES: readonly MyWorkModule[] = [
     isVisible: (ctx) =>
       hasModule(ctx, "expenses") &&
       ((ctx.capabilities?.has_executive_reporting ?? false) ||
-        hasRole(ctx, "employee", "manager", "accounting", "admin", "executive") ||
+        hasRole(ctx, "employee", "manager", "accounting", "executive") ||
         hasPermission(ctx, "submit_expense") ||
         hasPermission(ctx, "approve_expense")),
     component: React.lazy(() => import("@/modules/my-reports/MyReportsModule")),
@@ -182,15 +187,18 @@ export const MY_WORK_MODULES: readonly MyWorkModule[] = [
   },
 
   // ── Finance Analytics ────────────────────────────────────────────────────────
-  // Read-only finance dashboard (Phase 4.7 + 5.7). Visible to admins,
-  // accounting, and executives. Server-aggregated — never returns raw expenses.
+  // Read-only finance dashboard (Phase 4.7 + 5.7). Visible to accounting,
+  // executives, and anyone with can_view_analytics flag or analytics permission.
+  // Admins do NOT see this by default — they must have the flag or permission.
+  // This keeps configuration-only admins focused on setup, not analytics.
   {
     id: "finance_analytics",
     label: "Finance Analytics",
     icon: "BarChart2",
     isVisible: (ctx) =>
       hasModule(ctx, "expenses") &&
-      (hasRole(ctx, "admin", "accounting", "executive") ||
+      (hasRole(ctx, "accounting", "executive") ||
+        (ctx.capabilities?.can_view_analytics ?? false) ||
         hasPermission(ctx, "analytics:view")),
     component: React.lazy(() => import("@/modules/finance-analytics/FinanceAnalyticsModule")),
   },

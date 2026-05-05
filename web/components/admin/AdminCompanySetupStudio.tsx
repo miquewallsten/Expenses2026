@@ -7,6 +7,8 @@ import { apiCall, apiPost, apiPut, apiDelete } from "@/lib/api/client";
 import {
   Save, Loader2, CheckCircle2, AlertCircle, Sparkles,
   Building2, Plus, Pencil, Trash2, X, ImagePlus,
+  Globe, Clock, Briefcase, Users,
+  Layers, CheckCircle, FileText, Archive,
 } from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -32,89 +34,107 @@ interface Props {
 // ── Option sets ───────────────────────────────────────────────────────────────
 
 const COUNTRY_OPTIONS = [
-  { value: "MX", label: "Mexico" },
-  { value: "US", label: "United States" },
-  { value: "CO", label: "Colombia" },
-  { value: "BR", label: "Brazil" },
-  { value: "AR", label: "Argentina" },
-  { value: "CL", label: "Chile" },
+  { value: "MX", labelKey: "countryMX" },
+  { value: "US", labelKey: "countryUS" },
+  { value: "CO", labelKey: "countryCO" },
+  { value: "BR", labelKey: "countryBR" },
+  { value: "AR", labelKey: "countryAR" },
+  { value: "CL", labelKey: "countryCL" },
 ];
 
 const CURRENCY_OPTIONS = [
-  { value: "MXN", label: "MXN — Mexican Peso" },
-  { value: "USD", label: "USD — US Dollar" },
-  { value: "COP", label: "COP — Colombian Peso" },
-  { value: "BRL", label: "BRL — Brazilian Real" },
-  { value: "ARS", label: "ARS — Argentine Peso" },
-  { value: "CLP", label: "CLP — Chilean Peso" },
+  { value: "MXN", labelKey: "currencyMXN" },
+  { value: "USD", labelKey: "currencyUSD" },
+  { value: "COP", labelKey: "currencyCOP" },
+  { value: "BRL", labelKey: "currencyBRL" },
+  { value: "ARS", labelKey: "currencyARS" },
+  { value: "CLP", labelKey: "currencyCLP" },
 ];
 
 const TIMEZONE_OPTIONS = [
-  { value: "America/Mexico_City",   label: "America/Mexico_City" },
-  { value: "America/New_York",      label: "America/New_York" },
-  { value: "America/Chicago",       label: "America/Chicago" },
-  { value: "America/Denver",        label: "America/Denver" },
-  { value: "America/Los_Angeles",   label: "America/Los_Angeles" },
-  { value: "America/Bogota",        label: "America/Bogota" },
-  { value: "America/Sao_Paulo",     label: "America/Sao_Paulo" },
-  { value: "America/Argentina/Buenos_Aires", label: "America/Argentina/Buenos_Aires" },
-  { value: "America/Santiago",      label: "America/Santiago" },
+  { value: "America/Mexico_City",   labelKey: "tzMexicoCity" },
+  { value: "America/New_York",      labelKey: "tzNewYork" },
+  { value: "America/Chicago",       labelKey: "tzChicago" },
+  { value: "America/Denver",        labelKey: "tzDenver" },
+  { value: "America/Los_Angeles",   labelKey: "tzLosAngeles" },
+  { value: "America/Bogota",        labelKey: "tzBogota" },
+  { value: "America/Sao_Paulo",     labelKey: "tzSaoPaulo" },
+  { value: "America/Argentina/Buenos_Aires", labelKey: "tzBuenosAires" },
+  { value: "America/Santiago",      labelKey: "tzSantiago" },
 ];
 
 const LANGUAGE_OPTIONS = [
-  { value: "es-MX", label: "Spanish (Mexico)" },
-  { value: "es-CO", label: "Spanish (Colombia)" },
-  { value: "en-US", label: "English (US)" },
-  { value: "pt-BR", label: "Portuguese (Brazil)" },
+  { value: "es-MX", labelKey: "langEsMX" },
+  { value: "es-CO", labelKey: "langEsCO" },
+  { value: "en-US", labelKey: "langEnUS" },
+  { value: "pt-BR", labelKey: "langPtBR" },
 ];
 
 const INDUSTRY_OPTIONS = [
-  { value: "technology",      label: "Technology" },
-  { value: "financial",       label: "Financial Services" },
-  { value: "retail",          label: "Retail" },
-  { value: "manufacturing",   label: "Manufacturing" },
-  { value: "consulting",      label: "Consulting" },
-  { value: "construction",    label: "Construction" },
-  { value: "healthcare",      label: "Healthcare" },
-  { value: "education",       label: "Education" },
-  { value: "logistics",       label: "Logistics" },
-  { value: "media",           label: "Media & Publishing" },
-  { value: "other",           label: "Other" },
+  { value: "technology",      labelKey: "industryTechnology" },
+  { value: "financial",       labelKey: "industryFinancial" },
+  { value: "retail",          labelKey: "industryRetail" },
+  { value: "manufacturing",   labelKey: "industryManufacturing" },
+  { value: "consulting",      labelKey: "industryConsulting" },
+  { value: "construction",    labelKey: "industryConstruction" },
+  { value: "healthcare",      labelKey: "industryHealthcare" },
+  { value: "education",       labelKey: "industryEducation" },
+  { value: "logistics",       labelKey: "industryLogistics" },
+  { value: "media",           labelKey: "industryMedia" },
+  { value: "other",           labelKey: "industryOther" },
 ];
 
 const EMPLOYEE_RANGE_OPTIONS = [
-  { value: "1-10",       label: "1–10" },
-  { value: "11-50",      label: "11–50" },
-  { value: "51-200",     label: "51–200" },
-  { value: "201-500",    label: "201–500" },
-  { value: "501-1000",   label: "501–1,000" },
-  { value: "1001+",      label: "1,001+" },
+  { value: "1-10",       labelKey: "employees1_10" },
+  { value: "11-50",      labelKey: "employees11_50" },
+  { value: "51-200",     labelKey: "employees51_200" },
+  { value: "201-500",    labelKey: "employees201_500" },
+  { value: "501-1000",   labelKey: "employees501_1000" },
+  { value: "1001+",      labelKey: "employees1001+" },
 ];
 
 const ALLOC_DIM_OPTIONS = [
-  { value: "project",                    label: "Project" },
-  { value: "client",                     label: "Client" },
-  { value: "cost_center",                label: "Cost Center" },
-  { value: "project_client",             label: "Project + Client" },
-  { value: "project_cost_center",        label: "Project + Cost Center" },
-  { value: "client_cost_center",         label: "Client + Cost Center" },
-  { value: "project_client_cost_center", label: "Project + Client + Cost Center" },
+  { value: "project",                    labelKey: "allocProject" },
+  { value: "client",                     labelKey: "allocClient" },
+  { value: "cost_center",                labelKey: "allocCostCenter" },
+  { value: "project_client",             labelKey: "allocProjectClient" },
+  { value: "project_cost_center",        labelKey: "allocProjectCostCenter" },
+  { value: "client_cost_center",         labelKey: "allocClientCostCenter" },
+  { value: "project_client_cost_center", labelKey: "allocProjectClientCostCenter" },
 ];
 
 // ── Shared sub-components ─────────────────────────────────────────────────────
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
+function SectionLabel({ children, icon }: { children: React.ReactNode; icon?: React.ReactNode }) {
   return (
-    <p className="mb-1 px-1 text-[9px] font-bold uppercase tracking-widest text-white/22">
-      {children}
-    </p>
+    <div className="mb-2 flex items-center gap-2 px-1">
+      {icon && (
+        <span className="flex h-5 w-5 items-center justify-center rounded-md bg-gradient-to-br from-accent to-accent-hover shadow-sm shadow-accent-glow">
+          {icon}
+        </span>
+      )}
+      <p className="text-[10px] font-bold uppercase tracking-widest text-secondary">
+        {children}
+      </p>
+    </div>
   );
 }
 
-function Panel({ children }: { children: React.ReactNode }) {
+function Panel({ children, title, icon, variant }: { children: React.ReactNode; title?: string; icon?: React.ReactNode; variant?: "default" | "premium" }) {
+  const isPremium = variant === "premium";
   return (
-    <div className="overflow-hidden rounded-lg border border-white/[0.07] bg-white/[0.02] divide-y divide-white/[0.05]">
-      {children}
+    <div className={`overflow-hidden rounded-xl border ${isPremium ? "border-accent/30 bg-gradient-to-b from-accent-muted/10 to-surface-1" : "border-subtle bg-surface-1"}`}>
+      {title && (
+        <div className={`flex items-center gap-2.5 border-b ${isPremium ? "border-accent/20" : "border-subtle"} px-4 py-3`}>
+          {icon && (
+            <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${isPremium ? "bg-gradient-to-br from-accent to-accent-hover shadow-sm shadow-accent-glow" : "bg-accent-muted"}`}>
+              <span className={isPremium ? "text-white" : "text-accent"}>{icon}</span>
+            </span>
+          )}
+          <h3 className="text-xs font-semibold text-primary">{title}</h3>
+        </div>
+      )}
+      <div className="divide-y divide-subtle">{children}</div>
     </div>
   );
 }
@@ -133,17 +153,17 @@ function TextInputRow({
   onChange: (v: string) => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 px-4 py-2.5">
+    <div className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-surface-2/30 group">
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium text-white/68">{label}</p>
-        {description && <p className="text-[10px] text-white/28">{description}</p>}
+        <p className="text-[11px] font-medium text-primary group-hover:text-primary">{label}</p>
+        {description && <p className="text-[10px] text-tertiary mt-0.5">{description}</p>}
       </div>
       <input
         type="text"
         value={value ?? ""}
         placeholder={placeholder ?? "—"}
         onChange={(e) => onChange(e.target.value)}
-        className="w-44 shrink-0 rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 text-[10px] text-white/55 placeholder:text-white/20 outline-none focus:border-indigo-500/40"
+        className="w-52 shrink-0 rounded-lg border border-default bg-surface-2 px-3 py-2 text-[11px] text-primary placeholder:text-muted outline-none transition-all focus:border-accent focus:bg-surface-3 focus:ring-2 focus:ring-accent-muted hover:border-strong"
       />
     </div>
   );
@@ -163,15 +183,15 @@ function SelectRow({
   onChange: (v: string) => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 px-4 py-2.5">
+    <div className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-surface-2/30 group">
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium text-white/68">{label}</p>
-        {description && <p className="text-[10px] text-white/28">{description}</p>}
+        <p className="text-[11px] font-medium text-primary">{label}</p>
+        {description && <p className="text-[10px] text-tertiary mt-0.5">{description}</p>}
       </div>
       <select
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
-        className="shrink-0 rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 text-[10px] text-white/55 outline-none focus:border-indigo-500/40"
+        className="w-52 shrink-0 rounded-lg border border-default bg-surface-2 px-3 py-2 text-[11px] text-primary outline-none transition-all focus:border-accent focus:bg-surface-3 focus:ring-2 focus:ring-accent-muted hover:border-strong appearance-none cursor-pointer"
       >
         <option value="">—</option>
         {options.map((o) => (
@@ -194,23 +214,25 @@ function ToggleRow({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 px-4 py-2.5">
+    <div className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-surface-2/30 group">
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium text-white/68">{label}</p>
-        {description && <p className="text-[10px] text-white/28">{description}</p>}
+        <p className="text-[11px] font-medium text-primary">{label}</p>
+        {description && <p className="text-[10px] text-tertiary mt-0.5">{description}</p>}
       </div>
       <button
         type="button"
         onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border transition-colors ${
+        className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border transition-all ${
           checked
-            ? "border-indigo-500/40 bg-indigo-600/30"
-            : "border-white/[0.1] bg-white/[0.04]"
+            ? "border-accent bg-accent-muted"
+            : "border-subtle bg-surface-2 hover:border-default"
         }`}
       >
         <span
-          className={`absolute top-0.5 h-3 w-3 rounded-full transition-transform ${
-            checked ? "translate-x-3 bg-indigo-400" : "translate-x-0.5 bg-white/20"
+          className={`absolute top-0.5 h-4 w-4 rounded-full transition-all ${
+            checked
+              ? "translate-x-5 bg-gradient-to-br from-accent to-accent-hover shadow-sm shadow-accent-glow"
+              : "translate-x-0.5 bg-surface-3"
           }`}
         />
       </button>
@@ -251,6 +273,16 @@ function LegalEntityForm({
   const t = useTranslations("admin.companySetup");
   const tc = useTranslations("common");
 
+  const COUNTRY_OPTIONS_T = COUNTRY_OPTIONS.map(opt => ({
+    value: opt.value,
+    label: t(opt.labelKey),
+  }));
+
+  const CURRENCY_OPTIONS_T = CURRENCY_OPTIONS.map(opt => ({
+    value: opt.value,
+    label: t(opt.labelKey),
+  }));
+
   const isEdit = !!initial?.id;
   const [form, setForm] = useState<Record<string, any>>(
     isEdit ? { ...initial } : { ...EMPTY_ENTITY, company_id: companyId }
@@ -285,84 +317,92 @@ function LegalEntityForm({
   };
 
   const fieldClass =
-    "w-full rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 text-[10px] text-white/55 placeholder:text-white/20 outline-none focus:border-indigo-500/40";
+    "w-full rounded-lg border border-default bg-surface-2 px-3 py-2 text-[11px] text-primary placeholder:text-muted outline-none transition-all focus:border-accent focus:bg-surface-3 focus:ring-2 focus:ring-accent-muted hover:border-strong";
 
   return (
-    <div className="space-y-3 rounded-lg border border-white/[0.08] bg-white/[0.025] p-4">
-      <p className="text-[9px] font-bold uppercase tracking-widest text-white/30">
-        {isEdit ? t("editEntity") : t("addLegalEntity")}
-      </p>
+    <div className="space-y-4 rounded-xl border border-accent/30 bg-gradient-to-b from-accent-muted/10 to-surface-1 p-4">
+      <div className="flex items-center gap-2">
+        <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-accent-hover">
+          <Building2 className="h-3 w-3 text-white" />
+        </div>
+        <p className="text-[11px] font-bold uppercase tracking-wider text-accent">
+          {isEdit ? t("editEntity") : t("addLegalEntity")}
+        </p>
+      </div>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-3">
         <div>
-          <p className="mb-0.5 text-[9px] text-white/30">{t("entityNameLabel")}</p>
+          <p className="mb-1 text-[10px] font-medium text-secondary">{t("entityNameLabel")}</p>
           <input className={fieldClass} value={form.entity_name ?? ""} onChange={(e) => set("entity_name", e.target.value)} placeholder="ACME S.A. de C.V." />
         </div>
         <div>
-          <p className="mb-0.5 text-[9px] text-white/30">{t("entityCodeLabel")}</p>
+          <p className="mb-1 text-[10px] font-medium text-secondary">{t("entityCodeLabel")}</p>
           <input className={fieldClass} value={form.entity_code ?? ""} onChange={(e) => set("entity_code", e.target.value)} placeholder="MX-MAIN" />
         </div>
         <div>
-          <p className="mb-0.5 text-[9px] text-white/30">{t("rfcLabel")}</p>
+          <p className="mb-1 text-[10px] font-medium text-secondary">{t("rfcLabel")}</p>
           <input className={fieldClass} value={form.rfc ?? ""} onChange={(e) => set("rfc", e.target.value)} placeholder="ACM901204XY3" />
         </div>
         <div>
-          <p className="mb-0.5 text-[9px] text-white/30">{t("taxIdLabel")}</p>
+          <p className="mb-1 text-[10px] font-medium text-secondary">{t("taxIdLabel")}</p>
           <input className={fieldClass} value={form.tax_id ?? ""} onChange={(e) => set("tax_id", e.target.value)} placeholder={t("taxIdPlaceholder")} />
         </div>
         <div>
-          <p className="mb-0.5 text-[9px] text-white/30">{t("countryLabel")}</p>
+          <p className="mb-1 text-[10px] font-medium text-secondary">{t("countryLabel")}</p>
           <select className={fieldClass} value={form.country_code ?? ""} onChange={(e) => set("country_code", e.target.value)}>
             <option value="">—</option>
-            {COUNTRY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            {COUNTRY_OPTIONS_T.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
         <div>
-          <p className="mb-0.5 text-[9px] text-white/30">{t("currencyLabel")}</p>
+          <p className="mb-1 text-[10px] font-medium text-secondary">{t("currencyLabel")}</p>
           <select className={fieldClass} value={form.base_currency ?? ""} onChange={(e) => set("base_currency", e.target.value)}>
             <option value="">—</option>
-            {CURRENCY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            {CURRENCY_OPTIONS_T.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
         <div>
-          <p className="mb-0.5 text-[9px] text-white/30">{t("fiscalRegimeLabel")}</p>
+          <p className="mb-1 text-[10px] font-medium text-secondary">{t("fiscalRegimeLabel")}</p>
           <input className={fieldClass} value={form.fiscal_regime ?? ""} onChange={(e) => set("fiscal_regime", e.target.value)} placeholder="601" />
         </div>
         <div>
-          <p className="mb-0.5 text-[9px] text-white/30">{t("fiscalZipLabel")}</p>
+          <p className="mb-1 text-[10px] font-medium text-secondary">{t("fiscalZipLabel")}</p>
           <input className={fieldClass} value={form.fiscal_zip_code ?? ""} onChange={(e) => set("fiscal_zip_code", e.target.value)} placeholder="06600" />
         </div>
         <div className="col-span-2">
-          <p className="mb-0.5 text-[9px] text-white/30">{t("legalNameLabel")}</p>
+          <p className="mb-1 text-[10px] font-medium text-secondary">{t("legalNameLabel")}</p>
           <input className={fieldClass} value={form.legal_name ?? ""} onChange={(e) => set("legal_name", e.target.value)} placeholder={t("legalNamePlaceholder")} />
         </div>
         <div className="col-span-2">
-          <p className="mb-0.5 text-[9px] text-white/30">{t("fiscalAddressLabel")}</p>
+          <p className="mb-1 text-[10px] font-medium text-secondary">{t("fiscalAddressLabel")}</p>
           <input className={fieldClass} value={form.fiscal_address ?? ""} onChange={(e) => set("fiscal_address", e.target.value)} placeholder={t("fiscalAddressPlaceholder")} />
         </div>
       </div>
 
       {/* Flags */}
-      <div className="flex items-center gap-4 pt-1">
+      <div className="flex flex-wrap items-center gap-4 pt-1">
         {[
           { key: "is_reimbursement_entity",    label: t("entityFlagReimb") },
           { key: "is_invoice_receiver_entity", label: t("entityFlagInvoice") },
           { key: "is_active",                  label: t("entityFlagActive") },
         ].map(({ key, label }) => (
-          <label key={key} className="flex cursor-pointer items-center gap-1.5">
+          <label key={key} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-surface-2/50">
             <input
               type="checkbox"
               checked={!!form[key]}
               onChange={(e) => set(key, e.target.checked)}
-              className="h-3 w-3 rounded border-white/20 bg-zinc-900 accent-indigo-500"
+              className="h-4 w-4 rounded border-default bg-surface-2 accent-accent"
             />
-            <span className="text-[10px] text-white/45">{label}</span>
+            <span className="text-[10px] text-secondary">{label}</span>
           </label>
         ))}
       </div>
 
       {error && (
-        <p className="text-[10px] text-red-400/70">{error}</p>
+        <div className="flex items-center gap-2 rounded-lg border border-error/30 bg-error-muted/20 px-3 py-2">
+          <AlertCircle className="h-3.5 w-3.5 text-error" />
+          <p className="text-[10px] text-error">{error}</p>
+        </div>
       )}
 
       <div className="flex items-center gap-2 pt-1">
@@ -370,17 +410,17 @@ function LegalEntityForm({
           type="button"
           onClick={save}
           disabled={saving}
-          className="flex items-center gap-1.5 rounded border border-indigo-500/30 bg-indigo-600/20 px-3 py-1 text-[10px] font-semibold text-indigo-300 transition-colors hover:bg-indigo-600/30 disabled:opacity-40"
+          className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-accent to-accent-hover px-4 py-2 text-[11px] font-semibold text-white shadow-sm shadow-accent-glow transition-all hover:shadow-md hover:shadow-accent-glow disabled:opacity-40 disabled:shadow-none"
         >
-          {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
           {isEdit ? t("update") : t("create")}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="flex items-center gap-1.5 rounded border border-white/[0.07] px-3 py-1 text-[10px] text-white/35 transition-colors hover:text-white/50"
+          className="flex items-center gap-2 rounded-lg border border-default bg-surface-2 px-3 py-2 text-[11px] font-medium text-secondary transition-colors hover:bg-surface-3 hover:text-primary"
         >
-          <X className="h-3 w-3" /> {tc("cancel")}
+          <X className="h-3.5 w-3.5" /> {tc("cancel")}
         </button>
       </div>
     </div>
@@ -400,6 +440,31 @@ export default function AdminCompanySetupStudio({
 }: Props) {
   const t = useTranslations("admin.companySetup");
   const tc = useTranslations("common");
+
+  const COUNTRY_OPTIONS_T = COUNTRY_OPTIONS.map(opt => ({
+    value: opt.value,
+    label: t(opt.labelKey),
+  }));
+
+  const CURRENCY_OPTIONS_T = CURRENCY_OPTIONS.map(opt => ({
+    value: opt.value,
+    label: t(opt.labelKey),
+  }));
+
+  const TIMEZONE_OPTIONS_T = TIMEZONE_OPTIONS.map(opt => ({
+    value: opt.value,
+    label: t(opt.labelKey),
+  }));
+
+  const LANGUAGE_OPTIONS_T = LANGUAGE_OPTIONS.map(opt => ({
+    value: opt.value,
+    label: t(opt.labelKey),
+  }));
+
+  const EMPLOYEE_RANGE_OPTIONS_T = EMPLOYEE_RANGE_OPTIONS.map(opt => ({
+    value: opt.value,
+    label: t(opt.labelKey),
+  }));
 
   const INDUSTRY_OPTIONS_T = [
     { value: "technology",    label: t("industryTechnology") },
@@ -571,73 +636,81 @@ export default function AdminCompanySetupStudio({
   const warnings = buildWarnings(form, entities);
 
   return (
-    <div className="max-w-xl space-y-5">
+    <div className="mx-auto max-w-3xl space-y-6">
 
-      {/* Header */}
-      <div className="border-b border-white/[0.06] pb-3">
-        <div className="flex items-center gap-2">
-          <Building2 className="h-4 w-4 text-white/25" />
-          <h2 className="text-sm font-semibold text-white/80">{t("title")}</h2>
-          {aiDrafted && (
-            <span className="flex items-center gap-1 rounded border border-indigo-500/20 bg-indigo-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-indigo-300/80">
-              <Sparkles className="h-2.5 w-2.5" /> {t("aiDraft")}
+      {/* Header with gradient accent */}
+      <div className="relative overflow-hidden rounded-xl border border-subtle bg-surface-1">
+        <div className="absolute inset-0 bg-gradient-to-r from-accent-muted/20 via-transparent to-ai-muted/10" />
+        <div className="relative flex items-center justify-between border-b border-subtle px-5 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-accent to-accent-hover shadow-sm shadow-accent-glow">
+              <Building2 className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-primary">{t("title")}</h2>
+              <p className="text-[10px] text-tertiary">{t("studioSubtitle")}</p>
+            </div>
+            {aiDrafted && (
+              <span className="flex items-center gap-1.5 rounded-full border border-ai/30 bg-ai-muted px-2 py-0.5 text-[9px] font-semibold text-ai">
+                <Sparkles className="h-3 w-3" /> {t("aiDraft")}
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={save}
+            disabled={!dirty || saving}
+            className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-accent to-accent-hover px-4 py-2 text-[11px] font-semibold text-white shadow-sm shadow-accent-glow transition-all hover:shadow-md hover:shadow-accent-glow disabled:opacity-40 disabled:shadow-none"
+          >
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            {tc("save")}
+          </button>
+        </div>
+
+        {/* Status indicators */}
+        <div className="relative flex items-center gap-4 px-5 py-2.5">
+          {dirty && !saved && (
+            <span className="flex items-center gap-1.5 text-[10px] text-warning">
+              <AlertCircle className="h-3 w-3" />
+              {t("unsavedChanges")}
             </span>
           )}
+          {saved && (
+            <span className="flex items-center gap-1.5 text-[10px] text-success">
+              <CheckCircle2 className="h-3 w-3" />
+              {tc("saved")}
+            </span>
+          )}
+          {error && (
+            <span className="flex items-center gap-1.5 text-[10px] text-error">
+              <AlertCircle className="h-3 w-3" />
+              {error}
+            </span>
+          )}
+          {!dirty && !saved && !error && (
+            <span className="text-[10px] text-muted">{buildSummary(form)}</span>
+          )}
         </div>
-        <p className="mt-0.5 text-[11px] text-white/35">
-          {t("studioSubtitle")}
-        </p>
-      </div>
-
-      {/* Summary banner */}
-      <div className="flex items-center gap-x-1 rounded border border-white/[0.05] bg-white/[0.02] px-3 py-2">
-        <p className="text-[10px] text-white/38">{buildSummary(form)}</p>
-      </div>
-
-      {/* Status bar */}
-      <div className="flex items-center gap-3">
-        {dirty && !saved && (
-          <span className="text-[10px] text-amber-400/70">{t("unsavedChanges")}</span>
-        )}
-        {saved && (
-          <span className="flex items-center gap-1 text-[10px] text-emerald-400/70">
-            <CheckCircle2 className="h-3 w-3" /> {tc("saved")}
-          </span>
-        )}
-        {error && (
-          <span className="flex items-center gap-1 text-[10px] text-red-400/70">
-            <AlertCircle className="h-3 w-3" /> {error}
-          </span>
-        )}
-        <button
-          type="button"
-          onClick={save}
-          disabled={!dirty || saving}
-          className="ml-auto flex items-center gap-1.5 rounded border border-indigo-500/30 bg-indigo-600/20 px-3 py-1 text-[10px] font-semibold text-indigo-300 transition-colors hover:bg-indigo-600/30 disabled:opacity-30"
-        >
-          {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-          {tc("save")}
-        </button>
       </div>
 
       {/* A — Company Identity */}
       <div>
-        <SectionLabel>{t("sectionA")}</SectionLabel>
-        <Panel>
+        <SectionLabel icon={<Globe className="h-3 w-3 text-white" />}>{t("sectionA")}</SectionLabel>
+        <Panel variant="premium">
           {/* Logo upload row */}
-          <div className="flex items-center justify-between gap-4 px-4 py-2.5">
+          <div className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-surface-2/30">
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-medium text-white/68">{t("logo")}</p>
-              <p className="text-[10px] text-white/28">{t("logoDesc")}</p>
-              {logoError && <p className="mt-0.5 text-[9px] text-red-400/70">{logoError}</p>}
+              <p className="text-[11px] font-medium text-primary">{t("logo")}</p>
+              <p className="text-[10px] text-tertiary mt-0.5">{t("logoDesc")}</p>
+              {logoError && <p className="mt-1 text-[10px] text-error">{logoError}</p>}
             </div>
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="flex shrink-0 items-center gap-3">
               {form.logo_url && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={`${API}${form.logo_url}`}
                   alt={t("logo")}
-                  className="h-8 w-8 rounded border border-white/[0.08] object-contain bg-white/[0.03] p-0.5"
+                  className="h-10 w-10 rounded-lg border border-default object-contain bg-surface-0 p-0.5"
                 />
               )}
               <input
@@ -655,11 +728,11 @@ export default function AdminCompanySetupStudio({
                 type="button"
                 onClick={() => logoInputRef.current?.click()}
                 disabled={logoUploading}
-                className="flex items-center gap-1.5 rounded border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[10px] text-white/45 transition-colors hover:bg-white/[0.06] hover:text-white/65 disabled:opacity-40"
+                className="flex items-center gap-2 rounded-lg border border-default bg-surface-2 px-3 py-1.5 text-[10px] font-medium text-secondary transition-all hover:border-accent hover:bg-accent-muted hover:text-accent disabled:opacity-40"
               >
                 {logoUploading
-                  ? <Loader2 className="h-3 w-3 animate-spin" />
-                  : <ImagePlus className="h-3 w-3" />}
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  : <ImagePlus className="h-3.5 w-3.5" />}
                 {form.logo_url ? t("logoReplace") : t("logoUpload")}
               </button>
             </div>
@@ -675,28 +748,28 @@ export default function AdminCompanySetupStudio({
             label={t("country")}
             description={t("countryDesc")}
             value={form.country_code ?? ""}
-            options={COUNTRY_OPTIONS}
+            options={COUNTRY_OPTIONS_T}
             onChange={(v) => set("country_code", v)}
           />
           <SelectRow
             label={t("baseCurrency")}
             description={t("baseCurrencyDesc")}
             value={form.base_currency ?? ""}
-            options={CURRENCY_OPTIONS}
+            options={CURRENCY_OPTIONS_T}
             onChange={(v) => set("base_currency", v)}
           />
           <SelectRow
             label={t("timezone")}
             description={t("timezoneDesc")}
             value={form.timezone ?? ""}
-            options={TIMEZONE_OPTIONS}
+            options={TIMEZONE_OPTIONS_T}
             onChange={(v) => set("timezone", v)}
           />
           <SelectRow
             label={t("language")}
             description={t("languageDesc")}
             value={form.language_code ?? ""}
-            options={LANGUAGE_OPTIONS}
+            options={LANGUAGE_OPTIONS_T}
             onChange={(v) => set("language_code", v)}
           />
           <SelectRow
@@ -711,13 +784,13 @@ export default function AdminCompanySetupStudio({
 
       {/* B — Organization Model */}
       <div>
-        <SectionLabel>{t("sectionB")}</SectionLabel>
+        <SectionLabel icon={<Users className="h-3 w-3 text-white" />}>{t("sectionB")}</SectionLabel>
         <Panel>
           <SelectRow
             label={t("employeeCountRange")}
             description={t("employeeCountRangeDesc")}
             value={form.employee_count_range ?? ""}
-            options={EMPLOYEE_RANGE_OPTIONS}
+            options={EMPLOYEE_RANGE_OPTIONS_T}
             onChange={(v) => set("employee_count_range", v)}
           />
           <ToggleRow
@@ -731,7 +804,7 @@ export default function AdminCompanySetupStudio({
 
       {/* C — Allocation & Operations */}
       <div>
-        <SectionLabel>{t("sectionC")}</SectionLabel>
+        <SectionLabel icon={<Layers className="h-3 w-3 text-white" />}>{t("sectionC")}</SectionLabel>
         <Panel>
           <SelectRow
             label={t("allocationDimensions")}
@@ -751,14 +824,14 @@ export default function AdminCompanySetupStudio({
 
       {/* D — Module Activation */}
       <div>
-        <SectionLabel>{t("sectionD")}</SectionLabel>
+        <SectionLabel icon={<CheckCircle className="h-3 w-3 text-white" />}>{t("sectionD")}</SectionLabel>
         <Panel>
           {[
-            { key: "expenses_module_enabled",          label: t("moduleExpenses"),          desc: t("moduleExpensesDesc") },
-            { key: "time_allocation_module_enabled",   label: t("moduleTimeAllocation"),    desc: t("moduleTimeAllocationDesc") },
-            { key: "approvals_module_enabled",         label: t("moduleApprovals"),         desc: t("moduleApprovalsDesc") },
-            { key: "accounting_module_enabled",        label: t("moduleAccounting"),        desc: t("moduleAccountingDesc") },
-            { key: "archive_module_enabled",           label: t("moduleArchive"),           desc: t("moduleArchiveDesc") },
+            { key: "expenses_module_enabled",          label: t("moduleExpenses"),          desc: t("moduleExpensesDesc"), icon: <FileText className="h-3.5 w-3.5" /> },
+            { key: "time_allocation_module_enabled",   label: t("moduleTimeAllocation"),    desc: t("moduleTimeAllocationDesc"), icon: <Clock className="h-3.5 w-3.5" /> },
+            { key: "approvals_module_enabled",         label: t("moduleApprovals"),         desc: t("moduleApprovalsDesc"), icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
+            { key: "accounting_module_enabled",        label: t("moduleAccounting"),        desc: t("moduleAccountingDesc"), icon: <Briefcase className="h-3.5 w-3.5" /> },
+            { key: "archive_module_enabled",           label: t("moduleArchive"),           desc: t("moduleArchiveDesc"), icon: <Archive className="h-3.5 w-3.5" /> },
           ].map(({ key, label, desc }) => (
             <ToggleRow
               key={key}
@@ -773,48 +846,48 @@ export default function AdminCompanySetupStudio({
 
       {/* E — Legal Entities */}
       <div>
-        <SectionLabel>{t("legalEntities")}</SectionLabel>
+        <SectionLabel icon={<Building2 className="h-3 w-3 text-white" />}>{t("sectionE")}</SectionLabel>
 
         {entities.length > 0 && (
-          <div className="mb-2 overflow-hidden rounded-lg border border-white/[0.07]">
-            <div className="grid grid-cols-[1fr_auto_auto_auto_60px] gap-x-3 border-b border-white/[0.05] bg-black/20 px-4 py-2">
+          <div className="mb-3 overflow-hidden rounded-xl border border-subtle bg-surface-1">
+            <div className="grid grid-cols-[1fr_auto_auto_auto_70px] gap-x-4 border-b border-subtle bg-surface-2/50 px-4 py-2.5">
               {[t("entityColName"), t("entityColRfc"), t("entityColReimb"), t("entityColInvoice"), ""].map((h, i) => (
-                <span key={i} className="text-[9px] font-bold uppercase tracking-widest text-white/22">{h}</span>
+                <span key={i} className="text-[9px] font-bold uppercase tracking-widest text-muted">{h}</span>
               ))}
             </div>
             {entities.map((e) => (
               <div
                 key={e.id}
-                className="grid grid-cols-[1fr_auto_auto_auto_60px] items-center gap-x-3 border-b border-white/[0.04] px-4 py-2.5 last:border-0 hover:bg-white/[0.02]"
+                className="grid grid-cols-[1fr_auto_auto_auto_70px] items-center gap-x-4 border-b border-subtle px-4 py-3 last:border-0 transition-colors hover:bg-surface-2/30"
               >
                 <div>
-                  <p className="text-[11px] font-medium text-white/65">{e.entity_name}</p>
-                  {e.entity_code && <p className="font-mono text-[9px] text-white/25">{e.entity_code}</p>}
+                  <p className="text-[11px] font-medium text-primary">{e.entity_name}</p>
+                  {e.entity_code && <p className="font-mono text-[9px] text-muted mt-0.5">{e.entity_code}</p>}
                 </div>
-                <span className="font-mono text-[10px] text-white/40">{e.rfc || "—"}</span>
-                <span className={`text-[10px] ${e.is_reimbursement_entity ? "text-emerald-400/70" : "text-white/18"}`}>
+                <span className="font-mono text-[10px] text-secondary">{e.rfc || "—"}</span>
+                <span className={`text-[10px] ${e.is_reimbursement_entity ? "text-success font-medium" : "text-muted"}`}>
                   {e.is_reimbursement_entity ? "✓" : "—"}
                 </span>
-                <span className={`text-[10px] ${e.is_invoice_receiver_entity ? "text-emerald-400/70" : "text-white/18"}`}>
+                <span className={`text-[10px] ${e.is_invoice_receiver_entity ? "text-success font-medium" : "text-muted"}`}>
                   {e.is_invoice_receiver_entity ? "✓" : "—"}
                 </span>
                 <div className="flex items-center gap-2 justify-end">
                   <button
                     type="button"
                     onClick={() => { setEditingEntity(e); setAddingEntity(false); }}
-                    className="text-white/25 hover:text-white/55 transition-colors"
+                    className="rounded p-1 text-muted transition-colors hover:bg-surface-3 hover:text-secondary"
                   >
-                    <Pencil className="h-3 w-3" />
+                    <Pencil className="h-3.5 w-3.5" />
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDeleteEntity(e.id)}
                     disabled={deletingId === e.id}
-                    className="text-white/20 hover:text-red-400/60 transition-colors disabled:opacity-40"
+                    className="rounded p-1 text-muted transition-colors hover:bg-error-muted hover:text-error disabled:opacity-40"
                   >
                     {deletingId === e.id
-                      ? <Loader2 className="h-3 w-3 animate-spin" />
-                      : <Trash2 className="h-3 w-3" />
+                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      : <Trash2 className="h-3.5 w-3.5" />
                     }
                   </button>
                 </div>
@@ -844,9 +917,9 @@ export default function AdminCompanySetupStudio({
           <button
             type="button"
             onClick={() => setAddingEntity(true)}
-            className="mt-1 flex items-center gap-1.5 rounded border border-white/[0.07] px-3 py-1.5 text-[10px] text-white/35 transition-colors hover:border-white/[0.12] hover:text-white/55"
+            className="flex items-center gap-2 rounded-lg border border-default bg-surface-2 px-3 py-2 text-[11px] font-medium text-secondary transition-all hover:border-accent hover:bg-accent-muted hover:text-accent"
           >
-            <Plus className="h-3 w-3" /> {t("addLegalEntity")}
+            <Plus className="h-3.5 w-3.5" /> {t("addLegalEntity")}
           </button>
         )}
       </div>

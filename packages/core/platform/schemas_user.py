@@ -26,6 +26,8 @@ class UserCreate(BaseModel):
     is_amex_reconciler: bool = False
     requires_time_tracking: bool = False
     has_executive_reporting: bool = False
+    can_access_accounting: bool = False
+    can_view_analytics: bool = False
     # If True the API will send an invite magic link to the new user
     send_invite: bool = False
     # Initial project assignments
@@ -47,6 +49,8 @@ class UserUpdate(BaseModel):
     is_amex_reconciler: bool | None = None
     requires_time_tracking: bool | None = None
     has_executive_reporting: bool | None = None
+    can_access_accounting: bool | None = None
+    can_view_analytics: bool | None = None
     # Provide a full replacement list; omit to leave unchanged
     project_ids: list[int] | None = None
 
@@ -71,6 +75,8 @@ class UserRead(BaseModel):
     is_amex_reconciler: bool = False
     requires_time_tracking: bool = False
     has_executive_reporting: bool = False
+    can_access_accounting: bool = False
+    can_view_analytics: bool = False
     invited_at: datetime | None = None
     last_login_at: datetime | None = None
     created_at: datetime

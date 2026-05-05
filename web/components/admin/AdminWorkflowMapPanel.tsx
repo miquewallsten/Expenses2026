@@ -213,15 +213,15 @@ export default function AdminWorkflowMapPanel({
     <div className="flex flex-col gap-4">
 
       {/* ── SVG Canvas ─────────────────────────────────────────────────────── */}
-      <div className="overflow-hidden rounded-lg border border-white/[0.07] bg-zinc-950">
+      <div className="overflow-hidden rounded-lg border border-default bg-surface-0">
 
         {/* Canvas header */}
-        <div className="flex items-center justify-between border-b border-white/[0.05] px-3 py-2">
+        <div className="flex items-center justify-between border-b border-subtle px-3 py-2">
           <div className="flex items-center gap-1.5">
-            <GitBranch className="h-3.5 w-3.5 text-white/30" />
-            <span className="text-[11px] font-semibold text-white/60">{tw("canvasTitle")}</span>
+            <GitBranch className="h-3.5 w-3.5 text-muted" />
+            <span className="text-[11px] font-semibold text-secondary">{tw("canvasTitle")}</span>
             {!isEmpty && (
-              <span className="rounded border border-white/[0.08] bg-white/[0.04] px-1.5 py-0.5 font-mono text-[9px] text-white/30">
+              <span className="rounded border border-default bg-surface-2 px-1.5 py-0.5 font-mono text-[9px] text-muted">
                 {stages.length} {tw("stagesUnit")} · {transitions.length} {tw("transitionsUnit")}
               </span>
             )}
@@ -229,7 +229,7 @@ export default function AdminWorkflowMapPanel({
           {!isEmpty && (
             <button
               onClick={loadGraph}
-              className="text-[9px] font-semibold text-white/25 hover:text-white/55 transition-colors"
+              className="text-[9px] font-semibold text-muted hover:text-tertiary transition-colors"
             >
               {tw("refresh")}
             </button>
@@ -239,17 +239,17 @@ export default function AdminWorkflowMapPanel({
         {isEmpty ? (
           /* ── Preset picker ── */
           <div className="px-6 py-8">
-            <p className="mb-4 text-center text-[11px] text-white/35">{tw("noStages")}</p>
+            <p className="mb-4 text-center text-[11px] text-muted">{tw("noStages")}</p>
             <div className="flex flex-wrap justify-center gap-2">
               {PRESETS.map((preset) => (
                 <button
                   key={preset.key}
                   onClick={() => applyPreset(preset)}
                   disabled={applyingPreset}
-                  className="flex flex-col items-start rounded border border-white/[0.09] bg-white/[0.03] px-4 py-3 text-left transition-colors hover:border-indigo-400/30 hover:bg-indigo-500/[0.07] disabled:opacity-50"
+                  className="flex flex-col items-start rounded border border-default bg-surface-1 px-4 py-3 text-left transition-colors hover:bg-accent-muted/30 hover:bg-accent-hover/[0.07] disabled:opacity-50"
                 >
-                  <span className="text-[11px] font-semibold text-white/70">{preset.label}</span>
-                  <span className="mt-0.5 text-[10px] text-white/35">{preset.desc}</span>
+                  <span className="text-[11px] font-semibold text-secondary">{preset.label}</span>
+                  <span className="mt-0.5 text-[10px] text-muted">{preset.desc}</span>
                 </button>
               ))}
             </div>
@@ -323,36 +323,36 @@ export default function AdminWorkflowMapPanel({
 
         {/* ── Inspector strip ── */}
         {(selectedStage || selectedTx) && (
-          <div className="border-t border-white/[0.06] bg-black/20 px-4 py-3">
+          <div className="border-t border-subtle bg-black/20 px-4 py-3">
             {selectedStage && (
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-white/22">{tw("inspStage")}</p>
-                  <p className="mt-1 text-[12px] font-semibold text-white/80">{selectedStage.stage_name}</p>
-                  <p className="mt-0.5 font-mono text-[10px] text-amber-300/60">{selectedStage.stage_key}</p>
-                  <p className="mt-0.5 text-[10px] text-white/35">
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-muted">{tw("inspStage")}</p>
+                  <p className="mt-1 text-[12px] font-semibold text-secondary">{selectedStage.stage_name}</p>
+                  <p className="mt-0.5 font-mono text-[10px] text-warning/60">{selectedStage.stage_key}</p>
+                  <p className="mt-0.5 text-[10px] text-muted">
                     {tw("orderLabel")}: {selectedStage.stage_order} ·{" "}
                     {selectedStage.is_terminal ? tw("terminal") : tw("notTerminal")}
                   </p>
                 </div>
-                <button onClick={() => setSelectedStage(null)} className="shrink-0 text-[11px] text-white/25 hover:text-white/60">✕</button>
+                <button onClick={() => setSelectedStage(null)} className="shrink-0 text-[11px] text-muted hover:text-secondary">✕</button>
               </div>
             )}
             {selectedTx && (
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-white/22">{tw("inspTransition")}</p>
-                  <p className="mt-1 font-mono text-[11px] text-amber-300/70">
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-muted">{tw("inspTransition")}</p>
+                  <p className="mt-1 font-mono text-[11px] text-warning/70">
                     {selectedTx.from_stage_key} → {selectedTx.to_stage_key}
                   </p>
-                  <p className="mt-0.5 text-[10px] text-white/35">
-                    {tw("actionLabel")}: <span className="font-mono text-indigo-300/70">{selectedTx.action_key}</span>
+                  <p className="mt-0.5 text-[10px] text-muted">
+                    {tw("actionLabel")}: <span className="font-mono text-accent/70">{selectedTx.action_key}</span>
                   </p>
-                  <p className="mt-0.5 text-[10px] text-white/35">
-                    {tw("permLabel")}: <span className="font-mono text-sky-300/60">{selectedTx.required_permission_key}</span>
+                  <p className="mt-0.5 text-[10px] text-muted">
+                    {tw("permLabel")}: <span className="font-mono text-accent/60">{selectedTx.required_permission_key}</span>
                   </p>
                 </div>
-                <button onClick={() => setSelectedTx(null)} className="shrink-0 text-[11px] text-white/25 hover:text-white/60">✕</button>
+                <button onClick={() => setSelectedTx(null)} className="shrink-0 text-[11px] text-muted hover:text-secondary">✕</button>
               </div>
             )}
           </div>

@@ -98,28 +98,28 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={title ? "modal-title" : undefined}
         className={cn(
-          "w-full mx-4 rounded-lg border border-white/10 bg-zinc-900 shadow-2xl",
+          "w-full mx-4 rounded-lg border border-subtle bg-surface-1 shadow-2xl",
           SIZE[size],
         )}
       >
         {(title || description) && (
-          <div className="px-4 py-3 border-b border-white/[0.06]">
+          <div className="px-4 py-3 border-b border-subtle">
             {title && (
               <h2
                 id="modal-title"
-                className="text-[11px] font-bold uppercase tracking-widest text-white/75"
+                className="text-[11px] font-bold uppercase tracking-widest text-secondary"
               >
                 {title}
               </h2>
             )}
             {description && (
-              <p className="mt-1 text-[11px] text-white/45">{description}</p>
+              <p className="mt-1 text-[11px] text-tertiary">{description}</p>
             )}
           </div>
         )}
         <div className="px-4 py-3">{children}</div>
         {footer && (
-          <div className="px-4 py-3 border-t border-white/[0.06] flex justify-end gap-2">
+          <div className="px-4 py-3 border-t border-subtle flex justify-end gap-2">
             {footer}
           </div>
         )}
