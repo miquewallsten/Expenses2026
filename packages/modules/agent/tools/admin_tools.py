@@ -535,7 +535,10 @@ def _handle_list_users(ctx: AgentContext, args: ListUsersArgs) -> ToolResult:
         if args.include_metrics:
             user_data["last_login_at"] = u.last_login_at.isoformat() if u.last_login_at else None
             user_data["created_at"] = u.created_at.isoformat() if u.created_at else None
-            user_data["expense_count"] = 0  # Placeholder
+            # TODO(Phase 2): expense_count should join with expenses table to return actual count.
+            # Currently returns 0 as placeholder. Implement by adding subquery counting expenses
+            # where user_id matches and expense is in a non-deleted state.
+            user_data["expense_count"] = 0
 
         user_list.append(user_data)
 

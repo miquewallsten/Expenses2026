@@ -323,3 +323,73 @@ class TestListUsersTool:
         res = REGISTRY.dispatch("list_users", {}, ctx)
         assert res.ok is False
         assert "forbidden" in (res.error or "")
+
+    def test_list_users_filter_by_legal_entity(self, db_session, test_company):
+        """Test list_users filters by legal_entity_id."""
+        ctx = _ctx(db_session, test_company)
+        # Create users with different legal_entity_id values
+        REGISTRY.dispatch("invite_user", {"email": "entity1@example.com"}, ctx)
+        REGISTRY.dispatch("invite_user", {"email": "entity2@example.com"}, ctx)
+        REGISTRY.dispatch("invite_user", {"email": "no_entity@example.com"}, ctx)
+
+        # Set legal_entity_id on first two users
+        user1 = db_session.query(User).filter(User.email == "entity1@example.com").first()
+        user1.legal_entity_id = 100
+        user2 = db_session.query(User).filter(User.email == "entity2@example.com").first()
+        user2.legal_entity_id = 200
+        db_session.commit()
+
+        # Filter by legal_entity_id 100
+        res = REGISTRY.dispatch("list_users", {"legal_entity_id": 100}, ctx)
+        assert res.ok is True
+        emails = [u["email"] for u in res.data["users"]]
+        assert "entity1@example.com" in emails
+        assert "entity2@example.com" not in emails
+        assert "no_entity@example.com" not in emails
+
+    def test_list_users_filter_by_capabilities(self, db_session, test_company):
+        """Test list_users filters by capabilities flags."""
+        ctx = _ctx(db_session, test_company)
+        REGISTRY.dispatch("invite_user", {"email": "can_create@example.com"}, ctx)
+        REGISTRY.dispatch("invite_user", {"email": "cannot_create@example.com"}, ctx)
+
+        # Set capabilities differently
+        can_user = db_session.query(User).filter(User.email == "can_create@example.com").first()
+        can_user.can_create_expenses = True
+        cannot_user = db_session.query(User).filter(User.email == "cannot_create@example.com").first()
+        cannot_user.can_create_expenses = False
+        db_session.commit()
+
+        # Filter for users who can create expenses
+        res = REGISTRY.dispatch("list_users", {"capabilities": ["can_create_expenses"]}, ctx)
+        assert res.ok is True
+        emails = [u["email"] for u in res.data["users"]]
+        assert "can_create@example.com" in emails
+        assert "cannot_create@example.com" not in emails
+
+    def test_list_users_filter_by_has_delegation(self, db_session, test_company):
+        """Test list_users filters by has_delegation."""
+        ctx = _ctx(db_session, test_company)
+        REGISTRY.dispatch("invite_user", {"email": "delegate_user@example.com"}, ctx)
+        REGISTRY.dispatch("invite_user", {"email": "boss_user@example.com"}, ctx)
+        REGISTRY.dispatch("invite_user", {"email": "no_delegate@example.com"}, ctx)
+
+        # Set up delegation: delegate_user acts on behalf of boss_user
+        delegate_user = db_session.query(User).filter(User.email == "delegate_user@example.com").first()
+        boss_user = db_session.query(User).filter(User.email == "boss_user@example.com").first()
+        delegate_user.delegates_for_user_id = boss_user.id
+        db_session.commit()
+
+        # Filter for users with delegation
+        res = REGISTRY.dispatch("list_users", {"has_delegation": True}, ctx)
+        assert res.ok is True
+        emails = [u["email"] for u in res.data["users"]]
+        assert "delegate_user@example.com" in emails
+        assert "no_delegate@example.com" not in emails
+
+        # Filter for users without delegation
+        res = REGISTRY.dispatch("list_users", {"has_delegation": False}, ctx)
+        assert res.ok is True
+        emails = [u["email"] for u in res.data["users"]]
+        assert "delegate_user@example.com" not in emails
+        assert "no_delegate@example.com" in emails
