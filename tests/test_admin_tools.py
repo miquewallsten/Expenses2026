@@ -6,6 +6,8 @@ import pytest
 from pydantic import BaseModel, ConfigDict
 
 from packages.core.platform.models_user import User
+from packages.core.platform.models_project import Project
+from packages.core.platform.models_user_project import UserProjectAssignment
 from packages.modules.agent.core.context import AgentContext
 from packages.modules.agent.core.registry import REGISTRY, ToolResult
 from packages.modules.agent.tools import registry_all  # noqa: F401 — triggers tool registration
@@ -658,3 +660,62 @@ class TestCreateUserTool:
         assert res.data["role"] == "employee"
         # Employee preset has can_create_expenses=True
         assert res.data["capabilities"]["can_create_expenses"] is True
+
+    def test_create_user_with_project_ids(self, db_session, test_company):
+        """Test create_user with project assignments."""
+        ctx = _ctx(db_session, test_company)
+        # Create test projects
+        project1 = Project(company_id=test_company.id, name="Project Alpha", code="PA")
+        project2 = Project(company_id=test_company.id, name="Project Beta", code="PB")
+        db_session.add_all([project1, project2])
+        db_session.commit()
+        db_session.refresh(project1)
+        db_session.refresh(project2)
+
+        res = REGISTRY.dispatch(
+            "create_user",
+            {
+                "email": "project_user@test.com",
+                "full_name": "Project User",
+                "role": "employee",
+                "project_ids": [project1.id, project2.id],
+            },
+            ctx,
+        )
+        assert res.ok is True
+        assert res.data["user_id"] is not None
+
+        # Verify user was created
+        user = db_session.query(User).filter(User.email == "project_user@test.com").first()
+        assert user is not None
+
+        # Verify project assignments
+        assignments = (
+            db_session.query(UserProjectAssignment)
+            .filter(UserProjectAssignment.user_id == user.id)
+            .all()
+        )
+        assert len(assignments) == 2
+        assigned_project_ids = {a.project_id for a in assignments}
+        assert project1.id in assigned_project_ids
+        assert project2.id in assigned_project_ids
+
+    def test_create_user_send_invite_false(self, db_session, test_company):
+        """Test create_user accepts send_invite parameter without error."""
+        ctx = _ctx(db_session, test_company)
+        res = REGISTRY.dispatch(
+            "create_user",
+            {
+                "email": "no_invite@test.com",
+                "full_name": "No Invite User",
+                "role": "employee",
+                "send_invite": False,
+            },
+            ctx,
+        )
+        assert res.ok is True
+        assert res.data["email"] == "no_invite@test.com"
+
+        # Verify user was created
+        user = db_session.query(User).filter(User.email == "no_invite@test.com").first()
+        assert user is not None
