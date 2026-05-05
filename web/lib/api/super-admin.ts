@@ -1,9 +1,10 @@
 /**
  * Super Admin API client
  * Provides typed access to platform-wide management endpoints
+ * Uses independent authentication from superAdminSession
  */
 
-import { apiCall } from "./client";
+import { superAdminApiCall } from "./super-admin-client";
 
 export interface AgentMetrics {
   total_requests: number;
@@ -84,61 +85,61 @@ export interface PlatformStats {
  * Get real-time agent performance metrics
  */
 export async function getAgentMetrics(): Promise<AgentMetrics> {
-  return apiCall<AgentMetrics>("/super-admin/agent-metrics");
+  return superAdminApiCall<AgentMetrics>("/super-admin/agent-metrics");
 }
 
 /**
  * Get currently active agent requests
  */
 export async function getActiveRequests(): Promise<ActiveRequest[]> {
-  return apiCall<ActiveRequest[]>("/super-admin/active-requests");
+  return superAdminApiCall<ActiveRequest[]>("/super-admin/active-requests");
 }
 
 /**
  * Get recent request history
  */
 export async function getRequestHistory(limit: number = 100): Promise<ActiveRequest[]> {
-  return apiCall<ActiveRequest[]>("/super-admin/request-history?limit=" + limit);
+  return superAdminApiCall<ActiveRequest[]>("/super-admin/request-history?limit=" + limit);
 }
 
 /**
  * Get detailed performance metrics by team
  */
 export async function getTeamPerformance(): Promise<Record<string, TeamPerformance>> {
-  return apiCall<Record<string, TeamPerformance>>("/super-admin/team-performance");
+  return superAdminApiCall<Record<string, TeamPerformance>>("/super-admin/team-performance");
 }
 
 /**
  * Get status of ALL agent teams across ALL companies
  */
 export async function getGlobalAgentStatus(): Promise<AgentTeamStatus[]> {
-  return apiCall<AgentTeamStatus[]>("/super-admin/agents/status");
+  return superAdminApiCall<AgentTeamStatus[]>("/super-admin/agents/status");
 }
 
 /**
  * List all companies/tenants in the platform
  */
 export async function listAllTenants(): Promise<TenantSummary[]> {
-  return apiCall<TenantSummary[]>("/super-admin/tenants");
+  return superAdminApiCall<TenantSummary[]>("/super-admin/tenants");
 }
 
 /**
  * Get platform-wide system health
  */
 export async function getSystemHealth(): Promise<SystemHealth> {
-  return apiCall<SystemHealth>("/super-admin/system-health");
+  return superAdminApiCall<SystemHealth>("/super-admin/system-health");
 }
 
 /**
  * List ALL users across ALL companies
  */
 export async function listAllUsers(): Promise<GlobalUser[]> {
-  return apiCall<GlobalUser[]>("/super-admin/users");
+  return superAdminApiCall<GlobalUser[]>("/super-admin/users");
 }
 
 /**
  * Get platform-wide statistics
  */
 export async function getPlatformStats(): Promise<PlatformStats> {
-  return apiCall<PlatformStats>("/super-admin/stats");
+  return superAdminApiCall<PlatformStats>("/super-admin/stats");
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import {
-  CheckCircle2, Settings, Puzzle, Clock, Archive,
+  CheckCircle2, Settings, Puzzle, Clock, Archive, Sparkles,
   ShoppingCart, Users, CreditCard, ChevronRight, AlertTriangle, Loader2,
   ExternalLink, Package, PackageCheck, PackageX,
 } from "lucide-react";
@@ -134,47 +134,61 @@ function ModuleRow({
   }
 
   return (
-    <div className={`rounded border ${locked ? "border-subtle" : "border-default"} ${isComing ? "opacity-50" : ""} bg-surface-1`}>
+    <div className={`group relative overflow-hidden rounded-lg border transition-all ${
+      locked ? "border-subtle/50" : "border-default hover:border-strong"
+    } ${isComing ? "opacity-60" : ""} bg-surface-1`}>
+      {/* Gradient background for installed modules */}
+      {isInstalled && (
+        <div className="absolute inset-0 bg-gradient-to-br from-success/[0.02] via-transparent to-transparent pointer-events-none" />
+      )}
+
       {/* Main row */}
-      <div className="flex items-center gap-3 px-4 py-3">
-        {/* Icon */}
-        <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded border ${
+      <div className="relative flex items-center gap-3 px-4 py-3">
+        {/* Icon with status indicator */}
+        <div className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
           isInstalled
-            ? "border-emerald-500/20 bg-success-muted text-success"
+            ? "bg-success/10 text-success"
             : locked
-            ? "border-subtle bg-surface-1 text-muted"
-            : "border-default bg-surface-1 text-muted"
+            ? "bg-surface-2 text-muted"
+            : "bg-accent/5 text-accent"
         }`}>
           {mod.icon}
+          {/* Installed checkmark */}
+          {isInstalled && (
+            <span className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-success text-white">
+              <CheckCircle2 className="h-2 w-2" />
+            </span>
+          )}
         </div>
 
         {/* Name + description */}
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-[11px] font-semibold text-secondary">{ta(mod.nameKey)}</span>
             {isInstalled && (
-              <span className="inline-flex items-center gap-1 rounded border border-emerald-500/25 bg-emerald-500/[0.08] px-1.5 py-0.5 text-[8.5px] font-bold uppercase tracking-widest text-success">
+              <span className="inline-flex items-center gap-1 rounded-full border border-success/20 bg-success/5 px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest text-success/80">
                 <PackageCheck className="h-2.5 w-2.5" />
                 {tm("installed")}
               </span>
             )}
             {!isInstalled && !locked && (
-              <span className="rounded border border-default bg-surface-1 px-1.5 py-0.5 text-[8.5px] font-bold uppercase tracking-widest text-muted">
+              <span className="rounded-full border border-subtle bg-surface-2 px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest text-muted">
                 {tm("notInstalled")}
               </span>
             )}
             {isComing && (
-              <span className="rounded border border-amber-500/15 bg-amber-500/[0.06] px-1.5 py-0.5 text-[8.5px] font-bold uppercase tracking-widest text-warning/60">
+              <span className="rounded-full border border-warning/15 bg-warning/5 px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest text-warning/60">
                 {tm("comingSoon")}
               </span>
             )}
             {isPremium && (
-              <span className="inline-flex items-center gap-1 rounded border border-amber-500/30 bg-amber-500/[0.08] px-1.5 py-0.5 text-[8.5px] font-bold uppercase tracking-widest text-warning/75">
+              <span className="inline-flex items-center gap-1 rounded-full border border-warning/20 bg-warning/5 px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest text-warning/70">
+                <Sparkles className="h-2 w-2" />
                 {tm("premium")}
               </span>
             )}
           </div>
-          <p className="mt-0.5 text-[10px] leading-relaxed text-muted">{ta(mod.descKey)}</p>
+          <p className="mt-1 text-[10px] leading-relaxed text-muted">{ta(mod.descKey)}</p>
         </div>
 
         {/* Actions */}
@@ -182,14 +196,14 @@ function ModuleRow({
           <div className="flex shrink-0 items-center">
             <a
               href="mailto:ventas@financial-ops.mx?subject=Contratar%20add-on%20Subcontratistas"
-              className="inline-flex items-center gap-1 rounded border border-amber-500/30 bg-amber-500/[0.08] px-3 py-1 text-[10px] font-semibold text-warning/85 transition-colors hover:bg-amber-500/[0.14] hover:text-warning"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-warning/20 bg-warning/5 px-3 py-1.5 text-[10px] font-semibold text-warning/80 transition-all hover:border-warning/30 hover:bg-warning/10"
             >
               {tm("contactSales")}
               <ExternalLink className="h-2.5 w-2.5 opacity-70" />
             </a>
           </div>
         ) : !isComing && (
-          <div className="flex shrink-0 items-center gap-1.5">
+          <div className="flex shrink-0 items-center gap-2">
             {isInstalled ? (
               <>
                 {/* Configure */}
@@ -197,13 +211,13 @@ function ModuleRow({
                   <button
                     type="button"
                     onClick={handleConfigureClick}
-                    className="inline-flex items-center gap-1 rounded border border-default bg-surface-1 px-2.5 py-1 text-[10px] font-medium text-tertiary transition-colors hover:border-default hover:text-secondary"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-default bg-surface-1 px-3 py-1.5 text-[10px] font-medium text-tertiary transition-all hover:border-strong hover:text-secondary"
                   >
-                    <Settings className="h-2.5 w-2.5" />
+                    <Settings className="h-3 w-3" />
                     {tm("configure")}
-                    {mod.configTarget?.type === "href" && <ExternalLink className="h-2 w-2 opacity-60" />}
+                    {mod.configTarget?.type === "href" && <ExternalLink className="h-2.5 w-2.5 opacity-60" />}
                     {mod.configInline && (
-                      <ChevronRight className={`h-2.5 w-2.5 transition-transform ${phase === "showConfig" ? "rotate-90" : ""}`} />
+                      <ChevronRight className={`h-3 w-3 transition-transform ${phase === "showConfig" ? "rotate-90" : ""}`} />
                     )}
                   </button>
                 )}
@@ -212,9 +226,9 @@ function ModuleRow({
                   <button
                     type="button"
                     onClick={() => setPhase("confirmUninstall")}
-                    className="inline-flex items-center gap-1 rounded border border-default bg-surface-1 px-2.5 py-1 text-[10px] font-medium text-muted transition-colors hover:border-red-500/20 hover:text-error/70"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-subtle bg-surface-1 px-3 py-1.5 text-[10px] font-medium text-muted transition-all hover:border-error/20 hover:text-error/70"
                   >
-                    <PackageX className="h-2.5 w-2.5" />
+                    <PackageX className="h-3 w-3" />
                     {tm("uninstall")}
                   </button>
                 )}
@@ -226,7 +240,7 @@ function ModuleRow({
                   type="button"
                   disabled={companySetupNull}
                   onClick={() => setPhase("confirmInstall")}
-                  className="inline-flex items-center gap-1 rounded border bg-accent-muted bg-blue-600/[0.12] px-3 py-1 text-[10px] font-semibold text-accent transition-colors hover:bg-accent-muted hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-accent/20 bg-accent/5 px-3 py-1.5 text-[10px] font-semibold text-accent transition-all hover:border-accent/30 hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Package className="h-2.5 w-2.5" />
                   {tm("install")}
@@ -344,20 +358,38 @@ export default function AdminModulesPanel({ companySetup, onSetupChanged, onNavi
   }
 
   return (
-    <div className="max-w-2xl">
-      {/* Header */}
-      <div className="mb-4 flex items-center gap-2">
-        <Puzzle className="h-4 w-4 text-muted" />
-        <h2 className="text-sm font-semibold text-primary">{tm("title")}</h2>
-        <span className="rounded border border-default bg-surface-2 px-1.5 py-0.5 font-mono text-[10px] text-muted">
-          {installedCount} / {availableCount}
-        </span>
+    <div className="max-w-2xl space-y-4">
+      {/* Premium header */}
+      <div className="relative overflow-hidden rounded-lg border border-default bg-gradient-to-r from-surface-1 via-surface-1 to-ai/[0.02] px-4 py-3">
+        {/* Subtle grid pattern */}
+        <div className="absolute inset-0 opacity-[0.015]" style={{
+          backgroundImage: "linear-gradient(var(--color-ai) 1px, transparent 1px), linear-gradient(90deg, var(--color-ai) 1px, transparent 1px)",
+          backgroundSize: "16px 16px"
+        }} />
+
+        <div className="relative flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-ai/10">
+            <Puzzle className="h-4 w-4 text-ai" />
+          </div>
+          <div className="flex flex-col">
+            <h2 className="text-sm font-semibold text-primary">{tm("title")}</h2>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="rounded-full border border-success/20 bg-success/5 px-2 py-0.5 font-mono text-[9px] text-success/70">
+                {installedCount} installed
+              </span>
+              <span className="text-[9px] text-muted">
+                {availableCount - installedCount} available
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {error && (
-        <p className="mb-3 rounded border border-red-500/20 bg-red-500/[0.08] px-3 py-2 text-[10px] text-error">
+        <div className="flex items-center gap-2 rounded-lg border border-error/20 bg-error/5 px-4 py-3 text-[10px] text-error/80">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
           {error}
-        </p>
+        </div>
       )}
 
       <div className="space-y-2">

@@ -1,12 +1,5 @@
 // web/lib/api/llm-config.ts
-import { getStoredSession } from "@/lib/session";
-
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
-function authHeaders(): HeadersInit {
-  const s = getStoredSession();
-  return s ? { Authorization: `Bearer ${s.token}` } : {};
-}
+import { superAdminApiCall, superAdminPost, superAdminPut, superAdminDelete } from "./super-admin-client";
 
 export interface LLMConfig {
   id: number;
@@ -19,44 +12,21 @@ export interface LLMConfig {
 }
 
 export async function listLLMConfigs(): Promise<LLMConfig[]> {
-  const r = await fetch(`${BASE}/super-admin/llm-configs`, { headers: authHeaders() });
-  if (!r.ok) throw new Error(`${r.status}`);
-  return r.json();
+  return superAdminApiCall<LLMConfig[]>("/super-admin/llm-configs");
 }
 
 export async function upsertLLMConfig(data: Partial<LLMConfig>): Promise<LLMConfig> {
-  const r = await fetch(`${BASE}/super-admin/llm-configs`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify(data),
-  });
-  if (!r.ok) throw new Error(await r.text());
-  return r.json();
+  return superAdminPost<LLMConfig>("/super-admin/llm-configs", data);
 }
 
 export async function updateLLMConfig(id: number, data: Partial<LLMConfig>): Promise<LLMConfig> {
-  const r = await fetch(`${BASE}/super-admin/llm-configs/${id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify(data),
-  });
-  if (!r.ok) throw new Error(await r.text());
-  return r.json();
+  return superAdminPut<LLMConfig>(`/super-admin/llm-configs/${id}`, data);
 }
 
 export async function deleteLLMConfig(id: number): Promise<void> {
-  await fetch(`${BASE}/super-admin/llm-configs/${id}`, {
-    method: "DELETE",
-    headers: authHeaders(),
-  });
+  return superAdminDelete(`/super-admin/llm-configs/${id}`);
 }
 
 export async function testLLMConnection(data: Partial<LLMConfig>): Promise<{ ok: boolean; latency_ms: number; error: string | null }> {
-  const r = await fetch(`${BASE}/super-admin/llm-configs/test`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify(data),
-  });
-  if (!r.ok) throw new Error(await r.text());
-  return r.json();
+  return superAdminPost<{ ok: boolean; latency_ms: number; error: string | null }>("/super-admin/llm-configs/test", data);
 }

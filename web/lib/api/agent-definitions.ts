@@ -1,12 +1,5 @@
 // web/lib/api/agent-definitions.ts
-import { getStoredSession } from "@/lib/session";
-
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
-function authHeaders(): HeadersInit {
-  const s = getStoredSession();
-  return s ? { Authorization: `Bearer ${s.token}` } : {};
-}
+import { superAdminApiCall, superAdminPost, superAdminPut, superAdminDelete, superAdminPatch } from "./super-admin-client";
 
 export interface AgentDefinition {
   id: number;
@@ -38,65 +31,33 @@ export interface ToolInfo {
 }
 
 export async function listAgentDefinitions(): Promise<AgentDefinition[]> {
-  const r = await fetch(`${BASE}/super-admin/agent-definitions`, { headers: authHeaders() });
-  if (!r.ok) throw new Error(`${r.status}`);
-  return r.json();
+  return superAdminApiCall<AgentDefinition[]>("/super-admin/agent-definitions");
 }
 
 export async function createAgentDefinition(data: Partial<AgentDefinition>): Promise<AgentDefinition> {
-  const r = await fetch(`${BASE}/super-admin/agent-definitions`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify(data),
-  });
-  if (!r.ok) throw new Error(await r.text());
-  return r.json();
+  return superAdminPost<AgentDefinition>("/super-admin/agent-definitions", data);
 }
 
 export async function updateAgentDefinition(key: string, data: Partial<AgentDefinition>): Promise<AgentDefinition> {
-  const r = await fetch(`${BASE}/super-admin/agent-definitions/${key}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify(data),
-  });
-  if (!r.ok) throw new Error(await r.text());
-  return r.json();
+  return superAdminPut<AgentDefinition>(`/super-admin/agent-definitions/${key}`, data);
 }
 
 export async function deleteAgentDefinition(key: string): Promise<void> {
-  await fetch(`${BASE}/super-admin/agent-definitions/${key}`, {
-    method: "DELETE",
-    headers: authHeaders(),
-  });
+  return superAdminDelete(`/super-admin/agent-definitions/${key}`);
 }
 
 export async function toggleAgent(key: string, isActive: boolean): Promise<AgentDefinition> {
-  const r = await fetch(`${BASE}/super-admin/agent-definitions/${key}/toggle?is_active=${isActive}`, {
-    method: "PATCH",
-    headers: authHeaders(),
-  });
-  if (!r.ok) throw new Error(await r.text());
-  return r.json();
+  return superAdminPatch<AgentDefinition>(`/super-admin/agent-definitions/${key}/toggle?is_active=${isActive}`);
 }
 
 export async function listChannelConfigs(): Promise<ChannelAgentConfig[]> {
-  const r = await fetch(`${BASE}/super-admin/channel-agent-configs`, { headers: authHeaders() });
-  if (!r.ok) throw new Error(`${r.status}`);
-  return r.json();
+  return superAdminApiCall<ChannelAgentConfig[]>("/super-admin/channel-agent-configs");
 }
 
 export async function updateChannelConfig(agentKey: string, data: Partial<ChannelAgentConfig>): Promise<ChannelAgentConfig> {
-  const r = await fetch(`${BASE}/super-admin/channel-agent-configs/${agentKey}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify(data),
-  });
-  if (!r.ok) throw new Error(await r.text());
-  return r.json();
+  return superAdminPut<ChannelAgentConfig>(`/super-admin/channel-agent-configs/${agentKey}`, data);
 }
 
 export async function getToolRegistry(): Promise<ToolInfo[]> {
-  const r = await fetch(`${BASE}/super-admin/tool-registry`, { headers: authHeaders() });
-  if (!r.ok) throw new Error(`${r.status}`);
-  return r.json();
+  return superAdminApiCall<ToolInfo[]>("/super-admin/tool-registry");
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   AlertTriangle, CheckCircle2, Loader2, Plus, Power, RefreshCw,
-  Save, Sparkles, Trash2, X, AlertCircle,
+  Save, Settings, Sparkles, Trash2, X, AlertCircle, ChevronRight,
 } from "lucide-react";
 import { apiCall, apiPost, apiPatch, apiDelete } from "@/lib/api/client";
 import { useTranslations } from "next-intl";
@@ -213,44 +213,87 @@ export default function AdminPoliciesPanel({ companyId, expensePolicy, onExpense
     <div className="flex h-full min-h-0 gap-0">
 
       {/* ── LEFT: Rule list ─────────────────────────────────────────────── */}
-      <div className="flex w-[40%] min-w-0 flex-col border-r border-default">
-        <div className="flex items-center justify-between border-b border-default px-3.5 py-2.5">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-muted">{t("rulesLabel")} · {rules.filter(r => r.enabled).length}/{rules.length}</span>
-          <button type="button" onClick={() => { setSelectedRule(null); setTab("create"); }}
-            className="inline-flex items-center gap-1 rounded border border-default bg-surface-1 px-2 py-0.5 text-[9.5px] text-tertiary hover:bg-surface-3 hover:text-secondary">
-            <Plus className="h-2.5 w-2.5" /> {t("newRule")}
+      <div className="flex w-[40%] min-w-0 flex-col border-r border-subtle bg-surface-0/30">
+        {/* Header with gradient */}
+        <div className="relative flex items-center justify-between border-b border-subtle px-4 py-3 bg-gradient-to-r from-surface-1 via-surface-1 to-ai/[0.02]">
+          <div className="flex items-center gap-2">
+            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-violet-500/10">
+              <Sparkles className="h-3.5 w-3.5 text-violet-400" />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-secondary">{t("rulesLabel")}</span>
+              <span className="ml-2 rounded-full border border-success/15 bg-success/5 px-1.5 py-0.5 font-mono text-[8px] text-success/70">
+                {rules.filter(r => r.enabled).length}/{rules.length}
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => { setSelectedRule(null); setTab("create"); }}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-accent/20 bg-accent/5 px-2.5 py-1 text-[9px] font-semibold text-accent transition-all hover:border-accent/30 hover:bg-accent/10"
+          >
+            <Plus className="h-3 w-3" /> {t("newRule")}
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto">
           {loadingRules ? (
-            <div className="flex items-center gap-1.5 px-3.5 py-4 text-[10px] text-muted">
-              <Loader2 className="h-3 w-3 animate-spin" /> {tc("loading")}
+            <div className="flex items-center gap-2 px-4 py-6 text-[10px] text-muted">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> {tc("loading")}
             </div>
           ) : rules.length === 0 ? (
-            <div className="px-3.5 py-4 text-[10px] text-muted">{t("noRules")}</div>
+            <div className="relative px-4 py-8 text-center">
+              <div className="absolute inset-0 bg-gradient-to-b from-surface-1/30 to-transparent pointer-events-none" />
+              <div className="relative">
+                <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-surface-1">
+                  <Sparkles className="h-5 w-5 text-muted/50" />
+                </div>
+                <p className="text-[10px] text-muted">{t("noRules")}</p>
+              </div>
+            </div>
           ) : (
-            <ul className="divide-y divide-white/[0.05]">
+            <ul className="divide-y divide-subtle/30">
               {rules.map((rule) => (
-                <li key={rule.id}
+                <li
+                  key={rule.id}
                   onClick={() => { setSelectedRule(rule); setTab("rule"); }}
-                  className={`group flex cursor-pointer items-start gap-2 px-3.5 py-2.5 transition-colors ${selectedRule?.id === rule.id ? "bg-surface-2" : "hover:bg-surface-1"} ${!rule.enabled ? "opacity-45" : ""}`}>
-                  <span className={`mt-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full ${rule.severity === "block" ? "bg-rose-400" : "bg-amber-400"}`} />
+                  className={`group relative flex cursor-pointer items-start gap-3 px-4 py-3 transition-colors ${
+                    selectedRule?.id === rule.id
+                      ? "bg-accent/5"
+                      : "hover:bg-surface-1"
+                  } ${!rule.enabled ? "opacity-50" : ""}`}
+                >
+                  {/* Active indicator */}
+                  {selectedRule?.id === rule.id && (
+                    <span className="absolute left-0 top-1/2 h-6 w-0.5 -translate-y-1/2 rounded-r bg-gradient-to-b from-accent to-accent-hover" />
+                  )}
+                  <span className={`mt-1.5 inline-block h-2 w-2 shrink-0 rounded-full ${
+                    rule.severity === "block" ? "bg-rose-400 shadow-sm shadow-rose-400/30" : "bg-amber-400 shadow-sm shadow-amber-400/30"
+                  }`} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[11px] font-medium text-secondary">{rule.summary}</p>
-                    <p className="truncate text-[10px] text-muted">{rule.scope}</p>
+                    <p className="truncate text-[11px] font-medium text-secondary leading-tight">{rule.summary}</p>
+                    <p className="truncate text-[9px] text-muted mt-0.5">{rule.scope}</p>
                   </div>
                   <div className="hidden shrink-0 items-center gap-0.5 group-hover:flex">
-                    <button type="button" onClick={(e) => { e.stopPropagation(); toggleRule(rule); }}
-                      className="rounded p-1 text-muted hover:bg-surface-3 hover:text-secondary">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); toggleRule(rule); }}
+                      className="rounded p-1 text-muted hover:bg-surface-2 hover:text-secondary transition-colors"
+                    >
                       <Power className="h-3 w-3" />
                     </button>
-                    <button type="button" onClick={(e) => { e.stopPropagation(); reExtract(rule); }}
-                      className="rounded p-1 text-muted hover:bg-surface-3 hover:text-secondary">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); reExtract(rule); }}
+                      className="rounded p-1 text-muted hover:bg-surface-2 hover:text-secondary transition-colors"
+                    >
                       <RefreshCw className="h-3 w-3" />
                     </button>
-                    <button type="button" onClick={(e) => { e.stopPropagation(); deleteRule(rule); }}
-                      className="rounded p-1 text-muted hover:bg-red-500/10 hover:text-error">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); deleteRule(rule); }}
+                      className="rounded p-1 text-muted hover:bg-error/10 hover:text-error transition-colors"
+                    >
                       <Trash2 className="h-3 w-3" />
                     </button>
                   </div>
@@ -261,13 +304,24 @@ export default function AdminPoliciesPanel({ companyId, expensePolicy, onExpense
         </div>
 
         {/* Settings compact summary */}
-        <div className="border-t border-default">
-          <button type="button" onClick={() => { setSelectedRule(null); setTab("settings"); }}
-            className={`w-full px-3.5 py-2.5 text-left transition-colors hover:bg-surface-1 ${tab === "settings" ? "bg-surface-2" : ""}`}>
-            <p className="text-[9.5px] font-bold uppercase tracking-widest text-muted">{t("expenseSettings")}</p>
-            <p className="mt-0.5 text-[10px] text-tertiary">
+        <div className="border-t border-subtle">
+          <button
+            type="button"
+            onClick={() => { setSelectedRule(null); setTab("settings"); }}
+            className={`group relative w-full px-4 py-3 text-left transition-colors hover:bg-surface-1 ${
+              tab === "settings" ? "bg-surface-1" : ""
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Settings className="h-3.5 w-3.5 text-muted" />
+                <p className="text-[9px] font-bold uppercase tracking-widest text-muted">{t("expenseSettings")}</p>
+              </div>
+              <ChevronRight className="h-3 w-3 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+            <p className="mt-1.5 text-[10px] text-tertiary">
               {form.xml_required_mode ? `XML: ${form.xml_required_mode}` : "—"}
-              {" · "}
+              <span className="mx-1.5 text-muted">·</span>
               {form.tickets_allowed ? t("ticketsOn") : t("ticketsOff")}
             </p>
           </button>
@@ -276,17 +330,23 @@ export default function AdminPoliciesPanel({ companyId, expensePolicy, onExpense
 
       {/* ── RIGHT: Detail / editor ──────────────────────────────────────── */}
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Tabs */}
-        <div className="flex items-center gap-0 border-b border-default">
+        {/* Tabs with gradient */}
+        <div className="flex items-center gap-0 border-b border-subtle bg-gradient-to-r from-surface-1 via-transparent to-transparent">
           {([["create", t("tabCreate")], ["rule", t("tabRule")], ["settings", t("tabSettings")]] as [RightTab, string][]).map(([key, label]) => (
-            <button key={key} type="button"
+            <button
+              key={key}
+              type="button"
               onClick={() => { if (key === "rule" && !selectedRule) return; setTab(key); }}
-              className={`border-b-2 px-4 py-2.5 text-[10px] font-semibold transition-colors ${
+              className={`relative border-b-2 px-4 py-3 text-[10px] font-semibold transition-colors ${
                 tab === key
-                  ? "bg-accent-muted/60 text-primary"
+                  ? "border-accent text-primary"
                   : "border-transparent text-muted hover:text-tertiary"
-              } ${key === "rule" && !selectedRule ? "cursor-not-allowed opacity-30" : ""}`}>
+              } ${key === "rule" && !selectedRule ? "cursor-not-allowed opacity-30" : ""}`}
+            >
               {label}
+              {tab === key && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-accent via-accent to-accent-hover" />
+              )}
             </button>
           ))}
         </div>
