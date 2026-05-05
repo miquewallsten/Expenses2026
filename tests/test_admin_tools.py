@@ -393,3 +393,47 @@ class TestListUsersTool:
         emails = [u["email"] for u in res.data["users"]]
         assert "delegate_user@example.com" not in emails
         assert "no_delegate@example.com" in emails
+
+    def test_list_users_pagination(self, db_session, test_company):
+        """Test list_users pagination with limit and offset."""
+        ctx = _ctx(db_session, test_company)
+        # Create 5 users
+        for i in range(5):
+            REGISTRY.dispatch("invite_user", {"email": f"page_user{i}@example.com", "role": "employee"}, ctx)
+
+        # Get first page (limit=2)
+        res = REGISTRY.dispatch("list_users", {"limit": 2, "offset": 0}, ctx)
+        assert res.ok is True
+        assert len(res.data["users"]) == 2
+
+        # Get second page (limit=2, offset=2)
+        res2 = REGISTRY.dispatch("list_users", {"limit": 2, "offset": 2}, ctx)
+        assert res2.ok is True
+        assert len(res2.data["users"]) == 2
+
+        # Ensure different users on each page
+        page1_ids = {u["id"] for u in res.data["users"]}
+        page2_ids = {u["id"] for u in res2.data["users"]}
+        assert page1_ids.isdisjoint(page2_ids), "Pages should have different users"
+
+        # Get remaining users (offset=4)
+        res3 = REGISTRY.dispatch("list_users", {"limit": 10, "offset": 4}, ctx)
+        assert res3.ok is True
+        # Should have at least 1 user (the 5th one we created, plus any existing ones from other tests)
+        assert len(res3.data["users"]) >= 1
+
+    def test_list_users_invalid_role(self, db_session, test_company):
+        """Test list_users rejects invalid roles."""
+        ctx = _ctx(db_session, test_company)
+        res = REGISTRY.dispatch("list_users", {"roles": ["superhero", "employee"]}, ctx)
+        assert res.ok is False
+        assert "invalid_roles" in (res.error or "")
+        assert "superhero" in res.summary
+
+    def test_list_users_invalid_capability(self, db_session, test_company):
+        """Test list_users rejects invalid capabilities."""
+        ctx = _ctx(db_session, test_company)
+        res = REGISTRY.dispatch("list_users", {"capabilities": ["fly_to_moon", "can_create_expenses"]}, ctx)
+        assert res.ok is False
+        assert "invalid_capabilities" in (res.error or "")
+        assert "fly_to_moon" in res.summary

@@ -454,6 +454,20 @@ REGISTRY.register(ToolSpec(
 
 # ── list_users ──────────────────────────────────────────────────────────────
 
+VALID_ROLES = ("employee", "manager", "accountant", "admin", "executive", "secretary")
+
+VALID_CAPABILITIES = (
+    "can_create_expenses",
+    "can_create_corporate_expenses",
+    "can_invoice_corporation",
+    "is_amex_reconciler",
+    "requires_time_tracking",
+    "has_executive_reporting",
+    "can_access_accounting",
+    "can_view_analytics",
+)
+
+
 class ListUsersArgs(BaseModel):
     model_config = ConfigDict(extra="forbid")
     search: str | None = None
@@ -464,6 +478,8 @@ class ListUsersArgs(BaseModel):
     has_delegation: bool | None = None
     group_by: str | None = None
     include_metrics: bool = False
+    limit: int = Field(default=100, ge=1, le=1000)
+    offset: int = Field(default=0, ge=0)
 
 
 def _handle_list_users(ctx: AgentContext, args: ListUsersArgs) -> ToolResult:
@@ -473,6 +489,26 @@ def _handle_list_users(ctx: AgentContext, args: ListUsersArgs) -> ToolResult:
             summary="list_users requires admin role",
             error="forbidden",
         )
+
+    # Validate roles
+    if args.roles:
+        invalid = set(args.roles) - set(VALID_ROLES)
+        if invalid:
+            return ToolResult(
+                ok=False,
+                summary=f"Invalid roles: {invalid}",
+                error="invalid_roles",
+            )
+
+    # Validate capabilities
+    if args.capabilities:
+        invalid = set(args.capabilities) - set(VALID_CAPABILITIES)
+        if invalid:
+            return ToolResult(
+                ok=False,
+                summary=f"Invalid capabilities: {invalid}",
+                error="invalid_capabilities",
+            )
 
     query = ctx.db.query(User).filter(User.company_id == ctx.company_id)
 
@@ -505,7 +541,7 @@ def _handle_list_users(ctx: AgentContext, args: ListUsersArgs) -> ToolResult:
             if hasattr(User, cap):
                 query = query.filter(getattr(User, cap) == True)
 
-    users = query.order_by(User.full_name).all()
+    users = query.order_by(User.full_name).offset(args.offset).limit(args.limit).all()
 
     # Build result
     user_list = []
@@ -519,7 +555,6 @@ def _handle_list_users(ctx: AgentContext, args: ListUsersArgs) -> ToolResult:
             "department": u.department,
             "legal_entity_id": u.legal_entity_id,
             "delegates_for_user_id": u.delegates_for_user_id,
-            "delegates_for_user_name": None,
             "capabilities": {
                 "can_create_expenses": u.can_create_expenses,
                 "can_create_corporate_expenses": u.can_create_corporate_expenses,
