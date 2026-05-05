@@ -47,12 +47,11 @@ interface LegalEntity {
 interface Props {
   user: UserFull;
   legalEntities: LegalEntity[];
-  onSaved: (user: UserFull) => void;
   onBack: () => void;
   onEdit?: () => void;
 }
 
-export default function UserDetailPanel({ user, legalEntities, onSaved, onBack, onEdit }: Props) {
+export default function UserDetailPanel({ user, legalEntities, onBack, onEdit }: Props) {
   const tu = useTranslations("admin.users");
 
   // Capability groups with translations

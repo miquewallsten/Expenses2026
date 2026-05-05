@@ -504,7 +504,6 @@ export default function AdminUsersPanel({ companyId, users, onUsersChanged, comp
         <UserDetailPanel
           user={selectedUser}
           legalEntities={legalEntities}
-          onSaved={handleSaved}
           onBack={() => { setSelectedUser(null); setIsEditMode(false); }}
           onEdit={() => setIsEditMode(true)}
         />
