@@ -2,13 +2,14 @@
 
 export const dynamic = "force-dynamic";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Receipt, CheckSquare, Calculator, Clock, Archive, Download, BarChart2, ShoppingCart,
   ClipboardList, BadgeCheck, CreditCard, Sparkles,
   ChevronLeft, ChevronRight, LayoutGrid, Bot, MessageSquare,
-  Menu, Settings, X, Zap, TrendingUp, Bell,
+  Menu, Settings, X, TrendingUp, Bell,
+  Building, FileText, GitBranch, Users, Plug, KeyRound, ScrollText, XOctagon,
   type LucideIcon,
 } from "lucide-react";
 import { Suspense } from "react";
@@ -16,6 +17,7 @@ import { useTranslations } from "next-intl";
 import { UserProvider } from "@/context/UserContext";
 import { MyWorkProvider, useMyWorkContext } from "@/context/MyWorkContext";
 import { useUserContext } from "@/context/UserContext";
+import { AdminProvider, useAdminContext, type AdminSection } from "@/context/AdminContext";
 import MyWorkSidebar from "@/components/my-work/MyWorkSidebar";
 import MyWorkWorkspace from "@/components/my-work/MyWorkWorkspace";
 import { buildGlobalNav } from "@/lib/navigation";
@@ -28,7 +30,6 @@ import type { NavRailItem } from "@/components/shell/NavRail";
 
 const SIDEBAR_W = 240;
 const SIDEBAR_COL_W = 64;
-const AI_DOCK_H = 56;
 
 // ── Module icon map ───────────────────────────────────────────────────────────
 
@@ -171,6 +172,7 @@ function UnifiedSidebar({
   onSelect,
   height,
   onAIExpand,
+  showAdminNav,
 }: {
   globalNavItems: NavRailItem[];
   collapsed: boolean;
@@ -178,10 +180,31 @@ function UnifiedSidebar({
   onSelect?: () => void;
   height?: "full";
   onAIExpand: () => void;
+  showAdminNav?: boolean;
 }) {
   const { visibleModules, activeModule, setActiveModule } = useMyWorkContext();
+  // Always call hook unconditionally, use value when showAdminNav is true
+  const adminContext = useAdminContext();
   const tn = useTranslations("nav");
   const ts = useTranslations("shell");
+  const ta = useTranslations("admin");
+
+  // Admin navigation sections
+  const ADMIN_SETTINGS_SECTIONS: { id: AdminSection; label: string; icon: LucideIcon }[] = [
+    { id: "company-setup", label: ta("companySetup.title"), icon: Building },
+    { id: "expense-policy", label: ta("expensePolicy"), icon: FileText },
+    { id: "approval-workflow", label: ta("workflow"), icon: GitBranch },
+    { id: "users-roles", label: ta("usersRoles"), icon: Users },
+    { id: "accounting-setup", label: ta("accountingSetup.title"), icon: Calculator },
+    { id: "integrations", label: ta("integrations"), icon: Plug },
+    { id: "platform-api", label: ta("platformApi"), icon: KeyRound },
+    { id: "export", label: ta("export"), icon: Download },
+  ];
+  const ADMIN_OPS_SECTIONS: { id: AdminSection; label: string; icon: LucideIcon }[] = [
+    { id: "audit-log", label: ta("auditLog.title"), icon: ScrollText },
+    { id: "cfdi-watcher", label: ta("cfdiWatcher.title"), icon: XOctagon },
+    { id: "notifications", label: ta("notifications"), icon: Bell },
+  ];
 
   return (
     <nav
@@ -192,12 +215,16 @@ function UnifiedSidebar({
       <div className="relative flex h-12 shrink-0 items-center gap-2 border-b border-subtle px-3 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-accent-muted/30 via-transparent to-ai-muted/20 opacity-50" />
         <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-accent-hover shadow-md shadow-accent-glow">
-          <LayoutGrid className="h-4 w-4 text-white" />
+          {showAdminNav ? (
+            <Settings className="h-4 w-4 text-white" />
+          ) : (
+            <LayoutGrid className="h-4 w-4 text-white" />
+          )}
         </div>
         {!collapsed && (
           <div className="relative flex-1 min-w-0">
             <span className="block truncate text-xs font-semibold tracking-tight text-primary">
-              {tn("myWork")}
+              {showAdminNav ? tn("admin") : tn("myWork")}
             </span>
             <span className="block text-[9px] text-muted">OpsFlow</span>
           </div>
@@ -215,59 +242,137 @@ function UnifiedSidebar({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto h-full">
-        {/* Module nav */}
-        <div className="py-2 px-2">
-          {!collapsed && (
-            <p className="px-2 pb-1.5 pt-1 text-[9px] font-bold uppercase tracking-widest text-muted">
-              {tn("modules")}
-            </p>
-          )}
-          <ul className="space-y-1">
-            {visibleModules.map((mod) => {
-              const Icon = resolveIcon(mod.icon);
-              const isActive = activeModule?.id === mod.id;
-              return (
-                <li key={mod.id}>
-                  <button
-                    type="button"
-                    title={collapsed ? mod.label : undefined}
-                    onClick={() => { setActiveModule(mod.id); onSelect?.(); }}
-                    aria-current={isActive ? "page" : undefined}
-                    className={`group relative flex w-full items-center gap-2.5 rounded-xl py-2 text-xs font-medium leading-none transition-all ${
-                      collapsed ? "justify-center px-2" : "px-3"
-                    } ${
-                      isActive
-                        ? "bg-accent-muted text-accent shadow-sm"
-                        : "text-secondary hover:bg-surface-2 hover:text-primary"
-                    }`}
-                  >
-                    {isActive && (
-                      <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-gradient-to-b from-accent to-accent-hover" />
-                    )}
-                    {Icon ? (
-                      <Icon
-                        className={`h-4 w-4 shrink-0 transition-transform group-hover:scale-110 ${
-                          isActive ? "text-accent" : "text-muted group-hover:text-secondary"
+        {showAdminNav ? (
+          /* Admin navigation */
+          <>
+            <div className="py-2 px-2">
+              {!collapsed && (
+                <p className="px-2 pb-1.5 pt-1 text-[9px] font-bold uppercase tracking-widest text-muted">
+                  {ta("sectionSettings")}
+                </p>
+              )}
+              <ul className="space-y-1">
+                {ADMIN_SETTINGS_SECTIONS.map((section) => {
+                  const isActive = adminContext?.activeSection === section.id;
+                  return (
+                    <li key={section.id}>
+                      <button
+                        type="button"
+                        title={collapsed ? section.label : undefined}
+                        onClick={() => adminContext?.setActiveSection(section.id)}
+                        className={`group relative flex w-full items-center gap-2.5 rounded-xl py-2 text-xs font-medium leading-none transition-all ${
+                          collapsed ? "justify-center px-2" : "px-3"
+                        } ${
+                          isActive
+                            ? "bg-accent-muted text-accent shadow-sm"
+                            : "text-secondary hover:bg-surface-2 hover:text-primary"
                         }`}
-                        aria-hidden="true"
-                      />
-                    ) : (
-                      <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[9px] font-bold uppercase tracking-wider transition-transform group-hover:scale-110 ${
-                        isActive ? "bg-accent text-white" : "bg-surface-2 text-muted group-hover:bg-surface-3"
-                      }`}>
-                        {initials(mod.label)}
-                      </span>
-                    )}
-                    {!collapsed && <span className="truncate">{mod.label}</span>}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+                      >
+                        {isActive && (
+                          <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-gradient-to-b from-accent to-accent-hover" />
+                        )}
+                        <section.icon className={`h-4 w-4 shrink-0 transition-transform group-hover:scale-110 ${
+                          isActive ? "text-accent" : "text-muted group-hover:text-secondary"
+                        }`} />
+                        {!collapsed && <span className="truncate">{section.label}</span>}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+            <div className="border-t border-subtle py-2 px-2">
+              {!collapsed && (
+                <p className="px-2 pb-1.5 pt-1 text-[9px] font-bold uppercase tracking-widest text-muted">
+                  {ta("sectionOperations")}
+                </p>
+              )}
+              <ul className="space-y-1">
+                {ADMIN_OPS_SECTIONS.map((section) => {
+                  const isActive = adminContext?.activeSection === section.id;
+                  return (
+                    <li key={section.id}>
+                      <button
+                        type="button"
+                        title={collapsed ? section.label : undefined}
+                        onClick={() => adminContext?.setActiveSection(section.id)}
+                        className={`group relative flex w-full items-center gap-2.5 rounded-xl py-2 text-xs font-medium leading-none transition-all ${
+                          collapsed ? "justify-center px-2" : "px-3"
+                        } ${
+                          isActive
+                            ? "bg-accent-muted text-accent shadow-sm"
+                            : "text-secondary hover:bg-surface-2 hover:text-primary"
+                        }`}
+                      >
+                        {isActive && (
+                          <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-gradient-to-b from-accent to-accent-hover" />
+                        )}
+                        <section.icon className={`h-4 w-4 shrink-0 transition-transform group-hover:scale-110 ${
+                          isActive ? "text-accent" : "text-muted group-hover:text-secondary"
+                        }`} />
+                        {!collapsed && <span className="truncate">{section.label}</span>}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </>
+        ) : (
+          /* Module nav */
+          <div className="py-2 px-2">
+            {!collapsed && (
+              <p className="px-2 pb-1.5 pt-1 text-[9px] font-bold uppercase tracking-widest text-muted">
+                {tn("modules")}
+              </p>
+            )}
+            <ul className="space-y-1">
+              {visibleModules.map((mod) => {
+                const Icon = resolveIcon(mod.icon);
+                const isActive = activeModule?.id === mod.id;
+                return (
+                  <li key={mod.id}>
+                    <button
+                      type="button"
+                      title={collapsed ? mod.label : undefined}
+                      onClick={() => { setActiveModule(mod.id); onSelect?.(); }}
+                      aria-current={isActive ? "page" : undefined}
+                      className={`group relative flex w-full items-center gap-2.5 rounded-xl py-2 text-xs font-medium leading-none transition-all ${
+                        collapsed ? "justify-center px-2" : "px-3"
+                      } ${
+                        isActive
+                          ? "bg-accent-muted text-accent shadow-sm"
+                          : "text-secondary hover:bg-surface-2 hover:text-primary"
+                      }`}
+                    >
+                      {isActive && (
+                        <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-gradient-to-b from-accent to-accent-hover" />
+                      )}
+                      {Icon ? (
+                        <Icon
+                          className={`h-4 w-4 shrink-0 transition-transform group-hover:scale-110 ${
+                            isActive ? "text-accent" : "text-muted group-hover:text-secondary"
+                          }`}
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[9px] font-bold uppercase tracking-wider transition-transform group-hover:scale-110 ${
+                          isActive ? "bg-accent text-white" : "bg-surface-2 text-muted group-hover:bg-surface-3"
+                        }`}>
+                          {initials(mod.label)}
+                        </span>
+                      )}
+                      {!collapsed && <span className="truncate">{mod.label}</span>}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
 
-        {/* Cross-portal links */}
-        {globalNavItems.length > 0 && (
+        {/* Cross-portal links - only show when not on admin */}
+        {!showAdminNav && globalNavItems.length > 0 && (
           <div className="mt-1 border-t border-subtle py-2 px-2">
             {!collapsed && (
               <p className="px-2 pb-1.5 pt-1 text-[9px] font-bold uppercase tracking-widest text-muted">
@@ -328,7 +433,7 @@ function MyWorkShell() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
 
-  // Defer hiding sidebar for admin until after hydration to avoid mismatch
+  // Defer admin check until after hydration to avoid mismatch
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
@@ -348,7 +453,7 @@ function MyWorkShell() {
     }).filter((item) => item.key !== "employee");
   }, [user.role, user.permissionKeys, effectiveConfig]);
 
-  // Admin module has its own navigation - hide MyWork sidebar when active
+  // Admin module shows admin navigation in sidebar
   const isAdminModule = mounted && activeModule?.id === "admin";
 
   const workspace = (
@@ -503,14 +608,13 @@ function MyWorkShell() {
         className="relative flex h-[100dvh] overflow-hidden bg-surface-0 text-primary"
         style={{ paddingTop: "var(--sai-t)", paddingBottom: "var(--sai-b)" }}
       >
-        {!isAdminModule && (
-          <UnifiedSidebar
-            globalNavItems={globalNavItems}
-            collapsed={true}
-            onToggle={() => {}}
-            onAIExpand={() => setAiPanelOpen(true)}
-          />
-        )}
+        <UnifiedSidebar
+          globalNavItems={globalNavItems}
+          collapsed={true}
+          onToggle={() => {}}
+          onAIExpand={() => setAiPanelOpen(true)}
+          showAdminNav={isAdminModule}
+        />
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {workspace}
@@ -526,15 +630,14 @@ function MyWorkShell() {
   return (
     <div className="relative flex h-[100dvh] overflow-hidden bg-surface-0 text-primary">
 
-      {!isAdminModule && (
-        <UnifiedSidebar
-          globalNavItems={globalNavItems}
-          collapsed={sidebarCollapsed}
-          onToggle={() => setSidebarCollapsed((v) => !v)}
-          height="full"
-          onAIExpand={() => setAiPanelOpen(true)}
-        />
-      )}
+      <UnifiedSidebar
+        globalNavItems={globalNavItems}
+        collapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed((v) => !v)}
+        height="full"
+        onAIExpand={() => setAiPanelOpen(true)}
+        showAdminNav={isAdminModule}
+      />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {workspace}
@@ -559,7 +662,9 @@ function MyWorkPageInner() {
   return (
     <UserProvider>
       <MyWorkProvider initialModuleId={initialModuleId}>
-        <MyWorkShell />
+        <AdminProvider>
+          <MyWorkShell />
+        </AdminProvider>
       </MyWorkProvider>
     </UserProvider>
   );

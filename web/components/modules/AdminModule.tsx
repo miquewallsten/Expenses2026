@@ -2,15 +2,14 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useUserContext } from "@/context/UserContext";
+import { useAdminContext } from "@/context/AdminContext";
 import { apiCall } from "@/lib/api/client";
-import AdminNavigation, { type AdminSection } from "@/components/admin/AdminNavigation";
 import AnnouncementPanel from "@/components/admin/AnnouncementPanel";
 import AdminCompanySetupStudio from "@/components/admin/AdminCompanySetupStudio";
 import AdminUsersPanel from "@/components/admin/AdminUsersPanel";
 import AdminPoliciesPanel from "@/components/admin/AdminPoliciesPanel";
 import AdminAccountingSetupStudio from "@/components/admin/AdminAccountingSetupStudio";
 import AdminWorkflowMapPanel from "@/components/admin/AdminWorkflowMapPanel";
-import AdminAgentChat from "@/components/agent/AdminAgentChat";
 import AdminOnboardingCopilot from "@/components/admin/AdminOnboardingCopilot";
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 import AuditLogSection from "@/components/admin/sections/AuditLogSection";
@@ -18,7 +17,7 @@ import CfdiWatcherSection from "@/components/admin/sections/CfdiWatcherSection";
 import ExportSection from "@/components/admin/sections/ExportSection";
 import IntegrationsSection from "@/components/admin/sections/IntegrationsSection";
 import PlatformApiSection from "@/components/admin/sections/PlatformApiSection";
-import RoutingRulesSection from "@/components/admin/sections/RoutingRulesSection";
+import { Settings, Bell } from "lucide-react";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 interface AdminData {
@@ -49,13 +48,20 @@ async function fetchAdminData(companyId: number): Promise<AdminData> {
 
 export default function AdminModule() {
   const { companyId } = useUserContext();
-  const [activeSection, setActiveSection] = useState<AdminSection>("company-setup");
+  const { activeSection, setOnboardingCompleted } = useAdminContext();
   const [data, setData] = useState<AdminData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Determine if onboarding is incomplete once data loads
+  const onboardingCompleted = data?.companySetup?.onboarding_completed_at != null;
+
+  // Sync onboarding completed state to context
+  useEffect(() => {
+    setOnboardingCompleted(onboardingCompleted);
+  }, [onboardingCompleted, setOnboardingCompleted]);
+
   useEffect(() => {
     if (!data) return;
     const setup = data.companySetup ?? {};
@@ -129,8 +135,13 @@ export default function AdminModule() {
 
   if (!companyId) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-[11px] text-white/40">No company context available</p>
+      <div className="flex h-full items-center justify-center bg-surface-0">
+        <div className="text-center">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-surface-2">
+            <Settings className="h-5 w-5 text-muted" />
+          </div>
+          <p className="text-xs text-tertiary">No company context available</p>
+        </div>
       </div>
     );
   }
@@ -148,14 +159,13 @@ export default function AdminModule() {
 
   if (loading) {
     return (
-      <div className="flex h-full" data-testid="admin-module">
-        <div className="hidden md:flex shrink-0 flex-col border-r border-subtle bg-surface-1" style={{ width: "200px" }}>
-          <div className="flex h-9 shrink-0 items-center border-b border-subtle px-3">
-            <span className="text-[9px] font-bold uppercase tracking-widest text-muted">Administration</span>
+      <div className="flex h-full items-center justify-center bg-surface-0" data-testid="admin-module">
+        <div className="flex flex-col items-center gap-3">
+          <div className="relative">
+            <div className="h-8 w-8 animate-spin rounded-lg border-2 border-accent border-t-transparent" />
+            <div className="absolute inset-0 h-8 w-8 animate-pulse rounded-lg bg-accent-muted" />
           </div>
-        </div>
-        <div className="flex flex-1 items-center justify-center">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-subtle border-t-accent" />
+          <p className="text-xs text-tertiary">Loading configuration...</p>
         </div>
       </div>
     );
@@ -163,29 +173,32 @@ export default function AdminModule() {
 
   if (error || !data) {
     return (
-      <div className="flex h-full" data-testid="admin-module">
-        <AdminNavigation activeSection={activeSection} onSelect={setActiveSection} />
-        <div className="flex flex-1 items-center justify-center">
-          <div className="text-center">
-            <p className="text-xs font-medium text-secondary">Failed to load admin data</p>
-            <p className="mt-1 text-xs text-muted">{error}</p>
-            <button
-              type="button"
-              onClick={load}
-              className="btn btn-secondary mt-3"
-            >
-              Retry
-            </button>
+      <div className="flex h-full items-center justify-center bg-surface-0" data-testid="admin-module">
+        <div className="text-center max-w-sm">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-error-muted">
+            <Settings className="h-5 w-5 text-error" />
           </div>
+          <p className="text-sm font-medium text-primary">Failed to load admin data</p>
+          <p className="mt-1 text-xs text-tertiary">{error}</p>
+          <button
+            type="button"
+            onClick={load}
+            className="btn btn-primary mt-4"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-full" data-testid="admin-module">
-      <AdminNavigation activeSection={activeSection} onSelect={setActiveSection} />
-      <main className="min-h-0 flex-1 overflow-y-auto bg-surface-0">
+    <main className="min-h-0 h-full flex-1 overflow-y-auto bg-surface-0" data-testid="admin-module">
+        {activeSection === "onboarding" && (
+          <div className="h-full">
+            <OnboardingWizard />
+          </div>
+        )}
         {activeSection === "company-setup" && (
           <AdminCompanySetupStudio
             companyId={companyId}
@@ -239,36 +252,26 @@ export default function AdminModule() {
           />
         )}
         {activeSection === "integrations" && <IntegrationsSection />}
-        {activeSection === "ai-agent" && companyId != null && (
-          <div className="min-h-0 flex-1 p-4">
-            <AdminAgentChat companyId={companyId} variant="page" />
-          </div>
-        )}
+        {activeSection === "platform-api" && <PlatformApiSection />}
+        {activeSection === "export" && <ExportSection />}
         {activeSection === "audit-log" && <AuditLogSection />}
         {activeSection === "cfdi-watcher" && <CfdiWatcherSection />}
-        {activeSection === "onboarding" && (
-          <div className="h-full">
-            <OnboardingWizard />
-          </div>
-        )}
-        {activeSection === "platform-api" && <PlatformApiSection />}
-        {activeSection === "routing-rules" && <RoutingRulesSection />}
-        {activeSection === "export" && <ExportSection />}
-        {activeSection === "advanced-settings" && (
-          <div className="mx-auto max-w-xl p-4">
-            <header className="mb-4">
-              <h1 className="text-[13px] font-bold tracking-[-0.01em] text-white/85">Advanced Settings</h1>
-              <p className="mt-0.5 text-[10.5px] text-white/40">Portal configuration and custom rules.</p>
+        {activeSection === "notifications" && (
+          <div className="p-6">
+            <header className="mb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-accent-muted to-accent/20 border border-accent/30">
+                  <Bell className="h-5 w-5 text-accent" />
+                </div>
+                <div>
+                  <h1 className="text-base font-semibold text-primary">Notifications</h1>
+                  <p className="text-xs text-tertiary">Send announcements and manage notifications</p>
+                </div>
+              </div>
             </header>
-            <div className="rounded border border-white/[0.07] bg-white/[0.02] p-6 text-center">
-              <p className="text-[11px] text-white/40">Advanced settings will appear here.</p>
-            </div>
-            <div className="mt-4">
-              <AnnouncementPanel />
-            </div>
+            <AnnouncementPanel />
           </div>
         )}
       </main>
-    </div>
   );
 }
