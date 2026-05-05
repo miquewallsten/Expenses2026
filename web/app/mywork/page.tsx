@@ -328,6 +328,12 @@ function MyWorkShell() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
 
+  // Defer hiding sidebar for admin until after hydration to avoid mismatch
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     if (!isMobile) setNavDrawerOpen(false);
   }, [isMobile]);
@@ -343,7 +349,7 @@ function MyWorkShell() {
   }, [user.role, user.permissionKeys, effectiveConfig]);
 
   // Admin module has its own navigation - hide MyWork sidebar when active
-  const isAdminModule = activeModule?.id === "admin";
+  const isAdminModule = mounted && activeModule?.id === "admin";
 
   const workspace = (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
