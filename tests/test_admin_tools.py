@@ -928,3 +928,129 @@ class TestUpdateUserPermissionsTool:
 
         assert res.ok is False
         assert "invalid_delegation" in (res.error or "")
+
+
+class TestAuditPermissionsTool:
+    def test_audit_permissions_role_mismatch(self, db_session, test_company):
+        """Test audit finds accountants without accounting access."""
+        ctx = _ctx(db_session, test_company)
+        # Create an accountant without accounting access
+        REGISTRY.dispatch(
+            "create_user",
+            {"email": "accountant_no_access@test.com", "full_name": "Accountant No Access", "role": "accountant"},
+            ctx,
+        )
+        accountant = db_session.query(User).filter(User.email == "accountant_no_access@test.com").first()
+        # Remove accounting access (role preset sets it to True, we override)
+        accountant.can_access_accounting = False
+        db_session.commit()
+
+        res = REGISTRY.dispatch("audit_permissions", {"check_type": "role_capability_mismatch"}, ctx)
+
+        assert res.ok is True
+        assert len(res.data["findings"]) >= 1
+        assert any(f["type"] == "accountant_without_accounting_access" for f in res.data["findings"])
+
+    def test_audit_permissions_missing_delegation(self, db_session, test_company):
+        """Test audit finds secretaries without boss."""
+        ctx = _ctx(db_session, test_company)
+        # Create a secretary without delegation
+        REGISTRY.dispatch(
+            "create_user",
+            {"email": "secretary_no_boss@test.com", "full_name": "Secretary No Boss", "role": "secretary"},
+            ctx,
+        )
+        secretary = db_session.query(User).filter(User.email == "secretary_no_boss@test.com").first()
+        # Ensure no delegation
+        secretary.delegates_for_user_id = None
+        db_session.commit()
+
+        res = REGISTRY.dispatch("audit_permissions", {"check_type": "missing_assignments"}, ctx)
+
+        assert res.ok is True
+        assert len(res.data["findings"]) >= 1
+        assert any(f["type"] == "secretary_without_boss" for f in res.data["findings"])
+
+    def test_audit_permissions_executive_without_reporting(self, db_session, test_company):
+        """Test audit finds executives without executive reporting."""
+        ctx = _ctx(db_session, test_company)
+        # Create an executive without executive reporting
+        REGISTRY.dispatch(
+            "create_user",
+            {"email": "exec_no_reporting@test.com", "full_name": "Exec No Reporting", "role": "executive"},
+            ctx,
+        )
+        executive = db_session.query(User).filter(User.email == "exec_no_reporting@test.com").first()
+        executive.has_executive_reporting = False
+        db_session.commit()
+
+        res = REGISTRY.dispatch("audit_permissions", {"check_type": "role_capability_mismatch"}, ctx)
+
+        assert res.ok is True
+        assert any(f["type"] == "executive_without_reporting" for f in res.data["findings"])
+
+    def test_audit_permissions_inactive_users(self, db_session, test_company):
+        """Test audit finds inactive users."""
+        ctx = _ctx(db_session, test_company)
+        # Create and deactivate a user
+        REGISTRY.dispatch(
+            "create_user",
+            {"email": "inactive_user@test.com", "full_name": "Inactive User", "role": "employee"},
+            ctx,
+        )
+        user = db_session.query(User).filter(User.email == "inactive_user@test.com").first()
+        user.is_active = False
+        db_session.commit()
+
+        res = REGISTRY.dispatch("audit_permissions", {"check_type": "orphaned_data"}, ctx)
+
+        assert res.ok is True
+        assert any(f["type"] == "inactive_user" for f in res.data["findings"])
+
+    def test_audit_permissions_capability_for_disabled_module(self, db_session, test_company):
+        """Test audit finds users with capabilities for disabled modules."""
+        ctx = _ctx(db_session, test_company)
+        # Create a user with amex_reconciler capability
+        REGISTRY.dispatch(
+            "create_user",
+            {"email": "amex_user@test.com", "full_name": "Amex User", "role": "employee", "is_amex_reconciler": True},
+            ctx,
+        )
+
+        # Ensure company has amex module disabled (default is False)
+        from packages.core.platform.models_company_setup import CompanySetup
+        setup = db_session.query(CompanySetup).filter(CompanySetup.company_id == test_company.id).first()
+        if setup:
+            setup.amex_reconciliation_module_enabled = False
+            db_session.commit()
+
+        res = REGISTRY.dispatch("audit_permissions", {"check_type": "module_gaps"}, ctx)
+
+        assert res.ok is True
+        assert any(f["type"] == "capability_for_disabled_module" for f in res.data["findings"])
+
+    def test_audit_permissions_check_all(self, db_session, test_company):
+        """Test audit with check_type='all' runs all checks."""
+        ctx = _ctx(db_session, test_company)
+        # Create multiple issues
+        REGISTRY.dispatch(
+            "create_user",
+            {"email": "accountant_all@test.com", "full_name": "Accountant All", "role": "accountant"},
+            ctx,
+        )
+        accountant = db_session.query(User).filter(User.email == "accountant_all@test.com").first()
+        accountant.can_access_accounting = False
+        db_session.commit()
+
+        res = REGISTRY.dispatch("audit_permissions", {"check_type": "all"}, ctx)
+
+        assert res.ok is True
+        assert "findings" in res.data
+        assert "total_checked" in res.data
+
+    def test_audit_permissions_permission_denied(self, db_session, test_company):
+        """Test audit_permissions requires admin role."""
+        ctx = _ctx(db_session, test_company, role="employee")
+        res = REGISTRY.dispatch("audit_permissions", {"check_type": "all"}, ctx)
+        assert res.ok is False
+        assert "forbidden" in (res.error or "")

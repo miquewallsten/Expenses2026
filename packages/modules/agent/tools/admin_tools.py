@@ -1032,3 +1032,148 @@ REGISTRY.register(ToolSpec(
     personas=frozenset({"admin"}),
     required_permission="agent.tool.admin",
 ))
+
+
+# ── audit_permissions ─────────────────────────────────────────────────────────
+
+class AuditPermissionsArgs(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    check_type: str = Field(..., pattern=r"^(role_capability_mismatch|missing_assignments|orphaned_data|module_gaps|all)$")
+
+
+def _handle_audit_permissions(ctx: AgentContext, args: AuditPermissionsArgs) -> ToolResult:
+    if ctx.user_role != "admin":
+        return ToolResult(
+            ok=False,
+            summary="audit_permissions requires admin role",
+            error="forbidden",
+        )
+
+    findings = []
+
+    # Get all users
+    users = (
+        ctx.db.query(User)
+        .filter(User.company_id == ctx.company_id)
+        .all()
+    )
+
+    # Get company modules
+    setup = (
+        ctx.db.query(CompanySetup)
+        .filter(CompanySetup.company_id == ctx.company_id)
+        .first()
+    )
+    company_modules = {
+        "accounting_module_enabled": setup.accounting_module_enabled if setup else True,
+        "time_allocation_module_enabled": setup.time_allocation_module_enabled if setup else False,
+        "amex_reconciliation_module_enabled": setup.amex_reconciliation_module_enabled if setup else False,
+    }
+
+    check_all = args.check_type == "all"
+
+    # Check 1: Role capability mismatch
+    if args.check_type in ("role_capability_mismatch", "all"):
+        for u in users:
+            # Accountants without accounting access
+            if u.role == "accountant" and not u.can_access_accounting:
+                findings.append({
+                    "type": "accountant_without_accounting_access",
+                    "user_id": u.id,
+                    "email": u.email,
+                    "role": u.role,
+                    "suggestion": f"Set can_access_accounting=True for {u.email}",
+                })
+
+            # Executives without executive reporting
+            if u.role == "executive" and not u.has_executive_reporting:
+                findings.append({
+                    "type": "executive_without_reporting",
+                    "user_id": u.id,
+                    "email": u.email,
+                    "role": u.role,
+                    "suggestion": f"Set has_executive_reporting=True for {u.email}",
+                })
+
+    # Check 2: Missing assignments
+    if args.check_type in ("missing_assignments", "all"):
+        for u in users:
+            # Secretaries without boss
+            if u.role == "secretary" and not u.delegates_for_user_id:
+                findings.append({
+                    "type": "secretary_without_boss",
+                    "user_id": u.id,
+                    "email": u.email,
+                    "role": u.role,
+                    "suggestion": f"Assign a boss for secretary {u.email}",
+                })
+
+            # Users with time tracking but no projects
+            if u.requires_time_tracking and company_modules.get("time_allocation_module_enabled"):
+                user_projects = (
+                    ctx.db.query(UserProjectAssignment)
+                    .filter(UserProjectAssignment.user_id == u.id)
+                    .count()
+                )
+                if user_projects == 0:
+                    findings.append({
+                        "type": "time_tracking_without_projects",
+                        "user_id": u.id,
+                        "email": u.email,
+                        "suggestion": f"Assign projects to {u.email} for time tracking",
+                    })
+
+    # Check 3: Orphaned data
+    if args.check_type in ("orphaned_data", "all"):
+        inactive = [u for u in users if not u.is_active]
+        for u in inactive:
+            findings.append({
+                "type": "inactive_user",
+                "user_id": u.id,
+                "email": u.email,
+                "suggestion": f"Consider reactivating or archiving {u.email}",
+            })
+
+    # Check 4: Module gaps
+    if args.check_type in ("module_gaps", "all"):
+        for u in users:
+            if u.is_amex_reconciler and not company_modules.get("amex_reconciliation_module_enabled"):
+                findings.append({
+                    "type": "capability_for_disabled_module",
+                    "user_id": u.id,
+                    "email": u.email,
+                    "capability": "is_amex_reconciler",
+                    "module": "amex_reconciliation",
+                    "suggestion": f"Disable is_amex_reconciler for {u.email} or enable the module",
+                })
+
+            if u.requires_time_tracking and not company_modules.get("time_allocation_module_enabled"):
+                findings.append({
+                    "type": "capability_for_disabled_module",
+                    "user_id": u.id,
+                    "email": u.email,
+                    "capability": "requires_time_tracking",
+                    "module": "time_allocation",
+                    "suggestion": f"Disable requires_time_tracking for {u.email} or enable the module",
+                })
+
+    return ToolResult(
+        ok=True,
+        summary=f"Found {len(findings)} permission issues",
+        data={
+            "check_type": args.check_type,
+            "findings": findings,
+            "total_checked": len(users),
+        },
+    )
+
+
+REGISTRY.register(ToolSpec(
+    name="audit_permissions",
+    description="Audita permisos y encuentra inconsistencias.",
+    category="read",
+    input_schema=AuditPermissionsArgs,
+    handler=_handle_audit_permissions,
+    personas=frozenset({"admin"}),
+    required_permission="agent.tool.admin",
+))
