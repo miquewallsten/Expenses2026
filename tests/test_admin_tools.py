@@ -437,3 +437,54 @@ class TestListUsersTool:
         assert res.ok is False
         assert "invalid_capabilities" in (res.error or "")
         assert "fly_to_moon" in res.summary
+
+
+class TestGetUserPermissionsTool:
+    def test_get_user_permissions_success(self, db_session, test_company):
+        """Test get_user_permissions returns detailed breakdown."""
+        ctx = _ctx(db_session, test_company)
+        # Create a user to query
+        REGISTRY.dispatch("invite_user", {"email": "perms@example.com", "role": "accountant"}, ctx)
+        user = db_session.query(User).filter(User.email == "perms@example.com").first()
+
+        res = REGISTRY.dispatch("get_user_permissions", {"user_id": user.id}, ctx)
+        assert res.ok is True
+        assert "capabilities" in res.data
+        assert "explanations" in res.data
+        assert "module_visibility" in res.data
+        assert "role_preset" in res.data
+        assert res.data["role"] == "accountant"
+        # Accounting role should have accounting access
+        assert res.data["module_visibility"]["accounting_review"] is True
+
+    def test_get_user_permissions_not_found(self, db_session, test_company):
+        """Test get_user_permissions returns error for non-existent user."""
+        ctx = _ctx(db_session, test_company)
+        res = REGISTRY.dispatch("get_user_permissions", {"user_id": 99999}, ctx)
+        assert res.ok is False
+        assert "not_found" in (res.error or "")
+
+    def test_get_user_permissions_permission_denied(self, db_session, test_company):
+        """Test get_user_permissions requires admin role."""
+        ctx = _ctx(db_session, test_company, role="employee")
+        res = REGISTRY.dispatch("get_user_permissions", {"user_id": 1}, ctx)
+        assert res.ok is False
+        assert "forbidden" in (res.error or "")
+
+    def test_get_user_permissions_with_delegation(self, db_session, test_company):
+        """Test get_user_permissions includes delegation info."""
+        ctx = _ctx(db_session, test_company)
+        # Create boss and delegate
+        REGISTRY.dispatch("invite_user", {"email": "boss@example.com", "role": "manager"}, ctx)
+        boss = db_session.query(User).filter(User.email == "boss@example.com").first()
+        REGISTRY.dispatch("invite_user", {"email": "delegate@example.com", "role": "employee"}, ctx)
+        delegate = db_session.query(User).filter(User.email == "delegate@example.com").first()
+        # Set up delegation
+        delegate.delegates_for_user_id = boss.id
+        db_session.commit()
+
+        res = REGISTRY.dispatch("get_user_permissions", {"user_id": delegate.id}, ctx)
+        assert res.ok is True
+        assert "delegation" in res.data
+        assert res.data["delegation"]["id"] == boss.id
+        assert "boss" in res.data["delegation"]["name"].lower() or res.data["delegation"]["name"] == boss.full_name

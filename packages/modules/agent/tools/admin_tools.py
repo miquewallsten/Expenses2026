@@ -607,3 +607,202 @@ REGISTRY.register(ToolSpec(
     personas=frozenset({"admin"}),
     required_permission="agent.tool.admin",
 ))
+
+
+# ── get_user_permissions ──────────────────────────────────────────────────────
+
+CAPABILITY_EXPLANATIONS = {
+    "can_create_expenses": "Can create and submit expense reports",
+    "can_create_corporate_expenses": "Can create corporate card expenses",
+    "can_invoice_corporation": "Can invoice on behalf of the corporation",
+    "is_amex_reconciler": "Can reconcile AMEX statements",
+    "requires_time_tracking": "Must track time on projects",
+    "has_executive_reporting": "Can access executive analytics dashboard",
+    "can_access_accounting": "Can access accounting review queue",
+    "can_view_analytics": "Can view finance analytics",
+}
+
+ROLE_PRESETS = {
+    "employee": {
+        "can_create_expenses": True,
+        "can_create_corporate_expenses": False,
+        "can_invoice_corporation": False,
+        "is_amex_reconciler": False,
+        "requires_time_tracking": False,
+        "has_executive_reporting": False,
+        "can_access_accounting": False,
+        "can_view_analytics": False,
+    },
+    "manager": {
+        "can_create_expenses": True,
+        "can_create_corporate_expenses": False,
+        "can_invoice_corporation": False,
+        "is_amex_reconciler": False,
+        "requires_time_tracking": False,
+        "has_executive_reporting": False,
+        "can_access_accounting": False,
+        "can_view_analytics": False,
+    },
+    "accountant": {
+        "can_create_expenses": False,
+        "can_create_corporate_expenses": False,
+        "can_invoice_corporation": False,
+        "is_amex_reconciler": False,
+        "requires_time_tracking": False,
+        "has_executive_reporting": False,
+        "can_access_accounting": True,
+        "can_view_analytics": True,
+    },
+    "admin": {
+        "can_create_expenses": False,
+        "can_create_corporate_expenses": False,
+        "can_invoice_corporation": False,
+        "is_amex_reconciler": False,
+        "requires_time_tracking": False,
+        "has_executive_reporting": False,
+        "can_access_accounting": False,
+        "can_view_analytics": False,
+    },
+    "executive": {
+        "can_create_expenses": True,
+        "can_create_corporate_expenses": False,
+        "can_invoice_corporation": False,
+        "is_amex_reconciler": False,
+        "requires_time_tracking": False,
+        "has_executive_reporting": True,
+        "can_access_accounting": False,
+        "can_view_analytics": False,
+    },
+    "secretary": {
+        "can_create_expenses": True,
+        "can_create_corporate_expenses": False,
+        "can_invoice_corporation": False,
+        "is_amex_reconciler": False,
+        "requires_time_tracking": False,
+        "has_executive_reporting": False,
+        "can_access_accounting": False,
+        "can_view_analytics": False,
+    },
+}
+
+
+def compute_module_visibility(role: str, capabilities: dict, company_modules: dict) -> dict:
+    """Compute which modules a user can see."""
+    visibility = {}
+
+    # My Expenses: requires can_create_expenses AND expenses module
+    visibility["my_expenses"] = (
+        capabilities.get("can_create_expenses", True) and
+        company_modules.get("expenses_module_enabled", True)
+    )
+
+    # Accounting Review: requires accounting role OR can_access_accounting
+    visibility["accounting_review"] = (
+        role == "accountant" or
+        capabilities.get("can_access_accounting", False)
+    ) and company_modules.get("accounting_module_enabled", True)
+
+    # Finance Analytics: requires accounting/executive role OR can_view_analytics
+    visibility["finance_analytics"] = (
+        role in ("accountant", "executive") or
+        capabilities.get("can_view_analytics", False)
+    )
+
+    # My Approvals: requires manager role
+    visibility["my_approvals"] = (
+        role == "manager" and
+        company_modules.get("approvals_module_enabled", True)
+    )
+
+    return visibility
+
+
+class GetUserPermissionsArgs(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    user_id: int
+
+
+def _handle_get_user_permissions(ctx: AgentContext, args: GetUserPermissionsArgs) -> ToolResult:
+    if ctx.user_role != "admin":
+        return ToolResult(
+            ok=False,
+            summary="get_user_permissions requires admin role",
+            error="forbidden",
+        )
+
+    user = (
+        ctx.db.query(User)
+        .filter(User.id == args.user_id, User.company_id == ctx.company_id)
+        .one_or_none()
+    )
+
+    if not user:
+        return ToolResult(
+            ok=False,
+            summary=f"User {args.user_id} not found",
+            error="not_found",
+        )
+
+    capabilities = {
+        "can_create_expenses": user.can_create_expenses,
+        "can_create_corporate_expenses": user.can_create_corporate_expenses,
+        "can_invoice_corporation": user.can_invoice_corporation,
+        "is_amex_reconciler": user.is_amex_reconciler,
+        "requires_time_tracking": user.requires_time_tracking,
+        "has_executive_reporting": user.has_executive_reporting,
+        "can_access_accounting": user.can_access_accounting,
+        "can_view_analytics": user.can_view_analytics,
+    }
+
+    # Get company modules
+    setup = (
+        ctx.db.query(CompanySetup)
+        .filter(CompanySetup.company_id == ctx.company_id)
+        .first()
+    )
+    company_modules = {
+        "expenses_module_enabled": setup.expenses_module_enabled if setup else True,
+        "accounting_module_enabled": setup.accounting_module_enabled if setup else True,
+        "approvals_module_enabled": setup.approvals_module_enabled if setup else True,
+        "time_allocation_module_enabled": setup.time_allocation_module_enabled if setup else False,
+        "amex_reconciliation_module_enabled": setup.amex_reconciliation_module_enabled if setup else False,
+    }
+
+    module_visibility = compute_module_visibility(user.role, capabilities, company_modules)
+
+    # Get delegation info
+    delegates_for_user = None
+    if user.delegates_for_user_id:
+        boss = ctx.db.query(User).filter(User.id == user.delegates_for_user_id).first()
+        if boss:
+            delegates_for_user = {"id": boss.id, "name": boss.full_name}
+
+    return ToolResult(
+        ok=True,
+        summary=f"Permissions for {user.full_name}",
+        data={
+            "user_id": user.id,
+            "email": user.email,
+            "full_name": user.full_name,
+            "role": user.role,
+            "is_active": user.is_active,
+            "capabilities": capabilities,
+            "explanations": CAPABILITY_EXPLANATIONS,
+            "module_visibility": module_visibility,
+            "role_preset": ROLE_PRESETS.get(user.role, {}),
+            "delegation": delegates_for_user,
+            "legal_entity_id": user.legal_entity_id,
+            "department": user.department,
+        },
+    )
+
+
+REGISTRY.register(ToolSpec(
+    name="get_user_permissions",
+    description="Devuelve el desglose detallado de permisos de un usuario.",
+    category="read",
+    input_schema=GetUserPermissionsArgs,
+    handler=_handle_get_user_permissions,
+    personas=frozenset({"admin"}),
+    required_permission="agent.tool.admin",
+))
