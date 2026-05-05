@@ -6,9 +6,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Receipt, CheckSquare, Calculator, Clock, Archive, Download, BarChart2, ShoppingCart,
-  ClipboardList, BadgeCheck, CreditCard,
-  ChevronLeft, ChevronRight, LayoutGrid,
-  Menu, Settings, X,
+  ClipboardList, BadgeCheck, CreditCard, Sparkles,
+  ChevronLeft, ChevronRight, LayoutGrid, Bot, MessageSquare,
+  Menu, Settings, X, Zap, TrendingUp, Bell,
   type LucideIcon,
 } from "lucide-react";
 import { Suspense } from "react";
@@ -26,8 +26,9 @@ import type { NavRailItem } from "@/components/shell/NavRail";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const SIDEBAR_W = 200;
-const SIDEBAR_COL_W = 56;
+const SIDEBAR_W = 240;
+const SIDEBAR_COL_W = 64;
+const AI_DOCK_H = 56;
 
 // ── Module icon map ───────────────────────────────────────────────────────────
 
@@ -44,7 +45,124 @@ function initials(label: string): string {
   return label.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
 }
 
-// ── Unified sidebar ────────────────────────────────────────────────────────────
+// ── AI Assistant Dock ───────────────────────────────────────────────────────────
+
+function AIAssistantDock({ collapsed, onExpand }: { collapsed: boolean; onExpand: () => void }) {
+  const t = useTranslations("myWork.ai");
+
+  if (collapsed) {
+    return (
+      <button
+        onClick={onExpand}
+        className="group flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-ai to-accent shadow-lg shadow-ai-glow transition-all hover:scale-105"
+        title={t("openAssistant")}
+      >
+        <Bot className="h-5 w-5 text-white" />
+        <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-success animate-pulse" />
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-3 rounded-xl bg-gradient-to-r from-ai-muted to-accent-muted p-3">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-ai to-accent shadow-md shadow-ai-glow">
+        <Bot className="h-4 w-4 text-white" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-ai">
+          {t("assistant")}
+        </p>
+        <p className="truncate text-[9px] text-tertiary">
+          {t("ready")}
+        </p>
+      </div>
+      <button
+        onClick={onExpand}
+        className="flex h-7 w-7 items-center justify-center rounded-md bg-surface-2 text-muted transition-colors hover:bg-surface-3 hover:text-secondary"
+      >
+        <MessageSquare className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
+// ── Hero Header ────────────────────────────────────────────────────────────────
+
+function HeroHeader({ userName }: { userName: string }) {
+  const t = useTranslations("myWork.hero");
+  const date = new Date();
+  const hour = date.getHours();
+  const greeting = hour < 12 ? t("morning") : hour < 18 ? t("afternoon") : t("evening");
+
+  return (
+    <header className="hero overflow-hidden rounded-2xl p-6">
+      <div className="hero-glow hero-glow-accent" />
+      <div className="hero-glow hero-glow-ai" />
+      <div className="hero-content relative z-10">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium text-secondary mb-1">
+              {greeting}, <span className="text-gradient">{userName}</span>
+            </p>
+            <h1 className="text-2xl font-semibold text-primary tracking-tight">
+              {t("title")}
+            </h1>
+            <p className="text-xs text-tertiary mt-1">
+              {t("subtitle")}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 rounded-lg bg-surface-2/50 px-3 py-1.5 backdrop-blur-sm border border-subtle">
+              <TrendingUp className="h-3.5 w-3.5 text-success" />
+              <span className="text-[10px] font-medium text-secondary">
+                {t("onTrack")}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick stats */}
+        <div className="mt-4 grid grid-cols-3 gap-3">
+          <div className="rounded-xl bg-surface-2/40 backdrop-blur-sm border border-subtle p-3">
+            <div className="flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-muted">
+                <Receipt className="h-3.5 w-3.5 text-accent" />
+              </div>
+              <div>
+                <p className="text-lg font-semibold text-primary">3</p>
+                <p className="text-[9px] text-muted uppercase tracking-wide">Pending</p>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-xl bg-surface-2/40 backdrop-blur-sm border border-subtle p-3">
+            <div className="flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-success-muted">
+                <CheckSquare className="h-3.5 w-3.5 text-success" />
+              </div>
+              <div>
+                <p className="text-lg font-semibold text-primary">12</p>
+                <p className="text-[9px] text-muted uppercase tracking-wide">This Week</p>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-xl bg-surface-2/40 backdrop-blur-sm border border-subtle p-3">
+            <div className="flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-ai-muted animate-glow-ai">
+                <Sparkles className="h-3.5 w-3.5 text-ai" />
+              </div>
+              <div>
+                <p className="text-lg font-semibold text-primary">AI</p>
+                <p className="text-[9px] text-muted uppercase tracking-wide">Ready</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+// ── Unified Sidebar ────────────────────────────────────────────────────────────
 
 function UnifiedSidebar({
   globalNavItems,
@@ -52,12 +170,14 @@ function UnifiedSidebar({
   onToggle,
   onSelect,
   height,
+  onAIExpand,
 }: {
   globalNavItems: NavRailItem[];
   collapsed: boolean;
   onToggle: () => void;
   onSelect?: () => void;
   height?: "full";
+  onAIExpand: () => void;
 }) {
   const { visibleModules, activeModule, setActiveModule } = useMyWorkContext();
   const tn = useTranslations("nav");
@@ -65,40 +185,44 @@ function UnifiedSidebar({
 
   return (
     <nav
-      className={`flex shrink-0 flex-col ${height === "full" ? "h-[100dvh]" : "overflow-hidden"} border-r border-subtle bg-surface-1 transition-[width] duration-200`}
+      className={`flex shrink-0 flex-col ${height === "full" ? "h-[100dvh]" : "overflow-hidden"} border-r border-subtle bg-surface-1 transition-[width] duration-300`}
       style={{ width: collapsed ? SIDEBAR_COL_W : SIDEBAR_W }}
     >
-      {/* Header row */}
-      <div className="flex h-9 shrink-0 items-center gap-2 border-b border-subtle px-2">
-        <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-accent-muted">
-          <LayoutGrid className="h-3 w-3 text-accent" />
+      {/* Header row with gradient accent */}
+      <div className="relative flex h-12 shrink-0 items-center gap-2 border-b border-subtle px-3 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-accent-muted/30 via-transparent to-ai-muted/20 opacity-50" />
+        <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-accent-hover shadow-md shadow-accent-glow">
+          <LayoutGrid className="h-4 w-4 text-white" />
         </div>
         {!collapsed && (
-          <span className="flex-1 truncate text-[10px] font-bold uppercase tracking-widest text-secondary">
-            {tn("myWork")}
-          </span>
+          <div className="relative flex-1 min-w-0">
+            <span className="block truncate text-xs font-semibold tracking-tight text-primary">
+              {tn("myWork")}
+            </span>
+            <span className="block text-[9px] text-muted">OpsFlow</span>
+          </div>
         )}
         <button
           type="button"
           onClick={onToggle}
           title={collapsed ? ts("expandSidebar") : ts("collapseSidebar")}
-          className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted transition-colors hover:bg-surface-2 hover:text-secondary"
+          className="relative ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted transition-all hover:bg-surface-2 hover:text-secondary"
         >
           {collapsed
-            ? <ChevronRight className="h-3.5 w-3.5" />
-            : <ChevronLeft className="h-3.5 w-3.5" />}
+            ? <ChevronRight className="h-4 w-4" />
+            : <ChevronLeft className="h-4 w-4" />}
         </button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto h-full">
         {/* Module nav */}
-        <div className="py-1.5">
+        <div className="py-2 px-2">
           {!collapsed && (
-            <p className="px-3 pb-0.5 pt-1 text-[9px] font-bold uppercase tracking-widest text-muted">
+            <p className="px-2 pb-1.5 pt-1 text-[9px] font-bold uppercase tracking-widest text-muted">
               {tn("modules")}
             </p>
           )}
-          <ul className={`space-y-0.5 ${collapsed ? "px-2" : "px-2.5"}`}>
+          <ul className="space-y-1">
             {visibleModules.map((mod) => {
               const Icon = resolveIcon(mod.icon);
               const isActive = activeModule?.id === mod.id;
@@ -109,27 +233,27 @@ function UnifiedSidebar({
                     title={collapsed ? mod.label : undefined}
                     onClick={() => { setActiveModule(mod.id); onSelect?.(); }}
                     aria-current={isActive ? "page" : undefined}
-                    className={`group relative flex w-full items-center gap-2.5 rounded py-1.5 text-xs font-medium leading-none transition-colors ${
-                      collapsed ? "justify-center px-2" : "px-2.5"
+                    className={`group relative flex w-full items-center gap-2.5 rounded-xl py-2 text-xs font-medium leading-none transition-all ${
+                      collapsed ? "justify-center px-2" : "px-3"
                     } ${
                       isActive
-                        ? "bg-accent-muted text-primary"
+                        ? "bg-accent-muted text-accent shadow-sm"
                         : "text-secondary hover:bg-surface-2 hover:text-primary"
                     }`}
                   >
                     {isActive && (
-                      <span className="absolute left-0 top-1/2 h-3.5 w-0.5 -translate-y-1/2 rounded-r bg-accent" />
+                      <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-gradient-to-b from-accent to-accent-hover" />
                     )}
                     {Icon ? (
                       <Icon
-                        className={`h-3.5 w-3.5 shrink-0 ${
+                        className={`h-4 w-4 shrink-0 transition-transform group-hover:scale-110 ${
                           isActive ? "text-accent" : "text-muted group-hover:text-secondary"
                         }`}
                         aria-hidden="true"
                       />
                     ) : (
-                      <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded text-[9px] font-bold uppercase tracking-wider ${
-                        isActive ? "bg-accent-muted text-accent" : "bg-surface-2 text-muted"
+                      <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[9px] font-bold uppercase tracking-wider transition-transform group-hover:scale-110 ${
+                        isActive ? "bg-accent text-white" : "bg-surface-2 text-muted group-hover:bg-surface-3"
                       }`}>
                         {initials(mod.label)}
                       </span>
@@ -144,31 +268,31 @@ function UnifiedSidebar({
 
         {/* Cross-portal links */}
         {globalNavItems.length > 0 && (
-          <div className="mt-1 border-t border-subtle py-1.5">
+          <div className="mt-1 border-t border-subtle py-2 px-2">
             {!collapsed && (
-              <p className="px-3 pb-0.5 pt-1 text-[9px] font-bold uppercase tracking-widest text-muted">
+              <p className="px-2 pb-1.5 pt-1 text-[9px] font-bold uppercase tracking-widest text-muted">
                 {tn("portals")}
               </p>
             )}
-            <ul className={`space-y-0.5 ${collapsed ? "px-2" : "px-2.5"}`}>
+            <ul className="space-y-1">
               {globalNavItems.map((item) => (
                 <li key={item.key}>
                   <Link
                     href={item.href}
                     title={collapsed ? item.label : undefined}
-                    className={`group relative flex items-center gap-2.5 rounded py-1.5 text-xs font-medium leading-none transition-colors ${
-                      collapsed ? "justify-center px-2" : "px-2.5"
+                    className={`group relative flex items-center gap-2.5 rounded-xl py-2 text-xs font-medium leading-none transition-all ${
+                      collapsed ? "justify-center px-2" : "px-3"
                     } ${
                       item.active
-                        ? "bg-accent-muted text-primary"
+                        ? "bg-accent-muted text-accent"
                         : "text-secondary hover:bg-surface-2 hover:text-primary"
                     }`}
                   >
                     {item.active && (
-                      <span className="absolute left-0 top-1/2 h-3.5 w-0.5 -translate-y-1/2 rounded-r bg-accent" />
+                      <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-gradient-to-b from-accent to-accent-hover" />
                     )}
-                    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded text-[9px] font-bold uppercase tracking-wider ${
-                      item.active ? "bg-accent-muted text-accent" : "bg-surface-2 text-muted"
+                    <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[9px] font-bold uppercase tracking-wider transition-transform group-hover:scale-110 ${
+                      item.active ? "bg-accent text-white" : "bg-surface-2 text-muted group-hover:bg-surface-3"
                     }`}>
                       {initials(item.label)}
                     </span>
@@ -179,6 +303,11 @@ function UnifiedSidebar({
             </ul>
           </div>
         )}
+      </div>
+
+      {/* AI Assistant Dock at bottom */}
+      <div className="shrink-0 border-t border-subtle p-3">
+        <AIAssistantDock collapsed={collapsed} onExpand={onAIExpand} />
       </div>
     </nav>
   );
@@ -197,6 +326,7 @@ function MyWorkShell() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [navDrawerOpen, setNavDrawerOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
 
   useEffect(() => {
     if (!isMobile) setNavDrawerOpen(false);
@@ -212,22 +342,38 @@ function MyWorkShell() {
     }).filter((item) => item.key !== "employee");
   }, [user.role, user.permissionKeys, effectiveConfig]);
 
+  // Admin module has its own navigation - hide MyWork sidebar when active
+  const isAdminModule = activeModule?.id === "admin";
+
   const workspace = (
-    <div className="min-h-0 flex-1 overflow-hidden">
-      <MyWorkWorkspace />
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      {/* Hero header at top of workspace - hide for Admin (has its own nav) */}
+      {!isMobile && !isAdminModule && <div className="px-4 pt-4 pb-2"><HeroHeader userName={user.displayName || "User"} /></div>}
+      <div className={`min-h-0 flex-1 overflow-hidden ${isAdminModule ? "" : "px-4 pb-4"}`}>
+        <MyWorkWorkspace />
+      </div>
     </div>
   );
 
   const topRightToolbar = (
-    <div className="pointer-events-none absolute right-2 top-2 z-20 flex items-center gap-1">
+    <div className="pointer-events-none absolute right-3 top-3 z-20 flex items-center gap-2">
+      <button
+        type="button"
+        onClick={() => setAiPanelOpen(true)}
+        title="AI Assistant"
+        aria-label="AI Assistant"
+        className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-ai to-accent text-white shadow-lg shadow-ai-glow transition-transform hover:scale-105"
+      >
+        <Bot className="h-4 w-4" />
+      </button>
       <button
         type="button"
         onClick={() => setSettingsOpen(true)}
         title={tnShell("settings")}
         aria-label={tnShell("settings")}
-        className="pointer-events-auto flex h-7 w-7 items-center justify-center rounded border border-subtle bg-surface-2 text-secondary shadow-sm transition-colors hover:border-default hover:bg-surface-3 hover:text-primary"
+        className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-xl border border-subtle bg-surface-2/80 backdrop-blur-sm text-secondary shadow-sm transition-all hover:border-default hover:bg-surface-3 hover:text-primary"
       >
-        <Settings className="h-3.5 w-3.5" />
+        <Settings className="h-4 w-4" />
       </button>
     </div>
   );
@@ -239,26 +385,40 @@ function MyWorkShell() {
         className="flex h-[100dvh] flex-col overflow-hidden bg-surface-0 text-primary"
         style={{ paddingTop: "var(--sai-t)", paddingBottom: "var(--sai-b)" }}
       >
-        <header className="flex h-10 shrink-0 items-center border-b border-subtle bg-surface-1 px-3">
+        <header className="flex h-12 shrink-0 items-center border-b border-subtle bg-surface-1 px-3">
           <button
             type="button"
             onClick={() => setNavDrawerOpen(true)}
             aria-label={tsShell("openNavigation")}
-            className="flex h-7 w-7 items-center justify-center rounded text-secondary transition-colors hover:bg-surface-2 hover:text-primary"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-secondary transition-colors hover:bg-surface-2 hover:text-primary"
           >
             <Menu className="h-4 w-4" />
           </button>
-          <span className="flex-1 px-2 text-[11px] font-semibold uppercase tracking-wide text-primary truncate">
-            {activeModule?.label ?? tnShell("myWork")}
-          </span>
-          <button
-            type="button"
-            onClick={() => setSettingsOpen(true)}
-            aria-label={tnShell("settings")}
-            className="flex h-7 w-7 items-center justify-center rounded text-muted transition-colors hover:bg-surface-2 hover:text-primary"
-          >
-            <Settings className="h-4 w-4" />
-          </button>
+          <div className="flex-1 px-3">
+            <span className="block text-[10px] font-semibold uppercase tracking-wide text-secondary">
+              {tnShell("myWork")}
+            </span>
+            <span className="block text-xs font-medium text-primary truncate">
+              {activeModule?.label ?? "..."}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setAiPanelOpen(true)}
+              className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-ai to-accent text-white shadow-md shadow-ai-glow"
+            >
+              <Bot className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setSettingsOpen(true)}
+              aria-label={tnShell("settings")}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-primary"
+            >
+              <Settings className="h-4 w-4" />
+            </button>
+          </div>
         </header>
 
         <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -268,21 +428,26 @@ function MyWorkShell() {
         {navDrawerOpen && (
           <>
             <div
-              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[1px]"
+              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
               onClick={() => setNavDrawerOpen(false)}
               aria-hidden="true"
             />
             <div
-              className="animate-slide-in-right fixed inset-y-0 left-0 z-50 flex w-[min(280px,85vw)] flex-col overflow-hidden bg-surface-1 shadow-xl"
+              className="animate-slide-in-right fixed inset-y-0 left-0 z-50 flex w-[min(300px,85vw)] flex-col overflow-hidden bg-surface-1 shadow-xl"
               style={{ paddingTop: "var(--sai-t)", paddingBottom: "var(--sai-b)" }}
             >
-              <div className="flex h-10 shrink-0 items-center justify-between border-b border-subtle px-3">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-secondary">{tnShell("myWork")}</span>
+              <div className="flex h-12 shrink-0 items-center justify-between border-b border-subtle px-4">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-accent-hover shadow-md shadow-accent-glow">
+                    <LayoutGrid className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="text-xs font-semibold text-primary">{tnShell("myWork")}</span>
+                </div>
                 <button
                   type="button"
                   onClick={() => setNavDrawerOpen(false)}
                   aria-label={tsShell("closeNavigation")}
-                  className="flex h-7 w-7 items-center justify-center rounded text-muted hover:bg-surface-2 hover:text-primary"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-surface-2 hover:text-primary"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -290,19 +455,19 @@ function MyWorkShell() {
               <div className="min-h-0 flex-1 overflow-y-auto">
                 <MyWorkSidebar onSelect={() => setNavDrawerOpen(false)} />
                 {globalNavItems.length > 0 && (
-                  <div className="mt-1 border-t border-subtle py-1.5">
-                    <p className="px-3 pb-0.5 pt-1 text-[9px] font-bold uppercase tracking-widest text-muted">
+                  <div className="mt-2 border-t border-subtle py-2 px-3">
+                    <p className="px-1 pb-1.5 pt-1 text-[9px] font-bold uppercase tracking-widest text-muted">
                       {tnShell("portals")}
                     </p>
-                    <ul className="space-y-0.5 px-2.5">
+                    <ul className="space-y-1">
                       {globalNavItems.map((item) => (
                         <li key={item.key}>
                           <Link
                             href={item.href}
                             onClick={() => setNavDrawerOpen(false)}
-                            className="flex items-center gap-2.5 rounded px-2.5 py-1.5 text-xs font-medium text-secondary transition-colors hover:bg-surface-2 hover:text-primary"
+                            className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-secondary transition-colors hover:bg-surface-2 hover:text-primary"
                           >
-                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-surface-2 text-[9px] font-bold uppercase tracking-wider text-muted">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-[9px] font-bold uppercase tracking-wider text-muted">
                               {initials(item.label)}
                             </span>
                             {item.label}
@@ -313,6 +478,10 @@ function MyWorkShell() {
                   </div>
                 )}
               </div>
+              {/* AI dock in mobile drawer */}
+              <div className="shrink-0 border-t border-subtle p-3">
+                <AIAssistantDock collapsed={false} onExpand={() => { setNavDrawerOpen(false); setAiPanelOpen(true); }} />
+              </div>
             </div>
           </>
         )}
@@ -322,44 +491,48 @@ function MyWorkShell() {
   }
 
   // ── Tablet ──────────────────────────────────────────────────────────────────
-  if (isTablet) {
-    return (
-      <div
-        className="relative flex h-[100dvh] overflow-hidden bg-surface-0 text-primary"
-        style={{ paddingTop: "var(--sai-t)", paddingBottom: "var(--sai-b)" }}
-      >
+  return (
+    <div
+      className="relative flex h-[100dvh] overflow-hidden bg-surface-0 text-primary"
+      style={{ paddingTop: "var(--sai-t)", paddingBottom: "var(--sai-b)" }}
+    >
+      {!isAdminModule && (
         <UnifiedSidebar
           globalNavItems={globalNavItems}
           collapsed={true}
           onToggle={() => {}}
+          onAIExpand={() => setAiPanelOpen(true)}
         />
-
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          {workspace}
-        </div>
-
-        {topRightToolbar}
-        <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-      </div>
-    );
-  }
-
-  // ── Desktop ─────────────────────────────────────────────────────────────────
-  return (
-    <div className="relative flex h-[100dvh] overflow-hidden bg-surface-0 text-primary">
-
-      <UnifiedSidebar
-        globalNavItems={globalNavItems}
-        collapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed((v) => !v)}
-        height="full"
-      />
+      )}
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {workspace}
       </div>
 
-      {topRightToolbar}
+      {!isAdminModule && topRightToolbar}
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+    </div>
+  );
+
+  // ── Desktop ─────────────────────────────────────────────────────────────────
+  return (
+    <div className="relative flex h-[100dvh] overflow-hidden bg-surface-0 text-primary">
+
+      {!isAdminModule && (
+        <UnifiedSidebar
+          globalNavItems={globalNavItems}
+          collapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed((v) => !v)}
+          height="full"
+          onAIExpand={() => setAiPanelOpen(true)}
+        />
+      )}
+
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        {workspace}
+      </div>
+
+      {!isAdminModule && topRightToolbar}
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );
@@ -388,7 +561,13 @@ export default function MyWorkPage() {
   return (
     <Suspense fallback={
       <div className="flex h-[100dvh] items-center justify-center bg-surface-0">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-subtle border-t-accent" />
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="h-10 w-10 animate-spin rounded-xl border-2 border-accent border-t-transparent" />
+            <div className="absolute inset-0 h-10 w-10 animate-pulse rounded-xl bg-accent-muted" />
+          </div>
+          <p className="text-xs text-tertiary animate-pulse">Loading...</p>
+        </div>
       </div>
     }>
       <MyWorkPageInner />
