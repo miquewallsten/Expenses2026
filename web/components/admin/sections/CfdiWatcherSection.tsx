@@ -145,44 +145,47 @@ export default function CfdiWatcherSection() {
   return (
     <main className="min-h-screen bg-surface-0 text-primary">
       <div className="mx-auto max-w-5xl px-6 py-6">
-        {/* Header */}
-        <div className="mb-5 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="flex items-center gap-2 text-[14px] font-semibold tracking-tight text-primary">
-                <XOctagon className="h-4 w-4 text-rose-300/70" />
-                {t("title")}
-              </h1>
-              <p className="text-[10.5px] text-muted">{t("subtitle")}</p>
+        {/* Premium header */}
+        <div className="relative overflow-hidden rounded-lg border border-default bg-gradient-to-r from-surface-1 via-surface-1 to-rose-500/[0.02] px-4 py-3 mb-5">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--color-rose-500)/5%,_transparent_50%)]" />
+          <div className="relative flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/10">
+                <XOctagon className="h-4 w-4 text-rose-400" />
+              </div>
+              <div className="flex flex-col">
+                <h1 className="text-sm font-semibold text-primary">{t("title")}</h1>
+                <span className="text-[9px] text-muted">SAT Cancelled CFDI Monitor</span>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-          <button
-            type="button"
-            disabled={batchRunning || loading}
-            onClick={() => void runBatch()}
-            className="flex items-center gap-1.5 rounded border border-sky-500/30 bg-accent/[0.10] px-2.5 py-1 text-[11px] text-sky-100 transition hover:border-sky-400/50 hover:bg-accent/[0.18] disabled:opacity-50"
-          >
-            {batchRunning ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <PlayCircle className="h-3.5 w-3.5" />
-            )}
-            {t("runBatch")}
-          </button>
-          <button
-            type="button"
-            disabled={loading}
-            onClick={() => void load()}
-            className="flex items-center gap-1.5 rounded border border-subtle bg-surface-2 px-2.5 py-1 text-[11px] text-tertiary transition hover:border-strong hover:bg-surface-3 disabled:opacity-50"
-          >
-            {loading ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <RefreshCw className="h-3.5 w-3.5" />
-            )}
-            {t("refresh")}
-          </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={batchRunning || loading}
+                onClick={() => void runBatch()}
+                className="flex items-center gap-1.5 rounded-lg border border-accent/30 bg-accent/10 px-2.5 py-1.5 text-[10px] font-semibold text-accent transition hover:border-accent/50 hover:bg-accent/20 disabled:opacity-50"
+              >
+                {batchRunning ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <PlayCircle className="h-3 w-3" />
+                )}
+                {t("runBatch")}
+              </button>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => void load()}
+                className="flex items-center gap-1.5 rounded-lg border border-default bg-surface-1 px-2.5 py-1.5 text-[10px] font-semibold text-tertiary transition hover:border-strong hover:text-secondary disabled:opacity-50"
+              >
+                {loading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3 w-3" />
+                )}
+                {t("refresh")}
+              </button>
+            </div>
           </div>
         </div>
 

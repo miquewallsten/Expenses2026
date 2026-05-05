@@ -212,29 +212,39 @@ export default function AdminWorkflowMapPanel({
   return (
     <div className="flex flex-col gap-4">
 
-      {/* ── SVG Canvas ─────────────────────────────────────────────────────── */}
-      <div className="overflow-hidden rounded-lg border border-default bg-surface-0">
-
-        {/* Canvas header */}
-        <div className="flex items-center justify-between border-b border-subtle px-3 py-2">
-          <div className="flex items-center gap-1.5">
-            <GitBranch className="h-3.5 w-3.5 text-muted" />
-            <span className="text-[11px] font-semibold text-secondary">{tw("canvasTitle")}</span>
+      {/* Premium header */}
+      <div className="relative overflow-hidden rounded-lg border border-default bg-gradient-to-r from-surface-1 via-surface-1 to-indigo-500/[0.02] px-4 py-3">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--color-indigo-500)/5%,_transparent_50%)]" />
+        <div className="relative flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/10">
+              <GitBranch className="h-4 w-4 text-indigo-400" />
+            </div>
+            <div className="flex flex-col">
+              <h2 className="text-sm font-semibold text-primary">{tw("canvasTitle")}</h2>
+              <span className="text-[9px] text-muted">Approval Workflow Visualizer</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
             {!isEmpty && (
-              <span className="rounded border border-default bg-surface-2 px-1.5 py-0.5 font-mono text-[9px] text-muted">
-                {stages.length} {tw("stagesUnit")} · {transitions.length} {tw("transitionsUnit")}
-              </span>
+              <>
+                <span className="rounded-full border border-indigo-500/20 bg-indigo-500/5 px-2.5 py-0.5 font-mono text-[10px] text-indigo-400/70">
+                  {stages.length} {tw("stagesUnit")} · {transitions.length} {tw("transitionsUnit")}
+                </span>
+                <button
+                  onClick={loadGraph}
+                  className="text-[10px] font-semibold text-muted hover:text-tertiary transition-colors"
+                >
+                  {tw("refresh")}
+                </button>
+              </>
             )}
           </div>
-          {!isEmpty && (
-            <button
-              onClick={loadGraph}
-              className="text-[9px] font-semibold text-muted hover:text-tertiary transition-colors"
-            >
-              {tw("refresh")}
-            </button>
-          )}
         </div>
+      </div>
+
+      {/* ── SVG Canvas ─────────────────────────────────────────────────────── */}
+      <div className="overflow-hidden rounded-lg border border-default bg-surface-0">
 
         {isEmpty ? (
           /* ── Preset picker ── */

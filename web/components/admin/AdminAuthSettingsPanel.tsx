@@ -233,18 +233,30 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
   }
 
   return (
-    <div className="max-w-2xl space-y-5">
-      <div className="flex items-center gap-2">
-        <Lock className="h-4 w-4 text-muted" />
-        <h2 className="text-sm font-semibold text-primary">{t("title")}</h2>
+    <div className="max-w-2xl space-y-4">
+      {/* Premium header */}
+      <div className="relative overflow-hidden rounded-lg border border-default bg-gradient-to-r from-surface-1 via-surface-1 to-violet-500/[0.02] px-4 py-3">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--color-violet-500)/5%,_transparent_50%)]" />
+        <div className="relative flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10">
+            <Lock className="h-4 w-4 text-violet-400" />
+          </div>
+          <div className="flex flex-col">
+            <h2 className="text-sm font-semibold text-primary">{t("title")}</h2>
+            <span className="text-[9px] text-muted">Authentication & Security</span>
+          </div>
+        </div>
       </div>
 
       {/* ── Magic Link ─────────────────────────────────────────────────────── */}
-      <div className="overflow-hidden rounded-lg border border-default">
-        <div className="flex items-center gap-2 border-b border-subtle bg-surface-1 px-4 py-2.5">
-          <Globe className="h-3.5 w-3.5 text-accent/50" />
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted">{t("magicLink")}</p>
-          <span className="ml-auto rounded border border-emerald-500/20 bg-emerald-500/[0.07] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-emerald-300/60">
+      <div className="relative overflow-hidden rounded-lg border border-default">
+        <div className="absolute inset-0 bg-gradient-to-br from-success/[0.01] via-transparent to-transparent pointer-events-none" />
+        <div className="relative flex items-center gap-2.5 border-b border-subtle bg-gradient-to-r from-surface-1 to-success/[0.02] px-4 py-3">
+          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-accent/10">
+            <Globe className="h-3.5 w-3.5 text-accent" />
+          </div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-secondary">{t("magicLink")}</p>
+          <span className="ml-auto rounded-full border border-success/20 bg-success/5 px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest text-success/70">
             {t("active")}
           </span>
         </div>
@@ -292,15 +304,18 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
       </div>
 
       {/* ── SSO ────────────────────────────────────────────────────────────── */}
-      <div className="overflow-hidden rounded-lg border border-default opacity-60">
-        <div className="flex items-center gap-2 border-b border-subtle bg-surface-1 px-4 py-2.5">
-          <Shield className="h-3.5 w-3.5 text-muted" />
+      <div className="relative overflow-hidden rounded-lg border border-subtle opacity-70">
+        <div className="absolute inset-0 bg-gradient-to-br from-violet-500/[0.01] via-transparent to-transparent pointer-events-none" />
+        <div className="relative flex items-center gap-2.5 border-b border-subtle bg-surface-1 px-4 py-3">
+          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-violet-500/10">
+            <Shield className="h-3.5 w-3.5 text-violet-400" />
+          </div>
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted">{t("sso")}</p>
-          <span className="ml-auto rounded border border-default bg-surface-1 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-muted">
+          <span className="ml-auto rounded-full border border-warning/15 bg-warning/5 px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest text-warning/60">
             {t("enterprise")}
           </span>
         </div>
-        <div className="px-4">
+        <div className="relative px-4">
           <ToggleRow
             label={t("enableSso")}
             description={t("enableSsoDesc")}
@@ -315,22 +330,24 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
               type="text"
               disabled
               placeholder={t("idpMetadataPlaceholder")}
-              className="w-full rounded border border-subtle bg-surface-1/50 px-2.5 py-1.5 font-mono text-[11px] text-muted outline-none"
+              className="w-full rounded-lg border border-subtle bg-surface-1/50 px-3 py-2 font-mono text-[11px] text-muted outline-none"
             />
           </div>
         </div>
       </div>
 
       {/* ── User Import ─────────────────────────────────────────────────────── */}
-      <div className="overflow-hidden rounded-lg border border-default opacity-60">
-        <div className="flex items-center gap-2 border-b border-subtle bg-surface-1 px-4 py-2.5">
-          <Globe className="h-3.5 w-3.5 text-muted" />
+      <div className="relative overflow-hidden rounded-lg border border-subtle opacity-70">
+        <div className="relative flex items-center gap-2.5 border-b border-subtle bg-surface-1 px-4 py-3">
+          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-ai/10">
+            <Globe className="h-3.5 w-3.5 text-ai/70" />
+          </div>
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted">{t("bulkImport")}</p>
-          <span className="ml-auto rounded border border-default bg-surface-1 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-muted">
+          <span className="ml-auto rounded-full border border-subtle bg-surface-2 px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest text-muted">
             {t("comingSoon")}
           </span>
         </div>
-        <div className="px-4 py-3">
+        <div className="relative px-4 py-4">
           <p className="text-[11px] text-muted leading-relaxed">
             {t("bulkImportDesc")}
           </p>

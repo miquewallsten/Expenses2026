@@ -54,26 +54,36 @@ export default function AdminPermissionsPanel({ permissions, onPermissionsChange
   };
 
   return (
-    <div className="max-w-2xl">
-      {/* Header */}
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Key className="h-4 w-4 text-muted" />
-          <h2 className="text-sm font-semibold text-primary">{tp("title")}</h2>
-          <span className="rounded border border-default bg-surface-2 px-1.5 py-0.5 font-mono text-[10px] text-muted">
-            {permissions.length}
-          </span>
+    <div className="max-w-2xl space-y-4">
+      {/* Premium header */}
+      <div className="relative overflow-hidden rounded-lg border border-default bg-gradient-to-r from-surface-1 via-surface-1 to-amber-500/[0.02] px-4 py-3">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--color-amber-500)/5%,_transparent_50%)]" />
+        <div className="relative flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10">
+              <Key className="h-4 w-4 text-amber-400" />
+            </div>
+            <div className="flex flex-col">
+              <h2 className="text-sm font-semibold text-primary">{tp("title")}</h2>
+              <span className="text-[9px] text-muted">System Permissions</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="rounded-full border border-amber-500/20 bg-amber-500/5 px-2.5 py-0.5 font-mono text-[10px] text-amber-400/70">
+              {permissions.length} keys
+            </span>
+            {!showForm && (
+              <button
+                type="button"
+                onClick={() => setShowForm(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-default bg-surface-1 px-2.5 py-1.5 text-[10px] font-semibold text-tertiary transition-colors hover:border-strong hover:text-secondary"
+              >
+                <Plus className="h-3 w-3" />
+                {tp("newPermission")}
+              </button>
+            )}
+          </div>
         </div>
-        {!showForm && (
-          <button
-            type="button"
-            onClick={() => setShowForm(true)}
-            className="inline-flex items-center gap-1.5 rounded border border-default bg-surface-1 px-2.5 py-1 text-[10px] font-semibold text-tertiary transition-colors hover:border-strong hover:text-secondary"
-          >
-            <Plus className="h-3 w-3" />
-            {tp("newPermission")}
-          </button>
-        )}
       </div>
 
       {permissions.length === 0 && !showForm ? (

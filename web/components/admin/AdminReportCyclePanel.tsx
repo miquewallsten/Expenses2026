@@ -194,16 +194,34 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
   const showDayOfMonth = settings.frequency === "monthly";
 
   return (
-    <div className="space-y-4">
-      {/* Master toggle */}
-      <div className="flex items-center justify-between rounded border border-subtle bg-surface-1 px-3 py-2">
-        <div>
-          <p className="text-[10px] font-semibold text-tertiary">{t("autoReportGeneration")}</p>
-          <p className="text-[9px] text-muted">
-            {settings.enabled ? t("cyclesActive") : t("cyclesDisabled")}
-          </p>
+    <div className="max-w-2xl space-y-4">
+      {/* Premium header */}
+      <div className="relative overflow-hidden rounded-lg border border-default bg-gradient-to-r from-surface-1 via-surface-1 to-violet-500/[0.02] px-4 py-3">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--color-violet-500)/5%,_transparent_50%)]" />
+        <div className="relative flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10">
+              <Zap className="h-4 w-4 text-violet-400" />
+            </div>
+            <div className="flex flex-col">
+              <h2 className="text-sm font-semibold text-primary">{t("autoReportGeneration")}</h2>
+              <span className="text-[9px] text-muted">Automated Report Cycles</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            {settings.enabled ? (
+              <span className="flex items-center gap-1.5 rounded-full border border-success/20 bg-success/5 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-success/70">
+                <CheckCircle2 className="h-2.5 w-2.5" />
+                {t("cyclesActive")}
+              </span>
+            ) : (
+              <span className="rounded-full border border-subtle bg-surface-2 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-muted">
+                {t("cyclesDisabled")}
+              </span>
+            )}
+            <Toggle value={settings.enabled} onChange={(v) => patch("enabled", v)} />
+          </div>
         </div>
-        <Toggle value={settings.enabled} onChange={(v) => patch("enabled", v)} />
       </div>
 
       {/* Schedule */}

@@ -795,41 +795,62 @@ export default function AdminChannelsPanel({ companyId }: { companyId: number })
       {/* Stats bar */}
       <StatsBar stats={stats} />
 
-      {/* Channel tabs */}
-      <div className="flex shrink-0 items-center gap-0 border-b border-subtle px-4">
-        {(["whatsapp", "email"] as ChannelTab[]).map((ch) => {
-          const enabled = ch === "whatsapp" ? waEnabled : emEnabled;
-          return (
-            <button
-              key={ch}
-              onClick={() => setChannelTab(ch)}
-              className={`flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-[11px] font-medium transition-colors ${
-                channelTab === ch
-                  ? "bg-accent-muted/60 text-secondary"
-                  : "border-transparent text-muted hover:text-tertiary"
-              }`}
-            >
-              {ch === "whatsapp"
-                ? <MessageSquare className="h-3.5 w-3.5" />
-                : <Mail className="h-3.5 w-3.5" />}
-              {ch === "whatsapp" ? t("tabWhatsApp") : t("tabEmail")}
-              <span className={`ml-0.5 h-1.5 w-1.5 rounded-full ${enabled ? "bg-emerald-400" : "bg-surface-2"}`} />
-            </button>
-          );
-        })}
+      {/* Channel tabs with gradient header */}
+      <div className="relative border-b border-subtle bg-gradient-to-r from-surface-1 via-surface-1 to-accent/[0.02]">
+        <div className="flex shrink-0 items-center gap-0 px-4">
+          {(["whatsapp", "email"] as ChannelTab[]).map((ch) => {
+            const enabled = ch === "whatsapp" ? waEnabled : emEnabled;
+            return (
+              <button
+                key={ch}
+                onClick={() => setChannelTab(ch)}
+                className={`group relative flex items-center gap-2 border-b-2 px-4 py-3 text-[11px] font-medium transition-colors ${
+                  channelTab === ch
+                    ? "border-accent text-primary"
+                    : "border-transparent text-muted hover:text-tertiary"
+                }`}
+              >
+                <div className={`flex h-6 w-6 items-center justify-center rounded-md transition-colors ${
+                  channelTab === ch
+                    ? "bg-accent/10 text-accent"
+                    : "bg-surface-2 text-muted group-hover:bg-surface-3"
+                }`}>
+                  {ch === "whatsapp"
+                    ? <MessageSquare className="h-3.5 w-3.5" />
+                    : <Mail className="h-3.5 w-3.5" />}
+                </div>
+                {ch === "whatsapp" ? t("tabWhatsApp") : t("tabEmail")}
+                <span className={`h-2 w-2 rounded-full transition-colors ${
+                  enabled ? "bg-success shadow-sm shadow-success/30" : "bg-surface-2"
+                }`} />
+                {channelTab === ch && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-accent via-accent to-accent-hover" />
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Sub-tabs */}
-      <div className="flex shrink-0 items-center gap-2 border-b border-subtle px-4 py-0">
+      <div className="flex shrink-0 items-center gap-1 border-b border-subtle bg-surface-0/50 px-4 py-1">
         {((["settings", "log", "dispatches"]) as SubTab[]).map((st) => (
           <button
             key={st}
             onClick={() => setSubTab(st)}
-            className={`flex items-center gap-1 px-3 py-2 text-[10.5px] font-medium capitalize transition-colors ${
-              subTab === st ? "text-secondary" : "text-muted hover:text-secondary"
+            className={`group flex items-center gap-1.5 rounded-lg px-3 py-2 text-[10px] font-medium capitalize transition-colors ${
+              subTab === st
+                ? "bg-surface-2 text-secondary"
+                : "text-muted hover:bg-surface-1 hover:text-secondary"
             }`}
           >
-            {st === "settings" ? <Settings2 className="h-3 w-3" /> : st === "log" ? <MessageSquare className="h-3 w-3" /> : <Send className="h-3 w-3" />}
+            {st === "settings" ? (
+              <Settings2 className="h-3 w-3" />
+            ) : st === "log" ? (
+              <MessageSquare className="h-3 w-3" />
+            ) : (
+              <Send className="h-3 w-3" />
+            )}
             {st === "settings" ? t("subTabSettings") : st === "log" ? t("subTabLog") : t("subTabDispatches")}
           </button>
         ))}

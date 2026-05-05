@@ -195,21 +195,28 @@ export default function IntegrationsSection() {
   return (
     <div className="min-h-screen bg-surface-0">
       <div className="mx-auto max-w-6xl px-6 py-6">
-        <div className="flex items-end justify-between">
-          <div>
-            <h1 className="text-[15px] font-semibold text-primary">
-              {t("title")}
-            </h1>
-            <p className="mt-0.5 text-[11px] text-tertiary">{t("intro")}</p>
+        {/* Premium header */}
+        <div className="relative overflow-hidden rounded-lg border border-default bg-gradient-to-r from-surface-1 via-surface-1 to-cyan-500/[0.02] px-4 py-3 mb-5">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--color-cyan-500)/5%,_transparent_50%)]" />
+          <div className="relative flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/10">
+                <Plug className="h-4 w-4 text-cyan-400" />
+              </div>
+              <div className="flex flex-col">
+                <h1 className="text-sm font-semibold text-primary">{t("title")}</h1>
+                <span className="text-[9px] text-muted">External System Connections</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => void loadList()}
+              className="flex items-center gap-1 rounded-lg border border-default bg-surface-1 px-2.5 py-1.5 text-[10px] font-semibold text-tertiary hover:border-strong hover:text-secondary"
+            >
+              <RefreshCw className="h-3 w-3" />
+              {t("refresh")}
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => void loadList()}
-            className="flex items-center gap-1 rounded border border-subtle px-2 py-1 text-[10px] text-tertiary hover:border-default hover:text-secondary"
-          >
-            <RefreshCw className="h-3 w-3" />
-            {t("refresh")}
-          </button>
         </div>
 
         {error && (

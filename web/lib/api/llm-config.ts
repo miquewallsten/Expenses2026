@@ -4,7 +4,7 @@ import { superAdminApiCall, superAdminPost, superAdminPut, superAdminDelete } fr
 export interface LLMConfig {
   id: number;
   company_id: number | null;
-  provider: "ollama" | "anthropic" | "openai";
+  provider: "ollama" | "ollama-cloud" | "anthropic" | "openai";
   base_url: string | null;
   api_key_env_ref: string | null;
   model_name: string;
@@ -29,4 +29,24 @@ export async function deleteLLMConfig(id: number): Promise<void> {
 
 export async function testLLMConnection(data: Partial<LLMConfig>): Promise<{ ok: boolean; latency_ms: number; error: string | null }> {
   return superAdminPost<{ ok: boolean; latency_ms: number; error: string | null }>("/super-admin/llm-configs/test", data);
+}
+
+export interface ChatTestRequest {
+  prompt: string;
+  provider: string;
+  model_name: string;
+  base_url?: string;
+  api_key_env_ref?: string;
+}
+
+export interface ChatTestResponse {
+  ok: boolean;
+  model: string | null;
+  content: string | null;
+  latency_ms: number;
+  error: string | null;
+}
+
+export async function testLLMChat(data: ChatTestRequest): Promise<ChatTestResponse> {
+  return superAdminPost<ChatTestResponse>("/super-admin/llm-configs/chat-test", data);
 }

@@ -161,27 +161,33 @@ export default function ExportSection() {
   return (
     <main className="min-h-screen bg-surface-0 text-primary">
       <div className="mx-auto max-w-6xl px-6 py-6">
-        {/* Header */}
-        <div className="mb-5 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-1.5">
-            <Download className="h-3.5 w-3.5 text-slate-300/70" />
-            <h1 className="text-[12px] font-semibold uppercase tracking-[0.08em] text-primary">
-              {t("title")}
-            </h1>
+        {/* Premium header */}
+        <div className="relative overflow-hidden rounded-lg border border-default bg-gradient-to-r from-surface-1 via-surface-1 to-emerald-500/[0.02] px-4 py-3 mb-5">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--color-emerald-500)/5%,_transparent_50%)]" />
+          <div className="relative flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10">
+                <Download className="h-4 w-4 text-emerald-400" />
+              </div>
+              <div className="flex flex-col">
+                <h1 className="text-sm font-semibold text-primary">{t("title")}</h1>
+                <span className="text-[9px] text-muted">Data Export & Backup</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={storageLoading || exportsLoading}
+              className="flex items-center gap-1.5 rounded-lg border border-default bg-surface-1 px-2.5 py-1.5 text-[10px] font-semibold text-tertiary transition hover:border-strong hover:text-secondary disabled:opacity-50"
+            >
+              {(storageLoading || exportsLoading) ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3 w-3" />
+              )}
+              {t("refresh")}
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={handleRefresh}
-            disabled={storageLoading || exportsLoading}
-            className="flex items-center gap-1 rounded border border-subtle bg-surface-2 px-2 py-1 text-[10px] text-tertiary transition hover:border-strong hover:text-secondary disabled:opacity-50"
-          >
-            {(storageLoading || exportsLoading) ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <RefreshCw className="h-3 w-3" />
-            )}
-            {t("refresh")}
-          </button>
         </div>
 
         {error && (
