@@ -15,6 +15,7 @@ from packages.core.platform.models_company_setup import CompanySetup
 from packages.core.platform.models_approval_setup import ApprovalSetup
 from packages.core.platform.models_accounting_setup import AccountingSetup
 from packages.core.platform.models_expense_policy import CompanyExpensePolicy
+from packages.core.platform.models_user_project import UserProjectAssignment
 
 from packages.modules.admin.service.company_setup_service import get_or_create_company_setup
 from packages.modules.admin.service.approval_setup_service import get_or_create_approval_setup
@@ -46,6 +47,8 @@ class CreateUserArgs(BaseModel):
     can_view_analytics: bool | None = None
     # Delegation
     delegates_for_user_id: int | None = None
+    # Project assignments
+    project_ids: list[int] | None = None
     # Invitation
     send_invite: bool = True
 
@@ -108,6 +111,13 @@ def _handle_create_user(ctx: AgentContext, args: CreateUserArgs) -> ToolResult:
     ctx.db.add(new_user)
     ctx.db.commit()
     ctx.db.refresh(new_user)
+
+    # Assign projects if provided
+    if args.project_ids:
+        for pid in args.project_ids:
+            up = UserProjectAssignment(user_id=new_user.id, project_id=pid)
+            ctx.db.add(up)
+        ctx.db.commit()
 
     # Send invite if requested
     if args.send_invite:
