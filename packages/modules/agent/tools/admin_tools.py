@@ -26,23 +26,39 @@ from ..core.registry import REGISTRY, ToolResult, ToolSpec
 from ._common import diff_row, non_null
 
 
-# ── invite_user ──────────────────────────────────────────────────────────────
+# ── create_user ──────────────────────────────────────────────────────────────
 
-class InviteUserArgs(BaseModel):
+class CreateUserArgs(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    email:      str = Field(..., min_length=3, max_length=255)
-    role:       str = Field(default="employee", pattern=r"^(employee|manager|accountant|admin)$")
+    email: str = Field(..., min_length=3, max_length=255)
+    full_name: str = Field(..., min_length=1, max_length=255)
+    role: str = Field(default="employee", pattern=r"^(employee|manager|accountant|admin|executive|secretary)$")
+    legal_entity_id: int | None = None
     department: str | None = Field(default=None, max_length=100)
+    # Capabilities (optional, auto-suggested based on role)
+    can_create_expenses: bool | None = None
+    can_create_corporate_expenses: bool | None = None
+    can_invoice_corporation: bool | None = None
+    is_amex_reconciler: bool | None = None
+    requires_time_tracking: bool | None = None
+    has_executive_reporting: bool | None = None
+    can_access_accounting: bool | None = None
+    can_view_analytics: bool | None = None
+    # Delegation
+    delegates_for_user_id: int | None = None
+    # Invitation
+    send_invite: bool = True
 
 
-def _handle_invite_user(ctx: AgentContext, args: InviteUserArgs) -> ToolResult:
+def _handle_create_user(ctx: AgentContext, args: CreateUserArgs) -> ToolResult:
     if ctx.user_role != "admin":
         return ToolResult(
             ok=False,
-            summary="invite_user requires admin role",
+            summary="create_user requires admin role",
             error="forbidden",
         )
 
+    # Check for existing user
     existing = (
         ctx.db.query(User)
         .filter(User.email == args.email)
@@ -55,22 +71,92 @@ def _handle_invite_user(ctx: AgentContext, args: InviteUserArgs) -> ToolResult:
             error="duplicate_email",
         )
 
+    # Get role preset
+    preset = ROLE_PRESETS.get(args.role, ROLE_PRESETS["employee"])
+
+    # Apply preset values, allow overrides
+    capability_fields = [
+        "can_create_expenses",
+        "can_create_corporate_expenses",
+        "can_invoice_corporation",
+        "is_amex_reconciler",
+        "requires_time_tracking",
+        "has_executive_reporting",
+        "can_access_accounting",
+        "can_view_analytics",
+    ]
+
+    capabilities = {}
+    for field in capability_fields:
+        provided_value = getattr(args, field, None)
+        if provided_value is not None:
+            capabilities[field] = provided_value
+        else:
+            capabilities[field] = preset.get(field, False)
+
+    # Create user
     new_user = User(
         email=args.email,
-        full_name=args.email.split("@")[0],
+        full_name=args.full_name,
         role=args.role,
         company_id=ctx.company_id,
         department=args.department,
+        legal_entity_id=args.legal_entity_id,
+        delegates_for_user_id=args.delegates_for_user_id,
+        **capabilities,
     )
     ctx.db.add(new_user)
     ctx.db.commit()
     ctx.db.refresh(new_user)
 
+    # Send invite if requested
+    if args.send_invite:
+        # TODO: Send magic link invite
+        pass
+
     return ToolResult(
         ok=True,
-        summary=f"Invited {args.email} as {args.role}",
-        data={"user_id": new_user.id, "email": new_user.email, "role": new_user.role},
+        summary=f"Created user {args.email} as {args.role}",
+        data={
+            "user_id": new_user.id,
+            "email": new_user.email,
+            "full_name": new_user.full_name,
+            "role": new_user.role,
+            "capabilities": capabilities,
+            "delegates_for_user_id": new_user.delegates_for_user_id,
+        },
     )
+
+
+REGISTRY.register(ToolSpec(
+    name="create_user",
+    description="Crea un nuevo usuario con capacidades sugeridas según el rol.",
+    category="config",
+    input_schema=CreateUserArgs,
+    handler=_handle_create_user,
+    personas=frozenset({"admin"}),
+    required_permission="agent.tool.admin",
+))
+
+
+# ── invite_user (deprecated - kept for backward compatibility) ─────────────────
+
+class InviteUserArgs(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    email:      str = Field(..., min_length=3, max_length=255)
+    role:       str = Field(default="employee", pattern=r"^(employee|manager|accountant|admin)$")
+    department: str | None = Field(default=None, max_length=100)
+
+
+def _handle_invite_user(ctx: AgentContext, args: InviteUserArgs) -> ToolResult:
+    # Delegate to create_user for backward compatibility
+    create_args = CreateUserArgs(
+        email=args.email,
+        full_name=args.email.split("@")[0],
+        role=args.role,
+        department=args.department,
+    )
+    return _handle_create_user(ctx, create_args)
 
 
 REGISTRY.register(ToolSpec(

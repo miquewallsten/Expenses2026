@@ -488,3 +488,173 @@ class TestGetUserPermissionsTool:
         assert "delegation" in res.data
         assert res.data["delegation"]["id"] == boss.id
         assert "boss" in res.data["delegation"]["name"].lower() or res.data["delegation"]["name"] == boss.full_name
+
+
+class TestCreateUserTool:
+    def test_create_user_with_role_preset(self, db_session, test_company):
+        """Test create_user applies role preset for accountant."""
+        ctx = _ctx(db_session, test_company)
+        res = REGISTRY.dispatch(
+            "create_user",
+            {
+                "email": "newaccountant@test.com",
+                "full_name": "New Accountant",
+                "role": "accountant",
+            },
+            ctx,
+        )
+        assert res.ok is True
+        assert res.data["role"] == "accountant"
+        assert res.data["capabilities"]["can_access_accounting"] is True
+        assert res.data["capabilities"]["can_view_analytics"] is True
+        assert res.data["capabilities"]["can_create_expenses"] is False
+
+        # Verify user was created in DB
+        user = db_session.query(User).filter(User.email == "newaccountant@test.com").first()
+        assert user is not None
+        assert user.can_access_accounting is True
+        assert user.can_view_analytics is True
+        assert user.can_create_expenses is False
+
+    def test_create_user_secretary_needs_delegation(self, db_session, test_company):
+        """Test create_user for secretary with delegation."""
+        ctx = _ctx(db_session, test_company)
+        # Create boss user first
+        REGISTRY.dispatch(
+            "create_user",
+            {"email": "boss@test.com", "full_name": "Boss User", "role": "manager"},
+            ctx,
+        )
+        boss = db_session.query(User).filter(User.email == "boss@test.com").first()
+
+        res = REGISTRY.dispatch(
+            "create_user",
+            {
+                "email": "newsecretary@test.com",
+                "full_name": "New Secretary",
+                "role": "secretary",
+                "delegates_for_user_id": boss.id,
+            },
+            ctx,
+        )
+
+        assert res.ok is True
+        assert res.data["role"] == "secretary"
+        assert res.data["delegates_for_user_id"] == boss.id
+        assert res.data["capabilities"]["can_create_expenses"] is True
+
+        # Verify DB
+        user = db_session.query(User).filter(User.email == "newsecretary@test.com").first()
+        assert user is not None
+        assert user.delegates_for_user_id == boss.id
+        assert user.can_create_expenses is True
+
+    def test_create_user_with_custom_capabilities(self, db_session, test_company):
+        """Test create_user with explicit capabilities overrides preset."""
+        ctx = _ctx(db_session, test_company)
+        res = REGISTRY.dispatch(
+            "create_user",
+            {
+                "email": "customadmin@test.com",
+                "full_name": "Custom Admin",
+                "role": "admin",
+                "can_create_expenses": True,  # Override default (admin preset has False)
+                "can_access_accounting": True,
+            },
+            ctx,
+        )
+
+        assert res.ok is True
+        assert res.data["capabilities"]["can_create_expenses"] is True
+        assert res.data["capabilities"]["can_access_accounting"] is True
+
+        # Verify DB
+        user = db_session.query(User).filter(User.email == "customadmin@test.com").first()
+        assert user is not None
+        assert user.can_create_expenses is True
+        assert user.can_access_accounting is True
+
+    def test_create_user_duplicate_email(self, db_session, test_company):
+        """Test create_user rejects duplicate email."""
+        ctx = _ctx(db_session, test_company)
+        REGISTRY.dispatch("create_user", {"email": "dup@test.com", "full_name": "First"}, ctx)
+        res = REGISTRY.dispatch("create_user", {"email": "dup@test.com", "full_name": "Second"}, ctx)
+        assert res.ok is False
+        assert "already exists" in res.summary
+
+    def test_create_user_permission_denied(self, db_session, test_company):
+        """Test create_user requires admin role."""
+        ctx = _ctx(db_session, test_company, role="employee")
+        res = REGISTRY.dispatch(
+            "create_user",
+            {"email": "noauth@test.com", "full_name": "No Auth"},
+            ctx,
+        )
+        assert res.ok is False
+        assert "forbidden" in (res.error or "")
+
+    def test_create_user_with_legal_entity(self, db_session, test_company):
+        """Test create_user with legal_entity_id assignment."""
+        ctx = _ctx(db_session, test_company)
+        res = REGISTRY.dispatch(
+            "create_user",
+            {
+                "email": "legal_entity_user@test.com",
+                "full_name": "Entity User",
+                "role": "employee",
+                "legal_entity_id": 42,
+            },
+            ctx,
+        )
+        assert res.ok is True
+        assert res.data["user_id"] is not None
+
+        user = db_session.query(User).filter(User.email == "legal_entity_user@test.com").first()
+        assert user is not None
+        assert user.legal_entity_id == 42
+
+    def test_create_user_with_department(self, db_session, test_company):
+        """Test create_user with department assignment."""
+        ctx = _ctx(db_session, test_company)
+        res = REGISTRY.dispatch(
+            "create_user",
+            {
+                "email": "dept_user@test.com",
+                "full_name": "Dept User",
+                "role": "employee",
+                "department": "Engineering",
+            },
+            ctx,
+        )
+        assert res.ok is True
+
+        user = db_session.query(User).filter(User.email == "dept_user@test.com").first()
+        assert user is not None
+        assert user.department == "Engineering"
+
+    def test_create_user_executive_preset(self, db_session, test_company):
+        """Test create_user with executive role preset."""
+        ctx = _ctx(db_session, test_company)
+        res = REGISTRY.dispatch(
+            "create_user",
+            {"email": "exec@test.com", "full_name": "Executive User", "role": "executive"},
+            ctx,
+        )
+        assert res.ok is True
+        # Executive preset has can_create_expenses=True, has_executive_reporting=True
+        assert res.data["capabilities"]["can_create_expenses"] is True
+        assert res.data["capabilities"]["has_executive_reporting"] is True
+        assert res.data["capabilities"]["can_access_accounting"] is False
+
+    def test_create_user_employee_default(self, db_session, test_company):
+        """Test create_user defaults to employee role."""
+        ctx = _ctx(db_session, test_company)
+        res = REGISTRY.dispatch(
+            "create_user",
+            {"email": "default@test.com", "full_name": "Default User"},
+            ctx,
+        )
+        assert res.ok is True
+        assert res.data["role"] == "employee"
+        # Employee preset has can_create_expenses=True
+        assert res.data["capabilities"]["can_create_expenses"] is True
