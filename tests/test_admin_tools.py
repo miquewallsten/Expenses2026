@@ -719,3 +719,212 @@ class TestCreateUserTool:
         # Verify user was created
         user = db_session.query(User).filter(User.email == "no_invite@test.com").first()
         assert user is not None
+
+
+class TestUpdateUserPermissionsTool:
+    def test_update_user_permissions_capabilities(self, db_session, test_company):
+        """Test updating user capabilities."""
+        ctx = _ctx(db_session, test_company)
+        # Create a user first
+        REGISTRY.dispatch(
+            "create_user",
+            {"email": "perms_update@test.com", "full_name": "Perms Update", "role": "employee"},
+            ctx,
+        )
+        user = db_session.query(User).filter(User.email == "perms_update@test.com").first()
+
+        res = REGISTRY.dispatch(
+            "update_user_permissions",
+            {
+                "user_id": user.id,
+                "can_access_accounting": True,
+                "can_view_analytics": True,
+            },
+            ctx,
+        )
+
+        assert res.ok is True
+        assert "can_access_accounting" in res.data["changes"]
+        assert "can_view_analytics" in res.data["changes"]
+
+        # Verify DB was updated
+        db_session.refresh(user)
+        assert user.can_access_accounting is True
+        assert user.can_view_analytics is True
+
+    def test_update_user_permissions_delegation(self, db_session, test_company):
+        """Test updating user delegation."""
+        ctx = _ctx(db_session, test_company)
+        # Create boss and secretary
+        REGISTRY.dispatch(
+            "create_user",
+            {"email": "boss_for_delegate@test.com", "full_name": "Boss For Delegate", "role": "manager"},
+            ctx,
+        )
+        boss = db_session.query(User).filter(User.email == "boss_for_delegate@test.com").first()
+        REGISTRY.dispatch(
+            "create_user",
+            {"email": "secretary_for_delegate@test.com", "full_name": "Secretary For Delegate", "role": "secretary"},
+            ctx,
+        )
+        secretary = db_session.query(User).filter(User.email == "secretary_for_delegate@test.com").first()
+
+        res = REGISTRY.dispatch(
+            "update_user_permissions",
+            {
+                "user_id": secretary.id,
+                "delegates_for_user_id": boss.id,
+            },
+            ctx,
+        )
+
+        assert res.ok is True
+        assert "delegates_for_user_id" in res.data["changes"]
+        assert res.data["changes"]["delegates_for_user_id"] == boss.id
+
+        # Verify DB was updated
+        db_session.refresh(secretary)
+        assert secretary.delegates_for_user_id == boss.id
+
+    def test_update_user_permissions_clear_delegation(self, db_session, test_company):
+        """Test clearing user delegation with 0."""
+        ctx = _ctx(db_session, test_company)
+        # Create boss and secretary with delegation
+        REGISTRY.dispatch(
+            "create_user",
+            {"email": "boss_clear@test.com", "full_name": "Boss Clear", "role": "manager"},
+            ctx,
+        )
+        boss = db_session.query(User).filter(User.email == "boss_clear@test.com").first()
+        REGISTRY.dispatch(
+            "create_user",
+            {
+                "email": "sec_clear@test.com",
+                "full_name": "Secretary Clear",
+                "role": "secretary",
+                "delegates_for_user_id": boss.id,
+            },
+            ctx,
+        )
+        secretary = db_session.query(User).filter(User.email == "sec_clear@test.com").first()
+        assert secretary.delegates_for_user_id == boss.id  # Verify initial state
+
+        res = REGISTRY.dispatch(
+            "update_user_permissions",
+            {
+                "user_id": secretary.id,
+                "delegates_for_user_id": 0,  # Clear delegation
+            },
+            ctx,
+        )
+
+        assert res.ok is True
+        db_session.refresh(secretary)
+        assert secretary.delegates_for_user_id is None
+
+    def test_update_user_permissions_legal_entity(self, db_session, test_company):
+        """Test updating user's legal entity."""
+        ctx = _ctx(db_session, test_company)
+        REGISTRY.dispatch(
+            "create_user",
+            {"email": "entity_update@test.com", "full_name": "Entity Update", "role": "employee"},
+            ctx,
+        )
+        user = db_session.query(User).filter(User.email == "entity_update@test.com").first()
+
+        res = REGISTRY.dispatch(
+            "update_user_permissions",
+            {
+                "user_id": user.id,
+                "legal_entity_id": 999,
+            },
+            ctx,
+        )
+
+        assert res.ok is True
+        db_session.refresh(user)
+        assert user.legal_entity_id == 999
+
+    def test_update_user_permissions_project_ids(self, db_session, test_company):
+        """Test updating user's project assignments."""
+        ctx = _ctx(db_session, test_company)
+        # Create projects
+        project1 = Project(company_id=test_company.id, name="Project Gamma", code="PG")
+        project2 = Project(company_id=test_company.id, name="Project Delta", code="PD")
+        db_session.add_all([project1, project2])
+        db_session.commit()
+        db_session.refresh(project1)
+        db_session.refresh(project2)
+
+        REGISTRY.dispatch(
+            "create_user",
+            {"email": "project_update@test.com", "full_name": "Project Update", "role": "employee"},
+            ctx,
+        )
+        user = db_session.query(User).filter(User.email == "project_update@test.com").first()
+
+        res = REGISTRY.dispatch(
+            "update_user_permissions",
+            {
+                "user_id": user.id,
+                "project_ids": [project1.id, project2.id],
+            },
+            ctx,
+        )
+
+        assert res.ok is True
+
+        # Verify project assignments
+        assignments = (
+            db_session.query(UserProjectAssignment)
+            .filter(UserProjectAssignment.user_id == user.id)
+            .all()
+        )
+        assert len(assignments) == 2
+        assigned_project_ids = {a.project_id for a in assignments}
+        assert project1.id in assigned_project_ids
+        assert project2.id in assigned_project_ids
+
+    def test_update_user_permissions_not_found(self, db_session, test_company):
+        """Test update_user_permissions returns error for non-existent user."""
+        ctx = _ctx(db_session, test_company)
+        res = REGISTRY.dispatch(
+            "update_user_permissions",
+            {"user_id": 99999, "can_create_expenses": True},
+            ctx,
+        )
+        assert res.ok is False
+        assert "not_found" in (res.error or "")
+
+    def test_update_user_permissions_permission_denied(self, db_session, test_company):
+        """Test update_user_permissions requires admin role."""
+        ctx = _ctx(db_session, test_company, role="employee")
+        res = REGISTRY.dispatch(
+            "update_user_permissions",
+            {"user_id": 1, "can_create_expenses": True},
+            ctx,
+        )
+        assert res.ok is False
+        assert "forbidden" in (res.error or "")
+
+    def test_update_user_permissions_invalid_delegation(self, db_session, test_company):
+        """Test update_user_permissions rejects invalid delegation target."""
+        ctx = _ctx(db_session, test_company)
+        REGISTRY.dispatch(
+            "create_user",
+            {"email": "invalid_delegate@test.com", "full_name": "Invalid Delegate", "role": "employee"},
+            ctx,
+        )
+        user = db_session.query(User).filter(User.email == "invalid_delegate@test.com").first()
+
+        res = REGISTRY.dispatch(
+            "update_user_permissions",
+            {
+                "user_id": user.id,
+                "delegates_for_user_id": 99999,  # Non-existent boss
+            },
+            ctx,
+        )
+
+        assert res.ok is False
+        assert "invalid_delegation" in (res.error or "")

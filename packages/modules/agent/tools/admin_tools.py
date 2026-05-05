@@ -902,3 +902,133 @@ REGISTRY.register(ToolSpec(
     personas=frozenset({"admin"}),
     required_permission="agent.tool.admin",
 ))
+
+
+# ── update_user_permissions ────────────────────────────────────────────────────
+
+class UpdateUserPermissionsArgs(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    user_id: int
+    # Capabilities
+    can_create_expenses: bool | None = None
+    can_create_corporate_expenses: bool | None = None
+    can_invoice_corporation: bool | None = None
+    is_amex_reconciler: bool | None = None
+    requires_time_tracking: bool | None = None
+    has_executive_reporting: bool | None = None
+    can_access_accounting: bool | None = None
+    can_view_analytics: bool | None = None
+    # Delegation
+    delegates_for_user_id: int | None = None
+    # Projects
+    project_ids: list[int] | None = None
+    # Legal entity
+    legal_entity_id: int | None = None
+
+
+def _handle_update_user_permissions(ctx: AgentContext, args: UpdateUserPermissionsArgs) -> ToolResult:
+    if ctx.user_role != "admin":
+        return ToolResult(
+            ok=False,
+            summary="update_user_permissions requires admin role",
+            error="forbidden",
+        )
+
+    user = (
+        ctx.db.query(User)
+        .filter(User.id == args.user_id, User.company_id == ctx.company_id)
+        .one_or_none()
+    )
+
+    if not user:
+        return ToolResult(
+            ok=False,
+            summary=f"User {args.user_id} not found",
+            error="not_found",
+        )
+
+    changes: dict[str, Any] = {}
+
+    # Update capabilities
+    capability_fields = [
+        "can_create_expenses",
+        "can_create_corporate_expenses",
+        "can_invoice_corporation",
+        "is_amex_reconciler",
+        "requires_time_tracking",
+        "has_executive_reporting",
+        "can_access_accounting",
+        "can_view_analytics",
+    ]
+
+    for field in capability_fields:
+        value = getattr(args, field, None)
+        if value is not None:
+            setattr(user, field, value)
+            changes[field] = value
+
+    # Update delegation
+    if args.delegates_for_user_id is not None:
+        # 0 means clear delegation
+        if args.delegates_for_user_id == 0:
+            user.delegates_for_user_id = None
+            changes["delegates_for_user_id"] = 0
+        else:
+            # Verify the boss exists and is in the same company
+            boss = (
+                ctx.db.query(User)
+                .filter(User.id == args.delegates_for_user_id, User.company_id == ctx.company_id)
+                .first()
+            )
+            if not boss:
+                return ToolResult(
+                    ok=False,
+                    summary=f"Boss user {args.delegates_for_user_id} not found",
+                    error="invalid_delegation",
+                )
+            user.delegates_for_user_id = args.delegates_for_user_id
+            changes["delegates_for_user_id"] = args.delegates_for_user_id
+
+    # Update legal entity
+    if args.legal_entity_id is not None:
+        user.legal_entity_id = args.legal_entity_id
+        changes["legal_entity_id"] = args.legal_entity_id
+
+    # Update projects
+    if args.project_ids is not None:
+        # Clear existing
+        ctx.db.query(UserProjectAssignment).filter(UserProjectAssignment.user_id == user.id).delete()
+        # Add new
+        for pid in args.project_ids:
+            up = UserProjectAssignment(user_id=user.id, project_id=pid)
+            ctx.db.add(up)
+        changes["project_ids"] = args.project_ids
+
+    if not changes:
+        return ToolResult(
+            ok=False,
+            summary="No changes provided",
+            error="empty_patch",
+        )
+
+    ctx.db.commit()
+
+    return ToolResult(
+        ok=True,
+        summary=f"Updated permissions for {user.email}",
+        data={
+            "user_id": user.id,
+            "changes": changes,
+        },
+    )
+
+
+REGISTRY.register(ToolSpec(
+    name="update_user_permissions",
+    description="Actualiza las capacidades y asignaciones de un usuario.",
+    category="config",
+    input_schema=UpdateUserPermissionsArgs,
+    handler=_handle_update_user_permissions,
+    personas=frozenset({"admin"}),
+    required_permission="agent.tool.admin",
+))
