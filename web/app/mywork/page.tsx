@@ -491,28 +491,30 @@ function MyWorkShell() {
   }
 
   // ── Tablet ──────────────────────────────────────────────────────────────────
-  return (
-    <div
-      className="relative flex h-[100dvh] overflow-hidden bg-surface-0 text-primary"
-      style={{ paddingTop: "var(--sai-t)", paddingBottom: "var(--sai-b)" }}
-    >
-      {!isAdminModule && (
-        <UnifiedSidebar
-          globalNavItems={globalNavItems}
-          collapsed={true}
-          onToggle={() => {}}
-          onAIExpand={() => setAiPanelOpen(true)}
-        />
-      )}
+  if (isTablet) {
+    return (
+      <div
+        className="relative flex h-[100dvh] overflow-hidden bg-surface-0 text-primary"
+        style={{ paddingTop: "var(--sai-t)", paddingBottom: "var(--sai-b)" }}
+      >
+        {!isAdminModule && (
+          <UnifiedSidebar
+            globalNavItems={globalNavItems}
+            collapsed={true}
+            onToggle={() => {}}
+            onAIExpand={() => setAiPanelOpen(true)}
+          />
+        )}
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        {workspace}
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          {workspace}
+        </div>
+
+        {!isAdminModule && topRightToolbar}
+        <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       </div>
-
-      {!isAdminModule && topRightToolbar}
-      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-    </div>
-  );
+    );
+  }
 
   // ── Desktop ─────────────────────────────────────────────────────────────────
   return (
