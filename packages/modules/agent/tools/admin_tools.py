@@ -450,3 +450,122 @@ REGISTRY.register(ToolSpec(
     required_permission="agent.tool.admin",
     destructive=True,
 ))
+
+
+# ── list_users ──────────────────────────────────────────────────────────────
+
+class ListUsersArgs(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    search: str | None = None
+    roles: list[str] | None = None
+    legal_entity_id: int | None = None
+    capabilities: list[str] | None = None
+    is_active: bool | None = None
+    has_delegation: bool | None = None
+    group_by: str | None = None
+    include_metrics: bool = False
+
+
+def _handle_list_users(ctx: AgentContext, args: ListUsersArgs) -> ToolResult:
+    if ctx.user_role != "admin":
+        return ToolResult(
+            ok=False,
+            summary="list_users requires admin role",
+            error="forbidden",
+        )
+
+    query = ctx.db.query(User).filter(User.company_id == ctx.company_id)
+
+    # Apply filters
+    if args.search:
+        search_term = f"%{args.search}%"
+        query = query.filter(
+            (User.full_name.ilike(search_term)) |
+            (User.email.ilike(search_term)) |
+            (User.department.ilike(search_term))
+        )
+
+    if args.roles:
+        query = query.filter(User.role.in_(args.roles))
+
+    if args.legal_entity_id:
+        query = query.filter(User.legal_entity_id == args.legal_entity_id)
+
+    if args.is_active is not None:
+        query = query.filter(User.is_active == args.is_active)
+
+    if args.has_delegation is not None:
+        if args.has_delegation:
+            query = query.filter(User.delegates_for_user_id.isnot(None))
+        else:
+            query = query.filter(User.delegates_for_user_id.is_(None))
+
+    if args.capabilities:
+        for cap in args.capabilities:
+            if hasattr(User, cap):
+                query = query.filter(getattr(User, cap) == True)
+
+    users = query.order_by(User.full_name).all()
+
+    # Build result
+    user_list = []
+    for u in users:
+        user_data = {
+            "id": u.id,
+            "email": u.email,
+            "full_name": u.full_name,
+            "role": u.role,
+            "is_active": u.is_active,
+            "department": u.department,
+            "legal_entity_id": u.legal_entity_id,
+            "delegates_for_user_id": u.delegates_for_user_id,
+            "delegates_for_user_name": None,
+            "capabilities": {
+                "can_create_expenses": u.can_create_expenses,
+                "can_create_corporate_expenses": u.can_create_corporate_expenses,
+                "can_invoice_corporation": u.can_invoice_corporation,
+                "is_amex_reconciler": u.is_amex_reconciler,
+                "requires_time_tracking": u.requires_time_tracking,
+                "has_executive_reporting": u.has_executive_reporting,
+                "can_access_accounting": u.can_access_accounting,
+                "can_view_analytics": u.can_view_analytics,
+            },
+        }
+
+        if args.include_metrics:
+            user_data["last_login_at"] = u.last_login_at.isoformat() if u.last_login_at else None
+            user_data["created_at"] = u.created_at.isoformat() if u.created_at else None
+            user_data["expense_count"] = 0  # Placeholder
+
+        user_list.append(user_data)
+
+    # Grouping
+    grouped = None
+    if args.group_by:
+        grouped = {}
+        for u in user_list:
+            key = u.get(args.group_by, "unknown")
+            if key not in grouped:
+                grouped[key] = []
+            grouped[key].append(u)
+
+    result_data = {"users": user_list}
+    if grouped:
+        result_data["grouped"] = grouped
+
+    return ToolResult(
+        ok=True,
+        summary=f"Found {len(user_list)} users",
+        data=result_data,
+    )
+
+
+REGISTRY.register(ToolSpec(
+    name="list_users",
+    description="Lista usuarios con filtros, agrupación y métricas opcionales.",
+    category="read",
+    input_schema=ListUsersArgs,
+    handler=_handle_list_users,
+    personas=frozenset({"admin"}),
+    required_permission="agent.tool.admin",
+))

@@ -232,3 +232,94 @@ class TestReactivateUserTool:
         res = REGISTRY.dispatch("reactivate_user", {"user_id": 1}, ctx)
         assert res.ok is False
         assert "forbidden" in (res.error or "")
+
+
+class TestListUsersTool:
+    def test_list_users_basic(self, db_session, test_company):
+        """Test list_users returns all users for admin."""
+        ctx = _ctx(db_session, test_company)
+        # Create some users
+        REGISTRY.dispatch("invite_user", {"email": "user1@example.com", "role": "employee"}, ctx)
+        REGISTRY.dispatch("invite_user", {"email": "user2@example.com", "role": "manager"}, ctx)
+
+        res = REGISTRY.dispatch("list_users", {}, ctx)
+        assert res.ok is True
+        assert "users" in res.data
+        assert len(res.data["users"]) >= 2
+        emails = [u["email"] for u in res.data["users"]]
+        assert "user1@example.com" in emails
+        assert "user2@example.com" in emails
+
+    def test_list_users_filter_by_role(self, db_session, test_company):
+        """Test list_users filters by role."""
+        ctx = _ctx(db_session, test_company)
+        REGISTRY.dispatch("invite_user", {"email": "emp1@example.com", "role": "employee"}, ctx)
+        REGISTRY.dispatch("invite_user", {"email": "mgr1@example.com", "role": "manager"}, ctx)
+        REGISTRY.dispatch("invite_user", {"email": "acct1@example.com", "role": "accountant"}, ctx)
+
+        res = REGISTRY.dispatch("list_users", {"roles": ["manager"]}, ctx)
+        assert res.ok is True
+        assert len(res.data["users"]) == 1
+        assert res.data["users"][0]["role"] == "manager"
+
+    def test_list_users_filter_by_active(self, db_session, test_company):
+        """Test list_users filters by is_active."""
+        ctx = _ctx(db_session, test_company)
+        REGISTRY.dispatch("invite_user", {"email": "active_user@example.com"}, ctx)
+        REGISTRY.dispatch("invite_user", {"email": "inactive_user@example.com"}, ctx)
+        # Deactivate one user
+        user = db_session.query(User).filter(User.email == "inactive_user@example.com").first()
+        user.is_active = False
+        db_session.commit()
+
+        res = REGISTRY.dispatch("list_users", {"is_active": True}, ctx)
+        assert res.ok is True
+        emails = [u["email"] for u in res.data["users"]]
+        assert "active_user@example.com" in emails
+        assert "inactive_user@example.com" not in emails
+
+    def test_list_users_search(self, db_session, test_company):
+        """Test list_users search by name and email."""
+        ctx = _ctx(db_session, test_company)
+        REGISTRY.dispatch("invite_user", {"email": "alice@test.com", "role": "employee"}, ctx)
+        REGISTRY.dispatch("invite_user", {"email": "bob@test.com", "role": "employee"}, ctx)
+
+        res = REGISTRY.dispatch("list_users", {"search": "alice"}, ctx)
+        assert res.ok is True
+        assert len(res.data["users"]) == 1
+        assert res.data["users"][0]["email"] == "alice@test.com"
+
+    def test_list_users_group_by_department(self, db_session, test_company):
+        """Test list_users grouping by department."""
+        ctx = _ctx(db_session, test_company)
+        REGISTRY.dispatch("invite_user", {"email": "sales1@example.com", "department": "Sales"}, ctx)
+        REGISTRY.dispatch("invite_user", {"email": "sales2@example.com", "department": "Sales"}, ctx)
+        REGISTRY.dispatch("invite_user", {"email": "eng1@example.com", "department": "Engineering"}, ctx)
+
+        res = REGISTRY.dispatch("list_users", {"group_by": "department"}, ctx)
+        assert res.ok is True
+        assert "grouped" in res.data
+        assert "Sales" in res.data["grouped"]
+        assert "Engineering" in res.data["grouped"]
+        assert len(res.data["grouped"]["Sales"]) == 2
+        assert len(res.data["grouped"]["Engineering"]) == 1
+
+    def test_list_users_include_metrics(self, db_session, test_company):
+        """Test list_users with include_metrics returns extra fields."""
+        ctx = _ctx(db_session, test_company)
+        REGISTRY.dispatch("invite_user", {"email": "metric_user@example.com"}, ctx)
+
+        res = REGISTRY.dispatch("list_users", {"include_metrics": True}, ctx)
+        assert res.ok is True
+        # Find the metric_user
+        user = next(u for u in res.data["users"] if u["email"] == "metric_user@example.com")
+        assert "last_login_at" in user
+        assert "created_at" in user
+        assert "expense_count" in user
+
+    def test_list_users_permission_denied(self, db_session, test_company):
+        """Test list_users requires admin role."""
+        ctx = _ctx(db_session, test_company, role="employee")
+        res = REGISTRY.dispatch("list_users", {}, ctx)
+        assert res.ok is False
+        assert "forbidden" in (res.error or "")
