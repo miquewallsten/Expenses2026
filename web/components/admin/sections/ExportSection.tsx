@@ -103,7 +103,8 @@ export default function ExportSection() {
         headers: { ...getAuthHeaders() },
       });
       if (!res.ok) throw new Error(`Failed to load exports: ${res.status}`);
-      setExports(await res.json());
+      const data = await res.json();
+      setExports(Array.isArray(data?.exports) ? data.exports : []);
     } catch (e) {
       console.error("Exports load error:", e);
     } finally {

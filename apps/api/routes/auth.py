@@ -54,13 +54,16 @@ _SMTP_FROM = os.environ.get("SMTP_FROM", "noreply@financial-ops.local")
 def _issue_session_jwt(user: User) -> str:
     now = datetime.now(tz=timezone.utc)
     payload = {
-        "sub":        str(user.id),
-        "email":      user.email,
-        "role":       user.role,
-        "company_id": user.company_id,
-        "iat":        int(now.timestamp()),
-        "exp":        int((now + timedelta(hours=_SESSION_TTL)).timestamp()),
+        "sub": str(user.id),
+        "email": user.email,
+        "role": user.role,
+        "iat": int(now.timestamp()),
+        "exp": int((now + timedelta(hours=_SESSION_TTL)).timestamp()),
+        "is_super_admin": bool(getattr(user, "is_super_admin", False)),
     }
+    # Only include company_id for tenant users (super-admins have no company)
+    if user.company_id is not None:
+        payload["company_id"] = user.company_id
     return jwt.encode(payload, _SECRET, algorithm="HS256")
 
 
@@ -105,7 +108,7 @@ class VerifyResponse(BaseModel):
     user_id: int
     email: str
     role: str
-    company_id: int
+    company_id: int | None = None
     full_name: str
     is_super_admin: bool = False
 
@@ -117,9 +120,65 @@ class SuperAdminDirectResponse(BaseModel):
     user_id: int
     email: str
     role: str
-    company_id: int
+    company_id: int | None = None
     full_name: str | None = None
     isSuperAdmin: bool = True
+
+
+# --- Super Admin Password Login ---
+
+class SuperAdminLoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class SuperAdminLoginResponse(BaseModel):
+    token: str
+    user_id: int
+    email: str
+    full_name: str
+    is_super_admin: bool = True
+
+
+@router.post("/super-admin/login", response_model=SuperAdminLoginResponse)
+@limiter.limit(RATE_LIMIT_AUTH, key_func=lambda request: request.client.host if request.client else "anon")
+def super_admin_login(request: Request, body: SuperAdminLoginRequest, db: Session = Depends(get_db)):
+    """Authenticate super-admin with email/password.
+
+    Only users with is_super_admin=True AND a password_hash set can log in.
+    """
+    from packages.core.platform.password_utils import verify_password
+
+    user = db.query(User).filter(User.email == body.email).first()
+
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    if not user.is_super_admin:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    if not user.password_hash:
+        raise HTTPException(status_code=403, detail="Super-admin account not configured for password login")
+
+    if not verify_password(body.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Account is disabled")
+
+    # Update last_login_at
+    user.last_login_at = datetime.now(tz=timezone.utc)
+    db.commit()
+
+    session_token = _issue_session_jwt(user)
+
+    return SuperAdminLoginResponse(
+        token=session_token,
+        user_id=user.id,
+        email=user.email,
+        full_name=user.full_name,
+        is_super_admin=True,
+    )
 
 @router.get("/superadmin-direct", response_model=SuperAdminDirectResponse)
 def superadmin_direct_login(request: Request, token: str, db: Session = Depends(get_db)):

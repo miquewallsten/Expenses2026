@@ -98,32 +98,64 @@ function SetupCard({
   statusLabels: { ok: string; warn: string; unconfigured: string };
   fullWidth?: boolean;
 }) {
+  // Status-based styling for premium feel
+  const statusStyles = {
+    ok: {
+      card: "border-emerald-500/20 hover:border-emerald-500/30",
+      header: "bg-gradient-to-r from-emerald-500/[0.03] to-transparent",
+      glow: "shadow-emerald-500/5",
+    },
+    warn: {
+      card: "border-amber-500/25 hover:border-amber-500/35",
+      header: "bg-gradient-to-r from-amber-500/[0.05] to-transparent",
+      glow: "shadow-amber-500/10",
+    },
+    unconfigured: {
+      card: "border-default hover:border-strong",
+      header: "bg-surface-2",
+      glow: "",
+    },
+  };
+
+  const styles = statusStyles[status];
+
   return (
     <button
       type="button"
       onClick={() => onEdit(section)}
-      className={`flex flex-col overflow-hidden rounded-lg border text-left transition-all hover:border-strong hover:bg-surface-1 hover:shadow-lg ${
-        status === "warn" ? "border-amber-500/20" : "border-default"
+      className={`group relative flex flex-col overflow-hidden rounded-lg border text-left transition-all duration-200 hover:shadow-lg ${
+        styles.card
       } ${fullWidth ? "col-span-2" : ""}`}
     >
-      <div className="flex items-center justify-between border-b border-subtle bg-black/20 px-4 py-2.5">
-        <div className="flex items-center gap-2">
-          <span className="text-muted">{icon}</span>
+      {/* Subtle gradient overlay for depth */}
+      <div className="absolute inset-0 bg-gradient-to-br from-surface-1/50 via-transparent to-transparent pointer-events-none" />
+
+      {/* Header with gradient based on status */}
+      <div className={`relative flex items-center justify-between border-b border-subtle px-4 py-2.5 ${styles.header}`}>
+        <div className="flex items-center gap-2.5">
+          <span className={`flex h-5 w-5 items-center justify-center rounded-md ${
+            status === "ok" ? "bg-success/10 text-success" :
+            status === "warn" ? "bg-warning/10 text-warning" :
+            "bg-surface-2 text-muted"
+          }`}>
+            {icon}
+          </span>
           <span className="text-[11px] font-semibold text-secondary">{sectionLabel}</span>
         </div>
         <CardStatusBadge status={status} labels={statusLabels} />
       </div>
 
-      <div className="flex-1">
-        {rows.map(([k, v]) => (
+      {/* Content rows */}
+      <div className="relative flex-1">
+        {rows.map(([k, v], idx) => (
           <div
             key={k}
-            className="flex items-center justify-between border-b border-subtle px-4 py-1.5 last:border-0"
+            className={`flex items-center justify-between px-4 py-1.5 ${idx < rows.length - 1 ? "border-b border-subtle/50" : ""}`}
           >
             <span className="text-[10px] text-muted">{k}</span>
             <span
               className={`text-[10px] font-medium ${
-                v === "—" ? "text-muted" : "text-tertiary"
+                v === "—" ? "text-muted/50" : "text-tertiary"
               }`}
             >
               {v}
@@ -132,10 +164,12 @@ function SetupCard({
         ))}
       </div>
 
-      <div className="flex items-center justify-between border-t border-subtle px-4 py-2">
-        <p className="min-w-0 flex-1 truncate text-[10px] text-muted">{summary}</p>
-        <span className="ml-3 shrink-0 text-[10px] font-medium text-muted">
+      {/* Summary footer with visual separator */}
+      <div className="relative flex items-center justify-between border-t border-subtle px-4 py-2 bg-surface-0/30">
+        <p className="min-w-0 flex-1 truncate text-[10px] text-muted leading-relaxed">{summary}</p>
+        <span className="ml-3 flex shrink-0 items-center gap-1 text-[10px] font-medium text-muted transition-colors group-hover:text-accent">
           {editLabel}
+          <span className="opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all">→</span>
         </span>
       </div>
     </button>
@@ -306,57 +340,85 @@ export default function AdminOverviewPanel({
   ];
 
   return (
-    <div className="max-w-3xl">
-      {/* System health bar — 3 states: unconfigured / conflicts / all-ok */}
+    <div className="max-w-3xl space-y-5">
+      {/* System health bar — Premium command center feel */}
       <div
-        className={`mb-5 flex items-center justify-between rounded border px-4 py-2.5 ${
+        className={`relative overflow-hidden rounded-lg border px-4 py-3 ${
           issueCount > 0
-            ? "border-amber-500/[0.12] bg-amber-500/[0.03]"
+            ? "border-amber-500/25 bg-gradient-to-r from-amber-500/[0.03] via-surface-1 to-transparent"
             : unconfiguredCount > 0
             ? "border-default bg-surface-1"
-            : "border-emerald-500/[0.10] bg-emerald-500/[0.02]"
+            : "border-emerald-500/20 bg-gradient-to-r from-emerald-500/[0.02] via-surface-1 to-transparent"
         }`}
       >
-        <div className="flex items-center gap-2.5">
-          {issueCount > 0 ? (
-            <>
-              <AlertTriangle className="h-3.5 w-3.5 text-warning/55" />
-              <span className="text-[11px] font-medium text-warning/55">
-                {to("issueCount", { count: issueCount })}
-              </span>
-            </>
-          ) : unconfiguredCount > 0 ? (
-            <>
-              <Circle className="h-3.5 w-3.5 text-muted" />
-              <span className="text-[11px] font-medium text-tertiary">
-                {to("unconfiguredCount", { count: unconfiguredCount })}
-              </span>
-            </>
-          ) : (
-            <>
-              <CheckCircle2 className="h-3.5 w-3.5 text-success/55" />
-              <span className="text-[11px] font-medium text-secondary">{to("allConfigured")}</span>
-            </>
+        {/* Subtle animated gradient for issues */}
+        {issueCount > 0 && (
+          <div className="absolute inset-0 bg-gradient-to-r from-amber-500/[0.02] via-transparent to-amber-500/[0.02] animate-pulse" style={{ animationDuration: "4s" }} />
+        )}
+        {/* Success glow */}
+        {issueCount === 0 && unconfiguredCount === 0 && (
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.03] via-transparent to-transparent" />
+        )}
+
+        <div className="relative flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {issueCount > 0 ? (
+              <>
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-warning/10">
+                  <AlertTriangle className="h-4 w-4 text-warning" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[11px] font-semibold text-warning/80">
+                    {to("issueCount", { count: issueCount })}
+                  </span>
+                  <span className="text-[9px] text-muted">Configuration needs attention</span>
+                </div>
+              </>
+            ) : unconfiguredCount > 0 ? (
+              <>
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface-2">
+                  <Circle className="h-4 w-4 text-muted" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[11px] font-semibold text-secondary">
+                    {to("unconfiguredCount", { count: unconfiguredCount })}
+                  </span>
+                  <span className="text-[9px] text-muted">Sections pending setup</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-success/10">
+                  <CheckCircle2 className="h-4 w-4 text-success" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[11px] font-semibold text-success/80">{to("allConfigured")}</span>
+                  <span className="text-[9px] text-muted">All systems operational</span>
+                </div>
+              </>
+            )}
+          </div>
+          {issueCount > 0 && fixTarget && (
+            <button
+              type="button"
+              onClick={() => onNavigate(fixTarget)}
+              className="flex items-center gap-1.5 rounded-lg border border-warning/20 bg-warning/5 px-3 py-1.5 text-[10px] font-semibold text-warning/80 transition-all hover:border-warning/30 hover:bg-warning/10"
+            >
+              {to("fixSetup")}
+              <span>→</span>
+            </button>
+          )}
+          {issueCount === 0 && unconfiguredCount > 0 && (
+            <button
+              type="button"
+              onClick={() => onNavigate("Onboarding")}
+              className="flex items-center gap-1.5 rounded-lg border border-accent/20 bg-accent/5 px-3 py-1.5 text-[10px] font-semibold text-accent transition-all hover:border-accent/30 hover:bg-accent/10"
+            >
+              {to("startSetup")}
+              <span>→</span>
+            </button>
           )}
         </div>
-        {issueCount > 0 && fixTarget && (
-          <button
-            type="button"
-            onClick={() => onNavigate(fixTarget)}
-            className="text-[10px] font-semibold text-warning/55 transition-colors hover:text-warning/80"
-          >
-            {to("fixSetup")}
-          </button>
-        )}
-        {issueCount === 0 && unconfiguredCount > 0 && (
-          <button
-            type="button"
-            onClick={() => onNavigate("Onboarding")}
-            className="text-[10px] font-semibold text-muted transition-colors hover:text-secondary"
-          >
-            {to("startSetup")}
-          </button>
-        )}
       </div>
 
       {/* Setup cards — 2-column grid; last card spans full width when count is odd */}
@@ -416,52 +478,68 @@ function AddOnsTile({
   const premiumCount   = ADDONS.filter((a) => a.premium).length;
 
   return (
-    <div className="mt-5 overflow-hidden rounded-lg border border-default">
-      <div className="flex items-center justify-between border-b border-subtle bg-black/20 px-4 py-2.5">
-        <div className="flex items-center gap-2">
-          <Puzzle className="h-3.5 w-3.5 text-muted" />
-          <span className="text-[11px] font-semibold text-secondary">{tt("title")}</span>
-          <span className="rounded border border-default bg-surface-2 px-1.5 py-0.5 font-mono text-[9.5px] text-muted">
+    <div className="relative overflow-hidden rounded-lg border border-default">
+      {/* Subtle gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-surface-1 via-transparent to-ai/[0.02] pointer-events-none" />
+
+      {/* Header */}
+      <div className="relative flex items-center justify-between border-b border-subtle bg-surface-2/50 px-4 py-3">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-ai/10">
+            <Puzzle className="h-3.5 w-3.5 text-ai" />
+          </div>
+          <span className="text-[11px] font-semibold text-primary">{tt("title")}</span>
+          <span className="rounded-full border border-ai/20 bg-ai/5 px-2 py-0.5 font-mono text-[9px] text-ai">
             {installedCount}/{ADDONS.length}
           </span>
         </div>
         <button
           type="button"
           onClick={onOpen}
-          className="text-[10px] font-medium text-muted transition-colors hover:text-secondary"
+          className="flex items-center gap-1 text-[10px] font-medium text-muted transition-colors hover:text-accent"
         >
           {tt("manage")}
+          <span className="opacity-0 group-hover:opacity-100 transition-opacity">→</span>
         </button>
       </div>
-      <ul>
-        {ADDONS.map((a) => {
+
+      {/* Module list */}
+      <ul className="relative">
+        {ADDONS.map((a, idx) => {
           const installed = !!companySetup?.[a.flag];
           const status: AddOnStatus = installed ? "installed" : a.premium ? "premium" : "available";
           return (
-            <li key={a.key} className="flex items-center justify-between gap-3 border-b border-subtle px-4 py-2 last:border-0">
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
+            <li
+              key={a.key}
+              className={`flex items-center justify-between gap-3 px-4 py-2.5 ${
+                idx < ADDONS.length - 1 ? "border-b border-subtle/50" : ""
+              } ${installed ? "bg-success/[0.01]" : ""}`}
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
                   <span className="text-[11px] font-medium text-secondary">{tm(`${a.i18nKey}Name`)}</span>
                   {a.premium && (
-                    <span className="inline-flex items-center gap-1 rounded border border-amber-500/25 bg-amber-500/[0.07] px-1 py-px text-[8.5px] font-bold uppercase tracking-widest text-warning/70">
-                      <Sparkles className="h-2.5 w-2.5" />
+                    <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/[0.05] px-1.5 py-px text-[8px] font-bold uppercase tracking-widest text-warning/60">
+                      <Sparkles className="h-2 w-2" />
                       Premium
                     </span>
                   )}
                 </div>
-                <p className="truncate text-[9.5px] text-muted">{tm(`${a.i18nKey}Desc`)}</p>
+                <p className="truncate text-[9px] text-muted mt-0.5">{tm(`${a.i18nKey}Desc`)}</p>
               </div>
               <AddOnStatusPill status={status} />
             </li>
           );
         })}
       </ul>
+
+      {/* Premium footer notice */}
       {premiumCount > 0 && (
-        <div className="flex items-center gap-2 border-t border-subtle bg-amber-500/[0.02] px-4 py-1.5">
-          <Lock className="h-3 w-3 text-warning/50" />
-          <p className="text-[9.5px] text-warning/45">
+        <div className="relative flex items-center gap-2 border-t border-subtle bg-gradient-to-r from-amber-500/[0.02] to-transparent px-4 py-2">
+          <Lock className="h-3.5 w-3.5 text-warning/40" />
+          <p className="text-[9px] text-muted">
             {tt.rich("premiumNotice", {
-              accent: (chunks) => <span className="text-warning/70">{chunks}</span>,
+              accent: (chunks) => <span className="text-warning/60 font-medium">{chunks}</span>,
             })}
           </p>
         </div>
@@ -474,7 +552,7 @@ function AddOnStatusPill({ status }: { status: AddOnStatus }) {
   const tt = useTranslations("admin.overview.addOnsTile");
   if (status === "installed") {
     return (
-      <span className="inline-flex items-center gap-1 rounded border border-emerald-500/25 bg-emerald-500/[0.06] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-success">
+      <span className="inline-flex items-center gap-1 rounded-full border border-success/20 bg-success/5 px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest text-success/80">
         <CheckCircle2 className="h-2.5 w-2.5" />
         {tt("installed")}
       </span>
@@ -482,14 +560,14 @@ function AddOnStatusPill({ status }: { status: AddOnStatus }) {
   }
   if (status === "premium") {
     return (
-      <span className="inline-flex items-center gap-1 rounded border border-amber-500/25 bg-amber-500/[0.06] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-warning/70">
+      <span className="inline-flex items-center gap-1 rounded-full border border-warning/15 bg-warning/5 px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest text-warning/60">
         <Lock className="h-2.5 w-2.5" />
         {tt("premium")}
       </span>
     );
   }
   return (
-    <span className="rounded border border-default bg-surface-1 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-muted">
+    <span className="rounded-full border border-subtle bg-surface-1 px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest text-muted">
       {tt("available")}
     </span>
   );

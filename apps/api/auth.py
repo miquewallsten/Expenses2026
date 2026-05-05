@@ -46,7 +46,13 @@ def _user_from_jwt(token: str, db: Session) -> User | None:
         user_id = int(payload["sub"])
     except (jwt.PyJWTError, KeyError, ValueError):
         return None
-    return db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.id == user_id).first()
+    if user:
+        # Verify is_super_admin matches JWT claim (prevents privilege escalation)
+        jwt_is_super_admin = payload.get("is_super_admin", False)
+        if jwt_is_super_admin and not user.is_super_admin:
+            return None  # JWT claims super-admin but user lost the privilege
+    return user
 
 
 def get_current_user(

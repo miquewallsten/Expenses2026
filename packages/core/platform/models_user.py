@@ -11,7 +11,8 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    company_id: Mapped[int] = mapped_column(index=True)
+    # Null for super-admins who have no company association
+    company_id: Mapped[Optional[int]] = mapped_column(Integer, index=True, nullable=True)
     email: Mapped[str] = mapped_column(String(255), unique=True)
     full_name: Mapped[str] = mapped_column(String(255))
     role: Mapped[str] = mapped_column(String(50), default="employee")
@@ -20,6 +21,8 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     # Platform operator (cross-tenant). NEVER granted to customer users.
     is_super_admin: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
+    # Password hash for super-admin login. Null for magic-link-only users.
+    password_hash: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     department: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     job_title: Mapped[Optional[str]] = mapped_column(String(150), nullable=True)
     phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
