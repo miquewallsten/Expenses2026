@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
-import { Save, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Save, Loader2, CheckCircle2, AlertTriangle, Calculator } from "lucide-react";
 import { apiPatch } from "@/lib/api/client";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -278,11 +278,48 @@ export default function AdminAccountingSetupStudio({ companyId, setup, companySe
   };
 
   return (
-    <div className="max-w-2xl space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <h2 className="text-sm font-semibold text-primary">{t("title")}</h2>
-        <DraftBadge patch={draftPatch} label={t("aiDraftCount", { count: Object.keys(draftPatch || {}).length }).replace(/\s*\(\d+\)$/, "")} />
+    <div className="max-w-2xl space-y-5">
+
+      {/* Premium header with sky accent */}
+      <div className="relative overflow-hidden rounded-xl border border-default bg-gradient-to-r from-surface-1 via-surface-1 to-sky-500/[0.02]">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--color-sky-500)/5%,_transparent_50%)]" />
+        <div className="relative flex items-center justify-between border-b border-subtle px-5 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-sky-600 shadow-sm shadow-sky-500/30">
+              <Calculator className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-primary">{t("title")}</h2>
+              <p className="text-[10px] text-muted">Accounting Integration Settings</p>
+            </div>
+            <DraftBadge patch={draftPatch} label={t("aiDraftCount", { count: Object.keys(draftPatch || {}).length }).replace(/\s*\(\d+\)$/, "")} />
+          </div>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-sky-500 to-sky-600 px-4 py-2 text-[11px] font-semibold text-white shadow-sm shadow-sky-500/20 transition-all hover:shadow-md hover:shadow-sky-500/30 disabled:opacity-40 disabled:shadow-none"
+          >
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            {tc("save")}
+          </button>
+        </div>
+
+        {/* Status indicators */}
+        <div className="relative flex items-center gap-4 px-5 py-2.5">
+          {saved && (
+            <span className="flex items-center gap-1.5 text-[10px] text-success">
+              <CheckCircle2 className="h-3 w-3" />
+              {tc("saved")}
+            </span>
+          )}
+          {error && (
+            <span className="flex items-center gap-1.5 text-[10px] text-error">
+              <AlertTriangle className="h-3 w-3" />
+              {error}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Warnings */}
@@ -368,28 +405,14 @@ export default function AdminAccountingSetupStudio({ companyId, setup, companySe
         </Panel>
       </div>
 
-      {/* Sticky Save bar */}
-      <div className="sticky bottom-0 -mx-4 mt-6 border-t border-default bg-surface-0/95 px-4 py-2.5 backdrop-blur supports-[backdrop-filter]:bg-surface-0/80">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="inline-flex items-center gap-1.5 rounded border bg-accent-muted bg-blue-500/[0.10] px-3 py-1.5 text-[10px] font-semibold text-accent/80 transition-colors hover:bg-accent-hover/[0.18] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {saving
-              ? <><Loader2 className="h-3 w-3 animate-spin" /> {tc("saving")}</>
-              : <><Save className="h-3 w-3" /> {tc("save")}</>
-            }
-          </button>
-          {saved && (
-            <span className="flex items-center gap-1 text-[10px] text-success/60">
-              <CheckCircle2 className="h-3 w-3" /> {tc("saved")}
-            </span>
-          )}
-          {error && <span className="text-[10px] text-error/60">{error}</span>}
+      {/* Status bar at bottom */}
+      {error && (
+        <div className="flex items-center gap-2 rounded-lg border border-error/30 bg-error-muted/20 px-3 py-2">
+          <AlertTriangle className="h-3.5 w-3.5 text-error" />
+          <p className="text-[10px] text-error">{error}</p>
         </div>
-      </div>
+      )}
+
     </div>
   );
 }
