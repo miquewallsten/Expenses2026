@@ -48,61 +48,6 @@ function initials(label: string): string {
   return label.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
 }
 
-// ── AI Assistant Dock ───────────────────────────────────────────────────────────
-
-function AIAssistantDock({ collapsed, onExpand }: { collapsed: boolean; onExpand: () => void }) {
-  const t = useTranslations("myWork.ai");
-  const { effectiveConfig } = useMyWorkContext();
-  const [hasInsights, setHasInsights] = useState(false);
-
-  useEffect(() => {
-    const companyId = effectiveConfig?.company_setup.company_id;
-    if (!companyId) return;
-    
-    // Check for open insights to trigger a glow/pulse on the bot icon
-    apiCall<any[]>(`/agent/my-insights/${companyId}`)
-      .then(ins => setHasInsights(ins.length > 0))
-      .catch(() => setHasInsights(false));
-  }, [effectiveConfig?.company_setup.company_id]);
-
-  if (collapsed) {
-    return (
-      <button
-        onClick={onExpand}
-        className={`group relative flex h-12 w-12 items-center justify-center rounded-xl transition-all hover:scale-105 ${hasInsights ? "bg-error/20 ring-1 ring-error/50" : "bg-accent/10 ring-1 ring-accent/30 shadow-sm"}`}
-        title={t("openAssistant")}
-      >
-        <Bot className={`h-5 w-5 ${hasInsights ? "text-error" : "text-accent"}`} />
-        {hasInsights && (
-          <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-error animate-pulse" />
-        )}
-      </button>
-    );
-  }
-
-  return (
-    <div className={`flex items-center gap-3 rounded-xl p-3 transition-colors ${hasInsights ? "bg-error/5 ring-1 ring-error/20" : "bg-accent/5 ring-1 ring-accent/10"}`}>
-      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg shadow-sm ${hasInsights ? "bg-error/20" : "bg-accent/20"}`}>
-        <Bot className={`h-4 w-4 ${hasInsights ? "text-error" : "text-accent"}`} />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className={`text-[10px] font-semibold uppercase tracking-wide ${hasInsights ? "text-error" : "text-ai"}`}>
-          {hasInsights ? "Aviso" : t("assistant")}
-        </p>
-        <p className="truncate text-[9px] text-tertiary">
-          {hasInsights ? "Tienes tareas pendientes" : t("ready")}
-        </p>
-      </div>
-      <button
-        onClick={onExpand}
-        className={`flex h-7 w-7 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-3 hover:text-secondary ${hasInsights ? "bg-error/10 hover:bg-error/20" : "bg-surface-2"}`}
-      >
-        <MessageSquare className="h-3.5 w-3.5" />
-      </button>
-    </div>
-  );
-}
-
 // ── Hero Header ────────────────────────────────────────────────────────────────
 
 function HeroHeader({ userName }: { userName: string }) {
@@ -404,11 +349,6 @@ function UnifiedSidebar({
           </div>
         )}
       </div>
-
-      {/* AI Assistant Dock at bottom */}
-      <div className="shrink-0 border-t border-subtle p-3">
-        <AIAssistantDock collapsed={collapsed} onExpand={onAIExpand} />
-      </div>
     </nav>
   );
 }
@@ -428,6 +368,37 @@ function MyWorkShell() {
   const [navDrawerOpen, setNavDrawerOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const [aiPanelWidth, setAiPanelWidth] = useState(400);
+  const [isResizing, setIsResizing] = useState(false);
+
+  // Handle panel resizing
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      const newWidth = window.innerWidth - e.clientX;
+      // Min width 24 (just the rail), max width 800
+      setAiPanelWidth(Math.max(24, Math.min(newWidth, 800)));
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    } else {
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    }
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isResizing]);
 
   // Defer admin check until after hydration to avoid mismatch
   const [mounted, setMounted] = useState(false);
@@ -469,6 +440,17 @@ function MyWorkShell() {
     <div className="pointer-events-none absolute right-3 top-3 z-20 flex items-center gap-2">
       <button
         type="button"
+        onClick={() => setAiPanelOpen(v => !v)}
+        title="Lola"
+        aria-label="Lola"
+        className={`pointer-events-auto flex h-8 w-8 items-center justify-center rounded-xl border border-white/5 transition-all shadow-sm ${
+          aiPanelOpen ? "bg-accent text-white" : "bg-surface-2/80 backdrop-blur-sm text-secondary hover:bg-surface-3 hover:text-primary"
+        }`}
+      >
+        <Bot className="h-4 w-4" />
+      </button>
+      <button
+        type="button"
         onClick={() => setSettingsOpen(true)}
         title={tnShell("settings")}
         aria-label={tnShell("settings")}
@@ -504,6 +486,17 @@ function MyWorkShell() {
             </span>
           </div>
           <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setAiPanelOpen(v => !v)}
+              title="Lola"
+              aria-label="Lola"
+              className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
+                aiPanelOpen ? "bg-accent text-white" : "text-muted hover:bg-surface-2 hover:text-primary"
+              }`}
+            >
+              <Bot className="h-4 w-4" />
+            </button>
             <button
               type="button"
               onClick={() => setSettingsOpen(true)}
@@ -572,10 +565,6 @@ function MyWorkShell() {
                   </div>
                 )}
               </div>
-              {/* AI dock in mobile drawer */}
-              <div className="shrink-0 border-t border-subtle p-3">
-                <AIAssistantDock collapsed={false} onExpand={() => { setNavDrawerOpen(false); setAiPanelOpen(true); }} />
-              </div>
             </div>
           </>
         )}
@@ -626,46 +615,73 @@ function MyWorkShell() {
         {workspace}
       </div>
 
-      {!isAdminModule && topRightToolbar}
-      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-
-      {/* AI Assistant Panel */}
+      {/* AI Assistant Panel (Fixed/Resizable on right for Desktop) */}
       {aiPanelOpen && companyId && (
         <>
+          {/* Resize handle */}
           <div
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
-            onClick={() => setAiPanelOpen(false)}
-          />
-          <aside className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[420px] flex-col border-l border-default bg-surface-0 shadow-2xl">
-            <header className="flex h-11 shrink-0 items-center gap-2 border-b border-white/5 px-3">
-              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-accent/10 transition-colors">
-                <Bot className="h-3.5 w-3.5 text-accent" />
-              </div>
-              <div className="flex flex-col leading-tight">
-                <span className="text-[11px] font-bold tracking-tight text-primary">Lola</span>
-                <span className="text-[9px] font-bold uppercase tracking-widest text-muted">Intelligent Ops</span>
-              </div>
+            className={`group relative z-50 w-1 cursor-col-resize bg-transparent transition-colors hover:bg-accent/40 ${isResizing ? "bg-accent/60" : ""}`}
+            onMouseDown={() => setIsResizing(true)}
+          >
+            <div className="absolute inset-y-0 -left-1 -right-1" />
+          </div>
+          
+          <aside 
+            className={`relative flex flex-col border-l border-white/5 bg-surface-1 shadow-sm transition-opacity duration-300 ${aiPanelWidth < 30 ? "items-center py-4" : ""}`}
+            style={{ width: aiPanelWidth }}
+          >
+            {aiPanelWidth >= 160 ? (
+              <>
+                <header className="flex h-11 shrink-0 items-center gap-2 border-b border-white/5 px-3">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-accent/10 transition-colors">
+                    <Bot className="h-3.5 w-3.5 text-accent" />
+                  </div>
+                  <div className="flex flex-col leading-tight">
+                    <span className="text-[11px] font-bold tracking-tight text-primary">Lola</span>
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-muted">Intelligent Ops</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAiPanelOpen(false);
+                      setAiPanelWidth(400); // Reset for next open
+                    }}
+                    className="ml-auto flex h-6 w-6 items-center justify-center rounded text-muted transition-colors hover:bg-surface-2 hover:text-secondary"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </header>
+                <div className="min-h-0 flex-1 overflow-hidden">
+                  <AgentChat
+                    companyId={companyId}
+                    persona={activeModule?.id === "admin" ? "admin-config" : "employee"}
+                    greeting={t("greeting")}
+                    allowUpload={false}
+                    streaming
+                    variant="page"
+                  />
+                </div>
+              </>
+            ) : (
+              /* Rail state */
               <button
-                type="button"
-                onClick={() => setAiPanelOpen(false)}
-                className="ml-auto flex h-6 w-6 items-center justify-center rounded text-muted transition-colors hover:bg-surface-2 hover:text-secondary"
+                onClick={() => setAiPanelWidth(400)}
+                className="group flex flex-col items-center gap-4"
               >
-                <X className="h-3.5 w-3.5" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-accent/10 text-accent transition-all group-hover:bg-accent group-hover:text-white">
+                  <Bot className="h-4 w-4" />
+                </div>
+                <div className="flex items-center gap-1.5 [writing-mode:vertical-lr]">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted group-hover:text-accent">Expand Lola</span>
+                </div>
               </button>
-            </header>
-            <div className="min-h-0 flex-1 overflow-hidden">
-              <AgentChat
-                companyId={companyId}
-                persona="employee"
-                greeting={t("greeting")}
-                allowUpload={false}
-                streaming
-                variant="page"
-              />
-            </div>
+            )}
           </aside>
         </>
       )}
+
+      {!isAdminModule && topRightToolbar}
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );
 }

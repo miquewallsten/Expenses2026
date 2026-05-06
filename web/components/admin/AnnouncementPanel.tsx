@@ -2,9 +2,15 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Megaphone, Send, CheckSquare } from "lucide-react";
+import { Megaphone, Send, CheckSquare, Bell } from "lucide-react";
 import { executeAction } from "@/lib/mywork/actions";
 import { useToast } from "@/components/ui/Toast";
+import {
+  PremiumHeader,
+  SectionPanel,
+  SectionLabel,
+  inputClasses,
+} from "@/components/admin/shared/AdminPatterns";
 
 export default function AnnouncementPanel() {
   const t = useTranslations("admin.announcement");
@@ -70,48 +76,44 @@ export default function AnnouncementPanel() {
   };
 
   return (
-    <div className="mx-auto max-w-xl p-4" data-testid="announcement-panel">
-      <header className="mb-4">
-        <h1 className="text-[13px] font-bold tracking-[-0.01em] text-primary">
-          {t("title")}
-        </h1>
-        <p className="mt-0.5 text-[10.5px] text-tertiary">
-          {t("subtitle")}
-        </p>
-      </header>
+    <div className="space-y-6" data-testid="announcement-panel">
+      <PremiumHeader
+        section="notifications"
+        icon={<Bell className="h-4 w-4" />}
+        title={t("title")}
+        subtitle={t("subtitle")}
+      />
 
-      <div className="space-y-3">
-        <div className="rounded border border-default bg-surface-1 p-3">
-          <label className="mb-1 block text-[9px] font-bold uppercase tracking-widest text-muted">
-            {t("messageLabel")}
-          </label>
-          <textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            rows={4}
-            placeholder={t("messagePlaceholder")}
-            className="w-full rounded border border-default bg-surface-1 px-2.5 py-2 text-[11px] text-secondary placeholder:text-muted focus:outline-none focus:bg-accent-muted resize-none"
-          />
+      <div className="mx-auto max-w-2xl space-y-6">
+        <div className="space-y-3">
+          <SectionLabel>{t("messageLabel")}</SectionLabel>
+          <SectionPanel>
+             <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              rows={4}
+              placeholder={t("messagePlaceholder")}
+              className={`w-full border-0 bg-transparent ring-0 focus:ring-0 ${inputClasses.textarea}`}
+            />
+          </SectionPanel>
         </div>
 
-        <div className="rounded border border-default bg-surface-1 p-3">
-          <label className="mb-1 block text-[9px] font-bold uppercase tracking-widest text-muted">
-            {t("targetLabel")}
-          </label>
-          <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-3">
+          <SectionLabel>{t("targetLabel")}</SectionLabel>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {TARGET_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
                 type="button"
                 onClick={() => setTarget(opt.value)}
-                className={`flex items-center gap-2 rounded border px-2.5 py-1.5 text-[11px] transition-colors ${
+                className={`flex items-center gap-2 rounded-xl border p-3 text-[11.5px] font-medium transition-all ${
                   target === opt.value
-                    ? "bg-accent-muted bg-accent-muted text-accent"
-                    : "border-subtle bg-surface-1 text-tertiary hover:bg-surface-2"
+                    ? "border-accent/40 bg-accent/10 text-accent shadow-sm"
+                    : "border-white/5 bg-surface-1 text-secondary hover:bg-surface-2"
                 }`}
               >
                 <CheckSquare
-                  className={`h-3 w-3 ${target === opt.value ? "text-accent" : "text-muted"}`}
+                  className={`h-3.5 w-3.5 ${target === opt.value ? "text-accent" : "text-muted"}`}
                 />
                 {opt.label}
               </button>
@@ -119,55 +121,55 @@ export default function AnnouncementPanel() {
           </div>
         </div>
 
-        <div className="rounded border border-default bg-surface-1 p-3">
-          <label className="mb-1 block text-[9px] font-bold uppercase tracking-widest text-muted">
-            {t("channelsLabel")}
-          </label>
-          <div className="flex flex-wrap gap-3">
-            {CHANNEL_OPTIONS.map((opt) => (
-              <label
-                key={opt.value}
-                className="flex cursor-pointer items-center gap-2 text-[11px] text-secondary"
-              >
-                <input
-                  type="checkbox"
-                  checked={channels[opt.value]}
-                  onChange={() => toggleChannel(opt.value)}
-                  className="accent-blue-500"
-                />
-                {opt.label}
-              </label>
-            ))}
-          </div>
+        <div className="space-y-3">
+          <SectionLabel>{t("channelsLabel")}</SectionLabel>
+          <SectionPanel>
+             <div className="flex flex-wrap gap-6 p-4">
+                {CHANNEL_OPTIONS.map((opt) => (
+                  <label
+                    key={opt.value}
+                    className="flex cursor-pointer items-center gap-3 text-[11.5px] font-medium text-secondary hover:text-primary transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={channels[opt.value]}
+                      onChange={() => toggleChannel(opt.value)}
+                      className="h-4 w-4 rounded border-white/10 bg-white/5 text-accent focus:ring-accent/20"
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+             </div>
+          </SectionPanel>
         </div>
 
-        <div className="rounded border border-default bg-surface-1 p-3">
-          <label className="mb-1 block text-[9px] font-bold uppercase tracking-widest text-muted">
-            {t("previewLabel")}
-          </label>
-          <div className="rounded border border-subtle bg-surface-1 p-3">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-blue-500/25">
-                <Megaphone className="h-3 w-3 text-accent" />
+        <div className="space-y-3">
+          <SectionLabel>{t("previewLabel")}</SectionLabel>
+          <div className="rounded-xl border border-dashed border-white/10 bg-black/10 p-5">
+            <div className="flex items-center gap-2.5 mb-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-accent/20 text-accent">
+                <Megaphone className="h-3.5 w-3.5" />
               </span>
-              <span className="text-[10px] font-medium text-secondary">{t("previewTitle")}</span>
+              <span className="text-[11px] font-bold uppercase tracking-widest text-primary">{t("previewTitle")}</span>
             </div>
-            <p className="text-[11px] text-tertiary whitespace-pre-wrap">
-              {message.trim() || <span className="italic text-muted">{t("previewPlaceholder")}</span>}
+            <p className="text-[12px] text-secondary whitespace-pre-wrap leading-relaxed">
+              {message.trim() || <span className="italic text-muted/50">{t("previewPlaceholder")}</span>}
             </p>
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={handleSend}
-          disabled={sending || !message.trim()}
-          className="flex w-full items-center justify-center gap-1.5 rounded border bg-accent-muted bg-accent-muted px-3 py-2 text-[11px] font-medium text-accent transition-colors hover:bg-accent-hover/15 disabled:opacity-40"
-          data-testid="announcement-send"
-        >
-          <Send className="h-3 w-3" />
-          {sending ? t("sending") : t("sendButton")}
-        </button>
+        <div className="pt-2">
+          <button
+            type="button"
+            onClick={handleSend}
+            disabled={sending || !message.trim()}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 text-[12px] font-bold text-white shadow-lg shadow-accent/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:scale-100"
+            data-testid="announcement-send"
+          >
+            <Send className="h-4 w-4" />
+            {sending ? t("sending") : t("sendButton")}
+          </button>
+        </div>
       </div>
     </div>
   );

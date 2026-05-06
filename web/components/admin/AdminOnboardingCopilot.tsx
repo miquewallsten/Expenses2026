@@ -248,39 +248,14 @@ export default function AdminOnboardingCopilot({ companyId, onComplete, onSkip }
 
   return (
     <div className="flex h-full flex-col bg-surface-0">
-      {/* Header */}
-      <header className="flex h-11 shrink-0 items-center justify-between border-b border-subtle bg-surface-1/50 px-4">
-        <div className="flex items-center gap-2">
-          <div className="flex h-5 w-5 items-center justify-center rounded bg-accent-muted">
-            <Sparkles className="h-3 w-3 text-accent" />
-          </div>
-          <span className="text-[11px] font-semibold text-secondary">{t("title")}</span>
-        </div>
-        <div className="flex items-center gap-3">
-          {/* Progress */}
-          <div className="flex items-center gap-1.5">
-            <div className="h-1.5 w-20 overflow-hidden rounded-full bg-surface-2">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-blue-500/80 to-blue-400/60 transition-all duration-500"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-            <span className="text-[9px] font-medium tabular-nums text-tertiary">{progress}%</span>
-          </div>
-          <button
-            type="button"
-            onClick={onSkip}
-            className="flex items-center gap-1 rounded-md border border-subtle bg-surface-1 px-2 py-1 text-[10px] text-tertiary transition-colors hover:bg-surface-2 hover:text-secondary"
-          >
-            <SkipForward className="h-3 w-3" />
-            {t("skip")}
-          </button>
-        </div>
-      </header>
-
-      {/* Messages */}
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+      {/* Compact Messages Area */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 scrollbar-hide">
         <div className="mx-auto max-w-lg space-y-3">
+          {messages.length === 0 && (
+            <div className="flex animate-pulse flex-col items-center justify-center py-10 text-center">
+              <div className="h-8 w-8 rounded-full bg-accent/20" />
+            </div>
+          )}
           {messages.map((msg, i) => (
             <div
               key={i}

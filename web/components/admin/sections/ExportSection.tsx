@@ -19,6 +19,12 @@ import {
   HardDrive,
   Package,
 } from "lucide-react";
+import {
+  PremiumHeader,
+  SectionPanel,
+  Row,
+  SectionLabel,
+} from "@/components/admin/shared/AdminPatterns";
 import { getCurrentCompanyId, getAuthHeaders } from "@/lib/session";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -56,13 +62,13 @@ function formatBytes(bytes: number | null): string {
 function statusTone(status: string): string {
   switch (status) {
     case "completed":
-      return "bg-emerald-500/15 text-emerald-300";
+      return "bg-emerald-500/15 text-emerald-400 border-emerald-500/20";
     case "failed":
-      return "bg-rose-500/15 text-rose-300";
+      return "bg-rose-500/15 text-rose-400 border-rose-500/20";
     case "processing":
-      return "bg-accent-muted text-accent";
+      return "bg-accent/10 text-accent border-accent/20";
     default:
-      return "bg-surface-2 text-tertiary";
+      return "bg-surface-2 text-tertiary border-white/5";
   }
 }
 
@@ -148,190 +154,171 @@ export default function ExportSection() {
 
   if (!companyId) {
     return (
-      <main className="min-h-screen bg-surface-0 text-primary">
-        <div className="mx-auto max-w-6xl px-6 py-10">
-          <div className="rounded border border-amber-500/20 bg-amber-500/[0.05] p-4 text-[12px] text-warning/80">
-            {t("noCompany")}
-          </div>
-        </div>
-      </main>
+      <div className="rounded-lg border border-amber-500/20 bg-amber-500/[0.05] p-4 text-[12px] text-warning/80">
+        {t("noCompany")}
+      </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-surface-0 text-primary">
-      <div className="mx-auto max-w-6xl px-6 py-6">
-        {/* Premium header */}
-        <div className="relative overflow-hidden rounded-lg border border-default bg-gradient-to-r from-surface-1 via-surface-1 to-emerald-500/[0.02] px-4 py-3 mb-5">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--color-emerald-500)/5%,_transparent_50%)]" />
-          <div className="relative flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10">
-                <Download className="h-4 w-4 text-emerald-400" />
-              </div>
-              <div className="flex flex-col">
-                <h1 className="text-sm font-semibold text-primary">{t("title")}</h1>
-                <span className="text-[9px] text-muted">Data Export & Backup</span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={handleRefresh}
-              disabled={storageLoading || exportsLoading}
-              className="flex items-center gap-1.5 rounded-lg border border-default bg-surface-1 px-2.5 py-1.5 text-[10px] font-semibold text-tertiary transition hover:border-strong hover:text-secondary disabled:opacity-50"
-            >
-              {(storageLoading || exportsLoading) ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : (
-                <RefreshCw className="h-3 w-3" />
-              )}
-              {t("refresh")}
-            </button>
-          </div>
+    <div className="space-y-6">
+      <PremiumHeader
+        section="export"
+        icon={<Download className="h-4 w-4" />}
+        title={t("title")}
+        subtitle="Data Export & Backup"
+        action={
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={storageLoading || exportsLoading}
+            className="flex items-center gap-1.5 rounded-lg border border-default bg-surface-1 px-3 py-1.5 text-[10px] font-semibold text-tertiary transition hover:border-strong hover:text-secondary disabled:opacity-50"
+          >
+            {(storageLoading || exportsLoading) ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5" />
+            )}
+            {t("refresh")}
+          </button>
+        }
+      />
+
+      {error && (
+        <div className="rounded-lg border border-error bg-rose-500/[0.06] px-3 py-2 text-[10.5px] text-rose-200/85">
+          {error}
         </div>
+      )}
 
-        {error && (
-          <div className="mb-3 flex items-start gap-2 rounded border border-error bg-rose-500/[0.06] px-3 py-2 text-[10.5px] text-rose-200/85">
-            {error}
-          </div>
-        )}
-
-        {/* Storage Usage Card */}
-        <div className="mb-6 rounded border border-default bg-surface-1 p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <HardDrive className="h-3.5 w-3.5 text-secondary" />
-            <h2 className="text-[11px] font-semibold text-secondary">
-              {t("storage.title")}
-            </h2>
-          </div>
+      {/* Storage Usage */}
+      <div className="space-y-3">
+        <SectionLabel>{t("storage.title")}</SectionLabel>
+        <SectionPanel>
           {storageLoading ? (
-            <div className="flex items-center gap-2 py-4 text-[11px] text-muted">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("loading")}
+            <div className="p-10 text-center text-muted animate-pulse">
+              <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+              {t("loading")}
             </div>
           ) : storage ? (
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-              <div className="rounded border border-subtle bg-surface-1 p-3">
-                <div className="mb-1 flex items-center gap-1.5 text-[9px] uppercase tracking-wide text-muted">
+            <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-white/5">
+              <div className="p-4 space-y-1.5">
+                <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-muted">
                   <FileStack className="h-3 w-3" /> {t("storage.files")}
                 </div>
-                <p className="text-lg font-semibold tabular-nums text-primary">
-                  {formatGb(storage.files_gb)} <span className="text-[10px] font-normal text-tertiary">GB</span>
-                </p>
-              </div>
-              <div className="rounded border border-subtle bg-surface-1 p-3">
-                <div className="mb-1 flex items-center gap-1.5 text-[9px] uppercase tracking-wide text-muted">
-                  <Database className="h-3 w-3" /> {t("storage.database")}
+                <div className="text-xl font-bold tabular-nums text-primary tracking-tight">
+                  {formatGb(storage.files_gb)} <span className="text-[10px] font-medium text-muted uppercase">GB</span>
                 </div>
-                <p className="text-lg font-semibold tabular-nums text-primary">
-                  {formatGb(storage.database_gb)} <span className="text-[10px] font-normal text-tertiary">GB</span>
-                </p>
               </div>
-              <div className="rounded border border-subtle bg-surface-1 p-3">
-                <div className="mb-1 flex items-center gap-1.5 text-[9px] uppercase tracking-wide text-muted">
-                  <Package className="h-3 w-3" /> {t("storage.total")}
+              <div className="p-4 space-y-1.5">
+                <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-muted">
+                   <Database className="h-3 w-3" /> {t("storage.database")}
                 </div>
-                <p className="text-lg font-semibold tabular-nums text-primary">
-                  {formatGb(storage.total_gb)} <span className="text-[10px] font-normal text-tertiary">GB</span>
-                </p>
+                <div className="text-xl font-bold tabular-nums text-primary tracking-tight">
+                   {formatGb(storage.database_gb)} <span className="text-[10px] font-medium text-muted uppercase">GB</span>
+                </div>
               </div>
-              <div className="rounded border border-subtle bg-surface-1 p-3">
-                <div className="mb-1 flex items-center gap-1.5 text-[9px] uppercase tracking-wide text-muted">
-                  {t("storage.included")}
+              <div className="p-4 space-y-1.5">
+                <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-muted">
+                   <Package className="h-3 w-3" /> {t("storage.total")}
                 </div>
-                <p className="text-lg font-semibold tabular-nums text-primary">
-                  {formatGb(storage.included_gb)} <span className="text-[10px] font-normal text-tertiary">GB</span>
-                </p>
+                <div className="text-xl font-bold tabular-nums text-accent tracking-tight">
+                   {formatGb(storage.total_gb)} <span className="text-[10px] font-medium text-accent/50 uppercase">GB</span>
+                </div>
+              </div>
+              <div className="p-4 space-y-1.5">
+                <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-muted">
+                   {t("storage.included")}
+                </div>
+                <div className="text-xl font-bold tabular-nums text-secondary tracking-tight">
+                   {formatGb(storage.included_gb)} <span className="text-[10px] font-medium text-muted uppercase">GB</span>
+                </div>
               </div>
             </div>
           ) : (
-            <div className="py-4 text-center text-[11px] text-muted">
+            <div className="p-8 text-center text-[11px] text-muted italic">
               {t("storage.unavailable")}
             </div>
           )}
-        </div>
+        </SectionPanel>
+      </div>
 
-        {/* Create Export */}
-        <div className="mb-6 rounded border border-default bg-surface-1 p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <Download className="h-3.5 w-3.5 text-secondary" />
-            <h2 className="text-[11px] font-semibold text-secondary">
-              {t("create.title")}
-            </h2>
-          </div>
-          <p className="mb-3 text-[10.5px] text-tertiary">
-            {t("create.description")}
-          </p>
-          <button
-            type="button"
-            className="rounded border bg-accent-muted bg-blue-500/[0.18] px-3 py-1.5 text-[11px] font-medium text-accent transition hover:bg-accent-hover/[0.25] disabled:opacity-50"
-            disabled
-          >
-            {t("create.button")}
-          </button>
-          <p className="mt-2 text-[9px] italic text-muted">
-            {t("create.comingSoon")}
-          </p>
-        </div>
+      {/* Create Export */}
+      <div className="space-y-3">
+        <SectionLabel>{t("create.title")}</SectionLabel>
+        <SectionPanel>
+           <div className="p-4">
+              <p className="text-[11.5px] text-secondary leading-relaxed mb-4">
+                {t("create.description")}
+              </p>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  className="rounded-lg border border-accent/20 bg-accent/5 px-4 py-1.5 text-[11px] font-bold text-accent transition-all hover:bg-accent/10 disabled:opacity-40"
+                  disabled
+                >
+                  {t("create.button")}
+                </button>
+                <span className="text-[10px] font-medium italic text-muted">
+                  {t("create.comingSoon")}
+                </span>
+              </div>
+           </div>
+        </SectionPanel>
+      </div>
 
-        {/* Export History */}
-        <div className="rounded border border-default bg-surface-1 p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <RefreshCw className="h-3.5 w-3.5 text-secondary" />
-            <h2 className="text-[11px] font-semibold text-secondary">
-              {t("history.title")}
-            </h2>
-          </div>
+      {/* Export History */}
+      <div className="space-y-3">
+        <SectionLabel>{t("history.title")}</SectionLabel>
+        <SectionPanel>
           {exportsLoading ? (
-            <div className="flex items-center gap-2 py-4 text-[11px] text-muted">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("loading")}
-            </div>
+            <div className="p-10 text-center text-muted"><Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />{t("loading")}</div>
           ) : exports.length === 0 ? (
-            <div className="py-6 text-center text-[11px] text-muted">
+            <div className="p-16 text-center text-[10.5px] text-muted italic">
               {t("history.empty")}
             </div>
           ) : (
-            <div className="overflow-hidden rounded border border-subtle">
-              <table className="w-full text-[10.5px]">
+            <div className="overflow-hidden">
+              <table className="w-full text-left text-[10.5px]">
                 <thead>
-                  <tr className="border-b border-default bg-surface-1 text-left text-[9.5px] uppercase tracking-wide text-muted">
-                    <th className="px-2 py-1.5 font-medium">{t("history.date")}</th>
-                    <th className="px-2 py-1.5 font-medium">{t("history.type")}</th>
-                    <th className="px-2 py-1.5 font-medium">{t("history.status")}</th>
-                    <th className="px-2 py-1.5 font-medium">{t("history.size")}</th>
-                    <th className="px-2 py-1.5 font-medium text-right">{t("history.download")}</th>
+                  <tr className="border-b border-white/5 bg-surface-2/30 text-[9px] uppercase tracking-widest text-muted">
+                    <th className="p-3 font-semibold">{t("history.date")}</th>
+                    <th className="p-3 font-semibold">{t("history.type")}</th>
+                    <th className="p-3 font-semibold">{t("history.status")}</th>
+                    <th className="p-3 font-semibold">{t("history.size")}</th>
+                    <th className="p-3 text-right" />
                   </tr>
                 </thead>
                 <tbody>
                   {exports.map((job) => (
                     <tr
                       key={job.id}
-                      className="border-b border-subtle last:border-b-0 hover:bg-surface-1"
+                      className="border-b border-white/5 last:border-0 hover:bg-surface-2/40 transition-colors"
                     >
-                      <td className="px-2 py-1.5 text-tertiary tabular-nums">
+                      <td className="p-3 text-secondary tabular-nums">
                         {job.created_at ? new Date(job.created_at).toLocaleString() : "—"}
                       </td>
-                      <td className="px-2 py-1.5 font-mono text-secondary">
+                      <td className="p-3 font-mono text-[10px] text-tertiary uppercase">
                         {job.export_type}
                       </td>
-                      <td className="px-2 py-1.5">
-                        <span className={`rounded px-1.5 py-0.5 font-mono text-[9.5px] ${statusTone(job.status)}`}>
+                      <td className="p-3">
+                        <span className={`inline-block rounded-md border px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-widest ${statusTone(job.status)}`}>
                           {job.status}
                         </span>
                       </td>
-                      <td className="px-2 py-1.5 text-tertiary">
+                      <td className="p-3 text-tertiary font-medium">
                         {formatBytes(job.file_size_bytes)}
                       </td>
-                      <td className="px-2 py-1.5 text-right">
+                      <td className="p-3 text-right">
                         {job.status === "completed" && job.file_path ? (
                           <button
                             type="button"
                             onClick={() => handleDownload(job.id)}
-                            className="rounded border border-subtle bg-surface-2 px-2 py-0.5 text-[10px] text-secondary transition hover:border-strong hover:text-primary"
+                            className="rounded-lg border border-default bg-surface-1 px-3 py-1 text-[10px] font-bold text-secondary transition-all hover:border-strong hover:text-primary"
                           >
                             {t("history.download")}
                           </button>
                         ) : (
-                          <span className="text-[10px] text-muted">—</span>
+                          <span className="text-[10px] text-muted font-medium">—</span>
                         )}
                       </td>
                     </tr>
@@ -340,8 +327,8 @@ export default function ExportSection() {
               </table>
             </div>
           )}
-        </div>
+        </SectionPanel>
       </div>
-    </main>
+    </div>
   );
 }

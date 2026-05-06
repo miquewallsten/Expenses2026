@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { getPortalConfigConflicts } from "@/lib/portal-config-conflicts";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import AdminOnboardingCopilot from "@/components/admin/AdminOnboardingCopilot";
 
 type SetupSection =
   | "Company Setup"
@@ -253,6 +254,12 @@ export default function AdminOverviewPanel({
 
   const statusLabels = { ok: to("statusConfigured"), warn: to("statusNeedsAttention"), unconfigured: to("statusNotConfigured") };
 
+  // Determine onboarding progress (example: signature fields saved)
+  const configuredCount = [
+    companyMarker, expenseMarker, accountMarker, approvalMarker, workflowMarker,
+  ].filter(m => m != null && m !== "").length;
+  const progressPercent = Math.round((configuredCount / 5) * 100);
+
   const companySummary = cs.display_name
     ? [cs.display_name, cs.country_code, cs.industry].filter(Boolean).join(" · ")
     : to("noCompanyProfile");
@@ -341,6 +348,29 @@ export default function AdminOverviewPanel({
 
   return (
     <div className="max-w-3xl space-y-5">
+      {/* Smart Onboarding Assistant — Inline guide */}
+      {unconfiguredCount > 0 && (
+        <div className="overflow-hidden rounded-xl border border-accent/20 bg-surface-1 shadow-sm">
+          <div className="flex items-center gap-2 border-b border-white/5 bg-accent/5 px-4 py-2">
+            <Sparkles className="h-3.5 w-3.5 text-accent" />
+            <span className="text-[11px] font-bold tracking-tight text-primary">Setup Companion</span>
+            <div className="ml-auto flex items-center gap-2">
+               <div className="h-1 w-16 overflow-hidden rounded-full bg-surface-2">
+                 <div className="h-full bg-accent transition-all animate-pulse" style={{ width: `${progressPercent}%` }} />
+               </div>
+               <span className="text-[9px] font-bold text-muted tabular-nums">{progressPercent}%</span>
+            </div>
+          </div>
+          <div className="flex h-[340px] flex-col">
+            <AdminOnboardingCopilot
+              companyId={companySetup.id}
+              onComplete={() => {}}
+              onSkip={() => {}}
+            />
+          </div>
+        </div>
+      )}
+
       {/* System health bar — Premium command center feel */}
       <div
         className={`relative overflow-hidden rounded-lg border px-4 py-3 ${
@@ -376,14 +406,17 @@ export default function AdminOverviewPanel({
               </>
             ) : unconfiguredCount > 0 ? (
               <>
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface-2">
-                  <Circle className="h-4 w-4 text-muted" />
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface-2 shadow-inner">
+                  <div className="relative flex h-5 w-5 items-center justify-center">
+                    <Circle className="absolute inset-0 h-5 w-5 text-muted/30" />
+                    <span className="text-[9px] font-bold text-accent">{progressPercent}%</span>
+                  </div>
                 </div>
                 <div className="flex flex-col">
                   <span className="text-[11px] font-semibold text-secondary">
-                    {to("unconfiguredCount", { count: unconfiguredCount })}
+                    Implementation Progress: {progressPercent}%
                   </span>
-                  <span className="text-[9px] text-muted">Sections pending setup</span>
+                  <span className="text-[9px] text-muted">{unconfiguredCount} setup blocks remaining</span>
                 </div>
               </>
             ) : (
@@ -401,7 +434,7 @@ export default function AdminOverviewPanel({
           {issueCount > 0 && fixTarget && (
             <button
               type="button"
-              onClick={() => onNavigate(fixTarget)}
+              onClick={() => onNavigate(fixTarget as any)}
               className="flex items-center gap-1.5 rounded-lg border border-warning/20 bg-warning/5 px-3 py-1.5 text-[10px] font-semibold text-warning/80 transition-all hover:border-warning/30 hover:bg-warning/10"
             >
               {to("fixSetup")}
@@ -412,9 +445,9 @@ export default function AdminOverviewPanel({
             <button
               type="button"
               onClick={() => onNavigate("Onboarding")}
-              className="flex items-center gap-1.5 rounded-lg border border-accent/20 bg-accent/5 px-3 py-1.5 text-[10px] font-semibold text-accent transition-all hover:border-accent/30 hover:bg-accent/10"
+              className="flex items-center gap-1.5 rounded-lg border border-accent ring-1 ring-accent-glow bg-accent/10 px-3 py-1.5 text-[10px] font-semibold text-accent transition-all hover:bg-accent hover:text-white"
             >
-              {to("startSetup")}
+              Resume Setup
               <span>→</span>
             </button>
           )}

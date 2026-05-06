@@ -131,9 +131,7 @@ export default function IntegrationsSection() {
 
   useEffect(() => {
     void loadList();
-    // we only want this on mount + manual reloads.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Detail load
   const loadDetail = useCallback(
@@ -191,19 +189,16 @@ export default function IntegrationsSection() {
     [integrations, activeId],
   );
 
-  // ── Render ──────────────────────────────────────────────────────────────────
-
   if (loading && !integrations) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-surface-0 text-tertiary">
-        <Loader2 className="h-4 w-4 animate-spin" />
+      <div className="flex items-center justify-center py-20 text-tertiary">
+        <Loader2 className="h-5 w-5 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-surface-0">
-      <div className="mx-auto max-w-6xl px-6 py-6">
+    <div className="space-y-6">
         <PremiumHeader
           section="integrations"
           icon={<Plug className="h-4 w-4" />}
@@ -221,85 +216,75 @@ export default function IntegrationsSection() {
           }
         />
 
-        <div className="mt-5">
-          {error && (
-            <div className="mb-4 rounded-lg border border-red-500/25 bg-red-500/[0.06] px-3 py-2 text-[10.5px] text-red-200/85">
-              <AlertTriangle className="mr-2 inline h-3.5 w-3.5" />
-              {error}
-            </div>
-          )}
+        {error && (
+          <div className="rounded-lg border border-error bg-rose-500/[0.06] px-3 py-2 text-[10.5px] text-rose-200/85">
+            <AlertTriangle className="mr-2 inline h-3.5 w-3.5 shrink-0" />
+            {error}
+          </div>
+        )}
 
-          {!integrations || integrations.length === 0 ? (
-            <div className="mt-8 rounded-md border border-dashed border-default bg-surface-1 px-6 py-10 text-center">
-              <p className="text-[12px] text-tertiary">{t("emptyTitle")}</p>
-              <p className="mt-1 text-[10.5px] text-muted">{t("emptyBody")}</p>
-            </div>
-          ) : (
-            <div className="mt-5 grid grid-cols-12 gap-4">
-              {/* Left rail — integrations list */}
-              <aside className="col-span-4">
-                <div className="text-[9.5px] uppercase tracking-wider text-muted">
-                  {t("listLabel")}
-                </div>
-                <ul className="mt-2 space-y-1">
-                  {integrations.map((it) => {
-                    const isActive = it.id === activeId;
-                    return (
-                      <li key={it.id}>
-                        <button
-                          type="button"
-                          onClick={() => setActiveId(it.id)}
-                          className={`flex w-full items-center justify-between rounded border px-2.5 py-1.5 text-left text-[10.5px] transition-colors ${
-                            isActive
-                              ? "border-blue-500/50 bg-blue-500/[0.08] text-primary"
-                              : "border-subtle bg-surface-1 text-tertiary hover:border-default hover:text-primary"
-                          }`}
-                        >
-                          <span className="flex min-w-0 flex-1 flex-col">
-                            <span className="truncate font-medium">
-                              {it.name}
-                            </span>
-                            <span className="truncate text-[9.5px] text-muted">
-                              {it.vendor} · {t(`kind.${it.kind}`)}
-                            </span>
+        {!integrations || integrations.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-default bg-surface-1 px-6 py-16 text-center">
+            <p className="text-[12px] font-medium text-primary">{t("emptyTitle")}</p>
+            <p className="mt-1 text-[10.5px] text-muted">{t("emptyBody")}</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-12 gap-6 items-start">
+            <aside className="col-span-4 space-y-2">
+              <SectionLabel>{t("listLabel")}</SectionLabel>
+              <ul className="space-y-1.5">
+                {integrations.map((it) => {
+                  const isActive = it.id === activeId;
+                  return (
+                    <li key={it.id}>
+                      <button
+                        type="button"
+                        onClick={() => setActiveId(it.id)}
+                        className={`flex w-full items-center justify-between rounded-xl border p-2.5 text-left text-[11px] transition-all ${
+                          isActive
+                            ? "border-accent/40 bg-accent/10 text-primary shadow-sm"
+                            : "border-transparent bg-surface-1 text-secondary hover:bg-surface-2"
+                        }`}
+                      >
+                        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                          <span className="truncate font-semibold">
+                            {it.name}
                           </span>
-                          <span
-                            className={`ml-2 inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
-                              it.is_enabled ? "bg-emerald-400/85" : "bg-surface-3"
-                            }`}
-                            aria-label={
-                              it.is_enabled ? t("enabled") : t("disabled")
-                            }
-                          />
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </aside>
+                          <span className="truncate text-[9.5px] text-muted font-medium uppercase tracking-wide">
+                            {it.vendor} · {t(`kind.${it.kind}`)}
+                          </span>
+                        </span>
+                        <span
+                          className={`ml-2 h-1.5 w-1.5 shrink-0 rounded-full ${
+                            it.is_enabled ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.4)]" : "bg-white/10"
+                          }`}
+                        />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </aside>
 
-              {/* Right pane — detail */}
-              <section className="col-span-8 rounded-md border border-subtle bg-surface-1">
-                {active ? (
-                  <DetailPane
-                    active={active}
-                    endpoints={endpoints}
-                    runs={runs}
-                    running={running}
-                    detailLoading={detailLoading}
-                    onRun={triggerRun}
-                    t={t}
-                  />
-                ) : (
-                  <div className="px-5 py-8 text-center text-[11px] text-muted">
-                    {t("selectPrompt")}
-                  </div>
-                )}
-              </section>
-            </div>
-          )}
-        </div>
-      </div>
+            <section className="col-span-8 rounded-xl border border-default bg-surface-1 overflow-hidden shadow-sm">
+              {active ? (
+                <DetailPane
+                  active={active}
+                  endpoints={endpoints}
+                  runs={runs}
+                  running={running}
+                  detailLoading={detailLoading}
+                  onRun={triggerRun}
+                  t={t}
+                />
+              ) : (
+                <div className="px-5 py-20 text-center text-[11px] text-muted italic">
+                  {t("selectPrompt")}
+                </div>
+              )}
+            </section>
+          </div>
+        )}
     </div>
   );
 }
@@ -324,30 +309,29 @@ function DetailPane({
   t: ReturnType<typeof useTranslations>;
 }) {
   return (
-    <div>
-      {/* Title row */}
-      <header className="flex items-center justify-between border-b border-subtle px-5 py-3">
-        <div>
-          <h2 className="text-[13.5px] font-semibold text-primary">
+    <div className="divide-y divide-white/5">
+      <header className="flex items-center justify-between bg-surface-2/30 px-5 py-4">
+        <div className="space-y-0.5">
+          <h2 className="text-[14px] font-bold text-primary tracking-tight">
             {active.name}
           </h2>
-          <p className="mt-0.5 text-[10px] text-tertiary">
-            {active.vendor} · {t(`kind.${active.kind}`)} ·{" "}
+          <div className="flex items-center gap-2 text-[10px] font-medium text-tertiary uppercase tracking-wider">
+            <span>{active.vendor}</span>
+            <span className="text-white/10">•</span>
+            <span>{t(`kind.${active.kind}`)}</span>
+            <span className="text-white/10">•</span>
             {active.is_enabled ? (
-              <span className="text-emerald-300/85">{t("enabled")}</span>
+              <span className="text-emerald-400">{t("enabled")}</span>
             ) : (
-              <span className="text-warning/85">{t("disabled")}</span>
+              <span className="text-warning">{t("disabled")}</span>
             )}
-          </p>
+          </div>
         </div>
       </header>
 
-      {/* Run actions */}
-      <section className="border-b border-subtle px-5 py-3">
-        <div className="text-[9.5px] uppercase tracking-wider text-muted">
-          {t("runNow")}
-        </div>
-        <div className="mt-2 flex flex-wrap gap-1.5">
+      <section className="px-5 py-4 space-y-3">
+        <SectionLabel>{t("runNow")}</SectionLabel>
+        <div className="flex flex-wrap gap-2">
           {RUNNABLE_ENDPOINTS.map((ep) => {
             const isRunning = running === ep;
             const disabled = !active.is_enabled || running !== null;
@@ -357,106 +341,94 @@ function DetailPane({
                 type="button"
                 onClick={() => onRun(ep)}
                 disabled={disabled}
-                className="flex items-center gap-1 rounded border bg-accent-muted bg-blue-500/[0.08] px-2.5 py-1 text-[10.5px] text-accent/85 hover:border-blue-500/50 hover:bg-accent-hover/[0.14] disabled:cursor-not-allowed disabled:opacity-30"
+                className="flex items-center gap-2 rounded-lg border border-accent/20 bg-accent/5 px-3 py-1.5 text-[10.5px] font-semibold text-accent transition-all hover:bg-accent/10 disabled:opacity-30"
               >
                 {isRunning ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <Play className="h-3 w-3" />
+                  <Play className="h-3.5 w-3.5 fill-current" />
                 )}
                 {t(`endpoint.${ep}`)}
               </button>
             );
           })}
-          {!active.is_enabled && (
-            <span className="text-[9.5px] text-warning/70">
-              {t("enableToRun")}
-            </span>
-          )}
         </div>
       </section>
 
-      {/* Endpoints */}
-      <section className="border-b border-subtle px-5 py-3">
+      <section className="px-5 py-4 space-y-3">
         <div className="flex items-center justify-between">
-          <div className="text-[9.5px] uppercase tracking-wider text-muted">
-            {t("endpointsLabel")}
-          </div>
+          <SectionLabel>{t("endpointsLabel")}</SectionLabel>
           {detailLoading && (
-            <Loader2 className="h-3 w-3 animate-spin text-muted" />
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-muted" />
           )}
         </div>
         {endpoints.length === 0 ? (
-          <p className="mt-2 text-[10.5px] text-muted">{t("noEndpoints")}</p>
+          <p className="py-2 text-[10.5px] text-muted italic">{t("noEndpoints")}</p>
         ) : (
-          <ul className="mt-2 divide-y divide-white/[0.04] rounded border border-subtle">
-            {endpoints.map((ep) => (
-              <li
-                key={ep.id}
-                className="flex items-center gap-3 px-2.5 py-1.5 text-[10.5px]"
-              >
-                <span className="flex h-1.5 w-1.5 shrink-0 rounded-full bg-current">
-                  <span
-                    className={
-                      ep.is_enabled ? "text-success/85" : "text-muted"
-                    }
-                  />
-                </span>
-                <span className="flex-1 font-mono text-secondary">
-                  {ep.endpoint}
-                </span>
-                <span className="text-muted">
-                  {ep.auth_strategy ?? "—"}
-                </span>
-                <span className="font-mono text-[9.5px] text-muted">
-                  {ep.schedule_cron ?? t("noSchedule")}
-                </span>
-                <StatusBadge status={ep.last_status} t={t} />
-              </li>
-            ))}
-          </ul>
+          <div className="overflow-hidden rounded-lg border border-white/5 bg-black/10">
+            <ul className="divide-y divide-white/5">
+              {endpoints.map((ep) => (
+                <li
+                  key={ep.id}
+                  className="flex items-center gap-3 px-3 py-2 text-[10.5px]"
+                >
+                  <span className={`h-1.5 w-1.5 rounded-full ${ep.is_enabled ? "bg-emerald-400" : "bg-white/10"}`} />
+                  <span className="flex-1 font-mono font-medium text-secondary">
+                    {ep.endpoint}
+                  </span>
+                  <span className="text-muted text-[10px] font-medium px-2 py-0.5 rounded-md bg-white/5 border border-white/5">
+                    {ep.auth_strategy ?? "—"}
+                  </span>
+                  <span className="hidden md:inline font-mono text-[9.5px] text-muted">
+                    {ep.schedule_cron ?? t("noSchedule")}
+                  </span>
+                  <StatusBadge status={ep.last_status} t={t} />
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </section>
 
-      {/* Recent runs */}
-      <section className="px-5 py-3">
-        <div className="text-[9.5px] uppercase tracking-wider text-muted">
-          {t("runsLabel")}
-        </div>
+      <section className="px-5 py-4 space-y-3">
+        <SectionLabel>{t("runsLabel")}</SectionLabel>
         {runs.length === 0 ? (
-          <p className="mt-2 text-[10.5px] text-muted">{t("noRuns")}</p>
+          <p className="py-2 text-[10.5px] text-muted italic">{t("noRuns")}</p>
         ) : (
-          <ul className="mt-2 divide-y divide-white/[0.04] rounded border border-subtle">
-            {runs.map((r) => (
-              <li
-                key={r.id}
-                className="grid grid-cols-12 items-center gap-2 px-2.5 py-1.5 text-[10.5px]"
-              >
-                <span className="col-span-3 font-mono text-secondary">
-                  {fmtDateTime(r.started_at)}
-                </span>
-                <span className="col-span-3 truncate font-mono text-tertiary">
-                  {r.endpoint}
-                </span>
-                <span className="col-span-1 text-[9.5px] text-muted">
-                  {r.direction === "outbound" ? "↑" : "↓"}
-                </span>
-                <span className="col-span-2 font-mono tabular-nums text-emerald-300/75">
-                  {r.items_ok}
-                  <span className="text-muted"> / </span>
-                  <span className="text-error/75">{r.items_failed}</span>
-                </span>
-                <span className="col-span-3 flex justify-end">
-                  <RunStatusBadge status={r.status} t={t} />
-                </span>
-                {r.error_summary && (
-                  <span className="col-span-12 truncate pl-0 pt-0.5 font-mono text-[9.5px] text-error/70">
-                    {r.error_summary}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
+          <div className="overflow-hidden rounded-lg border border-white/5">
+            <ul className="divide-y divide-white/5">
+              {runs.map((r) => (
+                <li
+                  key={r.id}
+                  className="group flex flex-col gap-1.5 px-3 py-2.5 transition-colors hover:bg-white/[0.02]"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="font-mono text-[10px] font-semibold text-secondary tabular-nums">
+                        {fmtDateTime(r.started_at)}
+                      </span>
+                      <span className="truncate font-mono text-[10px] text-tertiary">
+                        {r.endpoint}
+                      </span>
+                    </div>
+                    <RunStatusBadge status={r.status} t={t} />
+                  </div>
+                  <div className="flex items-center gap-3 text-[9px] font-bold uppercase tracking-widest">
+                    <span className="text-muted">{r.direction === "outbound" ? "Export" : "Import"}</span>
+                    <span className="text-white/5">•</span>
+                    <span className="text-emerald-400/80">OK {r.items_ok}</span>
+                    <span className="text-white/5">•</span>
+                    <span className="text-rose-400/80">ERR {r.items_failed}</span>
+                  </div>
+                  {r.error_summary && (
+                    <div className="mt-0.5 rounded-md bg-rose-500/10 border border-rose-500/20 px-2.5 py-1.5 font-mono text-[9px] text-rose-300/90 leading-normal break-all">
+                      {r.error_summary}
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </section>
     </div>
@@ -472,21 +444,15 @@ function StatusBadge({
   status: string | null;
   t: ReturnType<typeof useTranslations>;
 }) {
-  if (!status) {
-    return <span className="text-[9.5px] text-muted">—</span>;
-  }
-  const tone =
-    status === "succeeded"
-      ? "border-emerald-500/25 bg-emerald-500/[0.07] text-success/85"
-      : status === "failed"
-        ? "border-red-500/25 bg-red-500/[0.07] text-red-200/85"
-        : status === "partial"
-          ? "border-amber-500/25 bg-amber-500/[0.07] text-warning/85"
-          : "border-default bg-surface-1 text-tertiary";
+  if (!status) return <span className="text-[9.5px] text-muted">—</span>;
+  const colors = {
+    succeeded: "border-emerald-500/20 bg-emerald-500/10 text-emerald-400",
+    failed: "border-rose-500/20 bg-rose-500/10 text-rose-400",
+    partial: "border-amber-500/20 bg-amber-500/10 text-amber-400",
+  };
+  const tone = colors[status as keyof typeof colors] || "border-white/5 bg-white/5 text-muted";
   return (
-    <span
-      className={`inline-block rounded-full border px-1.5 py-0 text-[9px] uppercase tracking-wider ${tone}`}
-    >
+    <span className={`inline-block rounded-md border px-1.5 py-0.5 text-[8.5px] font-bold uppercase tracking-widest ${tone}`}>
       {t(`status.${status}`)}
     </span>
   );
@@ -499,33 +465,22 @@ function RunStatusBadge({
   status: SyncStatus;
   t: ReturnType<typeof useTranslations>;
 }) {
-  const Icon =
-    status === "succeeded"
-      ? CheckCircle2
-      : status === "failed"
-        ? XCircle
-        : status === "partial"
-          ? AlertTriangle
-          : CircleDashed;
-  const tone =
-    status === "succeeded"
-      ? "text-emerald-300/85"
-      : status === "failed"
-        ? "text-error/85"
-        : status === "partial"
-          ? "text-warning/85"
-          : "text-tertiary";
+  const Icon = status === "succeeded" ? CheckCircle2 : status === "failed" ? XCircle : status === "partial" ? AlertTriangle : CircleDashed;
+  const colors = {
+    succeeded: "text-emerald-400",
+    failed: "text-rose-400",
+    partial: "text-amber-400",
+    pending: "text-muted animate-pulse",
+    running: "text-accent animate-spin-slow",
+  };
   return (
-    <span className={`flex items-center gap-1 ${tone}`}>
+    <span className={`flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest ${colors[status]}`}>
       <Icon className="h-3 w-3" />
-      <span className="text-[9.5px] uppercase tracking-wider">
-        {t(`status.${status}`)}
-      </span>
+      {t(`status.${status}`)}
     </span>
   );
 }
 
 function fmtDateTime(iso: string): string {
-  // YYYY-MM-DD HH:MM
   return iso.replace("T", " ").slice(0, 16);
 }

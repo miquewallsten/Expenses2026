@@ -153,17 +153,6 @@ export default function AdminModule() {
     );
   }
 
-  // AI-guided onboarding takes over when the company hasn't completed setup yet.
-  if (showOnboarding && data) {
-    return (
-      <AdminOnboardingCopilot
-        companyId={companyId}
-        onComplete={() => setShowOnboarding(false)}
-        onSkip={() => setShowOnboarding(false)}
-      />
-    );
-  }
-
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center bg-surface-0" data-testid="admin-module">
@@ -200,20 +189,9 @@ export default function AdminModule() {
   }
 
   return (
-    <main className="min-h-0 h-full flex-1 overflow-y-auto bg-surface-0" data-testid="admin-module">
-        {activeSection === "overview" && (
-          <div className="p-6">
-            <header className="mb-6">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-accent/20 to-accent/5 border border-accent/20">
-                  <LayoutGrid className="h-5 w-5 text-accent" />
-                </div>
-                <div>
-                  <h1 className="text-base font-semibold text-primary">Admin Overview</h1>
-                  <p className="text-xs text-tertiary">Monitor and manage your organization's configuration</p>
-                </div>
-              </div>
-            </header>
+    <main className="min-h-0 h-full flex-1 overflow-y-auto bg-surface-0 pb-20 scroll-smooth" data-testid="admin-module">
+        <div className="mx-auto max-w-5xl px-8 py-8 space-y-10">
+          {activeSection === "overview" && (
             <AdminOverviewPanel
               portalConfig={data.portalConfig}
               companySetup={data.companySetup}
@@ -232,86 +210,77 @@ export default function AdminModule() {
                 setActiveSection(map[section] || "overview");
               }}
             />
-          </div>
-        )}
-        {activeSection === "onboarding" && (
-          <div className="h-full">
-            <OnboardingWizard />
-          </div>
-        )}
-        {activeSection === "company-setup" && (
-          <AdminCompanySetupStudio
-            companyId={companyId}
-            setup={data.companySetup}
-            legalEntities={data.companySetup?.legal_entities ?? []}
-            onSaved={refreshCompanySetup}
-            onLegalEntitiesChanged={(entities) =>
-              setData((prev) =>
-                prev
-                  ? {
-                      ...prev,
-                      companySetup: { ...prev.companySetup, legal_entities: entities },
-                    }
-                  : prev
-              )
-            }
-          />
-        )}
-        {activeSection === "expense-policy" && (
-          <AdminPoliciesPanel
-            companyId={companyId}
-            expensePolicy={data.expensePolicy}
-            onExpensePolicySaved={refreshExpensePolicy}
-          />
-        )}
-        {activeSection === "approval-workflow" && (
-          <AdminWorkflowMapPanel
-            companyId={companyId}
-            workflowSetup={data.workflowSetup}
-            companySetup={data.companySetup}
-            expensePolicy={data.expensePolicy}
-            accountingSetup={data.accountingSetup}
-            onWorkflowSaved={refreshWorkflowSetup}
-          />
-        )}
-        {activeSection === "users-roles" && (
-          <AdminUsersPanel
-            companyId={companyId}
-            users={data.users}
-            onUsersChanged={refreshUsers}
-            companySetup={data.companySetup}
-          />
-        )}
-        {activeSection === "accounting-setup" && (
-          <AdminAccountingSetupStudio
-            companyId={companyId}
-            setup={data.accountingSetup}
-            companySetup={data.companySetup}
-            expensePolicy={data.expensePolicy}
-            onSaved={refreshAccountingSetup}
-          />
-        )}
-        {activeSection === "integrations" && <IntegrationsSection />}
-        {activeSection === "platform-api" && <PlatformApiSection />}
-        {activeSection === "export" && <ExportSection />}
-        {activeSection === "audit-log" && <AuditLogSection />}
-        {activeSection === "cfdi-watcher" && <CfdiWatcherSection />}
-        {activeSection === "notifications" && (
-          <div className="p-6">
-            <header className="mb-6">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-accent-muted to-accent/20 border border-accent/30">
-                  <Bell className="h-5 w-5 text-accent" />
-                </div>
-                <div>
-                  <h1 className="text-base font-semibold text-primary">Notifications</h1>
-                  <p className="text-xs text-tertiary">Send announcements and manage notifications</p>
-                </div>
-              </div>
-            </header>
-            <AnnouncementPanel />
-          </div>
-        )}
+          )}
+
+          {activeSection === "company-setup" && (
+            <AdminCompanySetupStudio
+              companyId={companyId}
+              setup={data.companySetup}
+              legalEntities={data.companySetup?.legal_entities ?? []}
+              onSaved={refreshCompanySetup}
+              onLegalEntitiesChanged={(entities) =>
+                setData((prev) =>
+                  prev
+                    ? {
+                        ...prev,
+                        companySetup: { ...prev.companySetup, legal_entities: entities },
+                      }
+                    : prev
+                )
+              }
+            />
+          )}
+
+          {activeSection === "expense-policy" && (
+            <AdminPoliciesPanel
+              companyId={companyId}
+              expensePolicy={data.expensePolicy}
+              onExpensePolicySaved={refreshExpensePolicy}
+            />
+          )}
+
+          {activeSection === "approval-workflow" && (
+            <AdminWorkflowMapPanel
+              companyId={companyId}
+              workflowSetup={data.workflowSetup}
+              companySetup={data.companySetup}
+              expensePolicy={data.expensePolicy}
+              accountingSetup={data.accountingSetup}
+              onWorkflowSaved={refreshWorkflowSetup}
+            />
+          )}
+
+          {activeSection === "users-roles" && (
+            <AdminUsersPanel
+              companyId={companyId}
+              users={data.users}
+              onUsersChanged={refreshUsers}
+              companySetup={data.companySetup}
+            />
+          )}
+
+          {activeSection === "accounting-setup" && (
+            <AdminAccountingSetupStudio
+              companyId={companyId}
+              setup={data.accountingSetup}
+              companySetup={data.companySetup}
+              expensePolicy={data.expensePolicy}
+              onSaved={refreshAccountingSetup}
+            />
+          )}
+
+          {activeSection === "integrations" && <IntegrationsSection />}
+          {activeSection === "platform-api" && <PlatformApiSection />}
+          {activeSection === "export" && <ExportSection />}
+          {activeSection === "audit-log" && <AuditLogSection />}
+          {activeSection === "cfdi-watcher" && <CfdiWatcherSection />}
+          
+          {activeSection === "notifications" && (
+            <div className="space-y-6">
+              <AnnouncementPanel />
+            </div>
+          )}
+        </div>
       </main>
   );
 }
