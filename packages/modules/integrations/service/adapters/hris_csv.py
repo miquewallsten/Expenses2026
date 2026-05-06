@@ -25,7 +25,7 @@ from packages.modules.integrations.models import Integration
 from packages.modules.integrations.service.adapters.protocol import AdapterResult
 
 
-_ALLOWED_ROLES = {"admin", "manager", "accountant", "employee", "finance_manager"}
+_ALLOWED_ROLES = {"admin", "manager", "accounting", "employee", "finance_manager"}
 
 
 def _normalize_row(row: dict[str, str]) -> dict[str, str]:

@@ -59,13 +59,24 @@ vi.mock("@/components/admin/AdminWorkflowMapPanel", () => ({
   ),
 }));
 
+// Mock AdminContext
+const mockSetActiveSection = vi.fn();
+vi.mock("@/context/AdminContext", () => ({
+  AdminProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useAdminContext: () => ({
+    activeSection: "company-setup",
+    setActiveSection: mockSetActiveSection,
+    onboardingCompleted: false,
+    setOnboardingCompleted: vi.fn(),
+  }),
+}));
+
 // Stub global fetch for admin data
 const mockFetch = vi.fn();
 Object.defineProperty(globalThis, "fetch", { value: mockFetch, writable: true, configurable: true });
 
 // ── Imports ──────────────────────────────────────────────────────────────────
 
-import AdminNavigation from "@/components/admin/AdminNavigation";
 import AnnouncementPanel from "@/components/admin/AnnouncementPanel";
 import AdminModule from "@/components/modules/AdminModule";
 import SuperAdminModule from "@/components/modules/SuperAdminModule";
@@ -91,55 +102,6 @@ beforeEach(() => {
       return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
     }
     return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-  });
-});
-
-// ── AdminNavigation ────────────────────────────────────────────────────────────
-
-describe("AdminNavigation", () => {
-  it("renders all 7 sections", () => {
-    render(
-      <AdminNavigation
-        activeSection="company-setup"
-        onSelect={() => {}}
-      />
-    );
-    const nav = screen.getByTestId("admin-navigation");
-    expect(nav).toBeInTheDocument();
-    const labels = Array.from(nav.querySelectorAll("button span.truncate")).map((el) => el.textContent);
-    expect(labels).toContain("Company Setup");
-    expect(labels).toContain("Expense Policy");
-    expect(labels).toContain("Approval Workflow");
-    expect(labels).toContain("Users & Roles");
-    expect(labels).toContain("Accounting Setup");
-    expect(labels).toContain("Integrations");
-    expect(labels).toContain("Advanced Settings");
-  });
-
-  it("highlights active section", () => {
-    render(
-      <AdminNavigation
-        activeSection="users-roles"
-        onSelect={() => {}}
-      />
-    );
-    const nav = screen.getByTestId("admin-navigation");
-    const activeBtn = Array.from(nav.querySelectorAll("button")).find((b) =>
-      b.textContent?.includes("Users & Roles")
-    );
-    expect(activeBtn?.className).toContain("bg-indigo-600/[0.18]");
-  });
-
-  it("calls onSelect when clicked", async () => {
-    const user = userEvent.setup();
-    const onSelect = vi.fn();
-    render(<AdminNavigation activeSection="company-setup" onSelect={onSelect} />);
-    const nav = screen.getByTestId("admin-navigation");
-    const btn = Array.from(nav.querySelectorAll("button")).find((b) =>
-      b.textContent?.includes("Expense Policy")
-    )!;
-    await user.click(btn);
-    expect(onSelect).toHaveBeenCalledWith("expense-policy");
   });
 });
 

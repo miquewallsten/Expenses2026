@@ -133,9 +133,9 @@ def _validate(
     category: AccountingCategory | None,
 ) -> None:
     """Raise ValueError for any condition that must block event generation."""
-    if expense.status != "submitted":
+    if expense.status != "approved":
         raise ValueError(
-            f"Accounting event can only be generated for a submitted expense "
+            f"Accounting event can only be generated for an approved expense "
             f"(current status: '{expense.status}')."
         )
 
@@ -174,7 +174,7 @@ def generate_accounting_event(db: Session, expense_id: int) -> dict:
     -----
     1. Load expense, allocations, accounting setup, and category config.
     2. Validate minimal requirements:
-       - expense.status == "submitted"
+       - expense.status == "approved"
        - account_code present on expense OR active category has expense_account_code
     3. Resolve accounts:
        - expense (debit) account: explicit account_code > category.expense_account_code

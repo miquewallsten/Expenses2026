@@ -550,7 +550,7 @@ REGISTRY.register(ToolSpec(
 
 # ── list_users ──────────────────────────────────────────────────────────────
 
-VALID_ROLES = ("employee", "manager", "accountant", "admin", "executive", "secretary")
+VALID_ROLES = ("employee", "manager", "accounting", "admin", "executive", "secretary")
 
 VALID_CAPABILITIES = (
     "can_create_expenses",
@@ -739,7 +739,7 @@ ROLE_PRESETS = {
         "can_access_accounting": False,
         "can_view_analytics": False,
     },
-    "accountant": {
+    "accounting": {
         "can_create_expenses": False,
         "can_create_corporate_expenses": False,
         "can_invoice_corporation": False,
@@ -794,13 +794,13 @@ def compute_module_visibility(role: str, capabilities: dict, company_modules: di
 
     # Accounting Review: requires accounting role OR can_access_accounting
     visibility["accounting_review"] = (
-        role == "accountant" or
+        role == "accounting" or
         capabilities.get("can_access_accounting", False)
     ) and company_modules.get("accounting_module_enabled", True)
 
     # Finance Analytics: requires accounting/executive role OR can_view_analytics
     visibility["finance_analytics"] = (
-        role in ("accountant", "executive") or
+        role in ("accounting", "executive") or
         capabilities.get("can_view_analytics", False)
     )
 
@@ -1075,10 +1075,10 @@ def _handle_audit_permissions(ctx: AgentContext, args: AuditPermissionsArgs) -> 
     # Check 1: Role capability mismatch
     if args.check_type in ("role_capability_mismatch", "all"):
         for u in users:
-            # Accountants without accounting access
-            if u.role == "accountant" and not u.can_access_accounting:
+            # Accounting users without accounting access
+            if u.role == "accounting" and not u.can_access_accounting:
                 findings.append({
-                    "type": "accountant_without_accounting_access",
+                    "type": "accounting_without_accounting_access",
                     "user_id": u.id,
                     "email": u.email,
                     "role": u.role,

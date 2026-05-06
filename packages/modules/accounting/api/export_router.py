@@ -83,15 +83,15 @@ def export_accounting_events(
     company_id: int,
     db: Session = Depends(get_db),
 ):
-    """Generate accounting events for all submitted expenses of *company_id*
+    """Generate accounting events for all approved expenses of *company_id*
     and return the export payload with rendered filename/folder.
     """
-    # ── Load submitted expenses ───────────────────────────────────────────────
+    # ── Load approved expenses ───────────────────────────────────────────────
     expenses: list[Expense] = (
         db.query(Expense)
         .filter(
             Expense.company_id == company_id,
-            Expense.status == "submitted",
+            Expense.status == "approved",
         )
         .order_by(Expense.id)
         .all()
@@ -100,7 +100,7 @@ def export_accounting_events(
     if not expenses:
         raise HTTPException(
             status_code=404,
-            detail=f"No submitted expenses found for company {company_id}.",
+            detail=f"No approved expenses found for company {company_id}.",
         )
 
     # ── Generate events ───────────────────────────────────────────────────────

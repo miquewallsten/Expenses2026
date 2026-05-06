@@ -82,7 +82,7 @@ def get_current_user(
 
 
 def require_manager_or_accountant(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role not in ["manager", "accountant", "admin"]:
+    if current_user.role not in ["manager", "accounting", "admin"]:
         raise HTTPException(status_code=403, detail="Insufficient permissions")
     return current_user
 

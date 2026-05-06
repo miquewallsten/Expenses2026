@@ -13,7 +13,7 @@ and process-local; admins editing roles in the future can reset it via
 Role keys for the implicit, code-defined "built-in" roles match the values
 already written to ``users.role``:
 
-    admin, manager, accountant, employee, disabled
+    admin, manager, accounting, employee, executive, secretary
 
 Custom roles can still be created via the existing /admin/roles/* endpoints
 and will resolve through the same path as long as they have at least one
@@ -133,7 +133,7 @@ _BUILTIN_ROLE_DEFAULTS: dict[str, set[str]] = {
         "agent:chat:employee",
         "analytics:view",
     },
-    "accountant": {
+    "accounting": {
         "expense:read:any",
         "expense:approve:accounting",
         "expense:reject",

@@ -108,7 +108,7 @@ class NotificationService:
         role_map: dict[str, list[str]] = {
             "employees": ["employee"],
             "managers": ["manager"],
-            "accounting": ["accountant"],
+            "accounting": ["accounting"],
         }
         for target in target_roles:
             if target == user_role:
