@@ -229,75 +229,76 @@ export default function IntegrationsSection() {
             </div>
           )}
 
-        {!integrations || integrations.length === 0 ? (
-          <div className="mt-8 rounded-md border border-dashed border-default bg-surface-1 px-6 py-10 text-center">
-            <p className="text-[12px] text-tertiary">{t("emptyTitle")}</p>
-            <p className="mt-1 text-[10.5px] text-muted">{t("emptyBody")}</p>
-          </div>
-        ) : (
-          <div className="mt-5 grid grid-cols-12 gap-4">
-            {/* Left rail — integrations list */}
-            <aside className="col-span-4">
-              <div className="text-[9.5px] uppercase tracking-wider text-muted">
-                {t("listLabel")}
-              </div>
-              <ul className="mt-2 space-y-1">
-                {integrations.map((it) => {
-                  const isActive = it.id === activeId;
-                  return (
-                    <li key={it.id}>
-                      <button
-                        type="button"
-                        onClick={() => setActiveId(it.id)}
-                        className={`flex w-full items-center justify-between rounded border px-2.5 py-1.5 text-left text-[10.5px] transition-colors ${
-                          isActive
-                            ? "border-blue-500/50 bg-blue-500/[0.08] text-primary"
-                            : "border-subtle bg-surface-1 text-tertiary hover:border-default hover:text-primary"
-                        }`}
-                      >
-                        <span className="flex min-w-0 flex-1 flex-col">
-                          <span className="truncate font-medium">
-                            {it.name}
-                          </span>
-                          <span className="truncate text-[9.5px] text-muted">
-                            {it.vendor} · {t(`kind.${it.kind}`)}
-                          </span>
-                        </span>
-                        <span
-                          className={`ml-2 inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
-                            it.is_enabled ? "bg-emerald-400/85" : "bg-surface-3"
-                          }`}
-                          aria-label={
-                            it.is_enabled ? t("enabled") : t("disabled")
-                          }
-                        />
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </aside>
-
-            {/* Right pane — detail */}
-            <section className="col-span-8 rounded-md border border-subtle bg-surface-1">
-              {active ? (
-                <DetailPane
-                  active={active}
-                  endpoints={endpoints}
-                  runs={runs}
-                  running={running}
-                  detailLoading={detailLoading}
-                  onRun={triggerRun}
-                  t={t}
-                />
-              ) : (
-                <div className="px-5 py-8 text-center text-[11px] text-muted">
-                  {t("selectPrompt")}
+          {!integrations || integrations.length === 0 ? (
+            <div className="mt-8 rounded-md border border-dashed border-default bg-surface-1 px-6 py-10 text-center">
+              <p className="text-[12px] text-tertiary">{t("emptyTitle")}</p>
+              <p className="mt-1 text-[10.5px] text-muted">{t("emptyBody")}</p>
+            </div>
+          ) : (
+            <div className="mt-5 grid grid-cols-12 gap-4">
+              {/* Left rail — integrations list */}
+              <aside className="col-span-4">
+                <div className="text-[9.5px] uppercase tracking-wider text-muted">
+                  {t("listLabel")}
                 </div>
-              )}
-            </section>
-          </div>
-        )}
+                <ul className="mt-2 space-y-1">
+                  {integrations.map((it) => {
+                    const isActive = it.id === activeId;
+                    return (
+                      <li key={it.id}>
+                        <button
+                          type="button"
+                          onClick={() => setActiveId(it.id)}
+                          className={`flex w-full items-center justify-between rounded border px-2.5 py-1.5 text-left text-[10.5px] transition-colors ${
+                            isActive
+                              ? "border-blue-500/50 bg-blue-500/[0.08] text-primary"
+                              : "border-subtle bg-surface-1 text-tertiary hover:border-default hover:text-primary"
+                          }`}
+                        >
+                          <span className="flex min-w-0 flex-1 flex-col">
+                            <span className="truncate font-medium">
+                              {it.name}
+                            </span>
+                            <span className="truncate text-[9.5px] text-muted">
+                              {it.vendor} · {t(`kind.${it.kind}`)}
+                            </span>
+                          </span>
+                          <span
+                            className={`ml-2 inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
+                              it.is_enabled ? "bg-emerald-400/85" : "bg-surface-3"
+                            }`}
+                            aria-label={
+                              it.is_enabled ? t("enabled") : t("disabled")
+                            }
+                          />
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </aside>
+
+              {/* Right pane — detail */}
+              <section className="col-span-8 rounded-md border border-subtle bg-surface-1">
+                {active ? (
+                  <DetailPane
+                    active={active}
+                    endpoints={endpoints}
+                    runs={runs}
+                    running={running}
+                    detailLoading={detailLoading}
+                    onRun={triggerRun}
+                    t={t}
+                  />
+                ) : (
+                  <div className="px-5 py-8 text-center text-[11px] text-muted">
+                    {t("selectPrompt")}
+                  </div>
+                )}
+              </section>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

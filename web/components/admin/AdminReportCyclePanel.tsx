@@ -11,7 +11,7 @@ import {
 } from "@/components/admin/shared/AdminPatterns";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Zap, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Zap, Loader2, CheckCircle2, AlertTriangle, Save } from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 

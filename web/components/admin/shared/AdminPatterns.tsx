@@ -294,5 +294,3 @@ export const inputClasses = {
   textarea: "rounded-lg border border-white/10 bg-surface-1 px-3 py-2 text-[11px] text-primary outline-none placeholder:text-muted focus:border-accent/40 focus:bg-surface-2 transition-all resize-none hover:border-white/20",
   mono: "rounded-lg border border-white/10 bg-surface-1 px-3 py-2 font-mono text-[10px] text-secondary outline-none placeholder:text-muted focus:border-accent/40 focus:bg-surface-2 transition-all hover:border-white/20",
 };
-  mono: "rounded border border-default bg-surface-1 px-2 py-1.5 font-mono text-[10px] text-tertiary outline-none placeholder:text-muted focus:bg-accent-muted",
-};

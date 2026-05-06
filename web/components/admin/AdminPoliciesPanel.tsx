@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   AlertTriangle, CheckCircle2, Loader2, Plus, Power, RefreshCw,
-  Save, Settings, Sparkles, Trash2, X, AlertCircle, ChevronRight,
+  Save, Settings, Sparkles, Trash2, X, AlertCircle, ChevronRight, FileText,
 } from "lucide-react";
 import {
   PremiumHeader,

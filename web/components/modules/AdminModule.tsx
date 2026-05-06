@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useUserContext } from "@/context/UserContext";
-import { useAdminContext } from "@/context/AdminContext";
+import { useAdminContext, type AdminSection } from "@/context/AdminContext";
 import { apiCall } from "@/lib/api/client";
 import AnnouncementPanel from "@/components/admin/AnnouncementPanel";
 import AdminCompanySetupStudio from "@/components/admin/AdminCompanySetupStudio";

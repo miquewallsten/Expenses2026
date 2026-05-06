@@ -3,6 +3,8 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from apps.api.deps import get_db
+from apps.api.auth import get_current_user, require_admin, require_same_company
+from packages.core.platform.models_user import User
 from packages.core.platform.module_gate import require_module
 from packages.modules.requests.schemas import (
     AddUrlAttachment,

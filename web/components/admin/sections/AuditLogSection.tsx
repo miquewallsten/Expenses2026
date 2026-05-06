@@ -236,130 +236,131 @@ export default function AuditLogSection() {
             </div>
           )}
 
-        {/* Filter pills */}
-        <div className="mb-3 flex flex-wrap items-center gap-1">
-          <span className="mr-1 text-[9.5px] uppercase tracking-wide text-muted">
-            {t("filter")}
-          </span>
-          <button
-            type="button"
-            onClick={() => onPickFilter(null)}
-            className={`rounded border px-2 py-0.5 text-[10px] transition ${
-              filter === null
-                ? "border-strong bg-surface-2 text-primary"
-                : "border-subtle bg-surface-1 text-tertiary hover:border-strong hover:text-secondary"
-            }`}
-          >
-            {t("all")}
-          </button>
-          {actions.map((a) => (
+          {/* Filter pills */}
+          <div className="mb-3 flex flex-wrap items-center gap-1">
+            <span className="mr-1 text-[9.5px] uppercase tracking-wide text-muted">
+              {t("filter")}
+            </span>
             <button
-              key={a}
               type="button"
-              onClick={() => onPickFilter(a)}
-              className={`rounded border px-2 py-0.5 font-mono text-[10px] transition ${
-                filter === a
-                  ? "border-slate-400/50 bg-slate-500/[0.18] text-slate-100"
+              onClick={() => onPickFilter(null)}
+              className={`rounded border px-2 py-0.5 text-[10px] transition ${
+                filter === null
+                  ? "border-strong bg-surface-2 text-primary"
                   : "border-subtle bg-surface-1 text-tertiary hover:border-strong hover:text-secondary"
               }`}
             >
-              {a}
+              {t("all")}
             </button>
-          ))}
-        </div>
+            {actions.map((a) => (
+              <button
+                key={a}
+                type="button"
+                onClick={() => onPickFilter(a)}
+                className={`rounded border px-2 py-0.5 font-mono text-[10px] transition ${
+                  filter === a
+                    ? "border-slate-400/50 bg-slate-500/[0.18] text-slate-100"
+                    : "border-subtle bg-surface-1 text-tertiary hover:border-strong hover:text-secondary"
+                }`}
+              >
+                {a}
+              </button>
+            ))}
+          </div>
 
-        {/* Table */}
-        {loading ? (
-          <div className="flex items-center gap-2 py-6 text-[11px] text-muted">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("loading")}
-          </div>
-        ) : rows.length === 0 ? (
-          <div className="rounded border border-default bg-surface-1 py-10 text-center text-[11px] text-muted">
-            {t("empty")}
-          </div>
-        ) : (
-          <div className="overflow-hidden rounded border border-default">
-            <table className="w-full text-[10.5px]">
-              <thead>
-                <tr className="border-b border-default bg-surface-1 text-left text-[9.5px] uppercase tracking-wide text-muted">
-                  <th className="w-7 px-1 py-1.5" />
-                  <th className="px-2 py-1.5 font-medium">{t("th.when")}</th>
-                  <th className="px-2 py-1.5 font-medium">{t("th.action")}</th>
-                  <th className="px-2 py-1.5 font-medium">{t("th.entity")}</th>
-                  <th className="px-2 py-1.5 font-medium">{t("th.actor")}</th>
-                  <th className="px-2 py-1.5 font-medium">{t("th.detail")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => {
-                  const isOpen = expanded === r.id;
-                  return (
-                    <Fragment key={r.id}>
-                      <tr
-                        onClick={() => setExpanded(isOpen ? null : r.id)}
-                        className="cursor-pointer border-b border-subtle last:border-b-0 hover:bg-surface-1"
-                      >
-                        <td className="px-1 py-1.5 align-top text-muted">
-                          {isOpen ? (
-                            <ChevronDown className="h-3 w-3" />
-                          ) : (
-                            <ChevronRight className="h-3 w-3" />
-                          )}
-                        </td>
-                        <td className="px-2 py-1.5 align-top text-tertiary tabular-nums">
-                          {r.created_at ? new Date(r.created_at).toLocaleString() : "—"}
-                        </td>
-                        <td className="px-2 py-1.5 align-top">
-                          <span className={`rounded px-1.5 py-0.5 font-mono text-[9.5px] ${actionTone(r.action)}`}>
-                            {r.action}
-                          </span>
-                        </td>
-                        <td className="px-2 py-1.5 align-top font-mono text-secondary">
-                          {r.entity_type}#{r.entity_id}
-                        </td>
-                        <td className="px-2 py-1.5 align-top text-tertiary">
-                          {r.actor_user_id ? `user#${r.actor_user_id}` : t("system")}
-                        </td>
-                        <td className="px-2 py-1.5 align-top text-tertiary">
-                          {!isOpen && (
-                            <span className="line-clamp-1 break-all font-mono text-[10px]">
-                              {r.detail_text || "—"}
+          {/* Table */}
+          {loading ? (
+            <div className="flex items-center gap-2 py-6 text-[11px] text-muted">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("loading")}
+            </div>
+          ) : rows.length === 0 ? (
+            <div className="rounded border border-default bg-surface-1 py-10 text-center text-[11px] text-muted">
+              {t("empty")}
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded border border-default">
+              <table className="w-full text-[10.5px]">
+                <thead>
+                  <tr className="border-b border-default bg-surface-1 text-left text-[9.5px] uppercase tracking-wide text-muted">
+                    <th className="w-7 px-1 py-1.5" />
+                    <th className="px-2 py-1.5 font-medium">{t("th.when")}</th>
+                    <th className="px-2 py-1.5 font-medium">{t("th.action")}</th>
+                    <th className="px-2 py-1.5 font-medium">{t("th.entity")}</th>
+                    <th className="px-2 py-1.5 font-medium">{t("th.actor")}</th>
+                    <th className="px-2 py-1.5 font-medium">{t("th.detail")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => {
+                    const isOpen = expanded === r.id;
+                    return (
+                      <Fragment key={r.id}>
+                        <tr
+                          onClick={() => setExpanded(isOpen ? null : r.id)}
+                          className="cursor-pointer border-b border-subtle last:border-b-0 hover:bg-surface-1"
+                        >
+                          <td className="px-1 py-1.5 align-top text-muted">
+                            {isOpen ? (
+                              <ChevronDown className="h-3 w-3" />
+                            ) : (
+                              <ChevronRight className="h-3 w-3" />
+                            )}
+                          </td>
+                          <td className="px-2 py-1.5 align-top text-tertiary tabular-nums">
+                            {r.created_at ? new Date(r.created_at).toLocaleString() : "—"}
+                          </td>
+                          <td className="px-2 py-1.5 align-top">
+                            <span className={`rounded px-1.5 py-0.5 font-mono text-[9.5px] ${actionTone(r.action)}`}>
+                              {r.action}
                             </span>
-                          )}
-                        </td>
-                      </tr>
-                      {isOpen && (
-                        <tr key={`${r.id}-detail`} className="border-b border-subtle bg-surface-1">
-                          <td className="px-2 py-2" colSpan={6}>
-                            <div className="rounded border border-subtle bg-surface-0/60 p-2">
-                              {renderDetail(r)}
-                            </div>
+                          </td>
+                          <td className="px-2 py-1.5 align-top font-mono text-secondary">
+                            {r.entity_type}#{r.entity_id}
+                          </td>
+                          <td className="px-2 py-1.5 align-top text-tertiary">
+                            {r.actor_user_id ? `user#${r.actor_user_id}` : t("system")}
+                          </td>
+                          <td className="px-2 py-1.5 align-top text-tertiary">
+                            {!isOpen && (
+                              <span className="line-clamp-1 break-all font-mono text-[10px]">
+                                {r.detail_text || "—"}
+                              </span>
+                            )}
                           </td>
                         </tr>
-                      )}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                        {isOpen && (
+                          <tr key={`${r.id}-detail`} className="border-b border-subtle bg-surface-1">
+                            <td className="px-2 py-2" colSpan={6}>
+                              <div className="rounded border border-subtle bg-surface-0/60 p-2">
+                                {renderDetail(r)}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-        {hasMore && (
-          <div className="mt-3 flex justify-center">
-            <button
-              type="button"
-              onClick={() =>
-                companyId && void loadPage(companyId, { append: true, cursor, filter })
-              }
-              disabled={moreLoading}
-              className="flex items-center gap-1 rounded border border-subtle bg-surface-2 px-3 py-1 text-[10.5px] text-secondary transition hover:border-strong hover:text-primary disabled:opacity-40"
-            >
-              {moreLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-              {t("loadMore")}
-            </button>
-          </div>
-        )}
+          {hasMore && (
+            <div className="mt-3 flex justify-center">
+              <button
+                type="button"
+                onClick={() =>
+                  companyId && void loadPage(companyId, { append: true, cursor, filter })
+                }
+                disabled={moreLoading}
+                className="flex items-center gap-1 rounded border border-subtle bg-surface-2 px-3 py-1 text-[10.5px] text-secondary transition hover:border-strong hover:text-primary disabled:opacity-40"
+              >
+                {moreLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                {t("loadMore")}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </main>
   );

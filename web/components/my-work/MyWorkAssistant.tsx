@@ -24,7 +24,7 @@ interface Message {
 }
 
 interface Insight {
-  id: int;
+  id: number;
   kind: string;
   severity: "info" | "warn" | "critical";
   title: string;

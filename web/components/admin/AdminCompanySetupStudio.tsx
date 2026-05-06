@@ -789,26 +789,3 @@ export default function AdminCompanySetupStudio({
     </div>
   );
 }
-
-        {addingEntity && !editingEntity && (
-          <LegalEntityForm
-            companyId={companyId}
-            onSaved={handleEntitySaved}
-            onCancel={() => setAddingEntity(false)}
-          />
-        )}
-
-        {!addingEntity && !editingEntity && (
-          <button
-            type="button"
-            onClick={() => setAddingEntity(true)}
-            className="flex items-center gap-2 rounded-lg border border-default bg-surface-2 px-3 py-2 text-[11px] font-medium text-secondary transition-all hover:border-accent hover:bg-accent-muted hover:text-accent"
-          >
-            <Plus className="h-3.5 w-3.5" /> {t("addLegalEntity")}
-          </button>
-        )}
-      </div>
-
-    </div>
-  );
-}

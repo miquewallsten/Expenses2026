@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'add_user_id_to_expense'
-down_revision = 'h8e9f0a1b2c3'
+down_revision = 'g7d8e9f0a1b2'
 branch_labels = None
 depends_on = None
 

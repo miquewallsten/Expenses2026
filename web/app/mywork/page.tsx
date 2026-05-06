@@ -24,6 +24,7 @@ import AgentChat from "@/components/agent/AgentChat";
 import { buildGlobalNav } from "@/lib/navigation";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { apiCall } from "@/lib/api/client";
 import SettingsModal from "@/components/shell/SettingsModal";
 import type { NavRailItem } from "@/components/shell/NavRail";
 
