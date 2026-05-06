@@ -654,7 +654,7 @@ function MyWorkShell() {
                 <div className="min-h-0 flex-1 overflow-hidden">
                   <AgentChat
                     companyId={companyId}
-                    persona={activeModule?.id === "admin" ? "admin-config" : "employee"}
+                    persona={activeModule?.id === "admin" ? "admin" : "employee"}
                     greeting={t("greeting")}
                     allowUpload={false}
                     streaming
