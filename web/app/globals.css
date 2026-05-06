@@ -89,11 +89,11 @@
   --color-error: #f87171;
   --color-error-muted: #f8717128;
 
-  /* Gradients - For hero sections and premium elements */
-  --gradient-accent: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
-  --gradient-hero: linear-gradient(135deg, #16161e 0%, #1e1e28 50%, #1a2830 100%);
-  --gradient-ai: linear-gradient(135deg, #2ec6b8 0%, #3b82f6 100%);
-  --gradient-card: linear-gradient(180deg, #1e1e28 0%, #16161e 100%);
+  /* Gradients - Flattened for "The Quiet Cockpit" philosophy */
+  --gradient-accent: var(--color-accent);
+  --gradient-hero: var(--color-surface-1);
+  --gradient-ai: var(--color-ai);
+  --gradient-card: var(--color-surface-2);
 
   /* Standard palette compatibility */
   --color-white: #ffffff;
@@ -612,11 +612,10 @@ html.light body { font-weight: 400; }
   line-height: 1.5;
 }
 .chat-message.user {
-  background: var(--gradient-accent);
+  background: var(--color-accent);
   color: white;
   margin-left: auto;
   border-bottom-right-radius: var(--radius-sm);
-  box-shadow: var(--shadow-sm);
 }
 .chat-message.assistant {
   background: var(--color-surface-3);
@@ -651,9 +650,7 @@ html.light body { font-weight: 400; }
 @keyframes slide-in-left { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: translateX(0); } }
 @keyframes scale-in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
 @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
-@keyframes pulse { 0%, 100% { opacity: 0.4; transform: scale(1); } 50% { opacity: 1; transform: scale(1.2); } }
-@keyframes glow { 0%, 100% { box-shadow: 0 0 20px var(--color-accent-glow); } 50% { box-shadow: 0 0 40px var(--color-accent-glow); } }
-@keyframes glow-ai { 0%, 100% { box-shadow: 0 0 20px var(--color-ai-glow); } 50% { box-shadow: 0 0 40px var(--color-ai-glow); } }
+@keyframes pulse { 0%, 100% { opacity: 0.4; transform: scale(1); } 50% { opacity: 1; transform: scale(1.1); } }
 @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
 
 .animate-fade-in { animation: fade-in 200ms ease-out both; }
@@ -661,8 +658,6 @@ html.light body { font-weight: 400; }
 .animate-slide-in-right { animation: slide-in-right 300ms ease-out both; }
 .animate-slide-in-left { animation: slide-in-left 300ms ease-out both; }
 .animate-scale-in { animation: scale-in 150ms ease-out both; }
-.animate-glow { animation: glow 2s ease-in-out infinite; }
-.animate-glow-ai { animation: glow-ai 2s ease-in-out infinite; }
 .animate-float { animation: float 3s ease-in-out infinite; }
 
 .skeleton {

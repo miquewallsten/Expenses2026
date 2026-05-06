@@ -190,15 +190,15 @@ function LegalEntityForm({
   };
 
   const fieldClass =
-    "w-full rounded-lg border border-default bg-surface-2 px-3 py-2 text-[11px] text-primary placeholder:text-muted outline-none transition-all focus:border-accent focus:bg-surface-3 focus:ring-2 focus:ring-accent-muted hover:border-strong";
+    "w-full rounded-lg border border-white/10 bg-surface-2 px-3 py-2 text-[11px] text-primary placeholder:text-muted outline-none transition-all focus:border-accent/40 focus:bg-surface-3 hover:border-white/20";
 
   return (
-    <div className="space-y-4 rounded-xl border border-accent/30 bg-gradient-to-b from-accent-muted/10 to-surface-1 p-4">
+    <div className="space-y-4 rounded-xl border border-white/10 bg-surface-1 p-4">
       <div className="flex items-center gap-2">
-        <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-accent-hover">
-          <Building2 className="h-3 w-3 text-white" />
+        <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-accent/20">
+          <Building2 className="h-3 w-3 text-accent" />
         </div>
-        <p className="text-[11px] font-bold uppercase tracking-wider text-accent">
+        <p className="text-[11px] font-bold uppercase tracking-widest text-secondary">
           {isEdit ? t("editEntity") : t("addLegalEntity")}
         </p>
       </div>
@@ -272,9 +272,9 @@ function LegalEntityForm({
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-error/30 bg-error-muted/20 px-3 py-2">
+        <div className="flex items-center gap-2 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2">
           <AlertCircle className="h-3.5 w-3.5 text-error" />
-          <p className="text-[10px] text-error">{error}</p>
+          <p className="text-[10px] text-error font-medium">{error}</p>
         </div>
       )}
 
@@ -283,7 +283,7 @@ function LegalEntityForm({
           type="button"
           onClick={save}
           disabled={saving}
-          className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-accent to-accent-hover px-4 py-2 text-[11px] font-semibold text-white shadow-sm shadow-accent-glow transition-all hover:shadow-md hover:shadow-accent-glow disabled:opacity-40 disabled:shadow-none"
+          className="flex items-center gap-2 rounded-lg bg-accent/80 px-4 py-2 text-[11px] font-semibold text-white transition-all hover:bg-accent disabled:opacity-40"
         >
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
           {isEdit ? t("update") : t("create")}
@@ -291,7 +291,7 @@ function LegalEntityForm({
         <button
           type="button"
           onClick={onCancel}
-          className="flex items-center gap-2 rounded-lg border border-default bg-surface-2 px-3 py-2 text-[11px] font-medium text-secondary transition-colors hover:bg-surface-3 hover:text-primary"
+          className="flex items-center gap-2 rounded-lg border border-white/10 bg-surface-2 px-3 py-2 text-[11px] font-medium text-secondary transition-colors hover:bg-surface-3 hover:text-primary"
         >
           <X className="h-3.5 w-3.5" /> {tc("cancel")}
         </button>
@@ -527,7 +527,7 @@ export default function AdminCompanySetupStudio({
             type="button"
             onClick={save}
             disabled={!dirty || saving}
-            className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-1.5 text-[11px] font-semibold text-white shadow-sm shadow-emerald-500/20 transition-all hover:shadow-md hover:shadow-emerald-500/30 disabled:opacity-40 disabled:shadow-none"
+            className="flex items-center gap-2 rounded-lg bg-emerald-500/80 px-4 py-1.5 text-[11px] font-semibold text-white transition-all hover:bg-emerald-500 disabled:opacity-40"
           >
             {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
             {tc("save")}

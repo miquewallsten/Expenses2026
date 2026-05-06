@@ -2033,10 +2033,10 @@
       "onTrack": "Todo en orden"
     },
     "ai": {
-      "assistant": "Asistente IA",
-      "ready": "Listo para ayudar",
-      "openAssistant": "Abrir asistente IA",
-      "greeting": "¡Hola! Soy tu asistente. ¿En qué puedo ayudarte hoy?"
+      "assistant": "Lola",
+      "ready": "Servicios activos",
+      "openAssistant": "Abrir Lola",
+      "greeting": "¡Hola! Soy Lola. ¿En qué puedo ayudarte hoy?"
     },
     "emptyPortal": {
       "title": "Portal de {role} sin configurar",
@@ -2051,7 +2051,7 @@
       "goToAdmin": "Ir a Administración"
     },
     "assistant": {
-      "copilot": "Copiloto",
+      "copilot": "Lola",
       "aiOffline": "IA sin conexión — la validación y el análisis de XML siguen funcionando.",
       "recommendedStep": "Siguiente paso recomendado",
       "noRecommendation": "Sin recomendación aún.",

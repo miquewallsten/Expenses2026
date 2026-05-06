@@ -68,21 +68,21 @@ function AIAssistantDock({ collapsed, onExpand }: { collapsed: boolean; onExpand
     return (
       <button
         onClick={onExpand}
-        className={`group relative flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-ai to-accent shadow-lg transition-all hover:scale-105 ${hasInsights ? "shadow-error-glow" : "shadow-ai-glow"}`}
+        className={`group relative flex h-12 w-12 items-center justify-center rounded-xl transition-all hover:scale-105 ${hasInsights ? "bg-error/20 ring-1 ring-error/50" : "bg-accent/10 ring-1 ring-accent/30 shadow-sm"}`}
         title={t("openAssistant")}
       >
-        <Bot className="h-5 w-5 text-white" />
+        <Bot className={`h-5 w-5 ${hasInsights ? "text-error" : "text-accent"}`} />
         {hasInsights && (
-          <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-error animate-pulse shadow-sm" />
+          <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-error animate-pulse" />
         )}
       </button>
     );
   }
 
   return (
-    <div className={`flex items-center gap-3 rounded-xl p-3 transition-colors ${hasInsights ? "bg-error/5 ring-1 ring-error/20" : "bg-gradient-to-r from-ai-muted to-accent-muted"}`}>
-      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br shadow-md ${hasInsights ? "from-error to-error-hover shadow-error-glow" : "from-ai to-accent shadow-ai-glow"}`}>
-        <Bot className="h-4 w-4 text-white" />
+    <div className={`flex items-center gap-3 rounded-xl p-3 transition-colors ${hasInsights ? "bg-error/5 ring-1 ring-error/20" : "bg-accent/5 ring-1 ring-accent/10"}`}>
+      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg shadow-sm ${hasInsights ? "bg-error/20" : "bg-accent/20"}`}>
+        <Bot className={`h-4 w-4 ${hasInsights ? "text-error" : "text-accent"}`} />
       </div>
       <div className="min-w-0 flex-1">
         <p className={`text-[10px] font-semibold uppercase tracking-wide ${hasInsights ? "text-error" : "text-ai"}`}>
@@ -111,65 +111,44 @@ function HeroHeader({ userName }: { userName: string }) {
   const greeting = hour < 12 ? t("morning") : hour < 18 ? t("afternoon") : t("evening");
 
   return (
-    <header className="hero overflow-hidden rounded-2xl p-6">
-      <div className="hero-glow hero-glow-accent" />
-      <div className="hero-glow hero-glow-ai" />
-      <div className="hero-content relative z-10">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-medium text-secondary mb-1">
-              {greeting}, <span className="text-gradient">{userName}</span>
-            </p>
-            <h1 className="text-2xl font-semibold text-primary tracking-tight">
-              {t("title")}
-            </h1>
-            <p className="text-xs text-tertiary mt-1">
-              {t("subtitle")}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 rounded-lg bg-surface-2/50 px-3 py-1.5 backdrop-blur-sm border border-subtle">
-              <TrendingUp className="h-3.5 w-3.5 text-success" />
-              <span className="text-[10px] font-medium text-secondary">
-                {t("onTrack")}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick stats */}
-        <div className="mt-4 grid grid-cols-3 gap-3">
-          <div className="rounded-xl bg-surface-2/40 backdrop-blur-sm border border-subtle p-3">
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-muted">
-                <Receipt className="h-3.5 w-3.5 text-accent" />
+    <header className="group relative overflow-hidden rounded-2xl border border-white/10 bg-surface-1 p-6 transition-all">
+      {/* Subtle background "thing": A soft radial glow that tracks with the brand color */}
+      <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-accent/5 blur-3xl transition-opacity group-hover:opacity-80" />
+      <div className="absolute -left-12 -bottom-12 h-48 w-48 rounded-full bg-success/5 blur-3xl" />
+      
+      <div className="relative z-10">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-5">
+            <div className="relative">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/10 ring-1 ring-accent/20 transition-transform group-hover:scale-105">
+                <Building className="h-7 w-7 text-accent" />
               </div>
-              <div>
-                <p className="text-lg font-semibold text-primary">3</p>
-                <p className="text-[9px] text-muted uppercase tracking-wide">Pending</p>
+              <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-lg bg-surface-2 p-1 ring-1 ring-white/10 shadow-lg">
+                <Sparkles className="h-full w-full text-ai" />
               </div>
             </div>
-          </div>
-          <div className="rounded-xl bg-surface-2/40 backdrop-blur-sm border border-subtle p-3">
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-success-muted">
-                <CheckSquare className="h-3.5 w-3.5 text-success" />
-              </div>
-              <div>
-                <p className="text-lg font-semibold text-primary">12</p>
-                <p className="text-[9px] text-muted uppercase tracking-wide">This Week</p>
-              </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted">
+                {greeting}, <span className="text-secondary">{userName}</span>
+              </p>
+              <h1 className="text-xl font-bold text-primary tracking-tight">
+                {t("title")}
+              </h1>
+              <p className="text-[12px] text-tertiary">
+                {t("subtitle")}
+              </p>
             </div>
           </div>
-          <div className="rounded-xl bg-surface-2/40 backdrop-blur-sm border border-subtle p-3">
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-ai-muted animate-glow-ai">
-                <Sparkles className="h-3.5 w-3.5 text-ai" />
+          
+          <div className="flex items-center gap-3">
+            <div className="flex flex-col items-end gap-1">
+              <div className="flex items-center gap-1.5 rounded-full bg-success/10 px-3 py-1 border border-success/30">
+                <TrendingUp className="h-3 w-3 text-success" />
+                <span className="text-[9px] font-bold uppercase tracking-wide text-success">
+                  {t("onTrack")}
+                </span>
               </div>
-              <div>
-                <p className="text-lg font-semibold text-primary">AI</p>
-                <p className="text-[9px] text-muted uppercase tracking-wide">Ready</p>
-              </div>
+              <span className="text-[9px] font-medium text-muted uppercase tracking-tighter">Everything clear</span>
             </div>
           </div>
         </div>
@@ -227,29 +206,28 @@ function UnifiedSidebar({
       className={`flex shrink-0 flex-col ${height === "full" ? "h-[100dvh]" : "overflow-hidden"} border-r border-subtle bg-surface-1 transition-[width] duration-300`}
       style={{ width: collapsed ? SIDEBAR_COL_W : SIDEBAR_W }}
     >
-      {/* Header row with gradient accent */}
-      <div className="relative flex h-12 shrink-0 items-center gap-2 border-b border-subtle px-3 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-accent-muted/30 via-transparent to-ai-muted/20 opacity-50" />
-        <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-accent-hover shadow-md shadow-accent-glow">
+      {/* Header row */}
+      <div className="relative flex h-12 shrink-0 items-center gap-2 border-b border-white/5 px-3 overflow-hidden">
+        <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/10 transition-colors">
           {showAdminNav ? (
-            <Settings className="h-4 w-4 text-white" />
+            <Settings className="h-4 w-4 text-accent" />
           ) : (
-            <LayoutGrid className="h-4 w-4 text-white" />
+            <LayoutGrid className="h-4 w-4 text-accent" />
           )}
         </div>
         {!collapsed && (
           <div className="relative flex-1 min-w-0">
-            <span className="block truncate text-xs font-semibold tracking-tight text-primary">
+            <span className="block truncate text-xs font-bold tracking-tight text-primary">
               {showAdminNav ? tn("admin") : tn("myWork")}
             </span>
-            <span className="block text-[9px] text-muted">OpsFlow</span>
+            <span className="block text-[9px] font-bold uppercase tracking-widest text-accent">Lola</span>
           </div>
         )}
         <button
           type="button"
           onClick={onToggle}
           title={collapsed ? ts("expandSidebar") : ts("collapseSidebar")}
-          className="relative ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted transition-all hover:bg-surface-2 hover:text-secondary"
+          className="relative ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted transition-all hover:bg-surface-2 hover:text-secondary focus-visible:ring-1 focus-visible:ring-accent/30"
         >
           {collapsed
             ? <ChevronRight className="h-4 w-4" />
@@ -280,12 +258,12 @@ function UnifiedSidebar({
                           collapsed ? "justify-center px-2" : "px-3"
                         } ${
                           isActive
-                            ? "bg-accent-muted text-accent shadow-sm"
+                            ? "bg-accent/10 text-accent"
                             : "text-secondary hover:bg-surface-2 hover:text-primary"
                         }`}
                       >
                         {isActive && (
-                          <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-gradient-to-b from-accent to-accent-hover" />
+                          <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-accent" />
                         )}
                         <section.icon className={`h-4 w-4 shrink-0 transition-transform group-hover:scale-110 ${
                           isActive ? "text-accent" : "text-muted group-hover:text-secondary"
@@ -316,12 +294,12 @@ function UnifiedSidebar({
                           collapsed ? "justify-center px-2" : "px-3"
                         } ${
                           isActive
-                            ? "bg-accent-muted text-accent shadow-sm"
+                            ? "bg-accent/10 text-accent"
                             : "text-secondary hover:bg-surface-2 hover:text-primary"
                         }`}
                       >
                         {isActive && (
-                          <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-gradient-to-b from-accent to-accent-hover" />
+                          <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-accent" />
                         )}
                         <section.icon className={`h-4 w-4 shrink-0 transition-transform group-hover:scale-110 ${
                           isActive ? "text-accent" : "text-muted group-hover:text-secondary"
@@ -357,12 +335,12 @@ function UnifiedSidebar({
                         collapsed ? "justify-center px-2" : "px-3"
                       } ${
                         isActive
-                          ? "bg-accent-muted text-accent shadow-sm"
+                          ? "bg-accent/10 text-accent"
                           : "text-secondary hover:bg-surface-2 hover:text-primary"
                       }`}
                     >
                       {isActive && (
-                        <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-gradient-to-b from-accent to-accent-hover" />
+                        <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-accent" />
                       )}
                       {Icon ? (
                         <Icon
@@ -490,19 +468,10 @@ function MyWorkShell() {
     <div className="pointer-events-none absolute right-3 top-3 z-20 flex items-center gap-2">
       <button
         type="button"
-        onClick={() => setAiPanelOpen(true)}
-        title="AI Assistant"
-        aria-label="AI Assistant"
-        className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-ai to-accent text-white shadow-lg shadow-ai-glow transition-transform hover:scale-105"
-      >
-        <Bot className="h-4 w-4" />
-      </button>
-      <button
-        type="button"
         onClick={() => setSettingsOpen(true)}
         title={tnShell("settings")}
         aria-label={tnShell("settings")}
-        className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-xl border border-subtle bg-surface-2/80 backdrop-blur-sm text-secondary shadow-sm transition-all hover:border-default hover:bg-surface-3 hover:text-primary"
+        className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-xl border border-white/5 bg-surface-2/80 backdrop-blur-sm text-secondary shadow-sm transition-all hover:border-default hover:bg-surface-3 hover:text-primary"
       >
         <Settings className="h-4 w-4" />
       </button>
@@ -534,13 +503,6 @@ function MyWorkShell() {
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setAiPanelOpen(true)}
-              className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-ai to-accent text-white shadow-md shadow-ai-glow"
-            >
-              <Bot className="h-4 w-4" />
-            </button>
             <button
               type="button"
               onClick={() => setSettingsOpen(true)}
@@ -674,13 +636,13 @@ function MyWorkShell() {
             onClick={() => setAiPanelOpen(false)}
           />
           <aside className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[420px] flex-col border-l border-default bg-surface-0 shadow-2xl">
-            <header className="flex h-11 shrink-0 items-center gap-2 border-b border-default px-3">
-              <div className="flex h-5 w-5 items-center justify-center rounded bg-gradient-to-br from-ai to-accent ring-1 ring-ai/20">
-                <Bot className="h-3 w-3 text-white" />
+            <header className="flex h-11 shrink-0 items-center gap-2 border-b border-white/5 px-3">
+              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-accent/10 transition-colors">
+                <Bot className="h-3.5 w-3.5 text-accent" />
               </div>
               <div className="flex flex-col leading-tight">
-                <span className="text-[11px] font-semibold text-secondary">AI Assistant</span>
-                <span className="text-[9px] uppercase tracking-widest text-muted">Your Copilot</span>
+                <span className="text-[11px] font-bold tracking-tight text-primary">Lola</span>
+                <span className="text-[9px] font-bold uppercase tracking-widest text-muted">Intelligent Ops</span>
               </div>
               <button
                 type="button"

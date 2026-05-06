@@ -2033,10 +2033,10 @@
       "onTrack": "On track"
     },
     "ai": {
-      "assistant": "AI Assistant",
+      "assistant": "Lola",
       "ready": "Ready to help",
-      "openAssistant": "Open AI Assistant",
-      "greeting": "Hi! I'm your assistant. How can I help you today?"
+      "openAssistant": "Open Lola",
+      "greeting": "Hi! I'm Lola. How can I help you today?"
     },
     "emptyPortal": {
       "title": "{role} portal not configured",
@@ -2051,7 +2051,7 @@
       "goToAdmin": "Go to Admin"
     },
     "assistant": {
-      "copilot": "Copilot",
+      "copilot": "Lola",
       "aiOffline": "AI offline — validation and XML parsing still work.",
       "recommendedStep": "Recommended next step",
       "noRecommendation": "No recommendation yet.",

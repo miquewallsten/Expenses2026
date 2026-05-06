@@ -49,13 +49,7 @@ export function PremiumHeader({ icon, title, subtitle, section = "default", badg
   const accent = SECTION_ACCENTS[section];
 
   return (
-    <div className="relative overflow-hidden rounded-lg border border-default bg-gradient-to-r from-surface-1 via-surface-1 to-current/[0.02] px-4 py-3">
-      {/* Radial accent gradient */}
-      <div
-        className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--color-current)/5%,_transparent_50%)]"
-        style={{ color: `var(--color-${section === "default" ? "surface-2" : section.split("-")[0]})` }}
-      />
-
+    <div className="relative overflow-hidden rounded-lg border border-white/10 bg-surface-1 px-4 py-3">
       <div className="relative flex items-center justify-between">
         <div className="flex items-center gap-3">
           {/* Icon container with colored background */}
@@ -64,8 +58,8 @@ export function PremiumHeader({ icon, title, subtitle, section = "default", badg
           </div>
 
           <div className="flex flex-col">
-            <h2 className="text-sm font-semibold text-primary">{title}</h2>
-            {subtitle && <span className="text-[9px] text-muted">{subtitle}</span>}
+            <h2 className="text-sm font-semibold text-primary tracking-tight">{title}</h2>
+            {subtitle && <span className="text-[9px] text-muted uppercase tracking-wider">{subtitle}</span>}
           </div>
 
           {badge}
@@ -73,11 +67,11 @@ export function PremiumHeader({ icon, title, subtitle, section = "default", badg
 
         <div className="flex items-center gap-3">
           {metrics && metrics.length > 0 && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-4">
               {metrics.map((m, i) => (
                 <div key={i} className="text-right">
                   <div className="text-[11px] font-semibold tabular-nums text-primary">{m.value}</div>
-                  <div className="text-[9px] text-muted">{m.label}</div>
+                  <div className="text-[9px] font-medium uppercase tracking-wide text-muted">{m.label}</div>
                 </div>
               ))}
             </div>
@@ -255,8 +249,8 @@ interface ToggleProps {
 
 export function Toggle({ value, onChange, disabled = false, size = "md" }: ToggleProps) {
   const sizeClasses = size === "sm" ? "h-4 w-7" : "h-5 w-9";
-  const knobSize = size === "sm" ? "h-2.5 w-2.5" : "h-4 w-4";
-  const knobTranslate = value ? (size === "sm" ? "translate-x-3" : "translate-x-4") : "translate-x-0.5";
+  const knobSize = size === "sm" ? "h-3 w-3" : "h-4 w-4";
+  const knobTranslate = value ? (size === "sm" ? "translate-x-3.5" : "translate-x-4.5") : "translate-x-0.5";
 
   return (
     <button
@@ -267,11 +261,11 @@ export function Toggle({ value, onChange, disabled = false, size = "md" }: Toggl
       onClick={() => !disabled && onChange(!value)}
       className={`relative inline-flex shrink-0 items-center rounded-full border transition-colors disabled:opacity-30 ${
         value
-          ? "border-accent bg-accent-muted"
-          : "border-default bg-surface-2"
+          ? "border-accent/40 bg-accent/20"
+          : "border-white/10 bg-surface-2"
       } ${sizeClasses}`}
     >
-      <span className={`absolute top-0.5 ${knobSize} rounded-full bg-white shadow transition-transform ${knobTranslate}`} />
+      <span className={`absolute top-0.5 ${knobSize} rounded-full bg-white transition-transform ${knobTranslate}`} />
     </button>
   );
 }
@@ -295,8 +289,10 @@ export function SectionLabel({ children }: { children: ReactNode }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const inputClasses = {
-  base: "rounded border border-default bg-surface-1 px-2 py-1.5 text-[11px] text-secondary outline-none placeholder:text-muted focus:bg-accent-muted focus:border-accent/40",
-  select: "rounded border border-default bg-surface-1 px-2 py-1 text-[10px] text-tertiary outline-none focus:bg-accent-muted",
-  textarea: "rounded border border-default bg-surface-1 px-2 py-1.5 text-[11px] text-secondary outline-none placeholder:text-muted focus:bg-accent-muted focus:border-accent/40 resize-none",
+  base: "rounded-lg border border-white/10 bg-surface-1 px-3 py-2 text-[11px] text-primary outline-none placeholder:text-muted focus:border-accent/40 focus:bg-surface-2 transition-all hover:border-white/20",
+  select: "rounded-lg border border-white/10 bg-surface-1 px-3 py-1.5 text-[10px] text-secondary outline-none focus:border-accent/40 focus:bg-surface-2 transition-all hover:border-white/20",
+  textarea: "rounded-lg border border-white/10 bg-surface-1 px-3 py-2 text-[11px] text-primary outline-none placeholder:text-muted focus:border-accent/40 focus:bg-surface-2 transition-all resize-none hover:border-white/20",
+  mono: "rounded-lg border border-white/10 bg-surface-1 px-3 py-2 font-mono text-[10px] text-secondary outline-none placeholder:text-muted focus:border-accent/40 focus:bg-surface-2 transition-all hover:border-white/20",
+};
   mono: "rounded border border-default bg-surface-1 px-2 py-1.5 font-mono text-[10px] text-tertiary outline-none placeholder:text-muted focus:bg-accent-muted",
 };

@@ -553,15 +553,15 @@ export default function MyWorkAssistant() {
     <div className="flex h-full flex-col overflow-hidden">
 
       {/* Header — desktop only */}
-      <div className="hidden h-10 shrink-0 items-center gap-2 border-b border-subtle bg-surface-1 px-3 lg:flex">
-        <div className="flex h-6 w-6 items-center justify-center rounded-md bg-accent text-primary shadow-[var(--shadow-glow)]">
-          <Bot className="h-3.5 w-3.5" />
+      <div className="hidden h-10 shrink-0 items-center gap-2 border-b border-white/5 bg-surface-1 px-3 lg:flex">
+        <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-accent/10 transition-colors">
+          <Bot className="h-3.5 w-3.5 text-accent" />
         </div>
-        <span className="flex-1 truncate text-[12px] font-semibold text-primary">
+        <span className="flex-1 truncate text-xs font-bold tracking-tight text-primary">
           {ta("copilot")}
         </span>
         {aiStatus?.active_model && (
-          <span className="shrink-0 rounded-md border border-default bg-surface-2 px-2 py-0.5 font-mono text-[9px] text-tertiary">
+          <span className="shrink-0 rounded-md border border-white/10 bg-surface-2 px-2 py-0.5 font-mono text-[9px] text-tertiary">
             {aiStatus.active_model.split(":")[0]}
           </span>
         )}

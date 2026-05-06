@@ -263,25 +263,27 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
 
       {/* Last trigger result */}
       {lastResult && (
-        <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.04] p-4 animate-in fade-in slide-in-from-top-2">
-          <div className="flex items-center gap-2 mb-2">
-            <CheckCircle2 className="h-4 w-4 text-success" />
+        <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4 animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-500/20">
+              <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+            </div>
             <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">
               {t("cycleComplete")}
             </span>
           </div>
           <div className="grid grid-cols-3 gap-4">
              <div className="text-center">
-              <p className="text-[11px] font-semibold text-emerald-300">{lastResult.reports_created}</p>
-              <p className="text-[9px] text-muted uppercase">Reports</p>
+              <p className="text-lg font-bold text-emerald-300 tabular-nums">{lastResult.reports_created}</p>
+              <p className="text-[9px] font-bold text-muted uppercase tracking-wider">Reports</p>
             </div>
             <div className="text-center">
-              <p className="text-[11px] font-semibold text-emerald-300">{lastResult.expenses_bundled}</p>
-              <p className="text-[9px] text-muted uppercase">Expenses</p>
+              <p className="text-lg font-bold text-emerald-300 tabular-nums">{lastResult.expenses_bundled}</p>
+              <p className="text-[9px] font-bold text-muted uppercase tracking-wider">Expenses</p>
             </div>
             <div className="text-center">
-              <p className="text-[11px] font-semibold text-emerald-300">{lastResult.users_processed}</p>
-              <p className="text-[9px] text-muted uppercase">Users</p>
+              <p className="text-lg font-bold text-emerald-300 tabular-nums">{lastResult.users_processed}</p>
+              <p className="text-[9px] font-bold text-muted uppercase tracking-wider">Users</p>
             </div>
           </div>
         </div>
@@ -299,7 +301,7 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
           type="button"
           onClick={handleSave}
           disabled={saving || !dirty}
-          className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-default bg-surface-2 px-4 py-2 text-[11px] font-semibold text-secondary transition-all hover:bg-surface-3 disabled:opacity-40"
+          className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-surface-2 px-4 py-2 text-[11px] font-semibold text-secondary transition-all hover:bg-surface-3 hover:text-primary disabled:opacity-40"
         >
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
           {saving ? tc("saving") : t("saveSettings")}
@@ -308,7 +310,7 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
           type="button"
           onClick={handleTrigger}
           disabled={triggering}
-          className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-violet-600 to-violet-500 px-4 py-2 text-[11px] font-semibold text-white shadow-sm shadow-violet-500/20 transition-all hover:shadow-md disabled:opacity-40"
+          className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-violet-500/80 px-4 py-2 text-[11px] font-semibold text-white transition-all hover:bg-violet-500 disabled:opacity-40"
         >
           {triggering ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
           {triggering ? t("running") : t("runNow")}
