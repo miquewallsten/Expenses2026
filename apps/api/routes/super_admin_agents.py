@@ -83,6 +83,22 @@ class LLMConfigIn(BaseModel):
     is_active: bool = True
 
 
+class ChatTestRequest(BaseModel):
+    prompt: str
+    provider: str = "openai"
+    model_name: str = "glm-5:cloud"
+    base_url: Optional[str] = None
+    api_key_env_ref: Optional[str] = None
+
+
+class ChatTestResponse(BaseModel):
+    ok: bool
+    model: Optional[str] = None
+    content: Optional[str] = None
+    latency_ms: int
+    error: Optional[str] = None
+
+
 # ── Agent Definitions ──────────────────────────────────────────────────────
 
 def _serialize_agent(a: AgentDefinition) -> dict:
@@ -205,6 +221,25 @@ def _serialize_llm(c: LLMProviderConfig) -> dict:
     }
 
 
+def _validate_api_key_env_ref(value: str | None) -> str:
+    """Validate that api_key_env_ref is an env var name, not an actual API key."""
+    if not value:
+        return value
+    # Env var names are typically short and uppercase with underscores
+    # API keys are long alphanumeric strings (often 30+ chars)
+    # Valid env var names: LLM_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY
+    # Invalid (actual keys): 87e154dc2299465fbc89589c1f5043f1..., sk-abc123...
+    value_stripped = value.strip()
+    if len(value_stripped) > 25:
+        # Check if it looks like an env var name (all caps with underscores)
+        if not (value_stripped.isupper() or value_stripped.upper() == value_stripped):
+            raise HTTPException(
+                status_code=400,
+                detail="api_key_env_ref must be the NAME of the environment variable (e.g., LLM_API_KEY), not the actual API key value."
+            )
+    return value
+
+
 @router.get("/llm-configs")
 def list_llm_configs(db: Session = Depends(get_db), _=Depends(require_super_admin)):
     return [_serialize_llm(c) for c in db.query(LLMProviderConfig).all()]
@@ -213,6 +248,9 @@ def list_llm_configs(db: Session = Depends(get_db), _=Depends(require_super_admi
 @router.post("/llm-configs", status_code=201)
 def create_llm_config(body: LLMConfigIn, db: Session = Depends(get_db),
                       _=Depends(require_super_admin)):
+    # Validate api_key_env_ref
+    _validate_api_key_env_ref(body.api_key_env_ref)
+
     existing = (
         db.query(LLMProviderConfig)
         .filter(LLMProviderConfig.company_id == body.company_id)
@@ -237,6 +275,9 @@ def create_llm_config(body: LLMConfigIn, db: Session = Depends(get_db),
 @router.put("/llm-configs/{cfg_id}")
 def update_llm_config(cfg_id: int, body: LLMConfigIn, db: Session = Depends(get_db),
                       _=Depends(require_super_admin)):
+    # Validate api_key_env_ref
+    _validate_api_key_env_ref(body.api_key_env_ref)
+
     cfg = db.query(LLMProviderConfig).filter_by(id=cfg_id).one_or_none()
     if not cfg:
         raise HTTPException(status_code=404, detail="Config not found")
@@ -259,6 +300,58 @@ def delete_llm_config(cfg_id: int, db: Session = Depends(get_db), _=Depends(requ
 def test_llm_connection(body: LLMConfigIn, _=Depends(require_super_admin)):
     result = LLM_PROVIDER_SERVICE.test_connection(body.model_dump())
     return result
+
+
+@router.post("/llm-configs/chat-test", response_model=ChatTestResponse)
+def test_llm_chat(body: ChatTestRequest, _=Depends(require_super_admin)):
+    """Test an actual chat completion with a specific model configuration."""
+    import os
+    import time
+    from apps.api.ai.ollama_client import chat_with_messages_dynamic, Provider
+
+    # Map ollama-cloud to ollama (same API, different base URL)
+    provider_kind = "ollama" if body.provider in ("ollama", "ollama-cloud") else body.provider
+
+    # Resolve API key
+    api_key = ""
+    if body.api_key_env_ref:
+        api_key = os.getenv(body.api_key_env_ref, "")
+    elif body.provider == "ollama-cloud":
+        api_key = os.getenv("LLM_API_KEY", "") or os.getenv("OLLAMA_API_KEY", "")
+    elif body.provider == "anthropic":
+        api_key = os.getenv("ANTHROPIC_API_KEY", "")
+
+    # Build provider config from request
+    provider = Provider(
+        kind=provider_kind,
+        base_url=(body.base_url or "").rstrip("/"),
+        model=body.model_name,
+        api_key=api_key,
+    )
+
+    started = time.monotonic()
+    try:
+        result = chat_with_messages_dynamic(
+            messages=[{"role": "user", "content": body.prompt}],
+            provider=provider,
+            temperature=0.7,
+        )
+        latency_ms = int((time.monotonic() - started) * 1000)
+        return ChatTestResponse(
+            ok=result.get("ok", False),
+            model=result.get("model"),
+            content=result.get("content"),
+            latency_ms=latency_ms,
+            error=result.get("error"),
+        )
+    except Exception as e:
+        latency_ms = int((time.monotonic() - started) * 1000)
+        return ChatTestResponse(
+            ok=False,
+            model=body.model_name,
+            latency_ms=latency_ms,
+            error=str(e),
+        )
 
 
 # ── Tool Registry (read-only) ───────────────────────────────────────────────

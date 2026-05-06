@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
-import { Save, Loader2, CheckCircle2, Sparkles, AlertTriangle, AlertCircle } from "lucide-react";
+import { Save, Loader2, CheckCircle2, Sparkles, AlertTriangle, AlertCircle, GitBranch } from "lucide-react";
 import { apiCall } from "@/lib/api/client";
 import {
   getPortalConfigConflicts,
@@ -295,13 +295,48 @@ export default function AdminApprovalSetupStudio({
   return (
     <div className="max-w-2xl space-y-5">
 
-      {/* Summary banner */}
-      <div className="rounded-lg border border-default bg-surface-1 px-4 py-2.5">
-        <div className="flex items-start justify-between gap-3">
-          <p className="text-[10px] leading-relaxed text-muted">{buildSummary(form)}</p>
-          {aiDrafted && (
-            <span className="flex shrink-0 items-center gap-1 rounded border border-blue-500/20 bg-blue-500/[0.06] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-accent/50">
-              <Sparkles className="h-2.5 w-2.5" /> {tc("draft")}
+      {/* Premium header with amber accent */}
+      <div className="relative overflow-hidden rounded-xl border border-default bg-gradient-to-r from-surface-1 via-surface-1 to-amber-500/[0.02]">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--color-amber-500)/5%,_transparent_50%)]" />
+        <div className="relative flex items-center justify-between border-b border-subtle px-5 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 shadow-sm shadow-amber-500/30">
+              <GitBranch className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-primary">{t("title")}</h2>
+              <p className="text-[10px] text-muted">Approval Routing Configuration</p>
+            </div>
+            {aiDrafted && (
+              <span className="flex items-center gap-1.5 rounded-full border border-ai/30 bg-ai-muted px-2 py-0.5 text-[9px] font-semibold text-ai">
+                <Sparkles className="h-3 w-3" /> {tc("draft")}
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={save}
+            disabled={saving || !dirty}
+            className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2 text-[11px] font-semibold text-white shadow-sm shadow-amber-500/20 transition-all hover:shadow-md hover:shadow-amber-500/30 disabled:opacity-40 disabled:shadow-none"
+          >
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            {tc("save")}
+          </button>
+        </div>
+
+        {/* Status indicators */}
+        <div className="relative flex items-center gap-4 px-5 py-2.5">
+          <span className="text-[10px] text-muted">{buildSummary(form)}</span>
+          {dirty && !saved && (
+            <span className="flex items-center gap-1.5 text-[10px] text-warning">
+              <AlertCircle className="h-3 w-3" />
+              {t("unsavedChanges")}
+            </span>
+          )}
+          {saved && !dirty && (
+            <span className="flex items-center gap-1.5 text-[10px] text-success">
+              <CheckCircle2 className="h-3 w-3" />
+              {tc("saved")}
             </span>
           )}
         </div>
@@ -413,26 +448,13 @@ export default function AdminApprovalSetupStudio({
         </p>
       </div>
 
-      {/* Save bar */}
+      {/* Save bar - minimal since save is in header */}
       {error && (
-        <p className="text-[10px] text-error/70">{error}</p>
+        <div className="flex items-center gap-2 rounded-lg border border-error/30 bg-error-muted/20 px-3 py-2">
+          <AlertCircle className="h-3.5 w-3.5 text-error" />
+          <p className="text-[10px] text-error">{error}</p>
+        </div>
       )}
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={save}
-          disabled={saving || !dirty}
-          className="flex items-center gap-1.5 rounded border bg-accent-muted bg-accent-muted px-4 py-1.5 text-[10px] font-semibold text-accent transition-colors hover:bg-accent-muted disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-          {t("saveApprovalSetup")}
-        </button>
-        {saved && !dirty && (
-          <span className="flex items-center gap-1 text-[10px] text-success/60">
-            <CheckCircle2 className="h-3 w-3" /> {tc("saved")}
-          </span>
-        )}
-      </div>
 
     </div>
   );

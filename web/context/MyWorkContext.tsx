@@ -270,14 +270,14 @@ export function MyWorkProvider({ children, initialModuleId }: { children: ReactN
   const showApprovalActions = useMemo(
     () =>
       managerFlowEnabled &&
-      (user.hasRole("manager", "admin") || user.hasPermission("approve_expense")),
+      (user.hasRole("manager", "admin") || user.hasPermission("expense:approve:manager")),
     [managerFlowEnabled, user],
   );
 
   const showAccountingActions = useMemo(
     () =>
       accountingFlowEnabled &&
-      (user.hasRole("accounting", "admin") || user.hasPermission("assign_account")),
+      (user.hasRole("accounting", "admin") || user.hasPermission("accounting:work")),
     [accountingFlowEnabled, user],
   );
 

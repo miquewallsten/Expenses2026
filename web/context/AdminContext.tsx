@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 
 export type AdminSection =
+  | "overview"
   | "onboarding"
   | "company-setup"
   | "expense-policy"
@@ -26,7 +27,7 @@ interface AdminContextValue {
 const AdminContext = createContext<AdminContextValue | null>(null);
 
 export function AdminProvider({ children }: { children: ReactNode }) {
-  const [activeSection, setActiveSection] = useState<AdminSection>("company-setup");
+  const [activeSection, setActiveSection] = useState<AdminSection>("overview");
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
   return (

@@ -10,6 +10,16 @@ import {
   Globe, Clock, Briefcase, Users,
   Layers, CheckCircle, FileText, Archive,
 } from "lucide-react";
+import {
+  PremiumHeader,
+  SectionPanel,
+  Row,
+  RowStack,
+  Toggle,
+  SectionLabel as PatternSectionLabel,
+  inputClasses,
+  SECTION_ACCENTS,
+} from "@/components/admin/shared/AdminPatterns";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -103,144 +113,7 @@ const ALLOC_DIM_OPTIONS = [
   { value: "project_client_cost_center", labelKey: "allocProjectClientCostCenter" },
 ];
 
-// ── Shared sub-components ─────────────────────────────────────────────────────
-
-function SectionLabel({ children, icon }: { children: React.ReactNode; icon?: React.ReactNode }) {
-  return (
-    <div className="mb-2 flex items-center gap-2 px-1">
-      {icon && (
-        <span className="flex h-5 w-5 items-center justify-center rounded-md bg-gradient-to-br from-accent to-accent-hover shadow-sm shadow-accent-glow">
-          {icon}
-        </span>
-      )}
-      <p className="text-[10px] font-bold uppercase tracking-widest text-secondary">
-        {children}
-      </p>
-    </div>
-  );
-}
-
-function Panel({ children, title, icon, variant }: { children: React.ReactNode; title?: string; icon?: React.ReactNode; variant?: "default" | "premium" }) {
-  const isPremium = variant === "premium";
-  return (
-    <div className={`overflow-hidden rounded-xl border ${isPremium ? "border-accent/30 bg-gradient-to-b from-accent-muted/10 to-surface-1" : "border-subtle bg-surface-1"}`}>
-      {title && (
-        <div className={`flex items-center gap-2.5 border-b ${isPremium ? "border-accent/20" : "border-subtle"} px-4 py-3`}>
-          {icon && (
-            <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${isPremium ? "bg-gradient-to-br from-accent to-accent-hover shadow-sm shadow-accent-glow" : "bg-accent-muted"}`}>
-              <span className={isPremium ? "text-white" : "text-accent"}>{icon}</span>
-            </span>
-          )}
-          <h3 className="text-xs font-semibold text-primary">{title}</h3>
-        </div>
-      )}
-      <div className="divide-y divide-subtle">{children}</div>
-    </div>
-  );
-}
-
-function TextInputRow({
-  label,
-  description,
-  value,
-  placeholder,
-  onChange,
-}: {
-  label: string;
-  description?: string;
-  value: string;
-  placeholder?: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-surface-2/30 group">
-      <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium text-primary group-hover:text-primary">{label}</p>
-        {description && <p className="text-[10px] text-tertiary mt-0.5">{description}</p>}
-      </div>
-      <input
-        type="text"
-        value={value ?? ""}
-        placeholder={placeholder ?? "—"}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-52 shrink-0 rounded-lg border border-default bg-surface-2 px-3 py-2 text-[11px] text-primary placeholder:text-muted outline-none transition-all focus:border-accent focus:bg-surface-3 focus:ring-2 focus:ring-accent-muted hover:border-strong"
-      />
-    </div>
-  );
-}
-
-function SelectRow({
-  label,
-  description,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  description?: string;
-  value: string;
-  options: { value: string; label: string }[];
-  onChange: (v: string) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-surface-2/30 group">
-      <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium text-primary">{label}</p>
-        {description && <p className="text-[10px] text-tertiary mt-0.5">{description}</p>}
-      </div>
-      <select
-        value={value ?? ""}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-52 shrink-0 rounded-lg border border-default bg-surface-2 px-3 py-2 text-[11px] text-primary outline-none transition-all focus:border-accent focus:bg-surface-3 focus:ring-2 focus:ring-accent-muted hover:border-strong appearance-none cursor-pointer"
-      >
-        <option value="">—</option>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
-function ToggleRow({
-  label,
-  description,
-  checked,
-  onChange,
-}: {
-  label: string;
-  description?: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-surface-2/30 group">
-      <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium text-primary">{label}</p>
-        {description && <p className="text-[10px] text-tertiary mt-0.5">{description}</p>}
-      </div>
-      <button
-        type="button"
-        onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border transition-all ${
-          checked
-            ? "border-accent bg-accent-muted"
-            : "border-subtle bg-surface-2 hover:border-default"
-        }`}
-      >
-        <span
-          className={`absolute top-0.5 h-4 w-4 rounded-full transition-all ${
-            checked
-              ? "translate-x-5 bg-gradient-to-br from-accent to-accent-hover shadow-sm shadow-accent-glow"
-              : "translate-x-0.5 bg-surface-3"
-          }`}
-        />
-      </button>
-    </div>
-  );
-}
-
-// ── Legal entity mini-form ────────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────────────────────
 
 const EMPTY_ENTITY = {
   company_id: 0,
@@ -637,76 +510,53 @@ export default function AdminCompanySetupStudio({
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-
-      {/* Header with gradient accent */}
-      <div className="relative overflow-hidden rounded-xl border border-subtle bg-surface-1">
-        <div className="absolute inset-0 bg-gradient-to-r from-accent-muted/20 via-transparent to-ai-muted/10" />
-        <div className="relative flex items-center justify-between border-b border-subtle px-5 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-accent to-accent-hover shadow-sm shadow-accent-glow">
-              <Building2 className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold text-primary">{t("title")}</h2>
-              <p className="text-[10px] text-tertiary">{t("studioSubtitle")}</p>
-            </div>
-            {aiDrafted && (
-              <span className="flex items-center gap-1.5 rounded-full border border-ai/30 bg-ai-muted px-2 py-0.5 text-[9px] font-semibold text-ai">
-                <Sparkles className="h-3 w-3" /> {t("aiDraft")}
-              </span>
-            )}
-          </div>
+      <PremiumHeader
+        section="company-setup"
+        icon={<Building2 className="h-4 w-4" />}
+        title={t("title")}
+        subtitle={t("studioSubtitle")}
+        badge={
+          aiDrafted ? (
+            <span className="flex items-center gap-1.5 rounded-full border border-ai/30 bg-ai-muted px-2 py-0.5 text-[9px] font-semibold text-ai">
+              <Sparkles className="h-3 w-3" /> {t("aiDraft")}
+            </span>
+          ) : null
+        }
+        action={
           <button
             type="button"
             onClick={save}
             disabled={!dirty || saving}
-            className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-accent to-accent-hover px-4 py-2 text-[11px] font-semibold text-white shadow-sm shadow-accent-glow transition-all hover:shadow-md hover:shadow-accent-glow disabled:opacity-40 disabled:shadow-none"
+            className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-1.5 text-[11px] font-semibold text-white shadow-sm shadow-emerald-500/20 transition-all hover:shadow-md hover:shadow-emerald-500/30 disabled:opacity-40 disabled:shadow-none"
           >
             {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
             {tc("save")}
           </button>
-        </div>
+        }
+        metrics={[
+          {
+            label: t("unsavedChanges"),
+            value: dirty ? "!" : "0",
+            tone: dirty ? "warning" : "neutral",
+          },
+        ]}
+      />
 
-        {/* Status indicators */}
-        <div className="relative flex items-center gap-4 px-5 py-2.5">
-          {dirty && !saved && (
-            <span className="flex items-center gap-1.5 text-[10px] text-warning">
-              <AlertCircle className="h-3 w-3" />
-              {t("unsavedChanges")}
-            </span>
-          )}
-          {saved && (
-            <span className="flex items-center gap-1.5 text-[10px] text-success">
-              <CheckCircle2 className="h-3 w-3" />
-              {tc("saved")}
-            </span>
-          )}
-          {error && (
-            <span className="flex items-center gap-1.5 text-[10px] text-error">
-              <AlertCircle className="h-3 w-3" />
-              {error}
-            </span>
-          )}
-          {!dirty && !saved && !error && (
-            <span className="text-[10px] text-muted">{buildSummary(form)}</span>
-          )}
+      {error && (
+        <div className="mb-3 flex items-start gap-2 rounded border border-error bg-rose-500/[0.06] px-3 py-2 text-[10.5px] text-rose-200/85">
+          <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
+          <span className="break-all">{error}</span>
         </div>
-      </div>
+      )}
 
       {/* A — Company Identity */}
       <div>
-        <SectionLabel icon={<Globe className="h-3 w-3 text-white" />}>{t("sectionA")}</SectionLabel>
-        <Panel variant="premium">
+        <PatternSectionLabel>{t("sectionA")}</PatternSectionLabel>
+        <SectionPanel>
           {/* Logo upload row */}
-          <div className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-surface-2/30">
-            <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-medium text-primary">{t("logo")}</p>
-              <p className="text-[10px] text-tertiary mt-0.5">{t("logoDesc")}</p>
-              {logoError && <p className="mt-1 text-[10px] text-error">{logoError}</p>}
-            </div>
-            <div className="flex shrink-0 items-center gap-3">
+          <Row label={t("logo")} description={t("logoDesc")}>
+            <div className="flex items-center gap-3">
               {form.logo_url && (
-                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={`${API}${form.logo_url}`}
                   alt={t("logo")}
@@ -730,127 +580,143 @@ export default function AdminCompanySetupStudio({
                 disabled={logoUploading}
                 className="flex items-center gap-2 rounded-lg border border-default bg-surface-2 px-3 py-1.5 text-[10px] font-medium text-secondary transition-all hover:border-accent hover:bg-accent-muted hover:text-accent disabled:opacity-40"
               >
-                {logoUploading
-                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  : <ImagePlus className="h-3.5 w-3.5" />}
+                {logoUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
                 {form.logo_url ? t("logoReplace") : t("logoUpload")}
               </button>
             </div>
-          </div>
-          <TextInputRow
-            label={t("displayName")}
-            description={t("displayNameDesc")}
-            value={form.display_name ?? ""}
-            placeholder={t("displayNamePlaceholder")}
-            onChange={(v) => set("display_name", v)}
-          />
-          <SelectRow
-            label={t("country")}
-            description={t("countryDesc")}
-            value={form.country_code ?? ""}
-            options={COUNTRY_OPTIONS_T}
-            onChange={(v) => set("country_code", v)}
-          />
-          <SelectRow
-            label={t("baseCurrency")}
-            description={t("baseCurrencyDesc")}
-            value={form.base_currency ?? ""}
-            options={CURRENCY_OPTIONS_T}
-            onChange={(v) => set("base_currency", v)}
-          />
-          <SelectRow
-            label={t("timezone")}
-            description={t("timezoneDesc")}
-            value={form.timezone ?? ""}
-            options={TIMEZONE_OPTIONS_T}
-            onChange={(v) => set("timezone", v)}
-          />
-          <SelectRow
-            label={t("language")}
-            description={t("languageDesc")}
-            value={form.language_code ?? ""}
-            options={LANGUAGE_OPTIONS_T}
-            onChange={(v) => set("language_code", v)}
-          />
-          <SelectRow
-            label={t("industry")}
-            description={t("industryDesc")}
-            value={form.industry ?? ""}
-            options={INDUSTRY_OPTIONS_T}
-            onChange={(v) => set("industry", v)}
-          />
-        </Panel>
+          </Row>
+
+          <Row label={t("displayName")} description={t("displayNameDesc")}>
+            <input
+              type="text"
+              value={form.display_name ?? ""}
+              placeholder={t("displayNamePlaceholder")}
+              onChange={(e) => set("display_name", e.target.value)}
+              className={`${inputClasses.base} w-52`}
+            />
+          </Row>
+
+          <Row label={t("country")} description={t("countryDesc")}>
+            <select
+              value={form.country_code ?? ""}
+              onChange={(e) => set("country_code", e.target.value)}
+              className={`${inputClasses.select} w-52`}
+            >
+              <option value="">—</option>
+              {COUNTRY_OPTIONS_T.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </Row>
+
+          <Row label={t("baseCurrency")} description={t("baseCurrencyDesc")}>
+            <select
+              value={form.base_currency ?? ""}
+              onChange={(e) => set("base_currency", e.target.value)}
+              className={`${inputClasses.select} w-52`}
+            >
+              <option value="">—</option>
+              {CURRENCY_OPTIONS_T.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </Row>
+
+          <Row label={t("timezone")} description={t("timezoneDesc")}>
+            <select
+              value={form.timezone ?? ""}
+              onChange={(e) => set("timezone", e.target.value)}
+              className={`${inputClasses.select} w-52`}
+            >
+              <option value="">—</option>
+              {TIMEZONE_OPTIONS_T.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </Row>
+
+          <Row label={t("language")} description={t("languageDesc")}>
+            <select
+              value={form.language_code ?? ""}
+              onChange={(e) => set("language_code", e.target.value)}
+              className={`${inputClasses.select} w-52`}
+            >
+              <option value="">—</option>
+              {LANGUAGE_OPTIONS_T.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </Row>
+
+          <Row label={t("industry")} description={t("industryDesc")}>
+            <select
+              value={form.industry ?? ""}
+              onChange={(e) => set("industry", e.target.value)}
+              className={`${inputClasses.select} w-52`}
+            >
+              <option value="">—</option>
+              {INDUSTRY_OPTIONS_T.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </Row>
+        </SectionPanel>
       </div>
 
       {/* B — Organization Model */}
       <div>
-        <SectionLabel icon={<Users className="h-3 w-3 text-white" />}>{t("sectionB")}</SectionLabel>
-        <Panel>
-          <SelectRow
-            label={t("employeeCountRange")}
-            description={t("employeeCountRangeDesc")}
-            value={form.employee_count_range ?? ""}
-            options={EMPLOYEE_RANGE_OPTIONS_T}
-            onChange={(v) => set("employee_count_range", v)}
-          />
-          <ToggleRow
-            label={t("hasManagers")}
-            description={t("hasManagersDesc")}
-            checked={!!form.has_managers}
-            onChange={(v) => set("has_managers", v)}
-          />
-        </Panel>
+        <PatternSectionLabel>{t("sectionB")}</PatternSectionLabel>
+        <SectionPanel>
+          <Row label={t("employeeCountRange")} description={t("employeeCountRangeDesc")}>
+            <select
+              value={form.employee_count_range ?? ""}
+              onChange={(e) => set("employee_count_range", e.target.value)}
+              className={`${inputClasses.select} w-52`}
+            >
+              <option value="">—</option>
+              {EMPLOYEE_RANGE_OPTIONS_T.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </Row>
+          <Row label={t("hasManagers")} description={t("hasManagersDesc")}>
+            <Toggle value={!!form.has_managers} onChange={(v) => set("has_managers", v)} />
+          </Row>
+        </SectionPanel>
       </div>
 
       {/* C — Allocation & Operations */}
       <div>
-        <SectionLabel icon={<Layers className="h-3 w-3 text-white" />}>{t("sectionC")}</SectionLabel>
-        <Panel>
-          <SelectRow
-            label={t("allocationDimensions")}
-            description={t("allocationDimensionsDesc")}
-            value={form.allocation_dimensions ?? "project_client_cost_center"}
-            options={ALLOC_DIM_OPTIONS_T}
-            onChange={(v) => set("allocation_dimensions", v)}
-          />
-          <ToggleRow
-            label={t("splitAllocations")}
-            description={t("splitAllocationsDesc")}
-            checked={!!form.allow_split_allocations}
-            onChange={(v) => set("allow_split_allocations", v)}
-          />
-        </Panel>
+        <PatternSectionLabel>{t("sectionC")}</PatternSectionLabel>
+        <SectionPanel>
+          <Row label={t("allocationDimensions")} description={t("allocationDimensionsDesc")}>
+            <select
+              value={form.allocation_dimensions ?? "project_client_cost_center"}
+              onChange={(e) => set("allocation_dimensions", e.target.value)}
+              className={`${inputClasses.select} w-52`}
+            >
+              {ALLOC_DIM_OPTIONS_T.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </Row>
+          <Row label={t("splitAllocations")} description={t("splitAllocationsDesc")}>
+            <Toggle value={!!form.allow_split_allocations} onChange={(v) => set("allow_split_allocations", v)} />
+          </Row>
+        </SectionPanel>
       </div>
 
       {/* D — Module Activation */}
       <div>
-        <SectionLabel icon={<CheckCircle className="h-3 w-3 text-white" />}>{t("sectionD")}</SectionLabel>
-        <Panel>
+        <PatternSectionLabel>{t("sectionD")}</PatternSectionLabel>
+        <SectionPanel>
           {[
-            { key: "expenses_module_enabled",          label: t("moduleExpenses"),          desc: t("moduleExpensesDesc"), icon: <FileText className="h-3.5 w-3.5" /> },
-            { key: "time_allocation_module_enabled",   label: t("moduleTimeAllocation"),    desc: t("moduleTimeAllocationDesc"), icon: <Clock className="h-3.5 w-3.5" /> },
-            { key: "approvals_module_enabled",         label: t("moduleApprovals"),         desc: t("moduleApprovalsDesc"), icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
-            { key: "accounting_module_enabled",        label: t("moduleAccounting"),        desc: t("moduleAccountingDesc"), icon: <Briefcase className="h-3.5 w-3.5" /> },
-            { key: "archive_module_enabled",           label: t("moduleArchive"),           desc: t("moduleArchiveDesc"), icon: <Archive className="h-3.5 w-3.5" /> },
+            { key: "expenses_module_enabled", label: t("moduleExpenses"), desc: t("moduleExpensesDesc") },
+            { key: "time_allocation_module_enabled", label: t("moduleTimeAllocation"), desc: t("moduleTimeAllocationDesc") },
+            { key: "approvals_module_enabled", label: t("moduleApprovals"), desc: t("moduleApprovalsDesc") },
+            { key: "accounting_module_enabled", label: t("moduleAccounting"), desc: t("moduleAccountingDesc") },
+            { key: "archive_module_enabled", label: t("moduleArchive"), desc: t("moduleArchiveDesc") },
           ].map(({ key, label, desc }) => (
-            <ToggleRow
-              key={key}
-              label={label}
-              description={desc}
-              checked={!!form[key]}
-              onChange={(v) => set(key, v)}
-            />
+            <Row key={key} label={label} description={desc}>
+              <Toggle value={!!form[key]} onChange={(v) => set(key, v)} />
+            </Row>
           ))}
-        </Panel>
+        </SectionPanel>
       </div>
 
       {/* E — Legal Entities */}
       <div>
-        <SectionLabel icon={<Building2 className="h-3 w-3 text-white" />}>{t("sectionE")}</SectionLabel>
+        <PatternSectionLabel>{t("sectionE")}</PatternSectionLabel>
 
         {entities.length > 0 && (
-          <div className="mb-3 overflow-hidden rounded-xl border border-subtle bg-surface-1">
-            <div className="grid grid-cols-[1fr_auto_auto_auto_70px] gap-x-4 border-b border-subtle bg-surface-2/50 px-4 py-2.5">
+          <div className="mb-3 overflow-hidden rounded-lg border border-default bg-surface-1">
+            <div className="grid grid-cols-[1fr_auto_auto_auto_70px] gap-x-4 border-b border-subtle bg-surface-2/50 px-4 py-2">
               {[t("entityColName"), t("entityColRfc"), t("entityColReimb"), t("entityColInvoice"), ""].map((h, i) => (
                 <span key={i} className="text-[9px] font-bold uppercase tracking-widest text-muted">{h}</span>
               ))}
@@ -858,11 +724,11 @@ export default function AdminCompanySetupStudio({
             {entities.map((e) => (
               <div
                 key={e.id}
-                className="grid grid-cols-[1fr_auto_auto_auto_70px] items-center gap-x-4 border-b border-subtle px-4 py-3 last:border-0 transition-colors hover:bg-surface-2/30"
+                className="grid grid-cols-[1fr_auto_auto_auto_70px] items-center gap-x-4 border-b border-subtle px-4 py-2.5 last:border-0 transition-colors hover:bg-surface-2/30"
               >
                 <div>
                   <p className="text-[11px] font-medium text-primary">{e.entity_name}</p>
-                  {e.entity_code && <p className="font-mono text-[9px] text-muted mt-0.5">{e.entity_code}</p>}
+                  {e.entity_code && <p className="font-mono text-[9px] text-muted">{e.entity_code}</p>}
                 </div>
                 <span className="font-mono text-[10px] text-secondary">{e.rfc || "—"}</span>
                 <span className={`text-[10px] ${e.is_reimbursement_entity ? "text-success font-medium" : "text-muted"}`}>
@@ -885,10 +751,7 @@ export default function AdminCompanySetupStudio({
                     disabled={deletingId === e.id}
                     className="rounded p-1 text-muted transition-colors hover:bg-error-muted hover:text-error disabled:opacity-40"
                   >
-                    {deletingId === e.id
-                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      : <Trash2 className="h-3.5 w-3.5" />
-                    }
+                    {deletingId === e.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                   </button>
                 </div>
               </div>
@@ -904,6 +767,28 @@ export default function AdminCompanySetupStudio({
             onCancel={() => setEditingEntity(null)}
           />
         )}
+
+        {addingEntity && !editingEntity && (
+          <LegalEntityForm
+            companyId={companyId}
+            onSaved={handleEntitySaved}
+            onCancel={() => setAddingEntity(false)}
+          />
+        )}
+
+        {!addingEntity && !editingEntity && (
+          <button
+            type="button"
+            onClick={() => setAddingEntity(true)}
+            className="flex items-center gap-2 rounded-lg border border-default bg-surface-2 px-3 py-1.5 text-[11px] font-medium text-secondary transition-all hover:border-accent hover:bg-accent-muted hover:text-accent"
+          >
+            <Plus className="h-3.5 w-3.5" /> {t("addLegalEntity")}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
         {addingEntity && !editingEntity && (
           <LegalEntityForm

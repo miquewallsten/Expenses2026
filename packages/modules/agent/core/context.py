@@ -39,3 +39,8 @@ class AgentContext:
     can_view_analytics: bool = False
     is_amex_reconciler: bool = False
     has_executive_reporting: bool = False
+    # Org assignment context
+    delegates_for_user_id: int | None = None
+    delegates_for_user_name: str | None = None
+    assigned_project_ids: list[int] = field(default_factory=list)
+

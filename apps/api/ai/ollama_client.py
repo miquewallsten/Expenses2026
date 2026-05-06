@@ -684,14 +684,22 @@ def stream_chat_with_messages_sse(
 def provider_from_config(config: dict) -> Provider | None:
     """Build a Provider from an LLMProviderConfig dict."""
     kind = config.get("provider", "ollama").strip().lower()
+    # Map ollama-cloud to ollama (same API, different base URL)
+    if kind == "ollama-cloud":
+        kind = "ollama"
     model = config.get("model_name", "")
     if not model:
         return None
+    # Resolve API key from env var reference
+    api_key = ""
+    env_ref = config.get("api_key_env_ref", "")
+    if env_ref:
+        api_key = os.environ.get(env_ref, "")
     return Provider(
         kind=kind,
         base_url=(config.get("base_url") or "").rstrip("/") or "http://127.0.0.1:11434",
         model=model,
-        api_key=config.get("api_key_env_ref", ""),
+        api_key=api_key,
         num_ctx=int(config.get("num_ctx") or 32768),
     )
 

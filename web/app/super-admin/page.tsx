@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-// Super admin landing moved to unified MyWork portal.
+// Redirect to the super-admin dashboard
 export default function SuperAdminPage() {
-  redirect("/mywork?module=super-admin");
+  redirect("/super-admin/dashboard");
 }

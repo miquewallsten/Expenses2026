@@ -42,7 +42,7 @@ def seed_all():
         users_data = [
             {"email": "employee@techglobal.mx", "full_name": "Juan Pérez García", "role": "employee", "department": "Engineering", "job_title": "Software Engineer"},
             {"email": "manager@techglobal.mx", "full_name": "María González López", "role": "manager", "department": "Engineering", "job_title": "Engineering Manager"},
-            {"email": "accountant@techglobal.mx", "full_name": "Carlos Rodríguez Hernández", "role": "accountant", "department": "Accounting", "job_title": "Senior Accountant", "is_amex_reconciler": True},
+            {"email": "accountant@techglobal.mx", "full_name": "Carlos Rodríguez Hernández", "role": "accounting", "department": "Accounting", "job_title": "Senior Accountant", "is_amex_reconciler": True},
             {"email": "admin@techglobal.mx", "full_name": "Ana Martínez Sánchez", "role": "admin", "department": "Operations", "job_title": "Operations Director"},
         ]
 

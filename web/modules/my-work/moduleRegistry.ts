@@ -59,7 +59,8 @@ export const MY_WORK_MODULES: readonly MyWorkModule[] = [
       hasModule(ctx, "expenses") &&
       (ctx.capabilities?.can_create_expenses ?? true) &&
       (hasRole(ctx, "employee", "manager", "admin", "executive", "secretary") ||
-        hasPermission(ctx, "submit_expense")),
+        hasPermission(ctx, "expense:submit") ||
+        ctx.capabilities?.delegates_for_user_id !== null),
     component: React.lazy(() => import("@/modules/my-expenses/MyExpensesModule")),
   },
 
@@ -75,7 +76,7 @@ export const MY_WORK_MODULES: readonly MyWorkModule[] = [
       hasModule(ctx, "approvals") &&
       (ctx.derived?.manager_flow_enabled ?? false) &&
       (hasRole(ctx, "manager", "executive") ||
-        hasPermission(ctx, "approve_expense")),
+        hasPermission(ctx, "expense:approve:manager")),
     component: React.lazy(() => import("@/modules/my-approvals/MyApprovalsModule")),
   },
 
@@ -92,7 +93,7 @@ export const MY_WORK_MODULES: readonly MyWorkModule[] = [
       (ctx.derived?.accounting_flow_enabled ?? false) &&
       (hasRole(ctx, "accounting") ||
         (ctx.capabilities?.can_access_accounting ?? false) ||
-        hasPermission(ctx, "assign_account")),
+        hasPermission(ctx, "accounting:work")),
     component: React.lazy(() => import("@/modules/accounting-review/AccountingReviewModule")),
   },
 
@@ -110,7 +111,7 @@ export const MY_WORK_MODULES: readonly MyWorkModule[] = [
       hasModule(ctx, "time_allocation") &&
       ((ctx.capabilities?.requires_time_tracking ?? false) ||
         hasRole(ctx, "employee", "admin") ||
-        hasPermission(ctx, "submit_timesheet")),
+        hasPermission(ctx, "time_tracking:submit")),
     component: React.lazy(() => import("@/modules/my-time/MyTimeModule")),
   },
 
@@ -128,7 +129,7 @@ export const MY_WORK_MODULES: readonly MyWorkModule[] = [
       ((ctx.capabilities?.has_executive_reporting ?? false) ||
         hasRole(ctx, "employee", "manager", "accounting", "executive") ||
         hasPermission(ctx, "submit_expense") ||
-        hasPermission(ctx, "approve_expense")),
+        hasPermission(ctx, "expense:approve:manager")),
     component: React.lazy(() => import("@/modules/my-reports/MyReportsModule")),
   },
 
@@ -142,7 +143,7 @@ export const MY_WORK_MODULES: readonly MyWorkModule[] = [
     isVisible: (ctx) =>
       hasModule(ctx, "purchase_requests") &&
       (hasRole(ctx, "employee", "manager", "accounting", "admin", "executive", "secretary") ||
-        hasPermission(ctx, "submit_expense")),
+        hasPermission(ctx, "expense:submit")),
     component: React.lazy(() => import("@/modules/my-requests/MyRequestsModule")),
   },
 

@@ -48,6 +48,9 @@ _MODULE_REQUIREMENTS: dict[str, dict[str, list[tuple[str, str, str]]]] = {
             ("CompanyExpensePolicy", "exists", "Expense policy must be configured"),
             ("ApprovalSetup", "exists", "Approval workflow must be configured"),
         ],
+        "required_users": [
+            ("can_create_expenses", "count>0", "At least one employee must be able to create expenses"),
+        ]
     },
     "accounting": {
         "required_entities": [
@@ -56,11 +59,17 @@ _MODULE_REQUIREMENTS: dict[str, dict[str, list[tuple[str, str, str]]]] = {
         "required_policies": [
             ("AccountingSetup", "exists", "Accounting setup must be configured"),
         ],
+        "required_users": [
+            ("can_access_accounting", "count>0", "At least one user must be marked as Accounting staff"),
+        ]
     },
     "approvals": {
         "required_policies": [
             ("ApprovalSetup", "exists", "Approval workflow must be configured"),
         ],
+        "required_users": [
+            ("role:manager", "count>0", "At least one user must have the Manager role"),
+        ]
     },
     "purchase_requests": {
         "required_policies": [
@@ -71,11 +80,17 @@ _MODULE_REQUIREMENTS: dict[str, dict[str, list[tuple[str, str, str]]]] = {
         "required_entities": [
             ("CompanySetup", "display_name", "Company name is required"),
         ],
+        "required_users": [
+            ("requires_time_tracking", "count>0", "At least one user must be marked as requiring time tracking"),
+        ]
     },
     "amex_reconciliation": {
         "prerequisites": [
             ("expenses", "The expenses module must be enabled for AMEX reconciliation"),
         ],
+        "required_users": [
+            ("is_amex_reconciler", "count>0", "At least one user must be marked as Amex Reconciler"),
+        ]
     },
     "archive": {
         "required_policies": [
@@ -187,6 +202,21 @@ class TenantReadinessValidator:
                     mod_gaps.append(gap)
                     blockers.append(gap)
 
+            # required users
+            for user_attr, check, msg in reqs.get("required_users", []):
+                ok = self._check_user(db, company_id, user_attr, check)
+                if not ok:
+                    gap = RequirementGap(
+                        module=module_key,
+                        kind="user",
+                        target=f"User.{user_attr}",
+                        message=msg,
+                        severity="blocker",
+                        wizard_step="users",
+                    )
+                    mod_gaps.append(gap)
+                    blockers.append(gap)
+
             modules.append(
                 ModuleReadiness(
                     module=module_key,
@@ -256,6 +286,26 @@ class TenantReadinessValidator:
         if policy_name == "ArchiveConfig":
             from packages.core.platform.models_archive_config import ArchiveConfig
             return db.query(ArchiveConfig).filter_by(company_id=company_id).first() is not None
+
+        return True
+
+    def _check_user(self, db: Session, company_id: int, attr: str, check: str) -> bool:
+        from packages.core.platform.models_user import User
+
+        query = db.query(User).filter_by(company_id=company_id, is_active=True)
+
+        if attr.startswith("role:"):
+            target_role = attr.split(":", 1)[1]
+            query = query.filter(User.role == target_role)
+        else:
+            # Check boolean capability flags
+            if hasattr(User, attr):
+                query = query.filter(getattr(User, attr) == True)
+            else:
+                return True
+
+        if check == "count>0":
+            return query.count() > 0
 
         return True
 

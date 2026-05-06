@@ -608,6 +608,56 @@ def list_insights(
     ]
 
 
+@router.get("/my-insights/{cid}")
+def list_my_insights(
+    cid: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List insights relevant to the current user."""
+    require_same_company(cid, current_user)
+    
+    # Filter insights by company and maybe by user if data_json has user_id
+    # For now, just return critical/warn company-wide if not admin, or all if admin
+    query = db.query(AgentInsight).filter(
+        AgentInsight.company_id == cid, 
+        AgentInsight.status == "open"
+    )
+    
+    if not has_permission(db, current_user, "admin"):
+        # Regular users only see insights where they are explicitly mentioned in the data 
+        # or non-admin categories (TBD). For now, let's look for user_id in data_json.
+        # This is a bit slow on SQLite, but OK for MVP.
+        # Efficient way: add user_id column to AgentInsight.
+        pass
+
+    rows = query.order_by(AgentInsight.severity.desc(), AgentInsight.created_at.desc()).limit(50).all()
+    
+    # Filter in Python for user-specific data if not admin
+    if not has_permission(db, current_user, "admin"):
+        filtered = []
+        for r in rows:
+            data = json.loads(r.data_json) if r.data_json else {}
+            if data.get("user_id") == current_user.id or not data.get("user_id"):
+                filtered.append(r)
+        rows = filtered
+
+    return [
+        {
+            "id": r.id,
+            "kind": r.kind,
+            "severity": r.severity,
+            "title": r.title,
+            "body": r.body,
+            "data": json.loads(r.data_json) if r.data_json else None,
+            "suggested_prompt": r.suggested_prompt,
+            "status": r.status,
+            "created_at": r.created_at,
+        }
+        for r in rows
+    ]
+
+
 class InsightStatusRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     status: Literal["acknowledged", "resolved", "dismissed"]

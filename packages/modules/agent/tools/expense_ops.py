@@ -43,9 +43,13 @@ class _CreateExpenseArgs(BaseModel):
 
 
 def _handle_create_expense(ctx: AgentContext, args: _CreateExpenseArgs) -> ToolResult:
+    if not ctx.can_create_expenses:
+        return ToolResult(ok=False, summary="No tienes permiso para crear gastos.", error="permission_denied")
+        
     try:
         payload = ExpenseCreate(
             company_id=ctx.company_id,
+            user_id=ctx.delegates_for_user_id or ctx.user_id,
             amount=Decimal(str(args.amount)),
             description=args.description,
             category_code=args.category_code,

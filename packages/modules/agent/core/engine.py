@@ -23,8 +23,9 @@ from typing import Any
 
 from apps.api.ai.ollama_client import chat_with_tools, chat_with_tools_dynamic, provider_from_config
 from packages.core.platform.models_user import User
+from packages.core.platform.models_user_project import UserProjectAssignment
 
-from ..models import AgentSession
+from ..models import AgentSession, AgentInsight
 from .audit import record as audit_record
 from .context import AgentContext, Persona
 from .knowledge import hybrid_search_knowledge, render_for_prompt
@@ -43,12 +44,13 @@ MAX_ITERATIONS    = 6
 
 # ── Session persistence ─────────────────────────────────────────────────────
 
-def _load_session(db, company_id: int, session_id: str) -> AgentSession | None:
+def _load_session(db, company_id: int, session_id: str, user_id: int) -> AgentSession | None:
     return (
         db.query(AgentSession)
         .filter(
             AgentSession.session_id == session_id,
             AgentSession.company_id == company_id,
+            AgentSession.user_id == user_id,
         )
         .one_or_none()
     )
@@ -206,12 +208,21 @@ def _system_prompt(
     db=None,
 ) -> str:
     base = _SYSTEM_PROMPT_ES.get(persona, _SYSTEM_PROMPT_ES["admin"])
+    
+    context_line = f"Contexto del usuario: id={user.id}, email={user.email}, rol={user.role}, empresa={company_id}."
+    if getattr(user, "delegates_for_user_id", None):
+        boss = db.query(User).filter(User.id == user.delegates_for_user_id).first()
+        if boss:
+            context_line += f" Actúas como asistente de {boss.full_name} (id={boss.id}). Puedes crear gastos en su nombre."
+
+    assigned_projects = db.query(UserProjectAssignment).filter(UserProjectAssignment.user_id == user.id).all()
+    if assigned_projects:
+        p_ids = ", ".join(str(p.project_id) for p in assigned_projects)
+        context_line += f" Tienes proyectos asignados: ids=[{p_ids}]."
+
     parts: list[str] = [
         base,
-        (
-            f"Contexto del usuario: id={user.id}, email={user.email}, rol={user.role}, "
-            f"empresa={company_id}."
-        ),
+        context_line,
     ]
     # Inject top-k relevant knowledge chunks based on the current user turn.
     chunks = hybrid_search_knowledge(db, company_id, user_message, k=5) if user_message else []
@@ -222,6 +233,21 @@ def _system_prompt(
         mem = list_memories_for_prompt(db, company_id=company_id, user_id=user.id, limit=8)
         if mem:
             parts.append(mem)
+            
+        # Inject open insights (autonomous background findings)
+        open_insights = (
+            db.query(AgentInsight)
+            .filter(AgentInsight.company_id == company_id, AgentInsight.status == "open")
+            .order_by(AgentInsight.created_at.desc())
+            .limit(5)
+            .all()
+        )
+        if open_insights:
+            insight_lines = ["Hallazgos proactivos (insights) que requieren atención:"]
+            for ins in open_insights:
+                insight_lines.append(f"- [{ins.severity.upper()}] {ins.title}: {ins.body}")
+            parts.append("\n".join(insight_lines))
+            
     return "\n\n".join(parts)
 
 
@@ -277,13 +303,13 @@ def run_turn(
             "error":         str | None,
         }
     """
+    # Resolve user id for context (needed whether session is new or existing)
+    u_id = user.id if hasattr(user, "id") else user
+
     # ── session row ───────────────────────────────────────────────────────
     session: AgentSession | None = None
     if session_id:
-        session = _load_session(db, company_id, session_id)
-
-    # Resolve user id for context (needed whether session is new or existing)
-    u_id = user.id if hasattr(user, "id") else user
+        session = _load_session(db, company_id, session_id, u_id)
 
     if session is None:
         session = _new_session(db, company_id=company_id, persona=persona, user_id=u_id)
@@ -309,6 +335,18 @@ def run_turn(
         else:
             allowed_tools_list = []
 
+    # Capability flags — control what modules the user can access
+    boss_name = None
+    if getattr(user, "delegates_for_user_id", None):
+        boss = db.query(User).filter(User.id == user.delegates_for_user_id).first()
+        if boss:
+            boss_name = boss.full_name
+            
+    assigned_projects = [
+        p.project_id for p in 
+        db.query(UserProjectAssignment).filter(UserProjectAssignment.user_id == u_id).all()
+    ]
+
     ctx = AgentContext(
         db=db,
         company_id=company_id,
@@ -325,6 +363,10 @@ def run_turn(
         can_view_analytics=getattr(user, "can_view_analytics", False),
         is_amex_reconciler=getattr(user, "is_amex_reconciler", False),
         has_executive_reporting=getattr(user, "has_executive_reporting", False),
+        # Org assignment context
+        delegates_for_user_id=getattr(user, "delegates_for_user_id", None),
+        delegates_for_user_name=boss_name,
+        assigned_project_ids=assigned_projects,
     )
 
     # ── executor closure ──────────────────────────────────────────────────

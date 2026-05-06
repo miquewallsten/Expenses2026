@@ -20,6 +20,7 @@ import { useUserContext } from "@/context/UserContext";
 import { AdminProvider, useAdminContext, type AdminSection } from "@/context/AdminContext";
 import MyWorkSidebar from "@/components/my-work/MyWorkSidebar";
 import MyWorkWorkspace from "@/components/my-work/MyWorkWorkspace";
+import AgentChat from "@/components/agent/AgentChat";
 import { buildGlobalNav } from "@/lib/navigation";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
@@ -50,36 +51,50 @@ function initials(label: string): string {
 
 function AIAssistantDock({ collapsed, onExpand }: { collapsed: boolean; onExpand: () => void }) {
   const t = useTranslations("myWork.ai");
+  const { effectiveConfig } = useMyWorkContext();
+  const [hasInsights, setHasInsights] = useState(false);
+
+  useEffect(() => {
+    const companyId = effectiveConfig?.company_setup.company_id;
+    if (!companyId) return;
+    
+    // Check for open insights to trigger a glow/pulse on the bot icon
+    apiCall<any[]>(`/agent/my-insights/${companyId}`)
+      .then(ins => setHasInsights(ins.length > 0))
+      .catch(() => setHasInsights(false));
+  }, [effectiveConfig?.company_setup.company_id]);
 
   if (collapsed) {
     return (
       <button
         onClick={onExpand}
-        className="group flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-ai to-accent shadow-lg shadow-ai-glow transition-all hover:scale-105"
+        className={`group relative flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-ai to-accent shadow-lg transition-all hover:scale-105 ${hasInsights ? "shadow-error-glow" : "shadow-ai-glow"}`}
         title={t("openAssistant")}
       >
         <Bot className="h-5 w-5 text-white" />
-        <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-success animate-pulse" />
+        {hasInsights && (
+          <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-error animate-pulse shadow-sm" />
+        )}
       </button>
     );
   }
 
   return (
-    <div className="flex items-center gap-3 rounded-xl bg-gradient-to-r from-ai-muted to-accent-muted p-3">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-ai to-accent shadow-md shadow-ai-glow">
+    <div className={`flex items-center gap-3 rounded-xl p-3 transition-colors ${hasInsights ? "bg-error/5 ring-1 ring-error/20" : "bg-gradient-to-r from-ai-muted to-accent-muted"}`}>
+      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br shadow-md ${hasInsights ? "from-error to-error-hover shadow-error-glow" : "from-ai to-accent shadow-ai-glow"}`}>
         <Bot className="h-4 w-4 text-white" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-ai">
-          {t("assistant")}
+        <p className={`text-[10px] font-semibold uppercase tracking-wide ${hasInsights ? "text-error" : "text-ai"}`}>
+          {hasInsights ? "Aviso" : t("assistant")}
         </p>
         <p className="truncate text-[9px] text-tertiary">
-          {t("ready")}
+          {hasInsights ? "Tienes tareas pendientes" : t("ready")}
         </p>
       </div>
       <button
         onClick={onExpand}
-        className="flex h-7 w-7 items-center justify-center rounded-md bg-surface-2 text-muted transition-colors hover:bg-surface-3 hover:text-secondary"
+        className={`flex h-7 w-7 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-3 hover:text-secondary ${hasInsights ? "bg-error/10 hover:bg-error/20" : "bg-surface-2"}`}
       >
         <MessageSquare className="h-3.5 w-3.5" />
       </button>
@@ -191,6 +206,7 @@ function UnifiedSidebar({
 
   // Admin navigation sections
   const ADMIN_SETTINGS_SECTIONS: { id: AdminSection; label: string; icon: LucideIcon }[] = [
+    { id: "overview", label: "Overview", icon: LayoutGrid },
     { id: "company-setup", label: ta("companySetup.title"), icon: Building },
     { id: "expense-policy", label: ta("expensePolicy"), icon: FileText },
     { id: "approval-workflow", label: ta("workflow"), icon: GitBranch },
@@ -427,6 +443,7 @@ function MyWorkShell() {
   const { isMobile, isTablet, isDesktop } = useLayoutMode();
   const tnShell = useTranslations("nav");
   const tsShell = useTranslations("shell");
+  const t = useTranslations("myWork.ai");
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [navDrawerOpen, setNavDrawerOpen] = useState(false);
@@ -455,6 +472,9 @@ function MyWorkShell() {
 
   // Admin module shows admin navigation in sidebar
   const isAdminModule = mounted && activeModule?.id === "admin";
+
+  // Company ID for AI chat
+  const companyId = user.companyId;
 
   const workspace = (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -645,6 +665,44 @@ function MyWorkShell() {
 
       {!isAdminModule && topRightToolbar}
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+
+      {/* AI Assistant Panel */}
+      {aiPanelOpen && companyId && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+            onClick={() => setAiPanelOpen(false)}
+          />
+          <aside className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[420px] flex-col border-l border-default bg-surface-0 shadow-2xl">
+            <header className="flex h-11 shrink-0 items-center gap-2 border-b border-default px-3">
+              <div className="flex h-5 w-5 items-center justify-center rounded bg-gradient-to-br from-ai to-accent ring-1 ring-ai/20">
+                <Bot className="h-3 w-3 text-white" />
+              </div>
+              <div className="flex flex-col leading-tight">
+                <span className="text-[11px] font-semibold text-secondary">AI Assistant</span>
+                <span className="text-[9px] uppercase tracking-widest text-muted">Your Copilot</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAiPanelOpen(false)}
+                className="ml-auto flex h-6 w-6 items-center justify-center rounded text-muted transition-colors hover:bg-surface-2 hover:text-secondary"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </header>
+            <div className="min-h-0 flex-1 overflow-hidden">
+              <AgentChat
+                companyId={companyId}
+                persona="employee"
+                greeting={t("greeting")}
+                allowUpload={false}
+                streaming
+                variant="page"
+              />
+            </div>
+          </aside>
+        </>
+      )}
     </div>
   );
 }

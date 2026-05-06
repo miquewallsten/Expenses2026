@@ -23,6 +23,16 @@ interface Message {
   content: string;
 }
 
+interface Insight {
+  id: int;
+  kind: string;
+  severity: "info" | "warn" | "critical";
+  title: string;
+  body: string;
+  data: any;
+  suggested_prompt: string | null;
+}
+
 interface AiStatus {
   available: boolean;
   active_model: string | null;
@@ -308,6 +318,8 @@ export default function MyWorkAssistant() {
   const [messages,       setMessages]       = useState<Message[]>([]);
   const [input,          setInput]          = useState("");
   const [chatLoading,    setChatLoading]    = useState(false);
+  const [insights,       setInsights]       = useState<Insight[]>([]);
+  const [insightsLoading, setInsightsLoading] = useState(false);
 
   const bottomRef   = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -324,6 +336,18 @@ export default function MyWorkAssistant() {
       }))
       .catch(() => setAiStatus({ available: false, active_model: null }));
   }, []);
+
+  // Fetch insights
+  useEffect(() => {
+    const companyId = effectiveConfig?.company_setup.company_id;
+    if (!companyId) return;
+
+    setInsightsLoading(true);
+    apiCall<Insight[]>(`/agent/my-insights/${companyId}`)
+      .then(setInsights)
+      .catch(() => setInsights([]))
+      .finally(() => setInsightsLoading(false));
+  }, [effectiveConfig?.company_setup.company_id]);
 
   // Scroll chat to bottom on new messages
   useEffect(() => {
@@ -545,6 +569,41 @@ export default function MyWorkAssistant() {
 
       {/* Body */}
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
+
+        {/* Proactive Insights */}
+        {insights.length > 0 && (
+          <div className="space-y-2">
+            {insights.map((ins) => (
+              <div 
+                key={ins.id} 
+                className={`rounded-lg border p-3 animate-in fade-in slide-in-from-top-2 ${
+                  ins.severity === "critical" 
+                    ? "border-error/30 bg-error/5 text-error" 
+                    : ins.severity === "warn"
+                    ? "border-warning/30 bg-warning/5 text-warning"
+                    : "border-accent/30 bg-accent/5 text-accent"
+                }`}
+              >
+                <div className="flex items-start gap-2">
+                  <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-[12px] font-semibold leading-tight">{ins.title}</p>
+                    <p className="mt-1 text-[11px] leading-relaxed opacity-90">{ins.body}</p>
+                    {ins.suggested_prompt && (
+                      <button
+                        onClick={() => sendMessage(ins.suggested_prompt!)}
+                        disabled={chatLoading}
+                        className="mt-2 text-[10px] font-bold uppercase tracking-wider underline-offset-2 hover:underline"
+                      >
+                        {ta("solveWithAI")}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Offline notice */}
         {aiStatus && !aiStatus.available && (

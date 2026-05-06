@@ -11,6 +11,15 @@
  * (already mounted as right rail) + agent-config link.
  */
 
+import {
+  PremiumHeader,
+  SectionPanel,
+  Row,
+  Toggle,
+  SectionLabel,
+  inputClasses,
+  SECTION_ACCENTS,
+} from "@/components/admin/shared/AdminPatterns";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -162,38 +171,26 @@ export default function AdminOnboardingPanel({ companyId, onNavigate }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* Premium header with progress */}
-      <div className="relative overflow-hidden rounded-lg border border-default bg-gradient-to-r from-surface-1 via-surface-1 to-success/[0.02] px-4 py-3">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--color-emerald-500)/5%,_transparent_50%)]" />
-        <div className="relative flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-success/10">
-              <CheckCircle2 className="h-4 w-4 text-success" />
-            </div>
-            <div className="flex flex-col">
-              <h1 className="text-sm font-semibold text-primary">{t("title")}</h1>
-              <p className="text-[9px] text-muted">{t("intro")}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <div className="text-[18px] font-semibold tabular-nums text-primary">
-                {data.passed}
-                <span className="text-[12px] text-muted">/{data.total}</span>
-              </div>
-              <div className="text-[9px] uppercase tracking-wider text-muted">
-                {t("complete")}
-              </div>
-            </div>
-          </div>
-        </div>
-        {/* Progress bar */}
-        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-surface-2">
-          <div
-            className="h-full bg-gradient-to-r from-success via-success to-success/70 transition-all"
-            style={{ width: `${progressPct}%` }}
-          />
-        </div>
+      <PremiumHeader
+        section="onboarding"
+        icon={<CheckCircle2 className="h-4 w-4" />}
+        title={t("title")}
+        subtitle={t("intro")}
+        metrics={[
+          {
+            label: t("complete"),
+            value: `${data.passed}/${data.total}`,
+            tone: data.passed === data.total ? "success" : "neutral",
+          },
+        ]}
+      />
+      
+      {/* Progress bar */}
+      <div className="relative h-1 w-full overflow-hidden rounded-full bg-surface-2">
+        <div
+          className="h-full bg-gradient-to-r from-success via-success to-success/70 transition-all duration-500"
+          style={{ width: `${progressPct}%` }}
+        />
       </div>
 
       <ol className="mt-5 grid grid-cols-7 gap-1.5">

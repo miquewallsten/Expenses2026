@@ -15,6 +15,15 @@
  * cards). No create/edit — those endpoints don't exist on the backend yet.
  */
 
+import {
+  PremiumHeader,
+  SectionPanel,
+  Row,
+  Toggle,
+  SectionLabel,
+  inputClasses,
+  SECTION_ACCENTS,
+} from "@/components/admin/shared/AdminPatterns";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -195,36 +204,30 @@ export default function IntegrationsSection() {
   return (
     <div className="min-h-screen bg-surface-0">
       <div className="mx-auto max-w-6xl px-6 py-6">
-        {/* Premium header */}
-        <div className="relative overflow-hidden rounded-lg border border-default bg-gradient-to-r from-surface-1 via-surface-1 to-cyan-500/[0.02] px-4 py-3 mb-5">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--color-cyan-500)/5%,_transparent_50%)]" />
-          <div className="relative flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/10">
-                <Plug className="h-4 w-4 text-cyan-400" />
-              </div>
-              <div className="flex flex-col">
-                <h1 className="text-sm font-semibold text-primary">{t("title")}</h1>
-                <span className="text-[9px] text-muted">External System Connections</span>
-              </div>
-            </div>
+        <PremiumHeader
+          section="integrations"
+          icon={<Plug className="h-4 w-4" />}
+          title={t("title")}
+          subtitle="External System Connections"
+          action={
             <button
               type="button"
               onClick={() => void loadList()}
-              className="flex items-center gap-1 rounded-lg border border-default bg-surface-1 px-2.5 py-1.5 text-[10px] font-semibold text-tertiary hover:border-strong hover:text-secondary"
+              className="flex items-center gap-1.5 rounded-lg border border-default bg-surface-1 px-3 py-1.5 text-[10px] font-semibold text-tertiary transition hover:border-strong hover:text-secondary"
             >
-              <RefreshCw className="h-3 w-3" />
+              <RefreshCw className="h-3.5 w-3.5" />
               {t("refresh")}
             </button>
-          </div>
-        </div>
+          }
+        />
 
-        {error && (
-          <div className="mt-3 rounded border border-red-500/25 bg-red-500/[0.06] px-3 py-1.5 text-[10.5px] text-red-200/85">
-            <AlertTriangle className="mr-1.5 inline h-3 w-3" />
-            {error}
-          </div>
-        )}
+        <div className="mt-5">
+          {error && (
+            <div className="mb-4 rounded-lg border border-red-500/25 bg-red-500/[0.06] px-3 py-2 text-[10.5px] text-red-200/85">
+              <AlertTriangle className="mr-2 inline h-3.5 w-3.5" />
+              {error}
+            </div>
+          )}
 
         {!integrations || integrations.length === 0 ? (
           <div className="mt-8 rounded-md border border-dashed border-default bg-surface-1 px-6 py-10 text-center">

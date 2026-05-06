@@ -1,5 +1,14 @@
 "use client";
 
+import {
+  PremiumHeader,
+  SectionPanel,
+  Row,
+  Toggle,
+  SectionLabel,
+  inputClasses,
+  SECTION_ACCENTS,
+} from "@/components/admin/shared/AdminPatterns";
 import { useEffect, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { apiCall, apiPatch } from "@/lib/api/client";
@@ -791,90 +800,90 @@ export default function AdminChannelsPanel({ companyId }: { companyId: number })
   const emEnabled = settings?.find((s) => s.channel === "email")?.is_enabled ?? false;
 
   return (
-    <div className="flex min-h-0 flex-col">
-      {/* Stats bar */}
-      <StatsBar stats={stats} />
+    <div className="mx-auto max-w-4xl space-y-6 px-4 py-4">
+      <PremiumHeader
+        section="channels"
+        icon={<MessageSquare className="h-4 w-4" />}
+        title={t("title")}
+        subtitle="Configure WhatsApp and Email communication channels"
+        metrics={[
+          {
+            label: "total",
+            value: stats?.total_messages ?? 0,
+            tone: "neutral",
+          },
+          {
+            label: "errors",
+            value: stats?.errors ?? 0,
+            tone: (stats?.errors ?? 0) > 0 ? "error" : "success",
+          },
+        ]}
+      />
 
-      {/* Channel tabs with gradient header */}
-      <div className="relative border-b border-subtle bg-gradient-to-r from-surface-1 via-surface-1 to-accent/[0.02]">
-        <div className="flex shrink-0 items-center gap-0 px-4">
-          {(["whatsapp", "email"] as ChannelTab[]).map((ch) => {
-            const enabled = ch === "whatsapp" ? waEnabled : emEnabled;
-            return (
-              <button
-                key={ch}
-                onClick={() => setChannelTab(ch)}
-                className={`group relative flex items-center gap-2 border-b-2 px-4 py-3 text-[11px] font-medium transition-colors ${
-                  channelTab === ch
-                    ? "border-accent text-primary"
-                    : "border-transparent text-muted hover:text-tertiary"
-                }`}
-              >
-                <div className={`flex h-6 w-6 items-center justify-center rounded-md transition-colors ${
-                  channelTab === ch
-                    ? "bg-accent/10 text-accent"
-                    : "bg-surface-2 text-muted group-hover:bg-surface-3"
-                }`}>
-                  {ch === "whatsapp"
-                    ? <MessageSquare className="h-3.5 w-3.5" />
-                    : <Mail className="h-3.5 w-3.5" />}
-                </div>
-                {ch === "whatsapp" ? t("tabWhatsApp") : t("tabEmail")}
-                <span className={`h-2 w-2 rounded-full transition-colors ${
-                  enabled ? "bg-success shadow-sm shadow-success/30" : "bg-surface-2"
-                }`} />
-                {channelTab === ch && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-accent via-accent to-accent-hover" />
-                )}
-              </button>
-            );
-          })}
+      {/* Main Tabs */}
+      <div className="flex gap-0 border-b border-subtle">
+        {(["whatsapp", "email"] as ChannelTab[]).map((ch) => {
+          const enabled = ch === "whatsapp" ? waEnabled : emEnabled;
+          return (
+            <button
+              key={ch}
+              onClick={() => setChannelTab(ch)}
+              className={`relative flex items-center gap-2 px-6 py-3 text-[11px] font-semibold transition-colors ${
+                channelTab === ch
+                  ? "text-primary"
+                  : "text-muted hover:text-secondary"
+              }`}
+            >
+              {ch === "whatsapp" ? <MessageSquare className="h-3.5 w-3.5" /> : <Mail className="h-3.5 w-3.5" />}
+              {ch === "whatsapp" ? t("tabWhatsApp") : t("tabEmail")}
+              <span className={`h-1.5 w-1.5 rounded-full ${enabled ? "bg-success" : "bg-muted"}`} />
+              {channelTab === ch && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent" />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex gap-6">
+        {/* Sidebar Sub-Tabs */}
+        <div className="w-44 shrink-0 space-y-1">
+          {(["settings", "log", "dispatches"] as SubTab[]).map((st) => (
+            <button
+              key={st}
+              onClick={() => setSubTab(st)}
+              className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-[11px] font-medium transition-all ${
+                subTab === st
+                  ? "bg-accent-muted text-accent shadow-sm"
+                  : "text-secondary hover:bg-surface-2 hover:text-primary"
+              }`}
+            >
+              <span>{t(`subTab.${st.charAt(0).toUpperCase() + st.slice(1)}`)}</span>
+              {subTab === st && <ChevronRight className="h-3.5 w-3.5" />}
+            </button>
+          ))}
         </div>
-      </div>
 
-      {/* Sub-tabs */}
-      <div className="flex shrink-0 items-center gap-1 border-b border-subtle bg-surface-0/50 px-4 py-1">
-        {((["settings", "log", "dispatches"]) as SubTab[]).map((st) => (
-          <button
-            key={st}
-            onClick={() => setSubTab(st)}
-            className={`group flex items-center gap-1.5 rounded-lg px-3 py-2 text-[10px] font-medium capitalize transition-colors ${
-              subTab === st
-                ? "bg-surface-2 text-secondary"
-                : "text-muted hover:bg-surface-1 hover:text-secondary"
-            }`}
-          >
-            {st === "settings" ? (
-              <Settings2 className="h-3 w-3" />
-            ) : st === "log" ? (
-              <MessageSquare className="h-3 w-3" />
+        {/* Content Area */}
+        <div className="min-w-0 flex-1">
+          {loading ? (
+            <div className="flex items-center gap-2 py-8 text-muted">
+              <Loader2 className="h-4 w-4 animate-spin" /> {t("loading")}
+            </div>
+          ) : subTab === "settings" ? (
+            current ? (
+              channelTab === "whatsapp"
+                ? <WhatsAppSettingsForm settings={current} onSaved={handleSaved} companyId={companyId} />
+                : <EmailSettingsForm settings={current} onSaved={handleSaved} companyId={companyId} />
             ) : (
-              <Send className="h-3 w-3" />
-            )}
-            {st === "settings" ? t("subTabSettings") : st === "log" ? t("subTabLog") : t("subTabDispatches")}
-          </button>
-        ))}
-      </div>
-
-      {/* Content */}
-      <div className="min-h-0 flex-1 overflow-y-auto p-4">
-        {loading ? (
-          <div className="flex items-center gap-2 py-8 text-muted">
-            <Loader2 className="h-4 w-4 animate-spin" /> {t("loading")}
-          </div>
-        ) : subTab === "settings" ? (
-          current ? (
-            channelTab === "whatsapp"
-              ? <WhatsAppSettingsForm settings={current} onSaved={handleSaved} companyId={companyId} />
-              : <EmailSettingsForm settings={current} onSaved={handleSaved} companyId={companyId} />
+              <p className="py-8 text-center text-[11px] text-muted">Could not load settings.</p>
+            )
+          ) : subTab === "log" ? (
+            <MessageLog channel={channelTab} companyId={companyId} />
           ) : (
-            <p className="py-8 text-center text-[11px] text-muted">Could not load settings.</p>
-          )
-        ) : subTab === "log" ? (
-          <MessageLog channel={channelTab} companyId={companyId} />
-        ) : (
-          <DispatchLog channel={channelTab} companyId={companyId} />
-        )}
+            <DispatchLog channel={channelTab} companyId={companyId} />
+          )}
+        </div>
       </div>
     </div>
   );

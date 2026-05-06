@@ -257,7 +257,7 @@ class TestListUsersTool:
         ctx = _ctx(db_session, test_company)
         REGISTRY.dispatch("invite_user", {"email": "emp1@example.com", "role": "employee"}, ctx)
         REGISTRY.dispatch("invite_user", {"email": "mgr1@example.com", "role": "manager"}, ctx)
-        REGISTRY.dispatch("invite_user", {"email": "acct1@example.com", "role": "accountant"}, ctx)
+        REGISTRY.dispatch("invite_user", {"email": "acct1@example.com", "role": "accounting"}, ctx)
 
         res = REGISTRY.dispatch("list_users", {"roles": ["manager"]}, ctx)
         assert res.ok is True
@@ -446,7 +446,7 @@ class TestGetUserPermissionsTool:
         """Test get_user_permissions returns detailed breakdown."""
         ctx = _ctx(db_session, test_company)
         # Create a user to query
-        REGISTRY.dispatch("invite_user", {"email": "perms@example.com", "role": "accountant"}, ctx)
+        REGISTRY.dispatch("invite_user", {"email": "perms@example.com", "role": "accounting"}, ctx)
         user = db_session.query(User).filter(User.email == "perms@example.com").first()
 
         res = REGISTRY.dispatch("get_user_permissions", {"user_id": user.id}, ctx)
@@ -455,7 +455,7 @@ class TestGetUserPermissionsTool:
         assert "explanations" in res.data
         assert "module_visibility" in res.data
         assert "role_preset" in res.data
-        assert res.data["role"] == "accountant"
+        assert res.data["role"] == "accounting"
         # Accounting role should have accounting access
         assert res.data["module_visibility"]["accounting_review"] is True
 
@@ -494,25 +494,25 @@ class TestGetUserPermissionsTool:
 
 class TestCreateUserTool:
     def test_create_user_with_role_preset(self, db_session, test_company):
-        """Test create_user applies role preset for accountant."""
+        """Test create_user applies role preset for accounting."""
         ctx = _ctx(db_session, test_company)
         res = REGISTRY.dispatch(
             "create_user",
             {
-                "email": "newaccountant@test.com",
-                "full_name": "New Accountant",
-                "role": "accountant",
+                "email": "newaccounting@test.com",
+                "full_name": "New Accounting",
+                "role": "accounting",
             },
             ctx,
         )
         assert res.ok is True
-        assert res.data["role"] == "accountant"
+        assert res.data["role"] == "accounting"
         assert res.data["capabilities"]["can_access_accounting"] is True
         assert res.data["capabilities"]["can_view_analytics"] is True
         assert res.data["capabilities"]["can_create_expenses"] is False
 
         # Verify user was created in DB
-        user = db_session.query(User).filter(User.email == "newaccountant@test.com").first()
+        user = db_session.query(User).filter(User.email == "newaccounting@test.com").first()
         assert user is not None
         assert user.can_access_accounting is True
         assert user.can_view_analytics is True
@@ -932,24 +932,24 @@ class TestUpdateUserPermissionsTool:
 
 class TestAuditPermissionsTool:
     def test_audit_permissions_role_mismatch(self, db_session, test_company):
-        """Test audit finds accountants without accounting access."""
+        """Test audit finds accounting users without accounting access."""
         ctx = _ctx(db_session, test_company)
-        # Create an accountant without accounting access
+        # Create an accounting user without accounting access
         REGISTRY.dispatch(
             "create_user",
-            {"email": "accountant_no_access@test.com", "full_name": "Accountant No Access", "role": "accountant"},
+            {"email": "accounting_no_access@test.com", "full_name": "Accounting No Access", "role": "accounting"},
             ctx,
         )
-        accountant = db_session.query(User).filter(User.email == "accountant_no_access@test.com").first()
+        accounting_user = db_session.query(User).filter(User.email == "accounting_no_access@test.com").first()
         # Remove accounting access (role preset sets it to True, we override)
-        accountant.can_access_accounting = False
+        accounting_user.can_access_accounting = False
         db_session.commit()
 
         res = REGISTRY.dispatch("audit_permissions", {"check_type": "role_capability_mismatch"}, ctx)
 
         assert res.ok is True
         assert len(res.data["findings"]) >= 1
-        assert any(f["type"] == "accountant_without_accounting_access" for f in res.data["findings"])
+        assert any(f["type"] == "accounting_without_accounting_access" for f in res.data["findings"])
 
     def test_audit_permissions_missing_delegation(self, db_session, test_company):
         """Test audit finds secretaries without boss."""
@@ -1035,11 +1035,11 @@ class TestAuditPermissionsTool:
         # Create multiple issues
         REGISTRY.dispatch(
             "create_user",
-            {"email": "accountant_all@test.com", "full_name": "Accountant All", "role": "accountant"},
+            {"email": "accounting_all@test.com", "full_name": "Accounting All", "role": "accounting"},
             ctx,
         )
-        accountant = db_session.query(User).filter(User.email == "accountant_all@test.com").first()
-        accountant.can_access_accounting = False
+        accounting_user = db_session.query(User).filter(User.email == "accounting_all@test.com").first()
+        accounting_user.can_access_accounting = False
         db_session.commit()
 
         res = REGISTRY.dispatch("audit_permissions", {"check_type": "all"}, ctx)

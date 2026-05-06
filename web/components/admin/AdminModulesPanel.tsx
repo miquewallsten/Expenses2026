@@ -2,6 +2,15 @@
 
 import { useState, useEffect } from "react";
 import {
+  PremiumHeader,
+  SectionPanel,
+  Row,
+  Toggle,
+  SectionLabel,
+  inputClasses,
+  SECTION_ACCENTS,
+} from "@/components/admin/shared/AdminPatterns";
+import {
   CheckCircle2, Settings, Puzzle, Clock, Archive, Sparkles,
   ShoppingCart, Users, CreditCard, ChevronRight, AlertTriangle, Loader2,
   ExternalLink, Package, PackageCheck, PackageX,
@@ -358,32 +367,25 @@ export default function AdminModulesPanel({ companySetup, onSetupChanged, onNavi
   }
 
   return (
-    <div className="max-w-2xl space-y-4">
-      {/* Premium header */}
-      <div className="relative overflow-hidden rounded-lg border border-default bg-gradient-to-r from-surface-1 via-surface-1 to-ai/[0.02] px-4 py-3">
-        {/* Subtle grid pattern */}
-        <div className="absolute inset-0 opacity-[0.015]" style={{
-          backgroundImage: "linear-gradient(var(--color-ai) 1px, transparent 1px), linear-gradient(90deg, var(--color-ai) 1px, transparent 1px)",
-          backgroundSize: "16px 16px"
-        }} />
-
-        <div className="relative flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-ai/10">
-            <Puzzle className="h-4 w-4 text-ai" />
-          </div>
-          <div className="flex flex-col">
-            <h2 className="text-sm font-semibold text-primary">{tm("title")}</h2>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className="rounded-full border border-success/20 bg-success/5 px-2 py-0.5 font-mono text-[9px] text-success/70">
-                {installedCount} installed
-              </span>
-              <span className="text-[9px] text-muted">
-                {availableCount - installedCount} available
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="mx-auto max-w-3xl space-y-6 px-4 py-4">
+      <PremiumHeader
+        section="modules"
+        icon={<Puzzle className="h-4 w-4" />}
+        title={tm("title")}
+        subtitle="Manage modular business domains and add-ons"
+        metrics={[
+          {
+            label: "installed",
+            value: installedCount,
+            tone: "success",
+          },
+          {
+            label: "available",
+            value: availableCount - installedCount,
+            tone: "neutral",
+          },
+        ]}
+      />
 
       {error && (
         <div className="flex items-center gap-2 rounded-lg border border-error/20 bg-error/5 px-4 py-3 text-[10px] text-error/80">
@@ -392,7 +394,7 @@ export default function AdminModulesPanel({ companySetup, onSetupChanged, onNavi
         </div>
       )}
 
-      <div className="space-y-2">
+      <div className="space-y-4">
         {ADDON_MODULES.map((mod) => {
           const isInstalled = mod.status !== "coming_soon" && !!companySetup?.[mod.setupFlag];
           return (
@@ -409,7 +411,7 @@ export default function AdminModulesPanel({ companySetup, onSetupChanged, onNavi
         })}
       </div>
 
-      <p className="mt-4 text-[9.5px] text-muted">
+      <p className="mt-4 text-[9px] font-medium tracking-wide text-muted uppercase">
         {tm("footerNote")}
       </p>
     </div>

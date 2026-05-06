@@ -45,23 +45,62 @@ router = APIRouter(
 
 
 @router.get("/{company_id}/my", response_model=list[PurchaseRequestRead])
-def get_my_requests(company_id: int, requester_id: int, db: Session = Depends(get_db)):
-    return list_requests(db, company_id, requester_id)
+def get_my_requests(
+    company_id: int, 
+    requester_id: int | None = None, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    require_same_company(company_id, current_user)
+    
+    # If requester_id not provided, default to current user
+    eff_requester_id = requester_id or current_user.id
+    
+    # Permission check: can only see own requests unless secretary for the requested user
+    if eff_requester_id != current_user.id:
+        is_boss = db.query(User).filter(User.id == eff_requester_id, User.delegates_for_user_id == current_user.id).first()
+        if not is_boss and not has_permission(db, current_user, "purchase_request:read:any"):
+            eff_requester_id = current_user.id
+
+    return list_requests(db, company_id, eff_requester_id)
 
 
 @router.get("/{company_id}/incoming", response_model=list[PurchaseRequestRead])
-def get_incoming_requests(company_id: int, db: Session = Depends(get_db)):
+def get_incoming_requests(
+    company_id: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    require_same_company(company_id, current_user)
+    # Only managers/accounting/admins should see incoming
+    if current_user.role not in ("admin", "manager", "accounting", "executive"):
+        raise HTTPException(status_code=403, detail="Not authorized to view company requests")
+        
     return list_incoming(db, company_id)
 
 
 @router.post("/{company_id}/new", response_model=PurchaseRequestRead)
 def create_new_request(
     company_id: int,
-    requester_id: int,
+    requester_id: int | None = None,
     requester_name: str | None = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    req = create_request(db, company_id, requester_id, requester_name)
+    require_same_company(company_id, current_user)
+    
+    eff_requester_id = requester_id or current_user.id
+    eff_requester_name = requester_name or current_user.full_name
+    
+    if eff_requester_id != current_user.id:
+        # Secretary check
+        boss = db.query(User).filter(User.id == eff_requester_id, User.delegates_for_user_id == current_user.id).first()
+        if not boss and not has_permission(db, current_user, "purchase_request:create:any"):
+            raise HTTPException(status_code=403, detail="Not authorized to create for this user")
+        if boss:
+            eff_requester_name = boss.full_name
+
+    req = create_request(db, company_id, eff_requester_id, eff_requester_name)
     req_agent.get_initial_greeting(db, req)
     return _to_read(req)
 

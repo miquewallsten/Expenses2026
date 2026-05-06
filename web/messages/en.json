@@ -2035,7 +2035,8 @@
     "ai": {
       "assistant": "AI Assistant",
       "ready": "Ready to help",
-      "openAssistant": "Open AI Assistant"
+      "openAssistant": "Open AI Assistant",
+      "greeting": "Hi! I'm your assistant. How can I help you today?"
     },
     "emptyPortal": {
       "title": "{role} portal not configured",
@@ -2057,6 +2058,7 @@
       "selectItem": "Select an item in {module} to see insights.",
       "selectModule": "Select a module to get started.",
       "askPlaceholder": "Ask Assistant…",
+      "solveWithAI": "Solve with AI",
       "why": "Why?",
       "aiUnavailable": "AI assistant did not respond. It may be temporarily offline.",
       "bullets": {

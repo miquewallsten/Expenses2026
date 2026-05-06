@@ -155,6 +155,7 @@ def create_expense(db: Session, payload: ExpenseCreate) -> Expense:
 
     expense = Expense(
         company_id=payload.company_id,
+        user_id=payload.user_id,
         amount=payload.amount,
         description=payload.description,
         mapping_snapshot=mapping,
@@ -180,6 +181,7 @@ def list_expenses(db: Session, company_id: int | None = None, status: str | None
 def list_expenses_paginated(
     db: Session,
     company_id: int | None = None,
+    user_id: int | None = None,
     status: str | None = None,
     page: int = 1,
     limit: int = 50,
@@ -191,6 +193,7 @@ def list_expenses_paginated(
     Args:
         db: Database session
         company_id: Filter by company (required for tenant isolation)
+        user_id: Filter by user
         status: Filter by status
         page: Page number (1-indexed)
         limit: Items per page (max 100)
@@ -210,6 +213,8 @@ def list_expenses_paginated(
 
     if company_id is not None:
         query = query.filter(Expense.company_id == company_id)
+    if user_id is not None:
+        query = query.filter(Expense.user_id == user_id)
     if status is not None:
         query = query.filter(Expense.status == status)
 

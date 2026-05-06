@@ -88,10 +88,10 @@ def test_manager_can_approve_but_not_admin(
     assert not has_permission(db_session, mgr, "admin:ai_policy:write")
 
 
-def test_accountant_can_export_polizas(
+def test_accounting_can_export_polizas(
     db_session: Session, co23: Company
 ) -> None:
-    acc = _user(db_session, co23, "accountant", "ac@p23.test")
+    acc = _user(db_session, co23, "accounting", "ac@p23.test")
     assert has_permission(db_session, acc, "accounting:export_polizas")
     assert has_permission(db_session, acc, "expense:approve:accounting")
     assert not has_permission(db_session, acc, "admin:roles:write")

@@ -17,7 +17,8 @@ import CfdiWatcherSection from "@/components/admin/sections/CfdiWatcherSection";
 import ExportSection from "@/components/admin/sections/ExportSection";
 import IntegrationsSection from "@/components/admin/sections/IntegrationsSection";
 import PlatformApiSection from "@/components/admin/sections/PlatformApiSection";
-import { Settings, Bell } from "lucide-react";
+import AdminOverviewPanel from "@/components/admin/AdminOverviewPanel";
+import { Settings, Bell, LayoutGrid } from "lucide-react";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 interface AdminData {
@@ -26,16 +27,20 @@ interface AdminData {
   expensePolicy: any;
   accountingSetup: any;
   workflowSetup: any;
+  approvalSetup: any;
+  portalConfig: any;
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 async function fetchAdminData(companyId: number): Promise<AdminData> {
-  const [companySetup, users, expensePolicy, accountingSetup, workflowSetup] = await Promise.all([
+  const [companySetup, users, expensePolicy, accountingSetup, workflowSetup, approvalSetup, portalConfig] = await Promise.all([
     apiCall(`/admin/company-setup/${companyId}`).catch(() => null),
     apiCall<any[]>(`/users?company_id=${companyId}`).catch(() => []),
     apiCall(`/expenses/policy/${companyId}`).catch(() => null),
     apiCall(`/admin/accounting-setup/${companyId}`).catch(() => null),
     apiCall(`/admin/workflow-setup/${companyId}`).catch(() => null),
+    apiCall(`/admin/approval-setup/${companyId}`).catch(() => null),
+    apiCall(`/admin/portal-config/${companyId}`).catch(() => null),
   ]);
   return {
     companySetup: companySetup ?? {},
@@ -43,12 +48,14 @@ async function fetchAdminData(companyId: number): Promise<AdminData> {
     expensePolicy: expensePolicy ?? {},
     accountingSetup: accountingSetup ?? {},
     workflowSetup: workflowSetup ?? {},
+    approvalSetup: approvalSetup ?? {},
+    portalConfig: portalConfig ?? {},
   };
 }
 
 export default function AdminModule() {
   const { companyId } = useUserContext();
-  const { activeSection, setOnboardingCompleted } = useAdminContext();
+  const { activeSection, setActiveSection, setOnboardingCompleted } = useAdminContext();
   const [data, setData] = useState<AdminData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -194,6 +201,39 @@ export default function AdminModule() {
 
   return (
     <main className="min-h-0 h-full flex-1 overflow-y-auto bg-surface-0" data-testid="admin-module">
+        {activeSection === "overview" && (
+          <div className="p-6">
+            <header className="mb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-accent/20 to-accent/5 border border-accent/20">
+                  <LayoutGrid className="h-5 w-5 text-accent" />
+                </div>
+                <div>
+                  <h1 className="text-base font-semibold text-primary">Admin Overview</h1>
+                  <p className="text-xs text-tertiary">Monitor and manage your organization's configuration</p>
+                </div>
+              </div>
+            </header>
+            <AdminOverviewPanel
+              portalConfig={data.portalConfig}
+              companySetup={data.companySetup}
+              expensePolicy={data.expensePolicy}
+              accountingSetup={data.accountingSetup}
+              approvalSetup={data.approvalSetup}
+              workflowSetup={data.workflowSetup}
+              onNavigate={(section: any) => {
+                const map: Record<string, AdminSection> = {
+                  "Company Setup": "company-setup",
+                  "Rules": "expense-policy",
+                  "Accounting Setup": "accounting-setup",
+                  "Workflow": "approval-workflow",
+                  "Onboarding": "onboarding"
+                };
+                setActiveSection(map[section] || "overview");
+              }}
+            />
+          </div>
+        )}
         {activeSection === "onboarding" && (
           <div className="h-full">
             <OnboardingWizard />

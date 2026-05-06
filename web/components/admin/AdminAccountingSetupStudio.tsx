@@ -4,6 +4,16 @@ import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Save, Loader2, CheckCircle2, AlertTriangle, Calculator } from "lucide-react";
 import { apiPatch } from "@/lib/api/client";
+import {
+  PremiumHeader,
+  SectionPanel,
+  Row,
+  RowStack,
+  Toggle,
+  SectionLabel as PatternSectionLabel,
+  inputClasses,
+  SECTION_ACCENTS,
+} from "@/components/admin/shared/AdminPatterns";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SetupData = Record<string, any>;
@@ -18,145 +28,7 @@ interface Props {
   draftPatch?: Partial<SetupData>;
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="mb-1 px-1 text-[9px] font-bold uppercase tracking-widest text-muted">
-      {children}
-    </p>
-  );
-}
-
-function Panel({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="overflow-hidden rounded-lg border border-default bg-surface-1 divide-y divide-white/[0.05]">
-      {children}
-    </div>
-  );
-}
-
-function SelectRow({
-  label,
-  description,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  description?: string;
-  value: string;
-  options: { value: string; label: string }[];
-  onChange: (v: string) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4 px-4 py-2.5">
-      <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium text-secondary">{label}</p>
-        {description && <p className="text-[10px] text-muted">{description}</p>}
-      </div>
-      <select
-        value={value ?? ""}
-        onChange={(e) => onChange(e.target.value)}
-        className="shrink-0 rounded border border-default bg-surface-1 px-2 py-1 text-[10px] text-tertiary outline-none focus:bg-accent-muted"
-      >
-        <option value="">—</option>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
-function NumberRow({
-  label,
-  description,
-  value,
-  placeholder,
-  onChange,
-}: {
-  label: string;
-  description?: string;
-  value: number | null;
-  placeholder?: string;
-  onChange: (v: number | null) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4 px-4 py-2.5">
-      <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium text-secondary">{label}</p>
-        {description && <p className="text-[10px] text-muted">{description}</p>}
-      </div>
-      <input
-        type="number"
-        value={value ?? ""}
-        placeholder={placeholder ?? "—"}
-        onChange={(e) => {
-          const v = e.target.value;
-          onChange(v === "" ? null : parseFloat(v));
-        }}
-        className="w-28 shrink-0 rounded border border-default bg-surface-1 px-2 py-1 text-[10px] text-tertiary placeholder:text-muted outline-none focus:bg-accent-muted"
-      />
-    </div>
-  );
-}
-
-function ToggleRow({
-  label,
-  description,
-  checked,
-  onChange,
-  disabled = false,
-  disabledHint,
-}: {
-  label: string;
-  description?: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  disabled?: boolean;
-  disabledHint?: string;
-}) {
-  return (
-    <div className={`flex items-center justify-between gap-4 px-4 py-2.5 ${disabled ? "opacity-50" : ""}`}>
-      <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium text-secondary">{label}</p>
-        {disabled && disabledHint
-          ? <p className="text-[10px] text-warning/50">{disabledHint}</p>
-          : description && <p className="text-[10px] text-muted">{description}</p>
-        }
-      </div>
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => !disabled && onChange(!checked)}
-        className={`relative inline-flex h-4 w-7 shrink-0 rounded-full border transition-colors ${
-          disabled ? "cursor-not-allowed" : "cursor-pointer"
-        } ${
-          checked
-            ? "bg-accent-muted bg-accent-muted"
-            : "border-default bg-surface-2"
-        }`}
-      >
-        <span
-          className={`absolute top-0.5 h-3 w-3 rounded-full transition-transform ${
-            checked ? "translate-x-3 bg-accent" : "translate-x-0.5 bg-surface-2"
-          }`}
-        />
-      </button>
-    </div>
-  );
-}
-
-function DraftBadge({ patch, label }: { patch: Partial<SetupData> | undefined; label: string }) {
-  if (!patch || Object.keys(patch).length === 0) return null;
-  const count = Object.keys(patch).length;
-  return (
-    <span className="rounded border border-violet-500/20 bg-violet-500/[0.08] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-violet-300/60">
-      {label} ({count})
-    </span>
-  );
-}
+// ── Main component ────────────────────────────────────────────────────────────
 
 // ── Main component ────────────────────────────────────────────────────────────
 
@@ -279,69 +151,67 @@ export default function AdminAccountingSetupStudio({ companyId, setup, companySe
 
   return (
     <div className="max-w-2xl space-y-5">
-
-      {/* Premium header with sky accent */}
-      <div className="relative overflow-hidden rounded-xl border border-default bg-gradient-to-r from-surface-1 via-surface-1 to-sky-500/[0.02]">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--color-sky-500)/5%,_transparent_50%)]" />
-        <div className="relative flex items-center justify-between border-b border-subtle px-5 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-sky-600 shadow-sm shadow-sky-500/30">
-              <Calculator className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold text-primary">{t("title")}</h2>
-              <p className="text-[10px] text-muted">Accounting Integration Settings</p>
-            </div>
-            <DraftBadge patch={draftPatch} label={t("aiDraftCount", { count: Object.keys(draftPatch || {}).length }).replace(/\s*\(\d+\)$/, "")} />
-          </div>
+      <PremiumHeader
+        section="accounting-setup"
+        icon={<Calculator className="h-4 w-4" />}
+        title={t("title")}
+        subtitle="Accounting Integration Settings"
+        badge={
+          draftPatch && Object.keys(draftPatch).length > 0 ? (
+            <span className="rounded border border-violet-500/20 bg-violet-500/[0.08] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-violet-300/60">
+              {t("aiDraftCount", { count: Object.keys(draftPatch).length }).replace(/\s*\(\d+\)$/, "")}
+            </span>
+          ) : null
+        }
+        action={
           <button
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-sky-500 to-sky-600 px-4 py-2 text-[11px] font-semibold text-white shadow-sm shadow-sky-500/20 transition-all hover:shadow-md hover:shadow-sky-500/30 disabled:opacity-40 disabled:shadow-none"
+            className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-sky-500 to-sky-600 px-4 py-1.5 text-[11px] font-semibold text-white shadow-sm shadow-sky-500/20 transition-all hover:shadow-md hover:shadow-sky-500/30 disabled:opacity-40 disabled:shadow-none"
           >
             {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
             {tc("save")}
           </button>
-        </div>
-
-        {/* Status indicators */}
-        <div className="relative flex items-center gap-4 px-5 py-2.5">
-          {saved && (
-            <span className="flex items-center gap-1.5 text-[10px] text-success">
-              <CheckCircle2 className="h-3 w-3" />
-              {tc("saved")}
-            </span>
-          )}
-          {error && (
-            <span className="flex items-center gap-1.5 text-[10px] text-error">
-              <AlertTriangle className="h-3 w-3" />
-              {error}
-            </span>
-          )}
-        </div>
-      </div>
+        }
+        metrics={[
+          {
+            label: tc("saved"),
+            value: saved ? "✓" : "-",
+            tone: saved ? "success" : "neutral",
+          },
+        ]}
+      />
 
       {/* Warnings */}
-      {warnings.map((w, i) => (
-        <div key={i} className="flex items-start gap-2 rounded border border-amber-500/20 bg-amber-950/20 px-3 py-2">
-          <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-warning/60" />
-          <p className="text-[11px] text-warning/60 leading-relaxed">{w}</p>
+      {warnings.length > 0 && (
+        <div className="space-y-2">
+          {warnings.map((w, i) => (
+            <div key={i} className="flex items-start gap-2 rounded border border-amber-500/20 bg-amber-950/20 px-3 py-2">
+              <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-warning/60" />
+              <p className="text-[11px] text-warning/60 leading-relaxed">{w}</p>
+            </div>
+          ))}
         </div>
-      ))}
+      )}
 
       {/* Operating Model */}
       <div>
-        <SectionLabel>{t("operatingModel")}</SectionLabel>
-        <Panel>
-          <SelectRow
-            label={t("accountingReviewMode")}
-            description={t("accountingReviewModeDesc")}
-            value={accountingReviewMode}
-            options={REVIEW_MODE_OPTIONS}
-            onChange={setAccountingReviewMode}
-          />
-        </Panel>
+        <PatternSectionLabel>{t("operatingModel")}</PatternSectionLabel>
+        <SectionPanel>
+          <Row label={t("accountingReviewMode")} description={t("accountingReviewModeDesc")}>
+            <select
+              value={accountingReviewMode}
+              onChange={(e) => setAccountingReviewMode(e.target.value)}
+              className={`${inputClasses.select} w-44`}
+            >
+              <option value="">—</option>
+              {REVIEW_MODE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </Row>
+        </SectionPanel>
         <p className="mt-1 px-1 text-[9.5px] text-muted leading-relaxed">
           La preaprobación de gerente y los umbrales se configuran en <span className="text-tertiary">Aprobaciones</span>. La retención de archivo se gestiona en el módulo de Archivo.
         </p>
@@ -349,44 +219,55 @@ export default function AdminAccountingSetupStudio({ companyId, setup, companySe
 
       {/* Compliance & Filing */}
       <div>
-        <SectionLabel>{t("complianceFiling")}</SectionLabel>
-        <Panel>
-          <ToggleRow
-            label={t("polizaXmlRequired")}
-            description={t("polizaXmlDesc")}
-            checked={polizaRequired}
-            onChange={setPolizaRequired}
-          />
-        </Panel>
+        <PatternSectionLabel>{t("complianceFiling")}</PatternSectionLabel>
+        <SectionPanel>
+          <Row label={t("polizaXmlRequired")} description={t("polizaXmlDesc")}>
+            <Toggle value={polizaRequired} onChange={setPolizaRequired} />
+          </Row>
+        </SectionPanel>
       </div>
 
       {/* Expense Control */}
       <div>
-        <SectionLabel>{t("expenseControlFields")}</SectionLabel>
-        <Panel>
-          <ToggleRow label={t("accountCodeRequired")} checked={accountCodeRequired} onChange={setAccountCodeRequired} />
-          <ToggleRow
+        <PatternSectionLabel>{t("expenseControlFields")}</PatternSectionLabel>
+        <SectionPanel>
+          <Row label={t("accountCodeRequired")}>
+            <Toggle value={accountCodeRequired} onChange={setAccountCodeRequired} />
+          </Row>
+          <Row
             label={t("costCenterRequired")}
-            checked={costCenterRequired}
-            onChange={setCostCenterRequired}
-            disabled={!costCenterDimActive}
-            disabledHint="Habilita Centro de costo en Política de gastos → Dimensiones de distribución."
-          />
-          <ToggleRow
+            description={!costCenterDimActive ? "Habilita Centro de costo en Política de gastos → Dimensiones de distribución." : undefined}
+            className={!costCenterDimActive ? "opacity-50" : ""}
+          >
+            <Toggle
+              value={costCenterRequired}
+              onChange={setCostCenterRequired}
+              disabled={!costCenterDimActive}
+            />
+          </Row>
+          <Row
             label={t("projectRequired")}
-            checked={projectRequired}
-            onChange={setProjectRequired}
-            disabled={!projectDimActive}
-            disabledHint="Habilita Proyecto en Política de gastos → Dimensiones de distribución."
-          />
-          <ToggleRow
+            description={!projectDimActive ? "Habilita Proyecto en Política de gastos → Dimensiones de distribución." : undefined}
+            className={!projectDimActive ? "opacity-50" : ""}
+          >
+            <Toggle
+              value={projectRequired}
+              onChange={setProjectRequired}
+              disabled={!projectDimActive}
+            />
+          </Row>
+          <Row
             label={t("clientRequired")}
-            checked={clientRequired}
-            onChange={setClientRequired}
-            disabled={!clientDimActive}
-            disabledHint="Habilita Cliente en Política de gastos → Dimensiones de distribución."
-          />
-        </Panel>
+            description={!clientDimActive ? "Habilita Cliente en Política de gastos → Dimensiones de distribución." : undefined}
+            className={!clientDimActive ? "opacity-50" : ""}
+          >
+            <Toggle
+              value={clientRequired}
+              onChange={setClientRequired}
+              disabled={!clientDimActive}
+            />
+          </Row>
+        </SectionPanel>
         <p className="mt-1 px-1 text-[9.5px] text-muted leading-relaxed">
           Cada toggle activado bloquea el envío y la generación de póliza si el campo no está asignado.
         </p>
@@ -394,15 +275,12 @@ export default function AdminAccountingSetupStudio({ companyId, setup, companySe
 
       {/* Validation */}
       <div>
-        <SectionLabel>{t("validationOverride")}</SectionLabel>
-        <Panel>
-          <ToggleRow
-            label={t("allowSubmitWithWarnings")}
-            description={t("allowSubmitWithWarningsDesc")}
-            checked={allowSubmitWithWarnings}
-            onChange={setAllowSubmitWithWarnings}
-          />
-        </Panel>
+        <PatternSectionLabel>{t("validationOverride")}</PatternSectionLabel>
+        <SectionPanel>
+          <Row label={t("allowSubmitWithWarnings")} description={t("allowSubmitWithWarningsDesc")}>
+            <Toggle value={allowSubmitWithWarnings} onChange={setAllowSubmitWithWarnings} />
+          </Row>
+        </SectionPanel>
       </div>
 
       {/* Status bar at bottom */}
@@ -412,7 +290,6 @@ export default function AdminAccountingSetupStudio({ companyId, setup, companySe
           <p className="text-[10px] text-error">{error}</p>
         </div>
       )}
-
     </div>
   );
 }

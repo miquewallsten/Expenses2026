@@ -35,6 +35,7 @@ class Expense(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     company_id: Mapped[int] = mapped_column(index=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, index=True, nullable=True)
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     description: Mapped[str] = mapped_column(String(255), nullable=False)
     status: Mapped[str] = mapped_column(String(50), default="draft")

@@ -10,6 +10,15 @@
  * secret are shown exactly once on creation.
  */
 
+import {
+  PremiumHeader,
+  SectionPanel,
+  Row,
+  Toggle,
+  SectionLabel,
+  inputClasses,
+  SECTION_ACCENTS,
+} from "@/components/admin/shared/AdminPatterns";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -287,28 +296,20 @@ export default function PlatformApiSection() {
   return (
     <main className="min-h-screen bg-surface-0 text-primary">
       <div className="mx-auto max-w-5xl px-6 py-6">
-        {/* Premium header */}
-        <div className="relative overflow-hidden rounded-lg border border-default bg-gradient-to-r from-surface-1 via-surface-1 to-cyan-500/[0.02] px-4 py-3 mb-5">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--color-cyan-500)/5%,_transparent_50%)]" />
-          <div className="relative flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/10">
-                <KeyRound className="h-4 w-4 text-cyan-400" />
-              </div>
-              <div className="flex flex-col">
-                <h1 className="text-sm font-semibold text-primary">{t("title")}</h1>
-                <span className="text-[9px] text-muted">{t("subtitle")}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+        <PremiumHeader
+          section="platform-api"
+          icon={<KeyRound className="h-4 w-4" />}
+          title={t("title")}
+          subtitle={t("subtitle")}
+        />
 
-        {error && (
-          <div className="mb-3 flex items-start gap-2 rounded border border-error bg-rose-500/[0.06] px-3 py-2 text-[10.5px] text-rose-200/85">
-            <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
-            <span className="break-all">{error}</span>
-          </div>
-        )}
+        <div className="mt-5">
+          {error && (
+            <div className="mb-4 rounded-lg border border-error bg-rose-500/[0.06] px-3 py-2 text-[10.5px] text-rose-200/85">
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 inline mr-2" />
+              <span className="break-all">{error}</span>
+            </div>
+          )}
 
         {/* Reveal banner — plaintext key */}
         {revealedKey && (

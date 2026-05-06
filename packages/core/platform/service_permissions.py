@@ -93,6 +93,8 @@ PERMISSION_CATALOG: dict[str, str] = {
     # analytics
     "analytics:view": "View finance analytics dashboard",
     "analytics:export": "Export analytics data",
+    # time tracking
+    "time_tracking:submit": "Submit time tracking entries",
     # agent / copilot
     "agent:chat:employee": "Use employee copilot persona",
     "agent:chat:admin": "Use admin copilot persona",
@@ -155,6 +157,37 @@ _BUILTIN_ROLE_DEFAULTS: dict[str, set[str]] = {
         "admin:audit:read",
     },
     "employee": {
+        "expense:create",
+        "expense:read:own",
+        "expense:update:own",
+        "expense:delete:own",
+        "expense:submit",
+        "document:upload",
+        "document:read:own",
+        "time_tracking:submit",
+        "agent:chat:employee",
+    },
+    "executive": {
+        # Executive inherits all employee permissions plus approval and analytics
+        "expense:create",
+        "expense:read:own",
+        "expense:read:any",
+        "expense:update:own",
+        "expense:delete:own",
+        "expense:submit",
+        "expense:approve:manager",
+        "expense:reject",
+        "expense:bulk_transition",
+        "document:upload",
+        "document:read:own",
+        "document:read:any",
+        "agent:chat:employee",
+        "analytics:view",
+        "analytics:export",
+    },
+    "secretary": {
+        # Secretary acts on behalf of another user (delegates_for_user_id)
+        # Base permissions for creating/managing delegated expenses
         "expense:create",
         "expense:read:own",
         "expense:update:own",

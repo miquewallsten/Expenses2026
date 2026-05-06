@@ -33,7 +33,7 @@ class CreateUserArgs(BaseModel):
     model_config = ConfigDict(extra="forbid")
     email: str = Field(..., min_length=3, max_length=255)
     full_name: str = Field(..., min_length=1, max_length=255)
-    role: str = Field(default="employee", pattern=r"^(employee|manager|accountant|admin|executive|secretary)$")
+    role: str = Field(default="employee", pattern=r"^(employee|manager|accounting|admin|executive|secretary)$")
     legal_entity_id: int | None = None
     department: str | None = Field(default=None, max_length=100)
     # Capabilities (optional, auto-suggested based on role)
@@ -154,7 +154,7 @@ REGISTRY.register(ToolSpec(
 class InviteUserArgs(BaseModel):
     model_config = ConfigDict(extra="forbid")
     email:      str = Field(..., min_length=3, max_length=255)
-    role:       str = Field(default="employee", pattern=r"^(employee|manager|accountant|admin)$")
+    role:       str = Field(default="employee", pattern=r"^(employee|manager|accounting|admin)$")
     department: str | None = Field(default=None, max_length=100)
 
 
@@ -411,7 +411,7 @@ REGISTRY.register(ToolSpec(
 class UpdateUserArgs(BaseModel):
     model_config = ConfigDict(extra="forbid")
     user_id:    int
-    role:       str | None = Field(default=None, pattern=r"^(employee|manager|accountant|admin)$")
+    role:       str | None = Field(default=None, pattern=r"^(employee|manager|accounting|admin)$")
     department: str | None = Field(default=None, max_length=100)
     full_name:  str | None = Field(default=None, max_length=255)
 

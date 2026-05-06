@@ -47,8 +47,8 @@ router = APIRouter(prefix="/accounting/work", tags=["accounting"])
 #
 # 3. Generate accounting event
 # -----------------------------
-# Precondition: expense.status == "submitted"; account_code or active category
-#               with expense_account_code is set.
+# Precondition: expense.status in ("submitted", "manager_approved"); account_code
+#               or active category with expense_account_code is set.
 # Expect: 200 with {header: {...}, lines: [...], metadata: {...}}
 #
 #   # Assign a code first if needed:

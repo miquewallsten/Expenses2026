@@ -10,6 +10,15 @@
  * detail expansion.
  */
 
+import {
+  PremiumHeader,
+  SectionPanel,
+  Row,
+  Toggle,
+  SectionLabel as PatternSectionLabel,
+  inputClasses,
+  SECTION_ACCENTS,
+} from "@/components/admin/shared/AdminPatterns";
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -201,19 +210,12 @@ export default function AuditLogSection() {
   return (
     <main className="min-h-screen bg-surface-0 text-primary">
       <div className="mx-auto max-w-6xl px-6 py-6">
-        {/* Premium header */}
-        <div className="relative overflow-hidden rounded-lg border border-default bg-gradient-to-r from-surface-1 via-surface-1 to-slate-500/[0.02] px-4 py-3 mb-5">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--color-slate-400)/5%,_transparent_50%)]" />
-          <div className="relative flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-500/10">
-                <Shield className="h-4 w-4 text-slate-400" />
-              </div>
-              <div className="flex flex-col">
-                <h1 className="text-sm font-semibold text-primary">{t("title")}</h1>
-                <span className="text-[9px] text-muted">System Activity Trail</span>
-              </div>
-            </div>
+        <PremiumHeader
+          section="audit-log"
+          icon={<Shield className="h-4 w-4" />}
+          title={t("title")}
+          subtitle="System Activity Trail"
+          action={
             <button
               type="button"
               onClick={() => companyId && void loadPage(companyId, { cursor: null, filter })}
@@ -223,15 +225,16 @@ export default function AuditLogSection() {
               {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
               {t("refresh")}
             </button>
-          </div>
-        </div>
+          }
+        />
 
-        {error && (
-          <div className="mb-3 flex items-start gap-2 rounded border border-error bg-rose-500/[0.06] px-3 py-2 text-[10.5px] text-rose-200/85">
-            <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
-            <span className="break-all">{error}</span>
-          </div>
-        )}
+        <div className="mt-5">
+          {error && (
+            <div className="mb-3 flex items-start gap-2 rounded border border-error bg-rose-500/[0.06] px-3 py-2 text-[10.5px] text-rose-200/85">
+              <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+              <span className="break-all">{error}</span>
+            </div>
+          )}
 
         {/* Filter pills */}
         <div className="mb-3 flex flex-wrap items-center gap-1">

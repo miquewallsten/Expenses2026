@@ -6,6 +6,16 @@ import {
   Users, Plus, Trash2, Loader2, Check, ChevronRight,
   ToggleLeft, ToggleRight, ArrowLeft,
 } from "lucide-react";
+import {
+  PremiumHeader,
+  SectionPanel,
+  Row,
+  RowStack,
+  Toggle,
+  SectionLabel as PatternSectionLabel,
+  inputClasses,
+  SECTION_ACCENTS,
+} from "@/components/admin/shared/AdminPatterns";
 import { apiCall, apiPost, apiPatch, apiDelete } from "@/lib/api/client";
 import UserDetailPanel from "./UserDetailPanel";
 
@@ -521,36 +531,37 @@ export default function AdminUsersPanel({ companyId, users, onUsersChanged, comp
   const others = users.filter((u) => !allGrouped.has(u.id));
 
   return (
-    <div className="max-w-3xl space-y-4">
-      {/* Header with metrics */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10">
-            <Users className="h-4 w-4 text-accent" />
-          </div>
-          <div className="flex flex-col">
-            <h2 className="text-sm font-semibold text-primary">{tu("title")}</h2>
-            <div className="flex items-center gap-2">
-              <span className="rounded-full border border-success/20 bg-success/5 px-2 py-0.5 font-mono text-[9px] text-success/70">
-                {users.filter((u) => u.is_active).length} active
-              </span>
-              <span className="text-[9px] text-muted">
-                {users.length} total
-              </span>
-            </div>
-          </div>
-        </div>
-        {!showForm && (
-          <button
-            type="button"
-            onClick={() => setShowForm(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-accent/20 bg-accent/5 px-3 py-1.5 text-[10px] font-semibold text-accent transition-all hover:border-accent/30 hover:bg-accent/10"
-          >
-            <Plus className="h-3 w-3" />
-            {tu("inviteUser")}
-          </button>
-        )}
-      </div>
+    <div className="max-w-3xl space-y-5">
+      <PremiumHeader
+        section="users-roles"
+        icon={<Users className="h-4 w-4" />}
+        title={tu("title")}
+        subtitle="Manage organization members and access"
+        action={
+          !showForm && (
+            <button
+              type="button"
+              onClick={() => setShowForm(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-accent/20 bg-accent/5 px-3 py-1.5 text-[10px] font-semibold text-accent transition-all hover:border-accent/30 hover:bg-accent/10"
+            >
+              <Plus className="h-3 w-3" />
+              {tu("inviteUser")}
+            </button>
+          )
+        }
+        metrics={[
+          {
+            label: "active",
+            value: users.filter((u) => u.is_active).length,
+            tone: "success",
+          },
+          {
+            label: "total",
+            value: users.length,
+            tone: "neutral",
+          },
+        ]}
+      />
 
       {users.length === 0 && !showForm ? (
         <div className="relative overflow-hidden rounded-lg border border-default bg-surface-1 px-4 py-10 text-center">

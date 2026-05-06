@@ -1,5 +1,14 @@
 "use client";
 
+import {
+  PremiumHeader,
+  SectionPanel,
+  Row,
+  Toggle,
+  SectionLabel,
+  inputClasses,
+  SECTION_ACCENTS,
+} from "@/components/admin/shared/AdminPatterns";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Zap, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
@@ -38,64 +47,7 @@ function fmtDt(iso: string | null): string {
   });
 }
 
-function Label({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="mb-1 text-[8.5px] font-bold uppercase tracking-[0.1em] text-muted">
-      {children}
-    </p>
-  );
-}
-
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-3 py-1.5 border-b border-subtle last:border-0">
-      <span className="text-[10px] text-tertiary">{label}</span>
-      <div className="flex items-center gap-2">{children}</div>
-    </div>
-  );
-}
-
-function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      type="button"
-      onClick={() => onChange(!value)}
-      className={`relative inline-flex h-4 w-7 shrink-0 rounded-full transition-colors ${
-        value ? "bg-violet-600/60" : "bg-surface-2"
-      }`}
-    >
-      <span
-        className={`absolute top-0.5 h-3 w-3 rounded-full bg-surface-4 shadow transition-transform ${
-          value ? "translate-x-3.5" : "translate-x-0.5"
-        }`}
-      />
-    </button>
-  );
-}
-
-function Select({
-  value,
-  onChange,
-  options,
-}: {
-  value: string | number;
-  onChange: (v: string) => void;
-  options: { value: string | number; label: string }[];
-}) {
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="rounded border border-default bg-surface-1 px-2 py-0.5 text-[10px] text-tertiary outline-none focus:border-violet-500/40"
-    >
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>
-          {o.label}
-        </option>
-      ))}
-    </select>
-  );
-}
+// ── Main component ────────────────────────────────────────────────────────────
 
 export default function AdminReportCyclePanel({ companyId }: { companyId: number }) {
   const t = useTranslations("admin.reportCycle");
@@ -194,173 +146,175 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
   const showDayOfMonth = settings.frequency === "monthly";
 
   return (
-    <div className="max-w-2xl space-y-4">
-      {/* Premium header */}
-      <div className="relative overflow-hidden rounded-lg border border-default bg-gradient-to-r from-surface-1 via-surface-1 to-violet-500/[0.02] px-4 py-3">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--color-violet-500)/5%,_transparent_50%)]" />
-        <div className="relative flex items-center justify-between">
+    <div className="mx-auto max-w-2xl space-y-5 px-4 py-4">
+      <PremiumHeader
+        section="notifications"
+        icon={<Zap className="h-4 w-4" />}
+        title={t("autoReportGeneration")}
+        subtitle="Automated Report Cycles"
+        metrics={[
+          {
+            label: "active",
+            value: settings.enabled ? "ON" : "OFF",
+            tone: settings.enabled ? "success" : "neutral",
+          },
+        ]}
+        action={
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10">
-              <Zap className="h-4 w-4 text-violet-400" />
-            </div>
-            <div className="flex flex-col">
-              <h2 className="text-sm font-semibold text-primary">{t("autoReportGeneration")}</h2>
-              <span className="text-[9px] text-muted">Automated Report Cycles</span>
-            </div>
+             <Toggle value={settings.enabled} onChange={(v) => patch("enabled", v)} />
           </div>
-          <div className="flex items-center gap-3">
-            {settings.enabled ? (
-              <span className="flex items-center gap-1.5 rounded-full border border-success/20 bg-success/5 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-success/70">
-                <CheckCircle2 className="h-2.5 w-2.5" />
-                {t("cyclesActive")}
-              </span>
-            ) : (
-              <span className="rounded-full border border-subtle bg-surface-2 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-muted">
-                {t("cyclesDisabled")}
-              </span>
-            )}
-            <Toggle value={settings.enabled} onChange={(v) => patch("enabled", v)} />
-          </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* Schedule */}
-      <div className="rounded border border-subtle bg-surface-1 px-3 py-2.5 space-y-0">
-        <Label>{t("schedule")}</Label>
-        <Row label={t("frequency")}>
-          <Select
-            value={settings.frequency}
-            onChange={(v) => patch("frequency", v as CycleSettings["frequency"])}
-            options={[
-              { value: "weekly", label: t("freqWeekly") },
-              { value: "biweekly", label: t("freqBiweekly") },
-              { value: "monthly", label: t("freqMonthly") },
-              { value: "manual", label: t("freqManual") },
-            ]}
-          />
-        </Row>
-
-        {showDayOfWeek && (
-          <Row label={t("dayOfWeek")}>
-            <Select
-              value={settings.day_of_week ?? 4}
-              onChange={(v) => patch("day_of_week", parseInt(v))}
-              options={DAY_NAMES.map((d, i) => ({ value: i, label: d }))}
-            />
+      <div>
+        <SectionLabel>{t("schedule")}</SectionLabel>
+        <SectionPanel>
+          <Row label={t("frequency")}>
+            <select
+              value={settings.frequency}
+              onChange={(e) => patch("frequency", e.target.value as CycleSettings["frequency"])}
+              className={`${inputClasses.select} w-44`}
+            >
+              <option value="weekly">{t("freqWeekly")}</option>
+              <option value="biweekly">{t("freqBiweekly")}</option>
+              <option value="monthly">{t("freqMonthly")}</option>
+              <option value="manual">{t("freqManual")}</option>
+            </select>
           </Row>
-        )}
 
-        {showDayOfMonth && (
-          <Row label={t("dayOfMonth")}>
-            <Select
-              value={settings.day_of_month ?? 1}
-              onChange={(v) => patch("day_of_month", parseInt(v))}
-              options={Array.from({ length: 28 }, (_, i) => ({
-                value: i + 1,
-                label: String(i + 1),
-              }))}
-            />
-          </Row>
-        )}
+          {showDayOfWeek && (
+            <Row label={t("dayOfWeek")}>
+              <select
+                value={settings.day_of_week ?? 4}
+                onChange={(e) => patch("day_of_week", parseInt(e.target.value))}
+                className={`${inputClasses.select} w-44`}
+              >
+                {DAY_NAMES.map((d, i) => (
+                  <option key={i} value={i}>{d}</option>
+                ))}
+              </select>
+            </Row>
+          )}
 
-        {settings.frequency !== "manual" && (
-          <Row label={t("time24h")}>
-            <input
-              type="time"
-              value={settings.time_of_day}
-              onChange={(e) => patch("time_of_day", e.target.value)}
-              className="rounded border border-default bg-surface-1 px-2 py-0.5 text-[10px] text-tertiary outline-none focus:border-violet-500/40"
-            />
-          </Row>
-        )}
+          {showDayOfMonth && (
+            <Row label={t("dayOfMonth")}>
+              <select
+                value={settings.day_of_month ?? 1}
+                onChange={(e) => patch("day_of_month", parseInt(e.target.value))}
+                className={`${inputClasses.select} w-44`}
+              >
+                {Array.from({ length: 28 }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>{i + 1}</option>
+                ))}
+              </select>
+            </Row>
+          )}
+
+          {settings.frequency !== "manual" && (
+            <Row label={t("time24h")}>
+              <input
+                type="time"
+                value={settings.time_of_day}
+                onChange={(e) => patch("time_of_day", e.target.value)}
+                className={`${inputClasses.base} w-44`}
+              />
+            </Row>
+          )}
+        </SectionPanel>
       </div>
 
       {/* Behaviour */}
-      <div className="rounded border border-subtle bg-surface-1 px-3 py-2.5 space-y-0">
-        <Label>{t("behaviour")}</Label>
-        <Row label={t("autoSubmitApproval")}>
-          <Toggle value={settings.auto_submit} onChange={(v) => patch("auto_submit", v)} />
-        </Row>
-        <Row label={t("statusesToBundle")}>
-          <input
-            value={settings.bundle_statuses}
-            onChange={(e) => patch("bundle_statuses", e.target.value)}
-            className="w-44 rounded border border-default bg-surface-1 px-2 py-0.5 text-[10px] text-tertiary outline-none focus:border-violet-500/40"
-          />
-        </Row>
-        <Row label={t("reportTitleTemplate")}>
-          <input
-            value={settings.report_name_template}
-            onChange={(e) => patch("report_name_template", e.target.value)}
-            className="w-44 rounded border border-default bg-surface-1 px-2 py-0.5 text-[10px] text-tertiary outline-none focus:border-violet-500/40"
-          />
-        </Row>
+      <div>
+        <SectionLabel>{t("behaviour")}</SectionLabel>
+        <SectionPanel>
+          <Row label={t("autoSubmitApproval")}>
+            <Toggle value={settings.auto_submit} onChange={(v) => patch("auto_submit", v)} />
+          </Row>
+          <Row label={t("statusesToBundle")}>
+            <input
+              value={settings.bundle_statuses}
+              onChange={(e) => patch("bundle_statuses", e.target.value)}
+              className={`${inputClasses.base} w-44`}
+            />
+          </Row>
+          <Row label={t("reportTitleTemplate")}>
+            <input
+              value={settings.report_name_template}
+              onChange={(e) => patch("report_name_template", e.target.value)}
+              className={`${inputClasses.base} w-44`}
+            />
+          </Row>
+        </SectionPanel>
       </div>
 
       {/* Status */}
-      <div className="rounded border border-subtle bg-surface-1 px-3 py-2.5 space-y-0">
-        <Label>{t("status")}</Label>
-        <Row label={t("lastRun")}>
-          <span className="text-[10px] text-muted">{fmtDt(settings.last_run_at)}</span>
-        </Row>
-        <Row label={t("nextScheduledRun")}>
-          <span className="text-[10px] text-muted">{fmtDt(settings.next_run_at)}</span>
-        </Row>
+      <div>
+        <SectionLabel>{t("status")}</SectionLabel>
+        <SectionPanel>
+          <Row label={t("lastRun")}>
+             <span className="text-[10px] text-muted font-mono">{fmtDt(settings.last_run_at)}</span>
+          </Row>
+          <Row label={t("nextScheduledRun")}>
+            <span className="text-[10px] text-muted font-mono">{fmtDt(settings.next_run_at)}</span>
+          </Row>
+        </SectionPanel>
       </div>
 
       {/* Last trigger result */}
       {lastResult && (
-        <div className="rounded border border-emerald-500/20 bg-emerald-500/[0.04] px-3 py-2 space-y-0.5">
-          <div className="flex items-center gap-1.5 mb-1">
-            <CheckCircle2 className="h-3 w-3 text-success/60" />
-            <span className="text-[9px] font-semibold uppercase tracking-widest text-emerald-300/55">
+        <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.04] p-4 animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-2 mb-2">
+            <CheckCircle2 className="h-4 w-4 text-success" />
+            <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">
               {t("cycleComplete")}
             </span>
           </div>
-          <p className="text-[10px] text-success/50">
-            {t("reportsCreated", { count: lastResult.reports_created })}
-            {" · "}
-            {t("expensesBundled", { count: lastResult.expenses_bundled })}
-            {" · "}
-            {t("usersProcessed", { count: lastResult.users_processed })}
-          </p>
-          {lastResult.skipped_users > 0 && (
-            <p className="text-[9px] text-muted">
-              {t("usersSkipped", { count: lastResult.skipped_users })}
-            </p>
-          )}
+          <div className="grid grid-cols-3 gap-4">
+             <div className="text-center">
+              <p className="text-[11px] font-semibold text-emerald-300">{lastResult.reports_created}</p>
+              <p className="text-[9px] text-muted uppercase">Reports</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[11px] font-semibold text-emerald-300">{lastResult.expenses_bundled}</p>
+              <p className="text-[9px] text-muted uppercase">Expenses</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[11px] font-semibold text-emerald-300">{lastResult.users_processed}</p>
+              <p className="text-[9px] text-muted uppercase">Users</p>
+            </div>
+          </div>
         </div>
       )}
 
       {error && (
-        <div className="flex items-start gap-1.5 rounded border border-red-500/20 bg-red-500/[0.04] px-2.5 py-2">
-          <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-error/60" />
-          <p className="text-[9.5px] text-error/60">{error}</p>
+        <div className="flex items-start gap-2 rounded-lg border border-error/20 bg-error/5 p-3 text-[10px] text-error">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          {error}
         </div>
       )}
 
-      {/* Actions */}
-      <div className="flex gap-2">
+      <div className="flex gap-3 mt-6">
         <button
           type="button"
           onClick={handleSave}
           disabled={saving || !dirty}
-          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded border border-default bg-surface-2 px-3 py-1.5 text-[10px] font-semibold text-tertiary transition-colors hover:bg-surface-3 hover:text-secondary disabled:cursor-not-allowed disabled:opacity-30"
+          className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-default bg-surface-2 px-4 py-2 text-[11px] font-semibold text-secondary transition-all hover:bg-surface-3 disabled:opacity-40"
         >
-          {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
           {saving ? tc("saving") : t("saveSettings")}
         </button>
         <button
           type="button"
           onClick={handleTrigger}
           disabled={triggering}
-          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded border border-violet-500/25 bg-violet-600/15 px-3 py-1.5 text-[10px] font-semibold text-violet-300/70 transition-colors hover:bg-violet-600/25 disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-violet-600 to-violet-500 px-4 py-2 text-[11px] font-semibold text-white shadow-sm shadow-violet-500/20 transition-all hover:shadow-md disabled:opacity-40"
         >
-          {triggering ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
+          {triggering ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
           {triggering ? t("running") : t("runNow")}
         </button>
       </div>
-      <p className="text-[8px] text-muted">
+      <p className="text-center text-[9px] text-muted font-medium tracking-wide uppercase">
         {t("templateTokensNote", { user: "{user}", month: "{month}", year: "{year}", date: "{date}" })}
       </p>
     </div>

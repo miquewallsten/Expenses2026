@@ -36,6 +36,7 @@ from . import platform          # noqa: F401
 # Domain directories (new organization)
 from . import accounting        # noqa: F401
 from . import work              # noqa: F401
+from .work import bulk_ops      # noqa: F401
 
 __all__ = [
     # Flat modules (backwards compatibility)

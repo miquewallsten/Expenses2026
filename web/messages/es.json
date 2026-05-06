@@ -2035,7 +2035,8 @@
     "ai": {
       "assistant": "Asistente IA",
       "ready": "Listo para ayudar",
-      "openAssistant": "Abrir asistente IA"
+      "openAssistant": "Abrir asistente IA",
+      "greeting": "¡Hola! Soy tu asistente. ¿En qué puedo ayudarte hoy?"
     },
     "emptyPortal": {
       "title": "Portal de {role} sin configurar",
@@ -2057,6 +2058,7 @@
       "selectItem": "Selecciona un elemento en {module} para ver información.",
       "selectModule": "Selecciona un módulo para comenzar.",
       "askPlaceholder": "Pregunta al Asistente…",
+      "solveWithAI": "Resolver con IA",
       "why": "¿Por qué?",
       "aiUnavailable": "El asistente de IA no respondió. Puede estar temporalmente fuera de servicio.",
       "bullets": {

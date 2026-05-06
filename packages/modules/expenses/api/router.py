@@ -76,6 +76,17 @@ class PaginatedPolizaResponse(BaseModel):
 def create_expense_route(payload: ExpenseCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     try:
         require_same_company(payload.company_id, current_user)
+        # If user_id is provided, verify permissions for "create on behalf of"
+        if payload.user_id and payload.user_id != current_user.id:
+            # Check if secretary relationship exists
+            is_delegated = db.query(User).filter(User.id == payload.user_id, User.delegates_for_user_id == current_user.id).first()
+            if not is_delegated and not has_permission(db, current_user, "expense:create:any"):
+                raise HTTPException(status_code=403, detail="Not authorized to create for this user")
+        
+        # Default to current user if not specified
+        if not payload.user_id:
+            payload.user_id = current_user.id
+            
         return create_expense(db, payload)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -84,6 +95,7 @@ def create_expense_route(payload: ExpenseCreate, db: Session = Depends(get_db), 
 @router.get("/", response_model=PaginatedExpenseResponse)
 def list_expenses_route(
     company_id: int | None = None,
+    user_id: int | None = Query(None),
     page: int = Query(1, ge=1, description="Page number (1-indexed)"),
     limit: int = Query(50, ge=1, le=100, description="Items per page (max 100)"),
     status: str | None = Query(None),
@@ -94,10 +106,24 @@ def list_expenses_route(
     # Non-admin users are scoped to their own company. Admins may pass an explicit company_id.
     if not has_permission(db, current_user, "expense:read:any"):
         company_id = current_user.company_id
+        
+        # Regular employees (not managers/accounting) only see their own expenses
+        # or expenses for users they delegate for.
+        if not has_permission(db, current_user, "expense:read:company"):
+            if user_id and user_id != current_user.id:
+                # Is it their boss?
+                 is_boss = db.query(User).filter(User.id == user_id, User.delegates_for_user_id == current_user.id).first()
+                 if not is_boss:
+                     user_id = current_user.id
+            else:
+                # If no user_id filter requested, and not manager, default to self
+                if not user_id:
+                    user_id = current_user.id
 
     result = list_expenses_paginated(
         db=db,
         company_id=company_id,
+        user_id=user_id,
         status=status,
         page=page,
         limit=limit,

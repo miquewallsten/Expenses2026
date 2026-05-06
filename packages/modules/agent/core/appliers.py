@@ -43,3 +43,6 @@ from packages.modules.agent.tools.expense_ops import _apply_approve, _apply_reje
 
 register_applier("approve_expense", _apply_approve)
 register_applier("reject_expense", _apply_reject)
+
+from packages.modules.agent.tools.work.bulk_ops import apply_bulk_update  # noqa: E402
+register_applier("bulk_update_expenses", apply_bulk_update)

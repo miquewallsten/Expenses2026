@@ -24,6 +24,7 @@ export const SECTION_ACCENTS = {
   auth: { bg: "bg-violet-500/10", text: "text-violet-400", border: "border-violet-500/20" },
   modules: { bg: "bg-ai/10", text: "text-ai", border: "border-ai/20" },
   channels: { bg: "bg-accent/10", text: "text-accent", border: "border-accent/20" },
+  overview: { bg: "bg-accent/10", text: "text-accent", border: "border-accent/20" },
   default: { bg: "bg-surface-2", text: "text-secondary", border: "border-default" },
 } as const;
 

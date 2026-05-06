@@ -5,6 +5,17 @@ import {
   AlertTriangle, CheckCircle2, Loader2, Plus, Power, RefreshCw,
   Save, Settings, Sparkles, Trash2, X, AlertCircle, ChevronRight,
 } from "lucide-react";
+import {
+  PremiumHeader,
+  SectionPanel,
+  Row,
+  RowStack,
+  Toggle,
+  SectionLabel as PatternSectionLabel,
+  inputClasses,
+  SECTION_ACCENTS,
+  StatusBadge as PatternStatusBadge,
+} from "@/components/admin/shared/AdminPatterns";
 import { apiCall, apiPost, apiPatch, apiDelete } from "@/lib/api/client";
 import { useTranslations } from "next-intl";
 
@@ -41,39 +52,6 @@ interface Props {
   expensePolicy: Record<string, any>;
   onExpensePolicySaved: (p: Record<string, any>) => void;
   draftPatch?: Partial<Record<string, any>>;
-}
-
-// ── Inline sub-components ─────────────────────────────────────────────────────
-
-function ToggleRow({
-  label, desc, checked, onChange,
-}: { label: string; desc: string; checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <div className="flex items-center justify-between gap-3 px-3.5 py-2">
-      <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium text-secondary">{label}</p>
-        <p className="text-[10px] text-muted">{desc}</p>
-      </div>
-      <button type="button" onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-4 w-7 shrink-0 rounded-full border transition-colors ${checked ? "bg-accent-muted bg-accent-muted" : "border-strong bg-surface-2"}`}>
-        <span className={`absolute top-0.5 h-3 w-3 rounded-full transition-transform ${checked ? "translate-x-3 bg-accent" : "translate-x-0.5 bg-surface-2"}`} />
-      </button>
-    </div>
-  );
-}
-
-function SelectRow({
-  label, value, options, onChange,
-}: { label: string; value: string; options: { value: string; label: string }[]; onChange: (v: string) => void }) {
-  return (
-    <div className="flex items-center justify-between gap-3 px-3.5 py-2">
-      <p className="text-[11px] font-medium text-secondary">{label}</p>
-      <select value={value} onChange={(e) => onChange(e.target.value)}
-        className="rounded border border-default bg-surface-1 px-2 py-1 text-[10px] text-tertiary outline-none focus:bg-accent-muted">
-        {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
-    </div>
-  );
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -210,294 +188,381 @@ export default function AdminPoliciesPanel({ companyId, expensePolicy, onExpense
   ];
 
   return (
-    <div className="flex h-full min-h-0 gap-0">
+    <div className="flex h-full min-h-0 flex-col gap-0">
+      <div className="shrink-0 px-4 py-3">
+        <PremiumHeader
+          section="expense-policy"
+          icon={<FileText className="h-4 w-4" />}
+          title={t("title")}
+          subtitle={t("studioSubtitle") || "Expense & AI Policies"}
+          action={
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => { setSelectedRule(null); setTab("create"); }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-accent/20 bg-accent/5 px-3 py-1.5 text-[10px] font-semibold text-accent transition-all hover:border-accent/30 hover:bg-accent/10"
+              >
+                <Plus className="h-3 w-3" /> {t("newRule")}
+              </button>
+            </div>
+          }
+          metrics={[
+            {
+              label: t("activeRules") || "Active Rules",
+              value: rules.filter((r) => r.enabled).length,
+              tone: "success",
+            },
+          ]}
+        />
+      </div>
 
-      {/* ── LEFT: Rule list ─────────────────────────────────────────────── */}
-      <div className="flex w-[40%] min-w-0 flex-col border-r border-subtle bg-surface-0/30">
-        {/* Header with gradient */}
-        <div className="relative flex items-center justify-between border-b border-subtle px-4 py-3 bg-gradient-to-r from-surface-1 via-surface-1 to-ai/[0.02]">
-          <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-violet-500/10">
-              <Sparkles className="h-3.5 w-3.5 text-violet-400" />
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-secondary">{t("rulesLabel")}</span>
-              <span className="ml-2 rounded-full border border-success/15 bg-success/5 px-1.5 py-0.5 font-mono text-[8px] text-success/70">
-                {rules.filter(r => r.enabled).length}/{rules.length}
-              </span>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => { setSelectedRule(null); setTab("create"); }}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-accent/20 bg-accent/5 px-2.5 py-1 text-[9px] font-semibold text-accent transition-all hover:border-accent/30 hover:bg-accent/10"
-          >
-            <Plus className="h-3 w-3" /> {t("newRule")}
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          {loadingRules ? (
-            <div className="flex items-center gap-2 px-4 py-6 text-[10px] text-muted">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" /> {tc("loading")}
-            </div>
-          ) : rules.length === 0 ? (
-            <div className="relative px-4 py-8 text-center">
-              <div className="absolute inset-0 bg-gradient-to-b from-surface-1/30 to-transparent pointer-events-none" />
-              <div className="relative">
+      <div className="flex min-h-0 flex-1 gap-0">
+        {/* ── LEFT: Rule list ─────────────────────────────────────────────── */}
+        <div className="flex w-[35%] min-w-0 flex-col border-r border-subtle bg-surface-0/30">
+          <div className="flex-1 overflow-y-auto">
+            {loadingRules ? (
+              <div className="flex items-center gap-2 px-4 py-6 text-[10px] text-muted">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> {tc("loading")}
+              </div>
+            ) : rules.length === 0 ? (
+              <div className="px-4 py-12 text-center">
                 <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-surface-1">
                   <Sparkles className="h-5 w-5 text-muted/50" />
                 </div>
                 <p className="text-[10px] text-muted">{t("noRules")}</p>
               </div>
-            </div>
-          ) : (
-            <ul className="divide-y divide-subtle/30">
-              {rules.map((rule) => (
-                <li
-                  key={rule.id}
-                  onClick={() => { setSelectedRule(rule); setTab("rule"); }}
-                  className={`group relative flex cursor-pointer items-start gap-3 px-4 py-3 transition-colors ${
-                    selectedRule?.id === rule.id
-                      ? "bg-accent/5"
-                      : "hover:bg-surface-1"
-                  } ${!rule.enabled ? "opacity-50" : ""}`}
-                >
-                  {/* Active indicator */}
-                  {selectedRule?.id === rule.id && (
-                    <span className="absolute left-0 top-1/2 h-6 w-0.5 -translate-y-1/2 rounded-r bg-gradient-to-b from-accent to-accent-hover" />
-                  )}
-                  <span className={`mt-1.5 inline-block h-2 w-2 shrink-0 rounded-full ${
-                    rule.severity === "block" ? "bg-rose-400 shadow-sm shadow-rose-400/30" : "bg-amber-400 shadow-sm shadow-amber-400/30"
-                  }`} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[11px] font-medium text-secondary leading-tight">{rule.summary}</p>
-                    <p className="truncate text-[9px] text-muted mt-0.5">{rule.scope}</p>
-                  </div>
-                  <div className="hidden shrink-0 items-center gap-0.5 group-hover:flex">
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); toggleRule(rule); }}
-                      className="rounded p-1 text-muted hover:bg-surface-2 hover:text-secondary transition-colors"
+            ) : (
+              <ul className="divide-y divide-subtle/30">
+                {rules.map((rule) => {
+                  const isActive = selectedRule?.id === rule.id && tab === "rule";
+                  return (
+                    <li
+                      key={rule.id}
+                      onClick={() => { setSelectedRule(rule); setTab("rule"); }}
+                      className={`group relative flex cursor-pointer items-start gap-3 px-4 py-3 transition-colors ${
+                        isActive ? "bg-accent/[0.04]" : "hover:bg-surface-1"
+                      } ${!rule.enabled ? "opacity-50" : ""}`}
                     >
-                      <Power className="h-3 w-3" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); reExtract(rule); }}
-                      className="rounded p-1 text-muted hover:bg-surface-2 hover:text-secondary transition-colors"
-                    >
-                      <RefreshCw className="h-3 w-3" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); deleteRule(rule); }}
-                      className="rounded p-1 text-muted hover:bg-error/10 hover:text-error transition-colors"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+                      {isActive && (
+                        <span className="absolute left-0 top-1/2 h-6 w-0.5 -translate-y-1/2 rounded-r bg-accent" />
+                      )}
+                      <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+                        rule.severity === "block" ? "bg-rose-500 shadow-sm shadow-rose-500/20" : "bg-amber-500 shadow-sm shadow-amber-500/20"
+                      }`} />
+                      <div className="min-w-0 flex-1">
+                        <p className={`truncate text-[11px] font-medium leading-tight ${isActive ? "text-primary" : "text-secondary"}`}>
+                          {rule.summary}
+                        </p>
+                        <p className="truncate text-[9px] text-muted mt-0.5 uppercase tracking-wide font-medium">{rule.scope}</p>
+                      </div>
+                      <div className="hidden shrink-0 items-center gap-0.5 group-hover:flex">
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); toggleRule(rule); }}
+                          title={rule.enabled ? tc("disable") : tc("enable")}
+                          className="rounded p-1 text-muted hover:bg-surface-2 hover:text-secondary transition-colors"
+                        >
+                          <Power className="h-3 w-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); deleteRule(rule); }}
+                          title={tc("delete")}
+                          className="rounded p-1 text-muted hover:bg-error/10 hover:text-error transition-colors"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
 
-        {/* Settings compact summary */}
-        <div className="border-t border-subtle">
-          <button
-            type="button"
-            onClick={() => { setSelectedRule(null); setTab("settings"); }}
-            className={`group relative w-full px-4 py-3 text-left transition-colors hover:bg-surface-1 ${
-              tab === "settings" ? "bg-surface-1" : ""
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Settings className="h-3.5 w-3.5 text-muted" />
-                <p className="text-[9px] font-bold uppercase tracking-widest text-muted">{t("expenseSettings")}</p>
-              </div>
-              <ChevronRight className="h-3 w-3 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
-            </div>
-            <p className="mt-1.5 text-[10px] text-tertiary">
-              {form.xml_required_mode ? `XML: ${form.xml_required_mode}` : "—"}
-              <span className="mx-1.5 text-muted">·</span>
-              {form.tickets_allowed ? t("ticketsOn") : t("ticketsOff")}
-            </p>
-          </button>
-        </div>
-      </div>
-
-      {/* ── RIGHT: Detail / editor ──────────────────────────────────────── */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        {/* Tabs with gradient */}
-        <div className="flex items-center gap-0 border-b border-subtle bg-gradient-to-r from-surface-1 via-transparent to-transparent">
-          {([["create", t("tabCreate")], ["rule", t("tabRule")], ["settings", t("tabSettings")]] as [RightTab, string][]).map(([key, label]) => (
+          {/* Settings toggle */}
+          <div className="border-t border-subtle">
             <button
-              key={key}
               type="button"
-              onClick={() => { if (key === "rule" && !selectedRule) return; setTab(key); }}
-              className={`relative border-b-2 px-4 py-3 text-[10px] font-semibold transition-colors ${
-                tab === key
-                  ? "border-accent text-primary"
-                  : "border-transparent text-muted hover:text-tertiary"
-              } ${key === "rule" && !selectedRule ? "cursor-not-allowed opacity-30" : ""}`}
+              onClick={() => { setSelectedRule(null); setTab("settings"); }}
+              className={`group relative w-full px-4 py-3 text-left transition-colors hover:bg-surface-1 ${
+                tab === "settings" ? "bg-accent/[0.04]" : ""
+              }`}
             >
-              {label}
-              {tab === key && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-accent via-accent to-accent-hover" />
+              {tab === "settings" && (
+                <span className="absolute left-0 top-1/2 h-6 w-0.5 -translate-y-1/2 rounded-r bg-accent" />
               )}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Settings className={`h-3.5 w-3.5 ${tab === "settings" ? "text-accent" : "text-muted"}`} />
+                  <p className={`text-[9px] font-bold uppercase tracking-widest ${tab === "settings" ? "text-accent" : "text-muted group-hover:text-secondary"}`}>
+                    {t("expenseSettings")}
+                  </p>
+                </div>
+                <ChevronRight className={`h-3 w-3 transition-all ${tab === "settings" ? "text-accent translate-x-0" : "text-muted opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0"}`} />
+              </div>
+              <p className="mt-1.5 truncate text-[10px] text-tertiary">
+                {form.xml_required_mode ? `XML: ${form.xml_required_mode}` : "—"}
+                <span className="mx-1.5 text-muted">·</span>
+                {form.tickets_allowed ? t("ticketsOn") : t("ticketsOff")}
+              </p>
             </button>
-          ))}
+          </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
-
-          {/* ── Create rule tab ────────────────────────────────────────── */}
-          {tab === "create" && (
-            <div className="space-y-4">
-              <div>
-                <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-muted">{t("promptLabel")}</p>
-                <textarea
-                  value={prompt}
-                  onChange={(e) => { setPrompt(e.target.value); setPreview(null); setGenError(null); }}
-                  rows={4}
-                  placeholder={t("promptPlaceholder")}
-                  className="w-full resize-none rounded border border-default bg-black/30 px-3 py-2 text-[11px] text-secondary placeholder:text-muted focus:border-strong focus:outline-none"
-                />
-              </div>
-
-              <button type="button" onClick={generate}
-                disabled={generating || !prompt.trim()}
-                className="inline-flex items-center gap-1.5 rounded border border-violet-500/25 bg-violet-600/15 px-3 py-1.5 text-[10px] font-semibold text-violet-300/80 transition-colors hover:bg-violet-600/25 disabled:cursor-not-allowed disabled:opacity-40">
-                {generating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                {generating ? t("generating") : t("generateBtn")}
+        {/* ── RIGHT: Detail / editor ──────────────────────────────────────── */}
+        <div className="flex min-w-0 flex-1 flex-col bg-surface-0/10">
+          {/* Internal Tab Bar */}
+          <div className="flex items-center gap-0 border-b border-subtle bg-surface-1/50 px-2">
+            {[
+              ["create", t("tabCreate")],
+              ["rule", t("tabRule")],
+              ["settings", t("tabSettings")]
+            ].map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => { if (key === "rule" && !selectedRule) return; setTab(key as RightTab); }}
+                className={`relative px-4 py-3 text-[10px] font-semibold transition-all ${
+                  tab === key
+                    ? "text-primary"
+                    : "text-muted hover:text-tertiary"
+                } ${key === "rule" && !selectedRule ? "cursor-not-allowed opacity-30" : ""}`}
+              >
+                {label}
+                {tab === key && (
+                  <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-accent rounded-full" />
+                )}
               </button>
+            ))}
+          </div>
 
-              {genError && (
-                <div className="flex items-start gap-2 rounded border border-red-500/20 bg-red-500/[0.05] px-3 py-2 text-[10px] text-error/80">
-                  <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" /> {genError}
+          <div className="flex-1 overflow-y-auto p-6">
+            {/* ── Create rule tab ────────────────────────────────────────── */}
+            {tab === "create" && (
+              <div className="mx-auto max-w-xl space-y-6">
+                <div>
+                  <PatternSectionLabel>{t("promptLabel")}</PatternSectionLabel>
+                  <textarea
+                    value={prompt}
+                    onChange={(e) => { setPrompt(e.target.value); setPreview(null); setGenError(null); }}
+                    rows={4}
+                    placeholder={t("promptPlaceholder")}
+                    className={`${inputClasses.textarea} w-full`}
+                  />
                 </div>
-              )}
 
-              {preview && (
-                <div className="space-y-3 rounded border border-default bg-surface-1 p-3">
-                  {preview.notice && (
-                    <div className="flex items-start gap-2 rounded border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2 text-[10px] text-warning/80">
-                      <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" /> {preview.notice}
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={generate}
+                    disabled={generating || !prompt.trim()}
+                    className="inline-flex items-center gap-2 rounded-lg bg-ai px-4 py-2 text-[11px] font-semibold text-white shadow-sm shadow-ai-glow transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40"
+                  >
+                    {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                    {generating ? t("generating") : t("generateBtn")}
+                  </button>
+
+                  {genError && (
+                    <div className="flex items-center gap-2 text-[10px] text-error font-medium">
+                      <AlertCircle className="h-3.5 w-3.5" />
+                      {genError}
+                    </div>
+                  )}
+                </div>
+
+                {preview && (
+                  <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                    <SectionPanel title={t("previewSummary")} className="border-ai/20 bg-ai/[0.02]">
+                      <div className="space-y-4 p-4">
+                        {preview.notice && (
+                          <div className="flex items-start gap-2 rounded-lg border border-warning/20 bg-warning/5 px-3 py-2 text-[10px] text-warning">
+                            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                            {preview.notice}
+                          </div>
+                        )}
+
+                        <div>
+                          <p className="text-[11px] text-primary font-medium leading-relaxed">{preview.summary}</p>
+                          <div className="mt-2">
+                            <PatternStatusBadge
+                              status={preview.severity === "block" ? "error" : "warning"}
+                              label={preview.severity}
+                              size="sm"
+                            />
+                          </div>
+                        </div>
+
+                        {Object.keys(preview.rule_json).length > 0 && (
+                          <div>
+                            <p className="mb-1.5 text-[9px] font-bold uppercase tracking-widest text-muted">Rule Logic</p>
+                            <pre className={`${inputClasses.mono} w-full overflow-x-auto`}>
+                              {JSON.stringify(preview.rule_json, null, 2)}
+                            </pre>
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-2 pt-2">
+                          {!preview.notice && (
+                            <button
+                              type="button"
+                              onClick={saveRule}
+                              disabled={saving}
+                              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-[11px] font-semibold text-white shadow-sm transition-all hover:bg-emerald-500 disabled:opacity-40"
+                            >
+                              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                              {t("saveRule")}
+                            </button>
+                          )}
+                          {preview.setting_suggestion && (
+                            <button
+                              type="button"
+                              onClick={() => applySetting(preview.setting_suggestion!.setting_key, preview.setting_suggestion!.value)}
+                              className="inline-flex items-center gap-2 rounded-lg border border-accent/30 bg-accent/10 px-4 py-2 text-[11px] font-semibold text-accent transition-all hover:bg-accent/20"
+                            >
+                              {t("applyAsSetting")}: {String(preview.setting_suggestion.setting_key).replace(/_/g, " ")}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => { setPreview(null); }}
+                            className="ml-auto text-[10px] text-muted hover:text-secondary p-2 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    </SectionPanel>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Rule detail tab ────────────────────────────────────────── */}
+            {tab === "rule" && selectedRule && (
+              <div className="mx-auto max-w-xl space-y-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-primary">{selectedRule.summary}</h3>
+                    <p className="mt-0.5 text-[10px] text-muted font-medium uppercase tracking-wider">{selectedRule.scope}</p>
+                  </div>
+                  <PatternStatusBadge
+                    status={selectedRule.severity === "block" ? "error" : "warning"}
+                    label={selectedRule.severity}
+                  />
+                </div>
+
+                <SectionPanel title={t("sourceText")}>
+                  <div className="p-4">
+                    <p className="text-[11px] text-secondary leading-relaxed">{selectedRule.source_text}</p>
+                  </div>
+                </SectionPanel>
+
+                <SectionPanel title={t("ruleJson")}>
+                  <div className="p-0">
+                    <pre className={`${inputClasses.mono} border-0 rounded-none bg-transparent w-full overflow-x-auto p-4`}>
+                      {JSON.stringify(selectedRule.rule_json, null, 2)}
+                    </pre>
+                  </div>
+                </SectionPanel>
+
+                <div className="flex items-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleRule(selectedRule)}
+                    className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-[11px] font-semibold transition-all ${
+                      selectedRule.enabled
+                        ? "border-default bg-surface-2 text-secondary hover:bg-surface-3"
+                        : "border-success/30 bg-success/10 text-success hover:bg-success/20"
+                    }`}
+                  >
+                    <Power className="h-3.5 w-3.5" />
+                    {selectedRule.enabled ? t("disableRule") : t("enableRule")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => reExtract(selectedRule)}
+                    className="inline-flex items-center gap-2 rounded-lg border border-default bg-surface-2 px-4 py-2 text-[11px] font-semibold text-secondary transition-all hover:bg-surface-3"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" /> {t("reExtract")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteRule(selectedRule)}
+                    className="ml-auto inline-flex items-center gap-2 rounded-lg border border-error/20 px-4 py-2 text-[11px] font-semibold text-error/70 transition-all hover:border-error/30 hover:bg-error/5"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" /> {tc("delete")}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ── Settings tab ───────────────────────────────────────────── */}
+            {tab === "settings" && (
+              <div className="mx-auto max-w-xl space-y-6">
+                <div>
+                  <PatternSectionLabel>{t("expenseSettings")}</PatternSectionLabel>
+                  <SectionPanel>
+                    <Row label={tm("xmlCfdiRequired")}>
+                      <select
+                        value={form.xml_required_mode ?? "mxn_only"}
+                        onChange={(e) => set("xml_required_mode", e.target.value)}
+                        className={`${inputClasses.select} w-44`}
+                      >
+                        {XML_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                      </select>
+                    </Row>
+                    <Row label={tm("pdfPairRequired")} description={tm("pdfPairDesc")}>
+                      <Toggle value={!!form.pdf_pair_required_for_cfdi} onChange={(v) => set("pdf_pair_required_for_cfdi", v)} />
+                    </Row>
+                    <Row label={tm("internationalAllowed")} description={tm("internationalDesc")}>
+                      <Toggle value={!!form.international_expenses_allowed} onChange={(v) => set("international_expenses_allowed", v)} />
+                    </Row>
+                    <Row label={tm("ticketsAllowed")} description={tm("ticketsDesc")}>
+                      <Toggle value={!!form.tickets_allowed} onChange={(v) => set("tickets_allowed", v)} />
+                    </Row>
+                    <Row label={tm("justificationRequired")} description={tm("justificationDesc")}>
+                      <Toggle value={!!form.require_justification} onChange={(v) => set("require_justification", v)} />
+                    </Row>
+                    <Row label={tm("proofRequired")} description={tm("proofDesc")}>
+                      <Toggle value={!!form.require_proof} onChange={(v) => set("require_proof", v)} />
+                    </Row>
+                    <Row label={tm("docFreeExpenses")} description={tm("docFreeExpensesDesc")}>
+                      <Toggle value={!!form.allow_document_free_expenses} onChange={(v) => set("allow_document_free_expenses", v)} />
+                    </Row>
+                  </SectionPanel>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={saveSettings}
+                    disabled={settingsSaving || !settingsDirty}
+                    className="inline-flex items-center gap-2 rounded-lg bg-accent px-5 py-2 text-[11px] font-semibold text-white shadow-sm shadow-accent-glow transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40"
+                  >
+                    {settingsSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                    {settingsSaving ? tc("saving") : tc("save")}
+                  </button>
+
+                  {settingsSaved && (
+                    <div className="flex items-center gap-1.5 text-[10px] text-success font-medium">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      {tc("saved")}
                     </div>
                   )}
 
-                  <div>
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-muted">{t("previewSummary")}</p>
-                    <p className="mt-1 text-[11px] text-secondary">{preview.summary}</p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <span className={`rounded border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${preview.severity === "block" ? "border-rose-500/25 bg-error-muted text-rose-300/80" : "border-amber-500/25 bg-warning-muted text-warning/80"}`}>
-                      {preview.severity}
-                    </span>
-                  </div>
-
-                  {Object.keys(preview.rule_json).length > 0 && (
-                    <pre className="overflow-x-auto rounded border border-default bg-black/30 px-3 py-2 text-[9.5px] text-tertiary">
-                      {JSON.stringify(preview.rule_json, null, 2)}
-                    </pre>
+                  {settingsError && (
+                    <div className="flex items-center gap-1.5 text-[10px] text-error font-medium">
+                      <AlertCircle className="h-3.5 w-3.5" />
+                      {settingsError}
+                    </div>
                   )}
-
-                  <div className="flex items-center gap-2">
-                    {!preview.notice && (
-                      <button type="button" onClick={saveRule} disabled={saving}
-                        className="inline-flex items-center gap-1.5 rounded border border-emerald-500/25 bg-emerald-600/15 px-3 py-1.5 text-[10px] font-semibold text-emerald-300/80 transition-colors hover:bg-emerald-600/25 disabled:opacity-40">
-                        {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-                        {t("saveRule")}
-                      </button>
-                    )}
-                    {preview.setting_suggestion && (
-                      <button type="button"
-                        onClick={() => applySetting(preview.setting_suggestion!.setting_key, preview.setting_suggestion!.value)}
-                        className="inline-flex items-center gap-1.5 rounded border border-sky-500/25 bg-sky-600/10 px-3 py-1.5 text-[10px] font-semibold text-accent/80 transition-colors hover:bg-sky-600/20">
-                        {t("applyAsSetting")}: {String(preview.setting_suggestion.setting_key).replace(/_/g, " ")}
-                      </button>
-                    )}
-                    <button type="button" onClick={() => { setPreview(null); }}
-                      className="text-[10px] text-muted hover:text-secondary">
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
                 </div>
-              )}
-            </div>
-          )}
-
-          {/* ── Rule detail tab ────────────────────────────────────────── */}
-          {tab === "rule" && selectedRule && (
-            <div className="space-y-4">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-[12px] font-semibold text-primary">{selectedRule.summary}</p>
-                  <p className="mt-0.5 text-[10px] text-muted">{selectedRule.scope}</p>
-                </div>
-                <span className={`shrink-0 rounded border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${selectedRule.severity === "block" ? "border-rose-500/25 bg-error-muted text-rose-300/80" : "border-amber-500/25 bg-warning-muted text-warning/80"}`}>
-                  {selectedRule.severity}
-                </span>
               </div>
-
-              <div>
-                <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-muted">{t("sourceText")}</p>
-                <p className="rounded border border-default bg-surface-1 px-3 py-2 text-[11px] text-tertiary leading-relaxed">{selectedRule.source_text}</p>
-              </div>
-
-              <div>
-                <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-muted">{t("ruleJson")}</p>
-                <pre className="overflow-x-auto rounded border border-default bg-black/30 px-3 py-2 text-[9.5px] text-tertiary">
-                  {JSON.stringify(selectedRule.rule_json, null, 2)}
-                </pre>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button type="button" onClick={() => toggleRule(selectedRule)}
-                  className={`inline-flex items-center gap-1.5 rounded border px-3 py-1.5 text-[10px] font-semibold transition-colors ${selectedRule.enabled ? "border-default bg-surface-2 text-tertiary hover:bg-surface-3" : "border-emerald-500/25 bg-emerald-600/10 text-emerald-300/70 hover:bg-emerald-600/20"}`}>
-                  <Power className="h-3 w-3" />
-                  {selectedRule.enabled ? t("disableRule") : t("enableRule")}
-                </button>
-                <button type="button" onClick={() => reExtract(selectedRule)}
-                  className="inline-flex items-center gap-1.5 rounded border border-default bg-surface-1 px-3 py-1.5 text-[10px] font-semibold text-tertiary transition-colors hover:bg-surface-3">
-                  <RefreshCw className="h-3 w-3" /> {t("reExtract")}
-                </button>
-                <button type="button" onClick={() => deleteRule(selectedRule)}
-                  className="inline-flex items-center gap-1.5 rounded border border-rose-500/15 px-3 py-1.5 text-[10px] font-semibold text-error/60 transition-colors hover:bg-error-muted">
-                  <Trash2 className="h-3 w-3" /> {tc("delete")}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ── Settings tab ───────────────────────────────────────────── */}
-          {tab === "settings" && (
-            <div className="space-y-4 max-w-md">
-              <div className="overflow-hidden rounded border border-default divide-y divide-white/[0.05]">
-                <SelectRow label={tm("xmlCfdiRequired")} value={form.xml_required_mode ?? "mxn_only"} options={XML_OPTIONS} onChange={(v) => set("xml_required_mode", v)} />
-                <ToggleRow label={tm("pdfPairRequired")} desc={tm("pdfPairDesc")} checked={!!form.pdf_pair_required_for_cfdi} onChange={(v) => set("pdf_pair_required_for_cfdi", v)} />
-                <ToggleRow label={tm("internationalAllowed")} desc={tm("internationalDesc")} checked={!!form.international_expenses_allowed} onChange={(v) => set("international_expenses_allowed", v)} />
-                <ToggleRow label={tm("ticketsAllowed")} desc={tm("ticketsDesc")} checked={!!form.tickets_allowed} onChange={(v) => set("tickets_allowed", v)} />
-                <ToggleRow label={tm("justificationRequired")} desc={tm("justificationDesc")} checked={!!form.require_justification} onChange={(v) => set("require_justification", v)} />
-                <ToggleRow label={tm("proofRequired")} desc={tm("proofDesc")} checked={!!form.require_proof} onChange={(v) => set("require_proof", v)} />
-                <ToggleRow label={tm("docFreeExpenses")} desc={tm("docFreeExpensesDesc")} checked={!!form.allow_document_free_expenses} onChange={(v) => set("allow_document_free_expenses", v)} />
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button type="button" onClick={saveSettings} disabled={settingsSaving || !settingsDirty}
-                  className="inline-flex items-center gap-1.5 rounded border bg-accent-muted bg-accent-muted px-3 py-1.5 text-[10px] font-semibold text-accent transition-colors hover:bg-accent-muted disabled:cursor-not-allowed disabled:opacity-40">
-                  {settingsSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-                  {settingsSaving ? tc("saving") : tc("save")}
-                </button>
-                {settingsSaved && <span className="inline-flex items-center gap-1 text-[10px] text-success/70"><CheckCircle2 className="h-3 w-3" /> {tc("saved")}</span>}
-                {settingsError && <span className="text-[10px] text-error/70">{settingsError}</span>}
-              </div>
-            </div>
-          )}
-
+            )}
+          </div>
         </div>
       </div>
     </div>

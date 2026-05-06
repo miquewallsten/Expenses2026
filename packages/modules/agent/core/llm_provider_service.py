@@ -64,8 +64,8 @@ class LLMProviderService:
         if not config.is_active:
             return False
         provider = (config.provider or "").lower()
-        # Anthropic and OpenAI need an API key or a reachable custom base URL
-        if provider in ("anthropic", "openai"):
+        # Anthropic, OpenAI, and Ollama Cloud need an API key
+        if provider in ("anthropic", "openai", "ollama-cloud"):
             key = self.resolve_api_key(config)
             if key:
                 return True
@@ -155,7 +155,17 @@ class LLMProviderService:
 
         started = time.monotonic()
         try:
-            if provider == "ollama":
+            # ollama and ollama-cloud use the same native API
+            if provider in ("ollama", "ollama-cloud"):
+                # For ollama-cloud, we can't list models remotely, just return success
+                if provider == "ollama-cloud":
+                    latency_ms = int((time.monotonic() - started) * 1000)
+                    return {
+                        "ok": True,
+                        "detail": f"Ollama Cloud configured with model {model!r}.",
+                        "latency_ms": latency_ms,
+                    }
+                # Local ollama - check if model exists
                 req = urllib.request.Request(
                     f"{base_url}/api/tags",
                     method="GET",
