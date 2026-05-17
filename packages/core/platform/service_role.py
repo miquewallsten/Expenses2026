@@ -20,8 +20,11 @@ def create_role(db: Session, data: RoleCreate) -> Role:
     return obj
 
 
-def list_roles(db: Session) -> list[Role]:
-    return db.query(Role).all()
+def list_roles(db: Session, company_id: int | None = None) -> list[Role]:
+    query = db.query(Role)
+    if company_id is not None:
+        query = query.filter(Role.company_id == company_id)
+    return query.all()
 
 
 def create_permission(db: Session, data: PermissionCreate) -> Permission:

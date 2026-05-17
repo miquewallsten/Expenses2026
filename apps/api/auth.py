@@ -103,5 +103,21 @@ def require_super_admin(current_user: User = Depends(get_current_user)) -> User:
 
 
 def require_same_company(target_company_id: int, current_user: User) -> None:
+    """Verify that current_user belongs to target_company_id.
+    
+    Super admins have company_id=None and should be exempt from this check.
+    The explicit None check prevents two users with company_id=None from
+    bypassing tenant isolation.
+    """
+    if current_user.company_id is None and target_company_id is None:
+        # Two super-admins — both have None company_id — allow only if is_super_admin
+        if not getattr(current_user, "is_super_admin", False):
+            raise HTTPException(status_code=403, detail="Cross-company access is not allowed")
+        return
+    if current_user.company_id is None:
+        # Super admin accessing a tenant — allowed
+        if not getattr(current_user, "is_super_admin", False):
+            raise HTTPException(status_code=403, detail="Cross-company access is not allowed")
+        return
     if current_user.company_id != target_company_id:
         raise HTTPException(status_code=403, detail="Cross-company access is not allowed")

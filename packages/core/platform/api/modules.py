@@ -4,7 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from apps.api.auth import get_current_user, require_same_company
 from apps.api.deps import get_db
+from packages.core.platform.models_user import User
 from packages.core.platform.schemas_module import (
     CompanyModuleCreate,
     CompanyModuleRead,
@@ -28,7 +30,9 @@ router = APIRouter(prefix="/modules", tags=["modules"])
 
 
 @router.post("/registry", response_model=PlatformModuleRead)
-def register_module(payload: PlatformModuleCreate, db: Session = Depends(get_db)):
+def register_module(payload: PlatformModuleCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if not getattr(current_user, "is_super_admin", False):
+        raise HTTPException(status_code=403, detail="Super admin access required")
     try:
         return create_platform_module(db, payload)
     except ValueError as exc:
@@ -36,17 +40,21 @@ def register_module(payload: PlatformModuleCreate, db: Session = Depends(get_db)
 
 
 @router.get("/registry", response_model=list[PlatformModuleRead])
-def get_registry(db: Session = Depends(get_db)):
+def get_registry(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return list_platform_modules(db)
 
 
 @router.post("/company", response_model=CompanyModuleRead)
-def upsert_company_module(payload: CompanyModuleCreate, db: Session = Depends(get_db)):
+def upsert_company_module(payload: CompanyModuleCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if not getattr(current_user, "is_super_admin", False):
+        require_same_company(payload.company_id, current_user)
     return enable_company_module(db, payload)
 
 
 @router.get("/company/{company_id}", response_model=list[CompanyModuleRead])
-def get_company_modules(company_id: int, db: Session = Depends(get_db)):
+def get_company_modules(company_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if not getattr(current_user, "is_super_admin", False):
+        require_same_company(company_id, current_user)
     return list_company_modules(db, company_id)
 
 
@@ -55,6 +63,10 @@ def get_visible_modules(
     company_id: int,
     user_id: Optional[int] = Query(default=None),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
+    # Any authenticated user can check visible modules for their own company
+    if not getattr(current_user, "is_super_admin", False):
+        require_same_company(company_id, current_user)
     keys = list_enabled_module_keys_for_company(db, company_id)
     return VisibleModulesResponse(company_id=company_id, enabled_module_keys=keys)

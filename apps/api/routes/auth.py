@@ -182,42 +182,39 @@ def super_admin_login(request: Request, body: SuperAdminLoginRequest, db: Sessio
 
 @router.get("/superadmin-direct", response_model=SuperAdminDirectResponse)
 def superadmin_direct_login(request: Request, token: str, db: Session = Depends(get_db)):
-    """Direct login for super admin users - bypasses email authentication"""
+    """Direct login for super admin users — validates a pre-issued token against the DB.
     
-    # Verify JWT token
-    auth_secret = os.getenv('AUTH_SECRET', 'dev-secret-change-in-production')
+    SECURITY: This endpoint verifies the token using the canonical AUTH_SECRET from
+    settings (not os.getenv), validates the user exists in the database, and confirms
+    they hold the is_super_admin flag. No MockUser bypass.
+    """
     
+    # Use the canonical secret from settings (not os.getenv with fallback)
     try:
-        payload = jwt.decode(token, auth_secret, algorithms=['HS256'], audience='financial-ops-platform')
-        user_id = int(payload['sub'])
-        email = payload['email']
-        company_id = payload['company_id']
-    except jwt.InvalidTokenError:
+        payload = jwt.decode(token, _SECRET, algorithms=["HS256"], audience="financial-ops-platform")
+        user_id = int(payload["sub"])
+        email = payload["email"]
+    except (jwt.InvalidTokenError, KeyError, ValueError):
         raise HTTPException(status_code=401, detail="Invalid token")
     
-    # Create a mock user object for session token
-    # This bypasses database checks since we can't guarantee a super admin exists
-    class MockUser:
-        def __init__(self, user_id, email, company_id):
-            self.id = user_id
-            self.email = email
-            self.company_id = company_id
-            self.role = "super_admin"
-            self.full_name = "Super Administrator"
-            self.is_superadmin = True
+    # Look up the real user — no mock bypass
+    user = db.query(User).filter(User.id == user_id, User.email == email).first()
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found")
     
-    mock_user = MockUser(user_id, email, company_id)
+    if not getattr(user, "is_super_admin", False):
+        raise HTTPException(status_code=403, detail="Super admin access required")
     
-    # Create session token
-    session_token = _issue_session_jwt(mock_user)
+    # Issue a proper session token via the canonical helper
+    session_token = _issue_session_jwt(user)
     
     return SuperAdminDirectResponse(
         token=session_token,
-        user_id=mock_user.id,
-        email=mock_user.email,
-        role=mock_user.role,
-        company_id=mock_user.company_id,
-        full_name=mock_user.full_name,
+        user_id=user.id,
+        email=user.email,
+        role=user.role,
+        company_id=user.company_id,
+        full_name=getattr(user, "full_name", "Super Administrator"),
         isSuperAdmin=True,
     )
 
