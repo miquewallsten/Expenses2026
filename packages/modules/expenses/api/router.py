@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from apps.api.auth import get_current_user, require_manager_or_accountant, require_same_company
+from packages.core.platform.module_gate import require_module
 from apps.api.deps import get_db
 from packages.core.platform.models_user import User
 from packages.core.platform.service_permissions import has_permission
@@ -41,7 +42,11 @@ from packages.modules.expenses.service.sat_validation_service import run_sat_val
 from packages.modules.expenses.service.policy_service import get_or_create_company_expense_policy
 from packages.modules.archive.service.archive_service import purge_archive_files_for_expense
 
-router = APIRouter(prefix="/expenses", tags=["expenses"])
+router = APIRouter(
+    prefix="/expenses",
+    tags=["expenses"],
+    dependencies=[Depends(require_module("expenses"))],
+)
 
 
 class PaginatedExpenseResponse(BaseModel):

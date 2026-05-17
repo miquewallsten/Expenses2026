@@ -50,7 +50,11 @@ from packages.modules.accounting.service.coa_import_service import (
 )
 from packages.modules.accounting.service.poliza_simulator_service import simulate_poliza
 
-router = APIRouter(prefix="/admin/coa", tags=["admin"], dependencies=[Depends(require_admin)])
+router = APIRouter(
+    prefix="/admin/coa",
+    tags=["admin"],
+    dependencies=[Depends(require_admin), Depends(require_module("accounting"))],
+)
 
 
 # ── Schemas ───────────────────────────────────────────────────────────────────

@@ -13,14 +13,22 @@ from packages.modules.admin.schemas.accounting_category import (
     AccountingCategoryRead,
 )
 
-router = APIRouter(prefix="/admin/accounting-categories", tags=["admin"])
+router = APIRouter(
+    prefix="/admin/accounting-categories",
+    tags=["admin"],
+    dependencies=[Depends(require_admin)],
+)
 
 
 @router.post("", response_model=AccountingCategoryRead, status_code=201)
 def create_accounting_category(
     body: AccountingCategoryCreate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
+    if not getattr(current_user, "is_super_admin", False):
+        require_same_company(body.company_id, current_user)
+
     if body.tax_behavior not in TAX_BEHAVIOR_VALUES:
         raise HTTPException(
             status_code=400,
@@ -63,7 +71,10 @@ def create_accounting_category(
 def list_accounting_categories(
     company_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
+    if not getattr(current_user, "is_super_admin", False):
+        require_same_company(company_id, current_user)
     return (
         db.query(AccountingCategory)
         .filter(
