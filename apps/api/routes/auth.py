@@ -65,6 +65,7 @@ def _issue_session_jwt(user: User) -> str:
     # Only include company_id for tenant users (super-admins have no company)
     if user.company_id is not None:
         payload["company_id"] = user.company_id
+    payload["aud"] = "financial-ops-platform"
     return jwt.encode(payload, _SECRET, algorithm="HS256")
 
 

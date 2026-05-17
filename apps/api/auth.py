@@ -42,7 +42,7 @@ if not _ALLOW_HEADER_AUTH:
 
 def _user_from_jwt(token: str, db: Session) -> User | None:
     try:
-        payload = jwt.decode(token, _SECRET, algorithms=["HS256"])
+        payload = jwt.decode(token, _SECRET, algorithms=["HS256"], audience="financial-ops-platform")
         user_id = int(payload["sub"])
     except (jwt.PyJWTError, KeyError, ValueError):
         return None
