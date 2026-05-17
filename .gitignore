@@ -34,3 +34,4 @@ env/
 # Celery
 celerybeat-schedule
 celerybeat-schedule.*
+.worktrees/
