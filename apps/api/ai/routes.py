@@ -2,16 +2,20 @@ import json
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from apps.api.auth import get_current_user
+from apps.api.deps import get_db
 from apps.api.ai.ollama_client import (
     OLLAMA_BASE_URL,
+    Provider,
     chat_with_ollama,
     chat_with_tools,
     stream_chat_sse,
     stream_chat_with_messages_sse,
     list_models,
     resolve_model,
+    resolve_provider_from_db,
 )
 from packages.core.platform.models_user import User
 
@@ -19,6 +23,14 @@ router = APIRouter(prefix="/ai", tags=["ai"], dependencies=[Depends(get_current_
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _get_provider_for_user(db: Session, user: User) -> Provider | None:
+    """
+    Resolve LLM provider from DB config (Super Admin) for the user's company.
+    Falls back to environment variables if no DB config is found.
+    """
+    return resolve_provider_from_db(db, company_id=user.company_id)
+
 
 def _lang(locale: str | None) -> str:
     if locale and locale.startswith("es"):
@@ -101,20 +113,36 @@ class AccountCodeRequest(BaseModel):
 # ── Routes ────────────────────────────────────────────────────────────────────
 
 @router.get("/status")
-def ai_status() -> dict:
-    active = resolve_model()
+def ai_status(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> dict:
+    """Return current LLM provider status (from DB config or env vars)."""
+    provider = _get_provider_for_user(db, user)
+    active = resolve_model(provider)
     return {
-        "models":       list_models(),
+        "models":       list_models(provider),
         "active_model": active,
         "available":    bool(active),
-        "base_url":     OLLAMA_BASE_URL,
+        "base_url":     provider.base_url if provider else OLLAMA_BASE_URL,
+        "provider":     provider.kind if provider else "none",
+        "source":       "db" if provider and hasattr(provider, "_from_db") else "env",
     }
 
 
 @router.post("/chat")
-def ai_chat(request: ChatRequest) -> dict:
+def ai_chat(
+    request: ChatRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> dict:
     """General-purpose copilot chat (non-streaming). Supports multi-turn history."""
-    if request.system_prompt:
+    provider = _get_provider_for_user(db, user)
+    
+    # SECURITY: user-supplied system_prompt is ignored for non-super-admin users
+    # to prevent prompt injection. Only super_admin can override the system prompt.
+    if request.system_prompt and getattr(user, "is_super_admin", False):
+        _log.warning("system_prompt override by super_admin user_id=%s", user.id)
         system = request.system_prompt
     else:
         system = (
@@ -139,16 +167,20 @@ def ai_chat(request: ChatRequest) -> dict:
             user_content = f"Context:\n{request.context}\n\nQuestion:\n{request.prompt}"
         messages.append({"role": "user", "content": user_content})
         from apps.api.ai.ollama_client import chat_with_messages
-        return chat_with_messages(messages, temperature=0.5)
+        return chat_with_messages(messages, temperature=0.5, provider=provider)
     else:
         user_prompt = request.prompt
         if request.context:
             user_prompt = f"Context:\n{request.context}\n\nQuestion:\n{request.prompt}"
-        return chat_with_ollama(system, user_prompt, temperature=0.5)
+        return chat_with_ollama(system, user_prompt, temperature=0.5, provider=provider)
 
 
 @router.post("/chat/stream")
-def ai_chat_stream(request: StreamChatRequest):
+def ai_chat_stream(
+    request: StreamChatRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
     """
     SSE streaming chat endpoint.
 
@@ -159,7 +191,11 @@ def ai_chat_stream(request: StreamChatRequest):
 
     Frontend reads this with the Fetch Streaming API (see AICopilotRail / MyWorkAssistant).
     """
-    if request.system_prompt:
+    provider = _get_provider_for_user(db, user)
+    
+    # SECURITY: user-supplied system_prompt is ignored for non-super-admin users
+    if request.system_prompt and getattr(user, "is_super_admin", False):
+        _log.warning("system_prompt override by super_admin user_id=%s", user.id)
         system = request.system_prompt
     else:
         system = (
@@ -183,24 +219,30 @@ def ai_chat_stream(request: StreamChatRequest):
                 messages.append({"role": turn["role"], "content": turn["content"]})
         messages.append({"role": "user", "content": user_content})
         return StreamingResponse(
-            stream_chat_with_messages_sse(messages, temperature=0.5),
+            stream_chat_with_messages_sse(messages, temperature=0.5, provider=provider),
             media_type="text/event-stream",
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
     else:
         return StreamingResponse(
-            stream_chat_sse(system, user_content, temperature=0.5),
+            stream_chat_sse(system, user_content, temperature=0.5, provider=provider),
             media_type="text/event-stream",
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
 
 
 @router.post("/review-expense")
-def review_expense(request: ExpenseReviewRequest) -> dict:
+def review_expense(
+    request: ExpenseReviewRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> dict:
     """
     Holistic expense review. Uses tool use when the model supports it to look up
     policy rules and past decisions, then returns a targeted assessment.
     """
+    provider = _get_provider_for_user(db, user)
+    
     system = (
         "You are a senior financial operations reviewer inside an enterprise expense platform. "
         "Your job: give a crisp, actionable assessment of one expense record.\n\n"
@@ -233,12 +275,18 @@ def review_expense(request: ExpenseReviewRequest) -> dict:
         parts.append(f"Additional context:\n{request.context}")
 
     user_prompt = "\n\n".join(parts)
-    return chat_with_ollama(system, user_prompt, temperature=0.2)
+    return chat_with_ollama(system, user_prompt, temperature=0.2, provider=provider)
 
 
 @router.post("/suggest-allocation")
-def suggest_allocation(request: AllocationSuggestionRequest) -> dict:
+def suggest_allocation(
+    request: AllocationSuggestionRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> dict:
     """Suggest project/client/cost-center allocation. Returns structured JSON."""
+    provider = _get_provider_for_user(db, user)
+    
     system = (
         "You are a financial allocation specialist. Analyse the expense and select the best "
         "matching project, client, and cost center from the provided lists.\n\n"
@@ -272,7 +320,7 @@ def suggest_allocation(request: AllocationSuggestionRequest) -> dict:
         user_prompt += f"\nPolicy notes: {request.company_policy_notes}"
     user_prompt += "\n\nSelect the best allocation from the lists above."
 
-    raw = chat_with_ollama(system, user_prompt, temperature=0.1)
+    raw = chat_with_ollama(system, user_prompt, temperature=0.1, provider=provider)
     raw_text: str = raw.get("content") or ""
 
     stripped = raw_text.strip()
@@ -303,11 +351,17 @@ def suggest_allocation(request: AllocationSuggestionRequest) -> dict:
 
 
 @router.post("/next-action")
-def next_action(request: NextActionRequest) -> dict:
+def next_action(
+    request: NextActionRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> dict:
     """
     Return the single most important next step for the employee.
     Tuned for brevity and precision — maximum two sentences, zero fluff.
     """
+    provider = _get_provider_for_user(db, user)
+    
     system = (
         "You are a financial operations guide inside an enterprise expense platform. "
         "Your job: tell the employee the single most important thing they must do RIGHT NOW "
@@ -341,15 +395,21 @@ def next_action(request: NextActionRequest) -> dict:
 
     user_prompt = "\n\n".join(parts) + "\n\nWhat is the single most important next action?"
 
-    return chat_with_ollama(system, user_prompt, temperature=0.2)
+    return chat_with_ollama(system, user_prompt, temperature=0.2, provider=provider)
 
 
 @router.post("/suggest-account-code")
-def suggest_account_code(request: AccountCodeRequest) -> dict:
+def suggest_account_code(
+    request: AccountCodeRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> dict:
     """
     Suggest the best matching GL account code for an expense.
     Uses tool use to reason over available codes and return a ranked suggestion.
     """
+    provider = _get_provider_for_user(db, user)
+    
     available_codes_text = ""
     if request.available_codes:
         lines = [f"  {c['code']}: {c.get('name', '')}" for c in request.available_codes[:50]]
@@ -384,7 +444,7 @@ def suggest_account_code(request: AccountCodeRequest) -> dict:
         user_prompt += f"AI-detected category: {request.detected_category}\n"
     user_prompt += f"\n{available_codes_text}\n\nSelect the best account code."
 
-    raw = chat_with_ollama(system, user_prompt, temperature=0.1)
+    raw = chat_with_ollama(system, user_prompt, temperature=0.1, provider=provider)
     raw_text: str = raw.get("content") or ""
 
     stripped = raw_text.strip()
@@ -407,13 +467,21 @@ def suggest_account_code(request: AccountCodeRequest) -> dict:
 
 
 @router.post("/diagnose-config")
-def diagnose_config(request: ChatRequest) -> dict:
+def diagnose_config(
+    request: ChatRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> dict:
     """
     Deep configuration analysis for the admin orchestrator.
     Uses extended reasoning to detect conflicts and suggest coherent fixes
     across all five setup domains simultaneously.
     """
-    if request.system_prompt:
+    provider = _get_provider_for_user(db, user)
+    
+    # SECURITY: system_prompt override restricted to super_admin
+    if request.system_prompt and getattr(user, "is_super_admin", False):
+        _log.warning("system_prompt override by super_admin user_id=%s (diagnose-configuration)", user.id)
         system = request.system_prompt
     else:
         system = (
@@ -444,7 +512,7 @@ def diagnose_config(request: ChatRequest) -> dict:
     if request.context:
         user_prompt = f"Current platform configuration:\n{request.context}\n\nRequest:\n{request.prompt}"
 
-    return chat_with_ollama(system, user_prompt, temperature=0.2)
+    return chat_with_ollama(system, user_prompt, temperature=0.2, provider=provider)
 
 
 # ── LLM Config Assistant ──────────────────────────────────────────────────────
@@ -457,11 +525,17 @@ class LLMConfigAssistantRequest(BaseModel):
 
 
 @router.post("/llm-config-assistant")
-def llm_config_assistant(request: LLMConfigAssistantRequest) -> dict:
+def llm_config_assistant(
+    request: LLMConfigAssistantRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> dict:
     """
     AI assistant that helps Super Admins choose and configure LLM models.
     Understands provider differences, model capabilities, and setup requirements.
     """
+    provider = _get_provider_for_user(db, user)
+    
     system = (
         "You are an expert LLM infrastructure consultant embedded in the Financial Ops platform. "
         "Your job is to help administrators choose, configure, and troubleshoot AI models.\n\n"
@@ -499,9 +573,9 @@ def llm_config_assistant(request: LLMConfigAssistantRequest) -> dict:
             user_content = f"Context:\n{ctx}\n\nQuestion:\n{request.prompt}"
         messages.append({"role": "user", "content": user_content})
         from apps.api.ai.ollama_client import chat_with_messages
-        return chat_with_messages(messages, temperature=0.4)
+        return chat_with_messages(messages, temperature=0.4, provider=provider)
 
     user_prompt = request.prompt
     if ctx:
         user_prompt = f"Context:\n{ctx}\n\nQuestion:\n{request.prompt}"
-    return chat_with_ollama(system, user_prompt, temperature=0.4)
+    return chat_with_ollama(system, user_prompt, temperature=0.4, provider=provider)

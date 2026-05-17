@@ -1,10 +1,12 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.orm import Session
 import os
 
 from apps.api.config import settings
 from apps.api.db import Base, engine
+from apps.api.deps import get_db
 from apps.api.routes import health
 from apps.api.routes.me import router as me_router
 
@@ -175,22 +177,31 @@ from apps.api.observability import install as _install_observability  # noqa: E4
 
 _install_observability(app)
 
-# ── Celery initialization ──────────────────────────────────────────────────────
-from packages.core.jobs.celery_app import celery_app as _celery_app
+# ── Celery initialization (optional) ──────────────────────────────────────────────────────
+# Celery is optional – if the library or Redis is not available we skip it so the API can still start.
+try:
+    from packages.core.jobs.celery_app import celery_app as _celery_app
 
-# Configure Celery to use the same Redis URL as the app
-_redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
-_celery_app.conf.update(
-    broker_url=_redis_url,
-    result_backend=_redis_url,
-)
+    # Use the same Redis URL as the main app (default localhost)
+    _redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+    _celery_app.conf.update(
+        broker_url=_redis_url,
+        result_backend=_redis_url,
+    )
+except Exception as exc:  # pragma: no cover – only triggers when Celery is missing
+    import logging
+    logging.getLogger(__name__).warning(
+        "Celery initialization skipped – %s. Background jobs will be unavailable.",
+        exc,
+    )
+    _celery_app = None  # type: ignore
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-User-Id", "Accept", "Origin"],
 )
 
 # ── Static file serving for uploads (logos, etc.) ────────────────────────────
@@ -212,6 +223,13 @@ app.mount("/uploads", StaticFiles(directory=_uploads_dir), name="uploads")
 def _run_migrations() -> None:
     import logging
     _mig_log = logging.getLogger(__name__)
+    
+    # Skip migrations in test mode (SQLite in-memory)
+    # Tests handle their own schema via conftest.py fixtures
+    if os.environ.get("DATABASE_URL", "").startswith("sqlite://"):
+        _mig_log.info("Skipping migrations in test mode (SQLite)")
+        return
+    
     # Ensure pgvector extension exists (idempotent).
     try:
         from sqlalchemy import text
@@ -244,6 +262,13 @@ _run_migrations()
 # description, or missing expense_date when a CFDI XML is already linked.
 # Runs on every server start; skips expenses that are already correct.
 def _run_backfill() -> None:
+    # Skip backfill in test mode (SQLite in-memory database)
+    if os.environ.get("DATABASE_URL", "").startswith("sqlite://"):
+        import logging
+        _log = logging.getLogger(__name__)
+        _log.info("Skipping startup backfill in test mode")
+        return
+    
     from apps.api.db import SessionLocal
     from packages.modules.expenses.service.backfill_service import backfill_expenses_from_xml
     import logging
@@ -282,6 +307,13 @@ app.include_router(portal_config_router)
 app.include_router(super_admin_agents_router)
 
 def _seed_agent_defaults() -> None:
+    # Skip agent seeding in test mode (SQLite in-memory database)
+    if os.environ.get("DATABASE_URL", "").startswith("sqlite://"):
+        import logging
+        _seed_log = logging.getLogger(__name__)
+        _seed_log.info("Skipping agent seeding in test mode")
+        return
+    
     import logging
     _seed_log = logging.getLogger(__name__)
     try:
@@ -362,7 +394,11 @@ app.include_router(agent_push_router)
 from packages.modules.agent.api.platform_router import (  # noqa: E402
     router as agent_platform_router,
 )
+from packages.modules.agent.api.agent_lifecycle_router import (  # noqa: E402
+    router as agent_lifecycle_router,
+)
 app.include_router(agent_platform_router)
+app.include_router(agent_lifecycle_router)
 app.include_router(mywork_router)
 app.include_router(super_admin_router)
 app.include_router(amex_router)
@@ -434,7 +470,7 @@ def root():
 
 
 @app.get("/health/ready")
-def health_ready() -> dict:
+def health_ready(db: Session = Depends(get_db)) -> dict:
     """Readiness probe — checks DB, storage write, optional Ollama.
 
     Returns 200 with per-subsystem detail if all required checks pass;
@@ -446,15 +482,12 @@ def health_ready() -> dict:
     import os as _os
     import tempfile as _tempfile
 
-    from apps.api.db import engine as _engine
-
     detail: dict = {"db": "unknown", "storage": "unknown", "ollama": "skipped"}
     failed = False
 
     # DB ping
     try:
-        with _engine.connect() as _conn:
-            _conn.execute(_sql_text("SELECT 1"))
+        db.execute(_sql_text("SELECT 1"))
         detail["db"] = "ok"
     except Exception as exc:
         detail["db"] = f"error: {type(exc).__name__}"

@@ -233,6 +233,37 @@ async def upload_document_route(
         data = await file.read()
         if not data:
             raise HTTPException(status_code=400, detail="Empty file")
+
+        # ── Upload size & MIME validation ───────────────────────────────────
+        _MAX_UPLOAD_SIZE = 25 * 1024 * 1024  # 25 MB
+        _ALLOWED_MIME_TYPES = {
+            "application/pdf",
+            "text/xml",
+            "application/xml",
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/heic",
+            "image/heif",
+        }
+        _ALLOWED_EXTENSIONS = {".pdf", ".xml", ".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"}
+
+        if len(data) > _MAX_UPLOAD_SIZE:
+            raise HTTPException(status_code=413, detail=f"File too large. Maximum size is {_MAX_UPLOAD_SIZE // (1024*1024)} MB")
+
+        import os as _os
+        _ext = _os.path.splitext(file.filename or "")[1].lower()
+        if _ext and _ext not in _ALLOWED_EXTENSIONS:
+            raise HTTPException(status_code=415, detail=f"File type {_ext} not allowed. Allowed: {', '.join(sorted(_ALLOWED_EXTENSIONS))}")
+
+        if file.content_type and file.content_type not in _ALLOWED_MIME_TYPES:
+            # Allow common variants
+            _variants = {
+                "application/x-pdf": "application/pdf",
+                "text/plain": None,  # .xml may come as text/plain
+            }
+            if file.content_type not in _variants:
+                raise HTTPException(status_code=415, detail=f"MIME type {file.content_type} not allowed")
         content_text = await asyncio.to_thread(_extract_text_from_upload, file.filename or "upload", data)
 
         # ── Storage dedup ──────────────────────────────────────────────────

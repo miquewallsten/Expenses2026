@@ -13,6 +13,7 @@ In production set:
   AUTH_SECRET   (random 32-char secret for signing JWTs)
 """
 
+import hashlib
 import logging
 import os
 import secrets
@@ -240,9 +241,12 @@ def request_magic_link(request: Request, body: MagicLinkRequest, db: Session = D
     ).delete()
 
     raw_token = secrets.token_urlsafe(48)
+    # Hash the token before storing — the DB never sees the raw token.
+    # This means a DB compromise does not expose valid magic links.
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
     link_token = MagicLinkToken(
         user_id=user.id,
-        token=raw_token,
+        token=token_hash,
         expires_at=now + timedelta(minutes=_TOKEN_TTL),
     )
     db.add(link_token)
@@ -293,9 +297,11 @@ def request_magic_link(request: Request, body: MagicLinkRequest, db: Session = D
 def verify_magic_link(request: Request, token: str, db: Session = Depends(get_db)):
     now = datetime.now(tz=timezone.utc)
 
+    # Hash the provided token to compare against the stored hash
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
     link_token = (
         db.query(MagicLinkToken)
-        .filter(MagicLinkToken.token == token)
+        .filter(MagicLinkToken.token == token_hash)
         .first()
     )
 
