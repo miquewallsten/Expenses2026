@@ -72,14 +72,15 @@ local DB seed.  Run the steps in order — each builds on the previous result.
     #   source_type      = "upload" for 3a, "expense" for 3b
 """
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
+from apps.api.auth import require_admin, require_same_company, get_current_user
 from apps.api.deps import get_db
 from packages.modules.archive.schemas.archive_file import ArchiveFileRead
 from packages.modules.archive.service.archive_service import store_file
 
-router = APIRouter(prefix="/archive", tags=["archive"])
+router = APIRouter(prefix="/archive", dependencies=[Depends(require_admin)], tags=["archive"])
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────

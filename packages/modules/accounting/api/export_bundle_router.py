@@ -12,15 +12,16 @@ If no eligible expenses exist the endpoint still returns a valid, empty bundle
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from apps.api.auth import require_admin, require_same_company, get_current_user
 from apps.api.deps import get_db
 from packages.modules.accounting.service.export_bundle_service import build_export_bundle
 
 _log = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/accounting/export-bundles", tags=["accounting"])
+router = APIRouter(prefix="/accounting/export-bundles", dependencies=[Depends(require_admin), Depends(require_module("accounting"))], tags=["accounting"])
 
 
 @router.post("/{company_id}")
