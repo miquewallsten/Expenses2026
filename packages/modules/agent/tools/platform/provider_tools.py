@@ -75,7 +75,7 @@ REGISTRY.register(ToolSpec(
     category="infra",
     input_schema=CreateProviderArgs,
     handler=_handle_create_provider,
-    personas=frozenset({"super_admin"}),
+    personas=frozenset({"admin"}),
     required_permission="agent.tool.infra",
 ))
 
@@ -123,7 +123,7 @@ REGISTRY.register(ToolSpec(
     category="read",
     input_schema=ListProvidersArgs,
     handler=_handle_list_providers,
-    personas=frozenset({"super_admin"}),
+    personas=frozenset({"admin"}),
     required_permission="agent.tool.infra",
 ))
 
@@ -176,6 +176,6 @@ REGISTRY.register(ToolSpec(
     category="infra",
     input_schema=UpdateProviderArgs,
     handler=_handle_update_provider,
-    personas=frozenset({"super_admin"}),
+    personas=frozenset({"admin"}),
     required_permission="agent.tool.infra",
 ))

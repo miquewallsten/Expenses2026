@@ -38,11 +38,15 @@ _DEFAULTS = [
             "read_company_setup", "update_company_setup",
             "read_expense_policy", "update_expense_policy",
             "read_accounting_setup", "update_accounting_setup",
+            "update_workflow",
             "list_accounting_categories", "create_accounting_category",
-            "bulk_create_accounting_categories",
+            "bulk_create_accounting_categories", "ingest_accounting_catalog",
             "check_tenant_readiness", "explain_module_requirements",
             "suggest_next_configuration_step",
             "list_users", "list_roles",
+            "invite_user", "update_user", "deactivate_user", "reactivate_user",
+            "send_announcement",
+            "list_ai_policies", "create_ai_policy", "update_ai_policy", "toggle_ai_policy", "delete_ai_policy",
             "trace_workflow", "diagnose_config",
         ],
         "system_prompt": (
@@ -61,6 +65,7 @@ _DEFAULTS = [
         "is_system": True,
         "allowed_tools": [
             "create_expense", "check_reimbursement_status",
+            "list_pending_approvals",
             "how_to", "search_knowledge",
         ],
         "system_prompt": (
@@ -78,15 +83,20 @@ _DEFAULTS = [
         "key": "accounting",
         "name": "Accounting Agent",
         "description": "Accounting categories, chart of accounts, export bundles, Poliza vouchers.",
-        "persona": "admin",
+        "persona": "accounting",
         "is_system": True,
         "allowed_tools": [
             "list_accounting_categories", "create_accounting_category",
             "bulk_create_accounting_categories",
             "generate_poliza_preview", "run_month_end",
             "find_missing_receipts", "match_cfdis_batch",
+            "expense_validation",
             "read_accounting_setup", "read_expense_policy",
             "how_to", "search_knowledge",
+            # Report Builder
+            "build_expense_reports", "review_expense_report",
+            "resolve_report_issue", "list_expense_reports",
+            "preview_poliza",
         ],
         "system_prompt": (
             "Eres el copiloto contable de la plataforma Financial Ops.\n"
@@ -115,37 +125,69 @@ _DEFAULTS = [
         ),
     },
     {
-        "key": "whatsapp",
-        "name": "WhatsApp Agent",
-        "description": "Processes inbound WhatsApp messages autonomously. Creates expenses, routes approvals.",
+        "key": "email",
+        "name": "Email Agent",
+        "description": "Processes inbound emails autonomously. Handles expense submissions (attachments/NL), approvals, time tracking, and spend queries.",
         "persona": "employee",
         "is_system": True,
-        "allowed_tools": [],
+        "allowed_tools": [
+            "create_expense", "create_expense_from_receipt", "list_my_expenses",
+            "submit_expense", "check_reimbursement_status",
+            "list_pending_approvals", "quick_approve", "quick_reject",
+            "submit_time_entry", "list_time_projects", "my_week_summary",
+            "spend_summary", "spend_by_project",
+            "how_to", "search_knowledge",
+        ],
         "system_prompt": (
-            "Eres el agente de WhatsApp de Financial Ops. Procesas mensajes entrantes de forma autónoma.\n\n"
+            "Eres el asistente de Financial Ops por email. Ayudas con gastos, aprobaciones, horas y reportes.\n\n"
+            "FLUJOS PRINCIPALES:\n"
+            "- Gasto con adjunto: create_expense_from_receipt (incluye moneda, proveedor)\n"
+            "- Gasto en texto: create_expense (monto + descripción)\n"
+            "- Enviar borrador: submit_expense\n"
+            "- Consultar mis gastos: list_my_expenses\n"
+            "- Consultar reembolso: check_reimbursement_status\n"
+            "- Aprobar gasto: quick_approve (solo managers)\n"
+            "- Rechazar gasto: quick_reject (solo managers)\n"
+            "- Pendientes de aprobación: list_pending_approvals\n"
+            "- Registrar horas: submit_time_entry\n"
+            "- Reporte de gastos: spend_summary, spend_by_project\n\n"
             "REGLAS:\n"
-            "- Identifica si el mensaje es un gasto, una consulta o una solicitud de aprobación.\n"
-            "- Para gastos: extrae monto, descripción, fecha y crea el registro usando las herramientas.\n"
-            "- Para consultas: responde con datos reales de las herramientas de lectura.\n"
-            "- Si no tienes suficiente información o la acción es de alto riesgo, indica 'ESCALAR'.\n"
-            "- Respuestas muy cortas y claras, en el idioma del usuario."
+            "- Respuestas concisas y claras\n"
+            "- Si el monto > $10,000 MXN o ambiguo, indica 'ESCALAR'\n"
+            "- Idioma: responde en el idioma del remitente"
         ),
     },
     {
-        "key": "email",
-        "name": "Email Agent",
-        "description": "Processes inbound emails autonomously. Extracts expenses from attachments, routes requests.",
+        "key": "whatsapp",
+        "name": "WhatsApp Agent",
+        "description": "Processes inbound WhatsApp messages autonomously. Handles expense submissions (photos/NL), approvals, time tracking, and spend queries.",
         "persona": "employee",
         "is_system": True,
-        "allowed_tools": [],
+        "allowed_tools": [
+            "create_expense", "create_expense_from_receipt", "list_my_expenses",
+            "submit_expense", "check_reimbursement_status",
+            "list_pending_approvals", "quick_approve", "quick_reject",
+            "submit_time_entry", "submit_time_week", "list_time_projects", "my_week_summary",
+            "spend_summary", "spend_by_project", "time_report_summary",
+            "how_to", "search_knowledge",
+        ],
         "system_prompt": (
-            "Eres el agente de email de Financial Ops. Procesas correos entrantes de forma autónoma.\n\n"
+            "Eres el asistente de Financial Ops por WhatsApp. Responde en el idioma del usuario.\n\n"
+            "ROL SEGÚN EL USUARIO:\n"
+            "- Empleado: subir gastos (foto o texto), consultar reembolsos, registrar horas\n"
+            "- Manager: todo lo anterior + aprobar/rechazar gastos, ver pendientes\n"
+            "- Ejecutivo: todo lo anterior + reportes de gastos por proyecto/categoría/período\n\n"
+            "HERRAMIENTAS POR ROL:\n"
+            "- Todos: create_expense, create_expense_from_receipt, submit_expense, list_my_expenses,\n"
+            "  check_reimbursement_status, submit_time_entry, submit_time_week, my_week_summary, how_to\n"
+            "- Managers+: list_pending_approvals, quick_approve, quick_reject\n"
+            "- Ejecutivos+: spend_summary, spend_by_project, time_report_summary\n\n"
             "REGLAS:\n"
-            "- Analiza el asunto y cuerpo del correo para identificar gastos, solicitudes o consultas.\n"
-            "- Para gastos con adjuntos: extrae los datos del comprobante y crea el registro.\n"
-            "- Para solicitudes de aprobación: verifica el estado y responde al remitente.\n"
-            "- Si la acción es de alto riesgo o ambigua, indica 'ESCALAR'.\n"
-            "- Respuestas concisas en el idioma del remitente."
+            "- Respuestas MUY breves (máximo 3 líneas)\n"
+            "- Monto > $10,000 MXN o ambiguo → indica ESCALAR\n"
+            "- Manager con pendientes → muestra resumen proactivo\n"
+            "- Ejecutivo pide números → responde con cifras exactas, no texto largo\n"
+            "- Nunca inventes datos. Si no sabes, di que no tienes esa información."
         ),
     },
 ]
@@ -240,7 +282,8 @@ class AgentDefinitionService:
         """Return the names of every tool registered in the agent tool registry."""
         from packages.modules.agent.core.registry import REGISTRY
         return [
-            {"name": s.name, "description": s.description, "category": s.category}
+            {"name": s.name, "description": s.description, "category": s.category,
+             "personas": sorted(list(s.personas)), "destructive": s.destructive}
             for s in REGISTRY._specs.values()
         ]
 

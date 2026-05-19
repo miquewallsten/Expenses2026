@@ -70,6 +70,7 @@ class LLMConfigOut(BaseModel):
     provider: str
     base_url: Optional[str]
     api_key_env_ref: Optional[str]
+    api_key: Optional[str]
     model_name: str
     is_active: bool
 
@@ -79,6 +80,7 @@ class LLMConfigIn(BaseModel):
     provider: str = "ollama"
     base_url: Optional[str] = None
     api_key_env_ref: Optional[str] = None
+    api_key: Optional[str] = None
     model_name: str = "llama3.2"
     is_active: bool = True
 
@@ -89,6 +91,7 @@ class ChatTestRequest(BaseModel):
     model_name: str = "glm-5:cloud"
     base_url: Optional[str] = None
     api_key_env_ref: Optional[str] = None
+    api_key: Optional[str] = None
 
 
 class ChatTestResponse(BaseModel):
@@ -217,6 +220,7 @@ def _serialize_llm(c: LLMProviderConfig) -> dict:
     return {
         "id": c.id, "company_id": c.company_id, "provider": c.provider,
         "base_url": c.base_url, "api_key_env_ref": c.api_key_env_ref,
+        "api_key": c.api_key,
         "model_name": c.model_name, "is_active": c.is_active,
     }
 
@@ -260,6 +264,7 @@ def create_llm_config(body: LLMConfigIn, db: Session = Depends(get_db),
         existing.provider = body.provider
         existing.base_url = body.base_url
         existing.api_key_env_ref = body.api_key_env_ref
+        existing.api_key = body.api_key
         existing.model_name = body.model_name
         existing.is_active = body.is_active
         db.commit()
@@ -309,17 +314,19 @@ def test_llm_chat(body: ChatTestRequest, _=Depends(require_super_admin)):
     import time
     from apps.api.ai.ollama_client import chat_with_messages_dynamic, Provider
 
-    # Map ollama-cloud to ollama (same API, different base URL)
-    provider_kind = "ollama" if body.provider in ("ollama", "ollama-cloud") else body.provider
+    # Ollama Cloud uses OpenAI-compatible API (/v1/chat/completions)
+    # Local Ollama uses native API (/api/chat)
+    provider_kind = "openai" if body.provider == "ollama-cloud" else ("ollama" if body.provider == "ollama" else body.provider)
 
     # Resolve API key
-    api_key = ""
-    if body.api_key_env_ref:
-        api_key = os.getenv(body.api_key_env_ref, "")
-    elif body.provider == "ollama-cloud":
-        api_key = os.getenv("LLM_API_KEY", "") or os.getenv("OLLAMA_API_KEY", "")
-    elif body.provider == "anthropic":
-        api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    api_key = body.api_key or ""
+    if not api_key:
+        if body.api_key_env_ref:
+            api_key = os.getenv(body.api_key_env_ref, "")
+        elif body.provider == "ollama-cloud":
+            api_key = os.getenv("LLM_API_KEY", "") or os.getenv("OLLAMA_API_KEY", "")
+        elif body.provider == "anthropic":
+            api_key = os.getenv("ANTHROPIC_API_KEY", "")
 
     # Build provider config from request
     provider = Provider(

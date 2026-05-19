@@ -37,6 +37,9 @@ class Expense(Base):
     company_id: Mapped[int] = mapped_column(index=True)
     user_id: Mapped[int | None] = mapped_column(Integer, index=True, nullable=True)
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), default="MXN", server_default="MXN", nullable=False)
+    exchange_rate: Mapped[Decimal | None] = mapped_column(Numeric(12, 6), nullable=True)
+    amount_mxn: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     description: Mapped[str] = mapped_column(String(255), nullable=False)
     status: Mapped[str] = mapped_column(String(50), default="draft")
     # How this expense is settled.  Allowed: "reimbursable", "corporate_card",
@@ -64,6 +67,10 @@ class Expense(Base):
     cfdi_amount_mismatch: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default="false", nullable=False
     )
+
+    # Soft delete — expenses are never hard-deleted; drafts can be "trashed"
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # ── Relationships for eager loading ─────────────────────────────────────────
     # Documents linked to this expense via ExpenseDocument.expense_id

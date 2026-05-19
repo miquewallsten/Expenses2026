@@ -1,15 +1,15 @@
 "use client";
 
 /**
- * AdminChartOfAccountsStudio — Motor de Pólizas.
+ * AdminChartOfAccountsStudio - Motor de Pólizas.
  *
  * Five tabs:
- *   • Mapeo    — 3-column live engine: sample expense → mapping decisions
+ *   • Mapeo    - 3-column live engine: sample expense → mapping decisions
  *                → live journal-entry preview
- *   • Cuentas  — read-only list of CoA accounts (Phase C makes editable)
- *   • IVA      — read-only list of tax rates    (Phase C makes editable)
- *   • Pruebas  — interactive simulator (Phase D adds presets)
- *   • Exportar — placeholder for Phase D export formats
+ *   • Cuentas  - read-only list of CoA accounts (Phase C makes editable)
+ *   • IVA      - read-only list of tax rates    (Phase C makes editable)
+ *   • Pruebas  - interactive simulator (Phase D adds presets)
+ *   • Exportar - placeholder for Phase D export formats
  *
  * Backend: /admin/coa/* + /admin/accounting-categories/*
  */
@@ -35,463 +35,35 @@ import { apiCall, apiPost, apiPatch, apiDelete } from "@/lib/api/client";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-// ── Types mirrored from backend ──────────────────────────────────────────────
-
-interface AccountRead {
-  id: number;
-  code: string;
-  name: string;
-  parent_id: number | null;
-  sat_group_code: string | null;
-  account_class: string;
-  is_postable: boolean;
-  split_by: string;
-  sort_order: number;
-  is_active: boolean;
-}
-interface TaxRateRead {
-  id: number;
-  name: string;
-  rate: number;
-  behavior: string;
-  gl_account_id: number | null;
-  is_active: boolean;
-}
-interface CategoryRead {
-  id: number;
-  code: string;
-  name: string;
-  expense_account_id: number | null;
-  tax_rate_id: number | null;
-  counterparty_account_id: number | null;
-}
-interface PolizaLine {
-  account_code: string;
-  account_name: string;
-  debit:  string;
-  credit: string;
-  note:   string;
-}
-interface PolizaResult {
-  lines: PolizaLine[];
-  balanced: boolean;
-  total_debit:  string;
-  total_credit: string;
-  warnings: string[];
-}
-
-// ── Sample expenses (deterministic, no backend calls) ────────────────────────
-
-const SAMPLE_EXPENSES: {
-  category_code: string;
-  amount: number;
-  description: string;
-  vendor: string;
-}[] = [
-  { category_code: "TRAVEL",                amount: 1856.00, description: "Vuelo MEX-MTY",          vendor: "Aeroméxico" },
-  { category_code: "MEALS",                 amount:   742.40, description: "Cena con cliente",       vendor: "Pujol" },
-  { category_code: "SOFTWARE",              amount:  3480.00, description: "Suscripción Notion",     vendor: "Notion Labs" },
-  { category_code: "OFFICE",                amount:   464.00, description: "Papelería trimestral",   vendor: "Office Depot" },
-  { category_code: "PROFESSIONAL_SERVICES", amount: 12760.00, description: "Honorarios legales",     vendor: "Bufete García" },
-  { category_code: "MARKETING",             amount:  5800.00, description: "Campaña LinkedIn",       vendor: "LinkedIn Corp" },
-  { category_code: "UTILITIES",             amount:  1276.00, description: "Internet oficina",       vendor: "Totalplay" },
-  { category_code: "MISCELLANEOUS",         amount:   348.00, description: "Estacionamiento",        vendor: "OperaPark" },
-];
-
-// ── Component ────────────────────────────────────────────────────────────────
-
-interface Props {
-  companyId: number;
-}
-
-type Tab = "mapeo" | "cuentas" | "iva" | "importar" | "pruebas" | "exportar";
-
-export default function AdminChartOfAccountsStudio({ companyId }: Props) {
-  const t  = useTranslations("admin.coa");
-  const tc = useTranslations("common");
-
-  const [tab, setTab] = useState<Tab>("mapeo");
-  const [accounts,   setAccounts]   = useState<AccountRead[]>([]);
-  const [taxRates,   setTaxRates]   = useState<TaxRateRead[]>([]);
-  const [categories, setCategories] = useState<CategoryRead[]>([]);
-  const [loading,    setLoading]    = useState(true);
-  const [error,      setError]      = useState<string | null>(null);
-  const [seeding,    setSeeding]    = useState(false);
-
-  // ── Loaders ────────────────────────────────────────────────────────────────
-  const loadAll = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [aRes, tRes, cRes] = await Promise.all([
-        apiCall<AccountRead[]>(`/admin/coa/${companyId}/accounts`),
-        apiCall<TaxRateRead[]>(`/admin/coa/${companyId}/tax-rates`),
-        apiCall<CategoryRead[]>(`/admin/accounting-categories/${companyId}`),
-      ]);
-      setAccounts(aRes);
-      setTaxRates(tRes);
-      setCategories(cRes);
-    } catch (e: any) {
-      setError(e?.message ?? "load failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { void loadAll(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [companyId]);
-
-  const applyPlanBasico = async () => {
-    setSeeding(true);
-    try {
-      await apiPost(`/admin/coa/${companyId}/apply-preset`, { preset: "plan_basico" });
-      await loadAll();
-    } catch (e: any) {
-      setError(e?.message ?? "preset failed");
-    } finally {
-      setSeeding(false);
-    }
-  };
-
-  // ── Lookups ────────────────────────────────────────────────────────────────
-  const expenseAccounts = useMemo(
-    () => accounts.filter(a => a.account_class === "expense" && a.is_postable),
-    [accounts],
-  );
-  const liabilityAccounts = useMemo(
-    () => accounts.filter(a => a.account_class === "liability" && a.is_postable),
-    [accounts],
-  );
-
-  // ── Render ─────────────────────────────────────────────────────────────────
-  return (
-    <div className="space-y-3">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <h2 className="text-sm font-semibold text-primary">{t("title")}</h2>
-          <span className="rounded border border-default px-1.5 py-0.5 text-[9px] uppercase tracking-widest text-tertiary">
-            {t("badge")}
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => void loadAll()}
-            disabled={loading}
-            className="inline-flex items-center gap-1 rounded border border-default px-2 py-1 text-[10px] text-secondary hover:bg-surface-2 disabled:opacity-40"
-          >
-            <RefreshCcw className="h-3 w-3" /> {tc("refresh")}
-          </button>
-          <button
-            onClick={() => void applyPlanBasico()}
-            disabled={seeding}
-            className="inline-flex items-center gap-1 rounded border bg-accent-muted bg-accent-muted px-2 py-1 text-[10px] text-accent hover:bg-accent-muted disabled:opacity-40"
-          >
-            {seeding ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-            {t("applyPreset")}
-          </button>
-        </div>
-      </div>
-
-      {error && (
-        <div className="flex items-start gap-2 rounded border border-red-500/20 bg-red-950/20 px-3 py-2">
-          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-error" />
-          <p className="text-[11px] text-red-200">{error}</p>
-        </div>
-      )}
-
-      {/* Tab strip */}
-      <div className="flex items-center gap-0 border-b border-default">
-        {(["mapeo", "cuentas", "iva", "importar", "pruebas", "exportar"] as Tab[]).map((k) => (
-          <button
-            key={k}
-            onClick={() => setTab(k)}
-            className={
-              "px-3 py-1.5 text-[11px] font-medium border-b -mb-px transition-colors " +
-              (tab === k
-                ? "bg-accent-muted text-primary"
-                : "border-transparent text-tertiary hover:text-secondary")
-            }
-          >
-            {t(`tabs.${k}`)}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab body */}
-      {loading ? (
-        <div className="flex items-center justify-center py-10 text-tertiary">
-          <Loader2 className="h-4 w-4 animate-spin" />
-        </div>
-      ) : tab === "mapeo" ? (
-        <MapeoEngine
-          companyId={companyId}
-          categories={categories}
-          accounts={accounts}
-          taxRates={taxRates}
-          expenseAccounts={expenseAccounts}
-          liabilityAccounts={liabilityAccounts}
-          onChanged={loadAll}
-        />
-      ) : tab === "cuentas" ? (
-        <AccountsEditor companyId={companyId} accounts={accounts} onChanged={loadAll} />
-      ) : tab === "iva" ? (
-        <TaxRatesEditor companyId={companyId} rates={taxRates} accounts={accounts} onChanged={loadAll} />
-      ) : tab === "importar" ? (
-        <ImportPanel
-          companyId={companyId}
-          categories={categories}
-          accounts={accounts}
-          taxRates={taxRates}
-          onChanged={loadAll}
-        />
-      ) : tab === "pruebas" ? (
-        <div className="space-y-6">
-          <BulkSimulatorPanel companyId={companyId} />
-          <SimulatorTab
-            companyId={companyId}
-            categories={categories}
-          />
-        </div>
-      ) : (
-        <ExportPanel companyId={companyId} />
-      )}
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Mapeo: 3-column live engine
-// ─────────────────────────────────────────────────────────────────────────────
-
-interface MapeoProps {
-  companyId: number;
-  categories: CategoryRead[];
-  accounts: AccountRead[];
-  taxRates: TaxRateRead[];
-  expenseAccounts:   AccountRead[];
-  liabilityAccounts: AccountRead[];
-  onChanged: () => Promise<void>;
-}
-
-function MapeoEngine({
-  companyId, categories, accounts, taxRates,
-  expenseAccounts, liabilityAccounts, onChanged,
-}: MapeoProps) {
+// ── Types & shared components imported from ./coa/ ───────────────────────
+import {
+  type AccountRead, type TaxRateRead, type CategoryRead,
+  type PolizaLine, type PolizaResult, type Tab,
+  type AccountDraft, type TaxRateDraft,
+  SAMPLE_EXPENSES, ACCOUNT_CLASSES, SPLIT_OPTIONS, TAX_BEHAVIORS,
+  blankAccount, blankRate, buildAccountTree, CUSTOM_PRESETS,
+} from "./coa/types";
+import { SectionLabel, EmptyHint, BindingRow, PolizaPreview } from "./coa/SharedComponents";
+function AccountsEditor({
+  companyId, accounts = [], onChanged = async () => {},
+}: { companyId: number; accounts?: AccountRead[]; onChanged?: () => Promise<void> }) {
   const t = useTranslations("admin.coa");
-  const [sampleIdx, setSampleIdx] = useState(0);
-  const [poliza, setPoliza] = useState<PolizaResult | null>(null);
+  const [draft, setDraft] = useState<AccountDraft>(blankAccount());
+  const [editing, setEditing] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
-  const [savingId, setSavingId] = useState<number | null>(null);
-  const [realExpenses, setRealExpenses] = useState<typeof SAMPLE_EXPENSES | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Pull real expenses for the current company; fall back to SAMPLE_EXPENSES
-  // if the company has none yet (so the mapping editor still has something
-  // to demonstrate the póliza preview against).
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const data = await apiCall<{ rows?: unknown[] }>(`/admin/coa/${companyId}/bulk-simulate?limit=24`);
-        const rows = Array.isArray(data?.rows) ? data.rows : [];
-        if (cancelled) return;
-        const mapped = rows
-          .filter((r: any) => r?.category_code)
-          .map((r: any) => ({
-            category_code: r.category_code as string,
-            amount: Number(r.amount ?? 0),
-            description: (r.description as string) || "(sin descripción)",
-            vendor: (r.vendor as string) || (r.merchant as string) || "—",
-          }));
-        setRealExpenses(mapped.length > 0 ? mapped : null);
-      } catch {
-        // network glitch → fall back to SAMPLE_EXPENSES silently
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [companyId]);
-
-  const samplePool = realExpenses && realExpenses.length > 0 ? realExpenses : SAMPLE_EXPENSES;
-  const usingReal = realExpenses !== null && realExpenses.length > 0;
-  const safeIdx = sampleIdx % samplePool.length;
-  const sample = samplePool[safeIdx];
-  const activeCategory = useMemo(
-    () => categories.find(c => c.code === sample.category_code) ?? null,
-    [categories, sample.category_code],
-  );
-
-  // Recompute the póliza preview whenever sample or category bindings change.
-  useEffect(() => {
-    let cancelled = false;
-    const run = async () => {
-      setBusy(true);
-      try {
-        const data = await apiPost<PolizaResult>(`/admin/coa/${companyId}/simulate`, { expense: sample });
-        if (!cancelled) setPoliza(data);
-      } catch {
-        if (!cancelled) setPoliza(null);
-      } finally {
-        if (!cancelled) setBusy(false);
-      }
-    };
-    void run();
-    return () => { cancelled = true; };
-  }, [companyId, sampleIdx, categories]);
-
-  const updateBinding = async (
-    field: "expense_account_id" | "tax_rate_id" | "counterparty_account_id",
-    value: number | null,
-  ) => {
-    if (!activeCategory) return;
-    setSavingId(activeCategory.id);
-    try {
-      const body = {
-        expense_account_id:      activeCategory.expense_account_id,
-        tax_rate_id:             activeCategory.tax_rate_id,
-        counterparty_account_id: activeCategory.counterparty_account_id,
-        [field]: value,
-      };
-      await apiPatch(`/admin/accounting-categories/${activeCategory.id}/bindings`, body);
-      await onChanged();
-    } finally {
-      setSavingId(null);
-    }
-  };
-
-  return (
-    <div className="grid grid-cols-12 gap-3">
-      {/* COL 1 — sample expense ───────────────────────────────────── */}
-      <div className="col-span-12 lg:col-span-3">
-        <SectionLabel>
-          {t("mapeo.sampleHeader")}
-          <span
-            className={`ml-2 inline-flex items-center rounded px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest ${
-              usingReal
-                ? "bg-emerald-500/15 text-emerald-300/80"
-                : "bg-amber-500/15 text-warning/80"
-            }`}
-            title={usingReal ? t("mapeo.sourceLiveHint") : t("mapeo.sourceSampleHint")}
-          >
-            {usingReal ? t("mapeo.sourceLive") : t("mapeo.sourceSample")}
-          </span>
-        </SectionLabel>
-        <div className="overflow-hidden rounded-lg border border-default bg-surface-1">
-          <div className="px-3 py-2.5">
-            <div className="flex items-baseline justify-between">
-              <p className="text-[11px] font-semibold text-primary">{sample.vendor}</p>
-              <p className="text-[10px] tabular-nums text-tertiary">
-                ${sample.amount.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
-              </p>
-            </div>
-            <p className="mt-0.5 text-[10px] text-tertiary">{sample.description}</p>
-            <p className="mt-2 text-[9px] uppercase tracking-widest text-muted">
-              {t("mapeo.category")}: {sample.category_code}
-            </p>
-          </div>
-          <div className="flex border-t border-default divide-x divide-white/[0.05]">
-            <button
-              onClick={() => setSampleIdx((i) => (i - 1 + samplePool.length) % samplePool.length)}
-              className="flex-1 py-1.5 text-[10px] text-tertiary hover:bg-surface-2"
-            >‹ {t("mapeo.prev")}</button>
-            <button
-              onClick={() => setSampleIdx((i) => (i + 1) % samplePool.length)}
-              className="flex-1 py-1.5 text-[10px] text-tertiary hover:bg-surface-2"
-            >{t("mapeo.next")} ›</button>
-          </div>
-          <p className="border-t border-default px-3 py-1.5 text-center text-[9px] text-muted tabular-nums">
-            {safeIdx + 1} / {samplePool.length}
-          </p>
-        </div>
-      </div>
-
-      {/* COL 2 — mapping decisions ────────────────────────────────── */}
-      <div className="col-span-12 lg:col-span-5">
-        <SectionLabel>
-          {t("mapeo.decisionsHeader")}
-          {savingId !== null && <Loader2 className="ml-2 inline h-3 w-3 animate-spin text-tertiary" />}
-        </SectionLabel>
-
-        {!activeCategory ? (
-          <EmptyHint message={t("mapeo.noCategory", { code: sample.category_code })} />
-        ) : (
-          <div className="overflow-hidden rounded-lg border border-default bg-surface-1 divide-y divide-white/[0.05]">
-            <BindingRow
-              label={t("mapeo.expenseAccount")}
-              hint={t("mapeo.expenseAccountHint")}
-              value={activeCategory.expense_account_id}
-              options={expenseAccounts.map(a => ({ value: a.id, label: `${a.code} — ${a.name}` }))}
-              onChange={(v) => updateBinding("expense_account_id", v)}
-            />
-            <BindingRow
-              label={t("mapeo.taxRate")}
-              hint={t("mapeo.taxRateHint")}
-              value={activeCategory.tax_rate_id}
-              options={taxRates.map(r => ({
-                value: r.id,
-                label: `${r.name} (${(r.rate * 100).toFixed(0)}% · ${r.behavior})`,
-              }))}
-              onChange={(v) => updateBinding("tax_rate_id", v)}
-            />
-            <BindingRow
-              label={t("mapeo.counterparty")}
-              hint={t("mapeo.counterpartyHint")}
-              value={activeCategory.counterparty_account_id}
-              options={liabilityAccounts.map(a => ({ value: a.id, label: `${a.code} — ${a.name}` }))}
-              onChange={(v) => updateBinding("counterparty_account_id", v)}
-            />
-          </div>
-        )}
-
-        {accounts.length === 0 && (
-          <p className="mt-2 text-[10px] text-warning/80">
-            {t("mapeo.emptyHint")}
-          </p>
-        )}
-      </div>
-
-      {/* COL 3 — live póliza preview ──────────────────────────────── */}
-      <div className="col-span-12 lg:col-span-4">
-        <SectionLabel>
-          {t("mapeo.previewHeader")}
-          {busy && <Loader2 className="ml-2 inline h-3 w-3 animate-spin text-tertiary" />}
-        </SectionLabel>
-        <PolizaPreview poliza={poliza} />
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Cuentas / IVA — editable inline editors (Phase C)
-// ─────────────────────────────────────────────────────────────────────────────
-
-const ACCOUNT_CLASSES = ["expense", "asset", "liability", "income", "equity"];
-const SPLIT_OPTIONS   = ["none", "cost_center", "project", "client"];
-const TAX_BEHAVIORS   = ["acreditable", "no_acreditable", "trasladable", "retenido", "exento"];
-
-type AccountDraft = {
-  id?: number;
-  code: string;
-  name: string;
-  sat_group_code: string;
-  account_class: string;
-  split_by: string;
-  is_postable: boolean;
-  parent_id: number | null;
-};
-
-const blankAccount = (): AccountDraft => ({
-  code: "", name: "", sat_group_code: "",
-  account_class: "expense", split_by: "none", is_postable: true,
-  parent_id: null,
-});
-
-// Build an indented, parent-grouped list. Falls back to code-prefix
-// matching when parent_id is not set on the row (so legacy seeds still
-// render as a tree by their `601.10 → 601` numeric prefix).
-function buildAccountTree(accounts: AccountRead[]): { row: AccountRead; depth: number }[] {
-  const byId   = new Map<number, AccountRead>();
-  const byCode = new Map<string, AccountRead>();
-  accounts.forEach(a => { byId.set(a.id, a); byCode.set(a.code, a); });
+  // Account lookup maps
+  const byId = useMemo(() => {
+    const m = new Map<number, AccountRead>();
+    accounts.forEach(a => m.set(a.id, a));
+    return m;
+  }, [accounts]);
+  const byCode = useMemo(() => {
+    const m = new Map<string, AccountRead>();
+    accounts.forEach(a => m.set(a.code, a));
+    return m;
+  }, [accounts]);
 
   const parentOf = (a: AccountRead): AccountRead | null => {
     if (a.parent_id != null && byId.has(a.parent_id)) return byId.get(a.parent_id)!;
@@ -528,19 +100,6 @@ function buildAccountTree(accounts: AccountRead[]): { row: AccountRead; depth: n
     const seen = new Set(out.map(o => o.row.id));
     accounts.forEach(a => { if (!seen.has(a.id)) out.push({ row: a, depth: 0 }); });
   }
-  return out;
-}
-
-function AccountsEditor({
-  companyId, accounts, onChanged,
-}: { companyId: number; accounts: AccountRead[]; onChanged: () => Promise<void> }) {
-  const t = useTranslations("admin.coa");
-  const [draft, setDraft] = useState<AccountDraft>(blankAccount());
-  const [editing, setEditing] = useState<number | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const tree = useMemo(() => buildAccountTree(accounts), [accounts]);
   // Header candidates for the parent picker = non-postable rows.
   const headerOptions = useMemo(
     () => accounts.filter(a => !a.is_postable).sort((x, y) =>
@@ -548,6 +107,8 @@ function AccountsEditor({
     ),
     [accounts],
   );
+
+  const tree = useMemo(() => buildAccountTree(accounts), [accounts]);
 
   const startSubaccount = (parent: AccountRead) => {
     setEditing(null);
@@ -619,7 +180,7 @@ function AccountsEditor({
             className="col-span-2 rounded border border-default bg-surface-1 px-2 py-1 text-[10px] text-secondary outline-none focus:bg-accent-muted"
             title="Cuenta padre"
           >
-            <option value="">— sin padre —</option>
+            <option value=""> -  sin padre  - </option>
             {headerOptions.map(h => (
               <option key={h.id} value={h.id}>{h.code} · {h.name}</option>
             ))}
@@ -677,8 +238,8 @@ function AccountsEditor({
                 <th className="px-3 py-1.5"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/[0.04]">
-              {tree.map(({ row: a, depth }) => editing === a.id ? (
+            <tbody className="divide-y divide-subtle">
+              {tree.map(({ row: a, depth }: { row: AccountRead; depth: number }) => editing === a.id ? (
                 <EditableAccountRow
                   key={a.id}
                   initial={{
@@ -718,8 +279,8 @@ function AccountsEditor({
                     {a.name}
                   </td>
                   <td className="px-3 py-1.5 text-tertiary">{a.account_class}</td>
-                  <td className="px-3 py-1.5 font-mono text-tertiary tabular-nums">{a.sat_group_code ?? "—"}</td>
-                  <td className="px-3 py-1.5 text-tertiary">{a.is_postable ? a.split_by : "—"}</td>
+                  <td className="px-3 py-1.5 font-mono text-tertiary tabular-nums">{a.sat_group_code ?? " - "}</td>
+                  <td className="px-3 py-1.5 text-tertiary">{a.is_postable ? a.split_by : " - "}</td>
                   <td className="px-3 py-1 text-right whitespace-nowrap">
                     {!a.is_postable && (
                       <button
@@ -786,7 +347,7 @@ function EditableAccountRow({
             className="rounded border border-default bg-surface-1 px-1.5 py-0.5 text-[10px] text-tertiary outline-none"
             title="Cuenta padre"
           >
-            <option value="">— sin padre —</option>
+            <option value=""> -  sin padre  - </option>
             {headerOptions
               .filter(h => h.id !== d.id)
               .map(h => <option key={h.id} value={h.id}>{h.code}</option>)}
@@ -833,17 +394,9 @@ function EditableAccountRow({
 
 // ── Tax-rate editor ─────────────────────────────────────────────────────────
 
-type TaxRateDraft = {
-  id?: number;
-  name: string;
-  rate: string;       // string for input control
-  behavior: string;
-  gl_account_id: number | null;
-};
 
-const blankRate = (): TaxRateDraft => ({
-  name: "", rate: "0.16", behavior: "acreditable", gl_account_id: null,
-});
+
+
 
 function TaxRatesEditor({
   companyId, rates, accounts, onChanged,
@@ -919,9 +472,9 @@ function TaxRatesEditor({
             onChange={(e) => setDraft({ ...draft, gl_account_id: e.target.value ? Number(e.target.value) : null })}
             className="col-span-3 rounded border border-default bg-surface-1 px-2 py-1 text-[10px] text-secondary outline-none focus:bg-accent-muted"
           >
-            <option value="">— GL —</option>
+            <option value=""> -  GL  - </option>
             {glOptions.map(a => (
-              <option key={a.id} value={a.id}>{a.code} — {a.name}</option>
+              <option key={a.id} value={a.id}>{a.code} - {a.name}</option>
             ))}
           </select>
           <button
@@ -948,7 +501,7 @@ function TaxRatesEditor({
                 <th className="px-3 py-1.5"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/[0.04]">
+            <tbody className="divide-y divide-subtle">
               {rates.map(r => editing === r.id ? (
                 <EditableTaxRow
                   key={r.id}
@@ -967,7 +520,7 @@ function TaxRatesEditor({
                   <td className="px-3 py-1.5 tabular-nums text-secondary">{(r.rate * 100).toFixed(2)}%</td>
                   <td className="px-3 py-1.5 text-tertiary">{r.behavior}</td>
                   <td className="px-3 py-1.5 font-mono text-tertiary tabular-nums">
-                    {r.gl_account_id === null ? "—" : accounts.find(a => a.id === r.gl_account_id)?.code ?? "?"}
+                    {r.gl_account_id === null ? " - " : accounts.find(a => a.id === r.gl_account_id)?.code ?? "?"}
                   </td>
                   <td className="px-3 py-1 text-right whitespace-nowrap">
                     <button
@@ -1028,7 +581,7 @@ function EditableTaxRow({
           onChange={(e) => setD({ ...d, gl_account_id: e.target.value ? Number(e.target.value) : null })}
           className="rounded border border-default bg-surface-1 px-1.5 py-0.5 text-[10px] text-secondary outline-none"
         >
-          <option value="">—</option>
+          <option value=""> - </option>
           {glOptions.map(a => <option key={a.id} value={a.id}>{a.code}</option>)}
         </select>
       </td>
@@ -1128,13 +681,13 @@ function ImportPanel({
   };
 
   const acctCode = (id: number | null) =>
-    id === null ? "—" : accounts.find(a => a.id === id)?.code ?? "?";
+    id === null ? " - " : accounts.find(a => a.id === id)?.code ?? "?";
   const rateName = (id: number | null) =>
-    id === null ? "—" : taxRates.find(r => r.id === id)?.name ?? "?";
+    id === null ? " - " : taxRates.find(r => r.id === id)?.name ?? "?";
 
   return (
     <div className="space-y-4">
-      {/* Unified import — CSV + Copilot in a single panel */}
+      {/* Unified import - CSV + Copilot in a single panel */}
       <UnifiedImportPanel
         companyId={companyId}
         onChanged={onChanged}
@@ -1146,7 +699,7 @@ function ImportPanel({
         runImport={runImport}
       />
 
-      {/* AI mapping — compact strip */}
+      {/* AI mapping - compact strip */}
       <div>
         <div className="mb-1 flex items-baseline justify-between px-1">
           <SectionLabel>{t("importar.aiHeader")}</SectionLabel>
@@ -1161,7 +714,7 @@ function ImportPanel({
               value={hint}
               onChange={(e) => setHint(e.target.value)}
               placeholder={t("importar.aiPlaceholder")}
-              className="flex-1 rounded border border-default bg-black/30 px-2 py-1 text-[11px] text-secondary placeholder:text-muted outline-none focus:border-strong"
+              className="flex-1 rounded border border-default bg-surface-2 px-2 py-1 text-[11px] text-secondary placeholder:text-muted outline-none focus:border-strong"
             />
             <button
               onClick={() => void runAi()}
@@ -1200,7 +753,7 @@ function ImportPanel({
                     <th className="px-2 py-1 text-left">Contrap.</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/[0.04]">
+                <tbody className="divide-y divide-subtle">
                   {suggestions.map(s => (
                     <tr key={s.category_id} title={s.reasoning}>
                       <td className="px-2 py-1">
@@ -1231,7 +784,7 @@ function ImportPanel({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Unified import — CSV directo OR Copilot (cualquier formato) in one panel
+// Unified import - CSV directo OR Copilot (cualquier formato) in one panel
 // ─────────────────────────────────────────────────────────────────────────────
 
 function UnifiedImportPanel({
@@ -1309,10 +862,10 @@ function UnifiedImportPanel({
             onChange={(e) => setCsv(e.target.value)}
             rows={6}
             placeholder={"code,name,class,sat,split\n601.30,Renta de oficina,expense,601.30,none\n..."}
-            className="w-full resize-y rounded border border-default bg-black/30 px-2 py-1.5 font-mono text-[10px] text-secondary placeholder:text-muted outline-none focus:border-strong"
+            className="w-full resize-y rounded border border-default bg-surface-2 px-2 py-1.5 font-mono text-[10px] text-secondary placeholder:text-muted outline-none focus:border-strong"
           />
           {csvResult && (
-            <div className="space-y-1 rounded border border-default bg-black/20 p-2 text-[10px]">
+            <div className="space-y-1 rounded border border-default section-subtle p-2 text-[10px]">
               <p className="text-emerald-300">✓ {csvResult.created_or_updated} cuentas procesadas</p>
               {csvResult.warnings?.map((w, i) => <p key={i} className="text-warning/80">• {w}</p>)}
               {csvResult.errors?.map((e, i) => <p key={i} className="text-error/80">× {e}</p>)}
@@ -1327,7 +880,7 @@ function UnifiedImportPanel({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Subir template (Copilot) — AI normaliza cualquier formato a nuestro esquema
+// Subir template (Copilot) - AI normaliza cualquier formato a nuestro esquema
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface NormalizedAccount {
@@ -1413,7 +966,7 @@ function TemplateCopilotPanel({
   };
 
   return (
-    <div className="rounded-lg border border-violet-500/20 bg-gradient-to-br from-violet-950/20 to-transparent p-3 space-y-2">
+    <div className="rounded-lg border border-default bg-surface-1 p-3 space-y-2">
       <p className="text-[10px] text-tertiary">{t("importar.copilotHint")}</p>
 
         <div className="grid grid-cols-12 gap-2">
@@ -1444,7 +997,7 @@ function TemplateCopilotPanel({
               onChange={(e) => setRaw(e.target.value)}
               rows={8}
               placeholder={t("importar.copilotPlaceholder")}
-              className="w-full resize-y rounded border border-default bg-black/30 px-2 py-1.5 font-mono text-[10px] text-secondary placeholder:text-muted outline-none focus:border-strong"
+              className="w-full resize-y rounded border border-default bg-surface-2 px-2 py-1.5 font-mono text-[10px] text-secondary placeholder:text-muted outline-none focus:border-strong"
             />
           </div>
           <div className="col-span-12 lg:col-span-5 space-y-2">
@@ -1453,7 +1006,7 @@ function TemplateCopilotPanel({
               onChange={(e) => setHint(e.target.value)}
               rows={3}
               placeholder={t("importar.copilotHintPlaceholder")}
-              className="w-full resize-none rounded border border-default bg-black/30 px-2 py-1.5 text-[11px] text-secondary placeholder:text-muted outline-none focus:border-strong"
+              className="w-full resize-none rounded border border-default bg-surface-2 px-2 py-1.5 text-[11px] text-secondary placeholder:text-muted outline-none focus:border-strong"
             />
             {note && (
               <p className="rounded border border-amber-500/20 bg-amber-950/20 px-2 py-1 text-[10px] text-warning">
@@ -1461,7 +1014,7 @@ function TemplateCopilotPanel({
               </p>
             )}
             {importResult && (
-              <div className="space-y-1 rounded border border-default bg-black/20 p-2 text-[10px]">
+              <div className="space-y-1 rounded border border-default section-subtle p-2 text-[10px]">
                 <p className="text-emerald-300">✓ {importResult.created_or_updated} cuentas importadas</p>
                 {importResult.errors?.slice(0, 4).map((e, i) => <p key={i} className="text-error/80">× {e}</p>)}
               </div>
@@ -1504,7 +1057,7 @@ function TemplateCopilotPanel({
                     <th className="px-2 py-1 text-left">Split</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/[0.04]">
+                <tbody className="divide-y divide-subtle">
                   {preview.map(a => (
                     <tr key={a.code} className={accepted.has(a.code) ? "" : "opacity-40"}>
                       <td className="px-2 py-1">
@@ -1517,7 +1070,7 @@ function TemplateCopilotPanel({
                       <td className="px-2 py-1 font-mono text-secondary tabular-nums">{a.code}</td>
                       <td className="px-2 py-1 text-secondary">{a.name}</td>
                       <td className="px-2 py-1 text-tertiary">{a.account_class}</td>
-                      <td className="px-2 py-1 font-mono text-tertiary tabular-nums">{a.sat_group_code ?? "—"}</td>
+                      <td className="px-2 py-1 font-mono text-tertiary tabular-nums">{a.sat_group_code ?? " - "}</td>
                       <td className="px-2 py-1 text-tertiary">{a.split_by}</td>
                     </tr>
                   ))}
@@ -1567,7 +1120,7 @@ function SimulatorTab({ companyId, categories }: { companyId: number; categories
     <div className="grid grid-cols-12 gap-3">
       <div className="col-span-12 lg:col-span-5">
         <SectionLabel>{t("pruebas.input")}</SectionLabel>
-        <div className="overflow-hidden rounded-lg border border-default bg-surface-1 divide-y divide-white/[0.05]">
+        <div className="overflow-hidden rounded-lg border border-default bg-surface-1 divide-y divide-subtle">
           <div className="flex items-center justify-between gap-3 px-3 py-2">
             <p className="text-[11px] text-secondary">{t("pruebas.amount")}</p>
             <input
@@ -1585,7 +1138,7 @@ function SimulatorTab({ companyId, categories }: { companyId: number; categories
               className="w-48 rounded border border-default bg-surface-1 px-2 py-1 text-[10px] text-secondary outline-none focus:bg-accent-muted"
             >
               {categories.map(c => (
-                <option key={c.id} value={c.code}>{c.code} — {c.name}</option>
+                <option key={c.id} value={c.code}>{c.code} - {c.name}</option>
               ))}
             </select>
           </div>
@@ -1610,7 +1163,7 @@ function SimulatorTab({ companyId, categories }: { companyId: number; categories
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Bulk simulator (Phase D — Pruebas tab)
+// Bulk simulator (Phase D - Pruebas tab)
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface BulkRow {
@@ -1694,13 +1247,13 @@ function BulkSimulatorPanel({ companyId }: { companyId: number }) {
                   <th className="px-2 py-1 text-left">{t("pruebas.colWarnings")}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/[0.04]">
+              <tbody className="divide-y divide-subtle">
                 {result.rows.map(r => (
                   <tr key={r.expense_id} className={r.balanced ? "" : "bg-rose-500/5"}>
                     <td className="px-2 py-1 font-mono text-tertiary tabular-nums">{r.expense_id}</td>
-                    <td className="px-2 py-1 font-mono text-tertiary tabular-nums">{r.date ?? "—"}</td>
+                    <td className="px-2 py-1 font-mono text-tertiary tabular-nums">{r.date ?? " - "}</td>
                     <td className="px-2 py-1 text-secondary">{r.description.slice(0, 60)}</td>
-                    <td className="px-2 py-1 font-mono text-tertiary">{r.category_code ?? "—"}</td>
+                    <td className="px-2 py-1 font-mono text-tertiary">{r.category_code ?? " - "}</td>
                     <td className="px-2 py-1 text-right font-mono tabular-nums text-secondary">{r.amount}</td>
                     <td className="px-2 py-1 text-center">
                       {r.balanced
@@ -1708,7 +1261,7 @@ function BulkSimulatorPanel({ companyId }: { companyId: number }) {
                         : <AlertTriangle className="inline h-3 w-3 text-rose-300" />}
                     </td>
                     <td className="px-2 py-1 text-warning/70" title={r.warnings.join(" · ")}>
-                      {r.warning_count > 0 ? t("pruebas.warningCount", { count: r.warning_count }) : "—"}
+                      {r.warning_count > 0 ? t("pruebas.warningCount", { count: r.warning_count }) : " - "}
                     </td>
                   </tr>
                 ))}
@@ -1729,7 +1282,7 @@ function BulkSimulatorPanel({ companyId }: { companyId: number }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Export panel (Phase D — Exportar tab)
+// Export panel (Phase D - Exportar tab)
 // ─────────────────────────────────────────────────────────────────────────────
 
 function ExportPanel({ companyId }: { companyId: number }) {
@@ -1740,7 +1293,7 @@ function ExportPanel({ companyId }: { companyId: number }) {
   const download = (format: "coi" | "contpaqi" | "sat-polizas") => {
     const qs = new URLSearchParams({ limit: String(limit) });
     if (format === "sat-polizas") qs.set("rfc", rfc);
-    // Auth headers via fetch then create a blob — keeps the JWT off the URL.
+    // Auth headers via fetch then create a blob - keeps the JWT off the URL.
     void (async () => {
       const res = await fetch(
         `${API}/admin/coa/${companyId}/export/${format}?${qs.toString()}`,
@@ -1831,29 +1384,10 @@ function ExportPanel({ companyId }: { companyId: number }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Custom export — define your own format with a template + live preview
+// Custom export - define your own format with a template + live preview
 // ─────────────────────────────────────────────────────────────────────────────
 
-const CUSTOM_PRESETS: { label: string; header: string; line: string; ext: string }[] = [
-  {
-    label: "CSV plano (1 fila por movimiento)",
-    header: "fecha,poliza,cuenta,debe,haber,concepto",
-    line:   "{date},EXP-{expense_id},{account_code},{debit},{credit},{description}",
-    ext:    "csv",
-  },
-  {
-    label: "TXT tabulado (ERP genérico)",
-    header: "FECHA\tCUENTA\tDEBE\tHABER\tCONCEPTO",
-    line:   "{date}\t{account_code}\t{debit}\t{credit}\t{description}",
-    ext:    "txt",
-  },
-  {
-    label: "Resumen por gasto (1 fila)",
-    header: "id,fecha,categoría,monto,balanceado",
-    line:   "{expense_id},{date},{category_code},{amount},{balanced}",
-    ext:    "csv",
-  },
-];
+
 
 function CustomExportPanel({ companyId, defaultLimit }: { companyId: number; defaultLimit: number }) {
   const t = useTranslations("admin.coa");
@@ -1880,25 +1414,18 @@ function CustomExportPanel({ companyId, defaultLimit }: { companyId: number; def
   const callExport = async (download: boolean) => {
     setBusy(true);
     try {
-      const res = await fetch(`${API}/admin/coa/${companyId}/export/custom`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({
-          line_template: line,
-          header,
-          footer,
-          one_line_per: perExpense ? "expense" : "movement",
-          limit,
-          filename,
-          extension,
-          download,
-        }),
-      });
-      if (!res.ok) {
-        alert(`Export failed: ${res.status}`);
-        return;
-      }
       if (download) {
+        // Blob download - must use raw fetch (apiCall doesn't support blob responses)
+        const res = await fetch(`${API}/admin/coa/${companyId}/export/custom`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+          body: JSON.stringify({
+            line_template: line, header, footer,
+            one_line_per: perExpense ? "expense" : "movement",
+            limit, filename, extension, download: true,
+          }),
+        });
+        if (!res.ok) { alert(`Export failed: ${res.status}`); return; }
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -1910,7 +1437,12 @@ function CustomExportPanel({ companyId, defaultLimit }: { companyId: number; def
         a.remove();
         URL.revokeObjectURL(url);
       } else {
-        setPreview(await res.json());
+        const data = await apiPost(`/admin/coa/${companyId}/export/custom`, {
+          line_template: line, header, footer,
+          one_line_per: perExpense ? "expense" : "movement",
+          limit, filename, extension, download: false,
+        });
+        setPreview(data as any);
       }
     } finally {
       setBusy(false);
@@ -1925,7 +1457,7 @@ function CustomExportPanel({ companyId, defaultLimit }: { companyId: number; def
   const LINE_KEYS    = ["line_no", "account_code", "account_name", "debit", "credit", "note"];
 
   return (
-    <div className="space-y-2 rounded-lg border border-violet-500/20 bg-gradient-to-br from-violet-950/15 to-transparent p-3">
+    <div className="space-y-2 rounded-lg border border-default bg-surface-1 p-3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-[12px] font-semibold text-primary">{t("exportar.customTitle")}</p>
         <div className="flex items-center gap-2">
@@ -1951,7 +1483,7 @@ function CustomExportPanel({ companyId, defaultLimit }: { companyId: number; def
               value={header}
               onChange={(e) => setHeader(e.target.value)}
               placeholder="fecha,cuenta,debe,haber,concepto"
-              className="w-full rounded border border-default bg-black/30 px-2 py-1.5 font-mono text-[10px] text-secondary placeholder:text-muted outline-none focus:border-strong"
+              className="w-full rounded border border-default bg-surface-2 px-2 py-1.5 font-mono text-[10px] text-secondary placeholder:text-muted outline-none focus:border-strong"
             />
           </div>
           <div>
@@ -1961,7 +1493,7 @@ function CustomExportPanel({ companyId, defaultLimit }: { companyId: number; def
               onChange={(e) => setLine(e.target.value)}
               rows={3}
               placeholder="{date},{account_code},{debit},{credit},{description}"
-              className="w-full resize-y rounded border border-default bg-black/30 px-2 py-1.5 font-mono text-[10px] text-secondary placeholder:text-muted outline-none focus:border-strong"
+              className="w-full resize-y rounded border border-default bg-surface-2 px-2 py-1.5 font-mono text-[10px] text-secondary placeholder:text-muted outline-none focus:border-strong"
             />
           </div>
           <div>
@@ -1970,7 +1502,7 @@ function CustomExportPanel({ companyId, defaultLimit }: { companyId: number; def
               value={footer}
               onChange={(e) => setFooter(e.target.value)}
               placeholder="(opcional)"
-              className="w-full rounded border border-default bg-black/30 px-2 py-1.5 font-mono text-[10px] text-secondary placeholder:text-muted outline-none focus:border-strong"
+              className="w-full rounded border border-default bg-surface-2 px-2 py-1.5 font-mono text-[10px] text-secondary placeholder:text-muted outline-none focus:border-strong"
             />
           </div>
         </div>
@@ -2068,7 +1600,7 @@ function CustomExportPanel({ companyId, defaultLimit }: { companyId: number; def
       </div>
 
       {preview && (
-        <pre className="max-h-[280px] overflow-auto rounded border border-default bg-black/40 p-2 font-mono text-[10px] text-secondary">{preview.preview}{preview.truncated ? "\n…" : ""}</pre>
+        <pre className="max-h-[280px] overflow-auto rounded border border-default bg-surface-3 p-2 font-mono text-[10px] text-secondary">{preview.preview}{preview.truncated ? "\n…" : ""}</pre>
       )}
     </div>
   );
@@ -2078,101 +1610,4 @@ function CustomExportPanel({ companyId, defaultLimit }: { companyId: number; def
 // Shared sub-components
 // ─────────────────────────────────────────────────────────────────────────────
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="mb-1 px-1 text-[9px] font-bold uppercase tracking-widest text-muted">
-      {children}
-    </p>
-  );
-}
-
-function EmptyHint({ message }: { message: string }) {
-  return (
-    <div className="rounded-lg border border-dashed border-default bg-surface-0 px-3 py-6 text-center">
-      <p className="text-[10px] text-tertiary">{message}</p>
-    </div>
-  );
-}
-
-function BindingRow({
-  label, hint, value, options, onChange,
-}: {
-  label: string;
-  hint?: string;
-  value: number | null;
-  options: { value: number; label: string }[];
-  onChange: (v: number | null) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 px-3 py-2">
-      <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium text-secondary">{label}</p>
-        {hint && <p className="text-[10px] text-muted">{hint}</p>}
-      </div>
-      <select
-        value={value ?? ""}
-        onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
-        className="shrink-0 rounded border border-default bg-surface-1 px-2 py-1 text-[10px] text-secondary outline-none focus:bg-accent-muted max-w-[260px]"
-      >
-        <option value="">—</option>
-        {options.map(o => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
-function PolizaPreview({ poliza }: { poliza: PolizaResult | null }) {
-  const t = useTranslations("admin.coa");
-  if (!poliza) {
-    return <EmptyHint message={t("preview.empty")} />;
-  }
-  return (
-    <div className="overflow-hidden rounded-lg border border-default bg-surface-1">
-      <table className="w-full text-[10.5px]">
-        <thead className="bg-surface-1 text-[9px] uppercase tracking-widest text-muted">
-          <tr>
-            <th className="px-2 py-1 text-left">{t("preview.account")}</th>
-            <th className="px-2 py-1 text-right">{t("preview.debit")}</th>
-            <th className="px-2 py-1 text-right">{t("preview.credit")}</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-white/[0.04]">
-          {poliza.lines.map((ln, i) => (
-            <tr key={i} className={ln.account_code === "?" ? "bg-amber-950/15" : ""}>
-              <td className="px-2 py-1">
-                <p className="font-mono tabular-nums text-secondary">{ln.account_code}</p>
-                <p className="text-[9.5px] text-muted">{ln.account_name} · {ln.note}</p>
-              </td>
-              <td className="px-2 py-1 text-right tabular-nums text-emerald-300/85">
-                {ln.debit !== "0.00" ? ln.debit : <span className="text-muted">—</span>}
-              </td>
-              <td className="px-2 py-1 text-right tabular-nums text-rose-300/85">
-                {ln.credit !== "0.00" ? ln.credit : <span className="text-muted">—</span>}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-        <tfoot className="border-t border-default bg-surface-1 text-[10px] font-semibold">
-          <tr>
-            <td className="px-2 py-1 text-tertiary">
-              {poliza.balanced
-                ? <span className="inline-flex items-center gap-1 text-emerald-300"><CheckCircle2 className="h-3 w-3" /> Balanceado</span>
-                : <span className="inline-flex items-center gap-1 text-rose-300"><AlertTriangle className="h-3 w-3" /> Descuadrado</span>}
-            </td>
-            <td className="px-2 py-1 text-right tabular-nums text-emerald-300/85">{poliza.total_debit}</td>
-            <td className="px-2 py-1 text-right tabular-nums text-rose-300/85">{poliza.total_credit}</td>
-          </tr>
-        </tfoot>
-      </table>
-      {poliza.warnings.length > 0 && (
-        <div className="border-t border-default bg-amber-950/10 px-2 py-1.5">
-          {poliza.warnings.map((w, i) => (
-            <p key={i} className="text-[10px] text-warning/80">• {w}</p>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+export default AccountsEditor;

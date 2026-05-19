@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { Plus, ShieldCheck, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { apiCall, apiPost } from "@/lib/api/client";
 
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 interface Role {
   id: number;
@@ -35,26 +35,8 @@ export default function AdminRolesPanel({ roles, companyId = 1, onRolesChanged }
     if (!name.trim() || !key.trim()) { setError(tr("errorRequired")); return; }
     setSaving(true); setError(null);
     try {
-      const res = await fetch(`${API}/roles/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ company_id: companyId, key: key.trim(), name: name.trim(), description: desc.trim() || null }),
-      });
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        const detail = d?.detail;
-        const msg =
-          typeof detail === "string"
-            ? detail
-            : Array.isArray(detail)
-              ? detail.map((x: any) => x?.msg ?? JSON.stringify(x)).join("; ")
-              : detail
-                ? JSON.stringify(detail)
-                : `${res.status}`;
-        throw new Error(msg);
-      }
-      const created = await res.json();
-      onRolesChanged?.([...roles, created]);
+      const created = await apiPost("/roles/", { company_id: companyId, key: key.trim(), name: name.trim(), description: desc.trim() || null });
+      onRolesChanged?.([...roles, created as any]);
       setName(""); setKey(""); setDesc("");
       setShowForm(false);
     } catch (e: any) {
@@ -67,8 +49,8 @@ export default function AdminRolesPanel({ roles, companyId = 1, onRolesChanged }
   return (
     <div className="max-w-2xl space-y-4">
       {/* Premium header */}
-      <div className="relative overflow-hidden rounded-lg border border-default bg-gradient-to-r from-surface-1 via-surface-1 to-violet-500/[0.02] px-4 py-3">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--color-violet-500)/5%,_transparent_50%)]" />
+      <div className="rounded-lg border border-default bg-surface-1 px-4 py-3">
+        <div className="" />
         <div className="relative flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10">
@@ -107,7 +89,7 @@ export default function AdminRolesPanel({ roles, companyId = 1, onRolesChanged }
         <div className="overflow-hidden rounded-lg border border-default">
           {/* Table header */}
           {roles.length > 0 && (
-            <div className="grid grid-cols-[1fr_1fr_2fr_100px] gap-x-4 border-b border-subtle bg-black/20 px-4 py-2">
+            <div className="grid grid-cols-[1fr_1fr_2fr_100px] gap-x-4 border-b border-subtle section-subtle px-4 py-2">
               {[tr("colName"), tr("colKey"), tr("colDescription"), tr("colCreated")].map((h) => (
                 <span key={h} className="text-[9px] font-bold uppercase tracking-widest text-muted">
                   {h}
@@ -125,7 +107,7 @@ export default function AdminRolesPanel({ roles, companyId = 1, onRolesChanged }
               <span className="truncate text-[11px] font-medium text-secondary">{role.name}</span>
               <span className="truncate font-mono text-[11px] text-accent">{role.key}</span>
               <span className="truncate text-[11px] text-tertiary">
-                {role.description ?? <span className="italic text-muted">—</span>}
+                {role.description ?? <span className="italic text-muted"> - </span>}
               </span>
               <span className="font-mono text-[10px] text-muted">
                 {new Date(role.created_at).toLocaleDateString("en-US", {

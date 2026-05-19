@@ -26,6 +26,7 @@ import {
   SectionLabel,
 } from "@/components/admin/shared/AdminPatterns";
 import { getCurrentCompanyId, getAuthHeaders } from "@/lib/session";
+import { apiCall } from "@/lib/api/client";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -52,7 +53,7 @@ function formatGb(value: number): string {
 }
 
 function formatBytes(bytes: number | null): string {
-  if (bytes === null) return "—";
+  if (bytes === null) return " - ";
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -62,13 +63,13 @@ function formatBytes(bytes: number | null): string {
 function statusTone(status: string): string {
   switch (status) {
     case "completed":
-      return "bg-emerald-500/15 text-emerald-400 border-emerald-500/20";
+      return "bg-success/15 text-success border-emerald-500/20";
     case "failed":
-      return "bg-rose-500/15 text-rose-400 border-rose-500/20";
+      return "bg-error/15 text-error border-rose-500/20";
     case "processing":
       return "bg-accent/10 text-accent border-accent/20";
     default:
-      return "bg-surface-2 text-tertiary border-white/5";
+      return "bg-surface-2 text-tertiary border-subtle";
   }
 }
 
@@ -90,11 +91,8 @@ export default function ExportSection() {
   const loadStorage = useCallback(async (_cid: number) => {
     setStorageLoading(true);
     try {
-      const res = await fetch(`${API}/admin/export/storage`, {
-        headers: { ...getAuthHeaders() },
-      });
-      if (!res.ok) throw new Error(`Failed to load storage: ${res.status}`);
-      setStorage(await res.json());
+      const data: any = await apiCall(`/admin/export/storage`);
+      if (data) setStorage(data);
     } catch (e) {
       console.error("Storage load error:", e);
     } finally {
@@ -105,11 +103,7 @@ export default function ExportSection() {
   const loadExports = useCallback(async (_cid: number) => {
     setExportsLoading(true);
     try {
-      const res = await fetch(`${API}/admin/export`, {
-        headers: { ...getAuthHeaders() },
-      });
-      if (!res.ok) throw new Error(`Failed to load exports: ${res.status}`);
-      const data = await res.json();
+      const data: any = await apiCall(`/admin/export`);
       setExports(Array.isArray(data?.exports) ? data.exports : []);
     } catch (e) {
       console.error("Exports load error:", e);
@@ -154,7 +148,7 @@ export default function ExportSection() {
 
   if (!companyId) {
     return (
-      <div className="rounded-lg border border-amber-500/20 bg-amber-500/[0.05] p-4 text-[12px] text-warning/80">
+      <div className="rounded-lg border border-warning/20 bg-amber-500/[0.05] p-4 text-[12px] text-warning/80">
         {t("noCompany")}
       </div>
     );
@@ -200,12 +194,12 @@ export default function ExportSection() {
               {t("loading")}
             </div>
           ) : storage ? (
-            <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-white/5">
+            <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-subtle">
               <div className="p-4 space-y-1.5">
                 <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-muted">
                   <FileStack className="h-3 w-3" /> {t("storage.files")}
                 </div>
-                <div className="text-xl font-bold tabular-nums text-primary tracking-tight">
+                <div className="text-base font-semibold tabular-nums text-primary tracking-tight">
                   {formatGb(storage.files_gb)} <span className="text-[10px] font-medium text-muted uppercase">GB</span>
                 </div>
               </div>
@@ -213,7 +207,7 @@ export default function ExportSection() {
                 <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-muted">
                    <Database className="h-3 w-3" /> {t("storage.database")}
                 </div>
-                <div className="text-xl font-bold tabular-nums text-primary tracking-tight">
+                <div className="text-base font-semibold tabular-nums text-primary tracking-tight">
                    {formatGb(storage.database_gb)} <span className="text-[10px] font-medium text-muted uppercase">GB</span>
                 </div>
               </div>
@@ -221,7 +215,7 @@ export default function ExportSection() {
                 <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-muted">
                    <Package className="h-3 w-3" /> {t("storage.total")}
                 </div>
-                <div className="text-xl font-bold tabular-nums text-accent tracking-tight">
+                <div className="text-base font-semibold tabular-nums text-accent tracking-tight">
                    {formatGb(storage.total_gb)} <span className="text-[10px] font-medium text-accent/50 uppercase">GB</span>
                 </div>
               </div>
@@ -229,7 +223,7 @@ export default function ExportSection() {
                 <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-muted">
                    {t("storage.included")}
                 </div>
-                <div className="text-xl font-bold tabular-nums text-secondary tracking-tight">
+                <div className="text-base font-semibold tabular-nums text-secondary tracking-tight">
                    {formatGb(storage.included_gb)} <span className="text-[10px] font-medium text-muted uppercase">GB</span>
                 </div>
               </div>
@@ -253,7 +247,7 @@ export default function ExportSection() {
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  className="rounded-lg border border-accent/20 bg-accent/5 px-4 py-1.5 text-[11px] font-bold text-accent transition-all hover:bg-accent/10 disabled:opacity-40"
+                  className="rounded-md border border-accent/20 bg-accent/5 px-4 py-1.5 text-[11px] font-bold text-accent transition-all hover:bg-accent/10 disabled:opacity-40"
                   disabled
                 >
                   {t("create.button")}
@@ -280,7 +274,7 @@ export default function ExportSection() {
             <div className="overflow-hidden">
               <table className="w-full text-left text-[10.5px]">
                 <thead>
-                  <tr className="border-b border-white/5 bg-surface-2/30 text-[9px] uppercase tracking-widest text-muted">
+                  <tr className="border-b border-subtle bg-surface-2/30 text-[9px] uppercase tracking-widest text-muted">
                     <th className="p-3 font-semibold">{t("history.date")}</th>
                     <th className="p-3 font-semibold">{t("history.type")}</th>
                     <th className="p-3 font-semibold">{t("history.status")}</th>
@@ -292,10 +286,10 @@ export default function ExportSection() {
                   {exports.map((job) => (
                     <tr
                       key={job.id}
-                      className="border-b border-white/5 last:border-0 hover:bg-surface-2/40 transition-colors"
+                      className="border-b border-subtle last:border-0 hover:bg-surface-2/40 transition-colors"
                     >
                       <td className="p-3 text-secondary tabular-nums">
-                        {job.created_at ? new Date(job.created_at).toLocaleString() : "—"}
+                        {job.created_at ? new Date(job.created_at).toLocaleString() : " - "}
                       </td>
                       <td className="p-3 font-mono text-[10px] text-tertiary uppercase">
                         {job.export_type}
@@ -318,7 +312,7 @@ export default function ExportSection() {
                             {t("history.download")}
                           </button>
                         ) : (
-                          <span className="text-[10px] text-muted font-medium">—</span>
+                          <span className="text-[10px] text-muted font-medium"> - </span>
                         )}
                       </td>
                     </tr>

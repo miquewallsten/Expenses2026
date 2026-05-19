@@ -30,9 +30,9 @@ import {
   ChevronRight,
   Shield,
 } from "lucide-react";
-import { getCurrentCompanyId, getAuthHeaders } from "@/lib/session";
+import { getCurrentCompanyId } from "@/lib/session";
+import { apiCall } from "@/lib/api/client";
 
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 const PAGE_SIZE = 50;
 
 interface AuditRow {
@@ -82,13 +82,10 @@ export default function AuditLogSection() {
 
   const loadActions = useCallback(async (cid: number) => {
     try {
-      const res = await fetch(`${API}/admin/audit-log/${cid}/actions`, {
-        headers: { ...getAuthHeaders() },
-      });
-      if (!res.ok) return;
-      setActions(await res.json());
+      const data = await apiCall<string[]>(`/admin/audit-log/${cid}/actions`);
+      setActions(data);
     } catch {
-      // non-fatal — pills just render empty
+      // non-fatal - pills just render empty
     }
   }, []);
 
@@ -102,11 +99,7 @@ export default function AuditLogSection() {
         qs.set("limit", String(PAGE_SIZE));
         if (opts.cursor) qs.set("cursor", String(opts.cursor));
         if (opts.filter) qs.set("action", opts.filter);
-        const res = await fetch(`${API}/admin/audit-log/${cid}?${qs.toString()}`, {
-          headers: { ...getAuthHeaders() },
-        });
-        if (!res.ok) throw new Error((await res.text()) || `${res.status}`);
-        const body = (await res.json()) as AuditPage;
+        const body = await apiCall<AuditPage>(`/admin/audit-log/${cid}?${qs.toString()}`);
         setRows((prev) => (opts.append ? [...prev, ...body.rows] : body.rows));
         setCursor(body.next_cursor);
         setHasMore(body.next_cursor !== null);
@@ -133,7 +126,7 @@ export default function AuditLogSection() {
   const renderDetail = (row: AuditRow) => {
     const text = row.detail_text || "";
     const trimmed = text.trim();
-    if (!trimmed) return <span className="text-muted">—</span>;
+    if (!trimmed) return <span className="text-muted"> - </span>;
     if (row.action === "routing.decision") {
       try {
         const p = JSON.parse(trimmed) as {
@@ -301,7 +294,7 @@ export default function AuditLogSection() {
                         )}
                       </td>
                       <td className="px-2 py-2 align-top text-tertiary tabular-nums">
-                        {r.created_at ? new Date(r.created_at).toLocaleString() : "—"}
+                        {r.created_at ? new Date(r.created_at).toLocaleString() : " - "}
                       </td>
                       <td className="px-2 py-2 align-top">
                         <span className={`rounded-md px-1.5 py-0.5 font-mono text-[9px] ${actionTone(r.action)}`}>
@@ -317,7 +310,7 @@ export default function AuditLogSection() {
                       <td className="px-2 py-2 align-top text-tertiary">
                         {!isOpen && (
                           <span className="line-clamp-1 break-all font-mono text-[10px] opacity-70">
-                            {r.detail_text || "—"}
+                            {r.detail_text || " - "}
                           </span>
                         )}
                       </td>
@@ -325,7 +318,7 @@ export default function AuditLogSection() {
                     {isOpen && (
                       <tr key={`${r.id}-detail`} className="border-b border-subtle bg-surface-2/10">
                         <td className="px-3 py-3" colSpan={6}>
-                          <div className="rounded-lg border border-white/5 bg-black/20 p-3">
+                          <div className="rounded-lg border border-subtle section-subtle p-3">
                             {renderDetail(r)}
                           </div>
                         </td>

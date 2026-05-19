@@ -89,7 +89,7 @@ REGISTRY.register(ToolSpec(
     category="diagnostic",
     input_schema=Empty,
     handler=_diagnose_config,
-    personas=frozenset({"admin"}),
+    personas=frozenset({"accounting", "admin"}),
 ))
 
 
@@ -141,7 +141,7 @@ REGISTRY.register(ToolSpec(
     category="diagnostic",
     input_schema=DiagnoseExpenseArgs,
     handler=_diagnose_expense,
-    personas=frozenset({"admin", "employee"}),
+    personas=frozenset({"accounting", "admin"}),
 ))
 
 
@@ -196,5 +196,5 @@ REGISTRY.register(ToolSpec(
     category="diagnostic",
     input_schema=Empty,
     handler=_trace_workflow,
-    personas=frozenset({"admin"}),
+    personas=frozenset({"accounting", "admin"}),
 ))

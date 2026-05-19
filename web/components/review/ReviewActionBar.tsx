@@ -42,14 +42,14 @@ export default function ReviewActionBar({
 
   if (!any && reasons.length === 0) return null;
 
-  // Exactly one action is PRIMARY — the recommended forward path.
+  // Exactly one action is PRIMARY - the recommended forward path.
   // Priority: approve → reject → return.
   const primaryIs = approve ? "approve" : reject ? "reject" : "return";
 
   return (
     <div className="flex flex-col gap-2 border-t border-subtle pt-3 md:flex-row md:flex-wrap md:items-center">
 
-      {/* Approve — always PRIMARY when available */}
+      {/* Approve - always PRIMARY when available */}
       {approve && (
         <button
           type="button"
@@ -62,7 +62,7 @@ export default function ReviewActionBar({
         </button>
       )}
 
-      {/* Reject — PRIMARY only when it's the sole available action, else secondary (border-only) */}
+      {/* Reject - PRIMARY only when it's the sole available action, else secondary (border-only) */}
       {reject && (
         <button
           type="button"
@@ -79,7 +79,7 @@ export default function ReviewActionBar({
         </button>
       )}
 
-      {/* Return — PRIMARY only when sole action, else ghost */}
+      {/* Return - PRIMARY only when sole action, else ghost */}
       {ret && (
         <button
           type="button"

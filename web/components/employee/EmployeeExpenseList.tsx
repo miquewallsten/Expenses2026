@@ -2,8 +2,10 @@
 
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useTranslations } from "next-intl";
-import { StatusDot, StatusText } from "@/components/ui/StatusBadge";
-import { Plus, Upload, Camera, FileText } from "lucide-react";
+import {
+  Plus, Upload, Camera, FileText, FileCode, FileCheck2,
+  Search, Receipt, Clock,
+} from "lucide-react";
 
 export interface Expense {
   id: number;
@@ -19,30 +21,36 @@ export interface Expense {
   cost_center?: string | null;
 }
 
-const FILTER_KEYS = ["all", "draft", "submitted", "approved", "needsAttention"] as const;
-type FilterKey = (typeof FILTER_KEYS)[number];
 
-function matchesFilterKey(expense: { status: string }, filter: FilterKey): boolean {
-  if (filter === "all") return true;
-  if (filter === "needsAttention") return expense.status === "rejected";
-  return expense.status.toLowerCase() === filter.toLowerCase();
+
+// ── Formatters ────────────────────────────────────────────────────────────────
+
+const AMOUNT_FMT = new Intl.NumberFormat("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+function formatAmount(n: number | string): string {
+  const v = Number(n);
+  return Number.isFinite(v) ? AMOUNT_FMT.format(v) : "0.00";
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+function formatGroupDate(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today.getTime() - 86400000);
+  const itemDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+  if (itemDate.getTime() === today.getTime()) return "Hoy";
+  if (itemDate.getTime() === yesterday.getTime()) return "Ayer";
+  const weekAgo = new Date(today.getTime() - 7 * 86400000);
+  if (itemDate >= weekAgo) {
+    return d.toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "short" });
+  }
+  return d.toLocaleDateString("es-MX", { month: "short", day: "numeric" });
 }
 
 function needsExtraction(e: Expense): boolean {
   return e.status === "uploading";
 }
-
-const _AMOUNT_FMT = new Intl.NumberFormat("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-function formatAmount(n: number | string): string {
-  const v = Number(n);
-  return Number.isFinite(v) ? _AMOUNT_FMT.format(v) : "0.00";
-}
-
-const _GARBAGE_PREFIXES = ["<?xml", "<cfdi", "<Comprobante", "%PDF"];
 
 function sanitizeDescriptionRaw(description: string): "xml" | "pdf" | "doc" | null {
   const trimmed = description.trimStart();
@@ -59,7 +67,6 @@ function sanitizeDescription(description: string, uploadedXml: string, uploadedP
   if (kind === "doc") return uploadedDoc;
   return description;
 }
-void _GARBAGE_PREFIXES;
 
 function secondaryLine(e: Expense): string {
   if (e.project) return e.project;
@@ -68,31 +75,48 @@ function secondaryLine(e: Expense): string {
   return "";
 }
 
-function SkeletonRow({ delay = 0 }: { delay?: number }) {
+// ── Document type indicator ───────────────────────────────────────────────────
+
+function DocTypeIcon({ type }: { type: "xml" | "pdf" | "doc" | null }) {
+  if (type === "xml") return <FileCode className="h-3 w-3 text-sky-400" />;
+  if (type === "pdf") return <FileCheck2 className="h-3 w-3 text-amber-400" />;
+  if (type === "doc") return <FileText className="h-3 w-3 text-muted" />;
+  return null;
+}
+
+// ── Status pill ──────────────────────────────────────────────────────────────
+
+const STATUS_PILL: Record<string, string> = {
+  draft: "bg-surface-2 text-secondary border border-default",
+  uploading: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+  submitted: "bg-sky-500/10 text-sky-400 border border-sky-500/20",
+  manager_approved: "bg-violet-500/10 text-violet-400 border border-violet-500/20",
+  approved: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+  rejected: "bg-error/10 text-error border border-error/20",
+};
+
+
+
+function StatusPill({ status, label }: { status: string; label?: string }) {
+  const cls = STATUS_PILL[status] ?? STATUS_PILL.draft;
   return (
-    <li className="border-b border-subtle px-3 py-3" style={{ animationDelay: `${delay}ms` }}>
-      <div className="flex items-baseline justify-between gap-2">
-        <div className="skeleton h-2.5 w-2/3 rounded" />
-        <div className="skeleton h-2.5 w-12 rounded" />
-      </div>
-      <div className="mt-2 flex items-center gap-1.5">
-        <div className="skeleton h-1.5 w-1.5 rounded-full" />
-        <div className="skeleton h-2 w-16 rounded" />
-        <div className="skeleton ml-auto h-2 w-10 rounded" />
-      </div>
-    </li>
+    <span className={`inline-flex items-center rounded-full px-1.5 py-px text-[9px] font-medium leading-none ${cls}`}>
+      {label ?? status}
+    </span>
   );
 }
 
-interface Props {
+// ── Component ─────────────────────────────────────────────────────────────────
+
+interface EmployeeExpenseListProps {
   expenses: Expense[];
   selectedId: number | null;
-  onSelect: (e: Expense) => void;
+  onSelect: (expense: Expense | null) => void;
   loading: boolean;
-  uploading?: boolean;
+  uploading: boolean;
   onUploadFile: () => void;
   onTakePhoto?: () => void;
-  onNewSimpleExpense?: () => void;
+  onNewSimpleExpense: () => void;
 }
 
 export default function EmployeeExpenseList({
@@ -100,76 +124,179 @@ export default function EmployeeExpenseList({
   selectedId,
   onSelect,
   loading,
-  uploading = false,
+  uploading,
   onUploadFile,
   onTakePhoto,
   onNewSimpleExpense,
-}: Props) {
-  const t = useTranslations("employee.expenseList");
-  const tc = useTranslations("common");
-  const [query, setQuery] = useState("");
-  const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
+}: EmployeeExpenseListProps) {
+  const t = useTranslations("employee");
+  const [search, setSearch] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!menuOpen) return;
-    const onDocClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
     };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMenuOpen(false);
-    };
-    document.addEventListener("mousedown", onDocClick);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDocClick);
-      document.removeEventListener("keydown", onKey);
-    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, [menuOpen]);
 
+  // ── Filtering & grouping ───────────────────────────────────────────────
   const filtered = useMemo(() => {
-    const safeExpenses = Array.isArray(expenses) ? expenses : [];
-    return safeExpenses.filter((e) => {
-      if (!matchesFilterKey(e, activeFilter)) return false;
-      if (query.trim()) {
-        const q = query.toLowerCase();
-        return (
+    let list = expenses;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (e) =>
           e.description.toLowerCase().includes(q) ||
-          (e.detected_category?.toLowerCase().includes(q) ?? false) ||
-          (e.account_code?.toLowerCase().includes(q) ?? false)
-        );
-      }
-      return true;
-    });
-  }, [expenses, query, activeFilter]);
+          e.detected_category?.toLowerCase().includes(q) ||
+          formatAmount(e.amount).includes(q) ||
+          e.project?.toLowerCase().includes(q) ||
+          e.client?.toLowerCase().includes(q) ||
+          e.cost_center?.toLowerCase().includes(q),
+      );
+    }
+    return list;
+  }, [expenses, search]);
 
+  const groups = useMemo(() => {
+    const map = new Map<string, Expense[]>();
+    for (const e of filtered) {
+      const key = formatGroupDate(e.created_at);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(e);
+    }
+    return map;
+  }, [filtered]);
+
+  // ── Render ──────────────────────────────────────────────────────────────
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="flex h-full flex-col bg-surface-0">
+      {/* Search */}
+      <div className="shrink-0 px-3 pt-3 pb-1">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t("searchPlaceholder")}
+            className="w-full rounded-lg border border-default bg-surface-1 py-1.5 pl-8 pr-3 text-[11px] text-primary placeholder:text-muted/50 outline-none focus:border-accent/40"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-secondary"
+            >
+              <span className="text-[10px]">✕</span>
+            </button>
+          )}
+        </div>
+      </div>
 
-      <div className="flex shrink-0 items-center gap-2 border-b border-subtle px-3 py-2">
-        <div ref={menuRef} className="relative shrink-0">
+      {/* Expense list */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-2">
+        {loading && expenses.length === 0 && (
+          <div className="flex items-center justify-center py-12">
+            <p className="text-[11px] text-muted">Cargando...</p>
+          </div>
+        )}
+
+        {!loading && filtered.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16">
+            <Receipt className="h-8 w-8 text-surface-2" />
+            <p className="mt-2 text-[11px] text-muted">{t("noExpenses")}</p>
+          </div>
+        )}
+
+        {Array.from(groups.entries()).map(([label, items]) => (
+          <div key={label} className="mb-1">
+            <p className="px-1.5 pb-0.5 pt-2 text-[9px] font-semibold uppercase tracking-widest text-muted">
+              {label}
+            </p>
+            <ul className="space-y-px">
+              {items.map((exp) => {
+                const isSelected = exp.id === selectedId;
+                const docType = sanitizeDescriptionRaw(exp.description);
+                const secondary = secondaryLine(exp);
+                return (
+                  <li key={exp.id}>
+                    <button
+                      type="button"
+                      onClick={() => onSelect(exp)}
+                      className={`group relative flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left transition-colors ${
+                        isSelected
+                          ? "bg-accent/5 ring-1 ring-inset ring-accent/15"
+                          : "hover:bg-surface-1"
+                      }`}
+                    >
+                      <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${
+                        isSelected ? "bg-accent/10" : "bg-surface-2 group-hover:bg-surface-3"
+                      } transition-colors`}>
+                        {needsExtraction(exp) ? (
+                          <Clock className="h-3 w-3 animate-pulse text-amber-400" />
+                        ) : (
+                          <DocTypeIcon type={docType} />
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className={`truncate text-[11px] font-medium leading-tight ${
+                            isSelected ? "text-primary" : "text-secondary group-hover:text-primary"
+                          } transition-colors`}>
+                            {sanitizeDescription(exp.description, t("uploadedXml"), t("uploadedPdf"), t("uploadedDoc"))}
+                          </span>
+                          <span className="shrink-0 text-[11px] font-semibold tabular-nums text-primary">
+                            ${formatAmount(exp.amount)}
+                          </span>
+                        </div>
+                        <div className="mt-0.5 flex items-center gap-1.5">
+                          <StatusPill status={exp.status} label={t(`status_${exp.status}` as Parameters<typeof t>[0])} />
+                          {exp.detected_category && !needsExtraction(exp) && (
+                            <span className="truncate text-[9px] text-muted">
+                              {exp.detected_category}
+                            </span>
+                          )}
+                          {secondary && !needsExtraction(exp) && (
+                            <>
+                              <span className="text-muted/40">·</span>
+                              <span className="truncate text-[9px] text-tertiary">{secondary}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      {/* New expense dropdown */}
+      <div className="shrink-0 border-t border-default px-3 py-2">
+        <div className="relative" ref={menuRef}>
           <button
+            type="button"
             onClick={() => setMenuOpen((v) => !v)}
             disabled={uploading}
-            aria-haspopup="menu"
-            aria-expanded={menuOpen}
-            className="btn btn-primary"
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-[11px] font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-40"
           >
             <Plus className="h-3 w-3" />
-            {uploading ? t("uploadingDoc") : t("newExpense")}
+            {t("newExpense")}
           </button>
-          {menuOpen && !uploading && (
-            <div
-              role="menu"
-              className="absolute left-0 top-full z-30 mt-1 w-48 overflow-hidden rounded-md border border-default bg-surface-2 shadow-lg"
-            >
+
+          {menuOpen && (
+            <div className="absolute bottom-full left-0 right-0 mb-1 z-20 overflow-hidden rounded-lg border border-default bg-surface-1 shadow-lg">
               <button
                 role="menuitem"
                 onClick={() => { setMenuOpen(false); onUploadFile(); }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-secondary transition-colors hover:bg-surface-3 hover:text-primary"
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-secondary transition-colors hover:bg-surface-2 hover:text-primary"
               >
                 <Upload className="h-3 w-3 text-muted" />
                 {t("uploadFile")}
@@ -178,7 +305,7 @@ export default function EmployeeExpenseList({
                 <button
                   role="menuitem"
                   onClick={() => { setMenuOpen(false); onTakePhoto(); }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-secondary transition-colors hover:bg-surface-3 hover:text-primary"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-secondary transition-colors hover:bg-surface-2 hover:text-primary"
                 >
                   <Camera className="h-3 w-3 text-muted" />
                   {t("takePhoto")}
@@ -188,7 +315,7 @@ export default function EmployeeExpenseList({
                 <button
                   role="menuitem"
                   onClick={() => { setMenuOpen(false); onNewSimpleExpense(); }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-secondary transition-colors hover:bg-surface-3 hover:text-primary"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-secondary transition-colors hover:bg-surface-2 hover:text-primary"
                 >
                   <FileText className="h-3 w-3 text-muted" />
                   {t("noReceipt")}
@@ -197,98 +324,6 @@ export default function EmployeeExpenseList({
             </div>
           )}
         </div>
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={t("searchPlaceholder")}
-          className="input h-7 text-xs"
-        />
-      </div>
-
-      <div className="flex shrink-0 items-center gap-1 overflow-x-auto px-3 py-2">
-        {FILTER_KEYS.map((key) => (
-          <button
-            key={key}
-            onClick={() => setActiveFilter(key)}
-            className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-              activeFilter === key
-                ? "bg-accent-muted text-accent"
-                : "text-secondary hover:bg-surface-2 hover:text-primary"
-            }`}
-          >
-            {t(`filters.${key}` as Parameters<typeof t>[0])}
-          </button>
-        ))}
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto">
-
-        {loading && (
-          <ul>
-            {[0, 1, 2, 3, 4].map((i) => (
-              <SkeletonRow key={i} delay={i * 60} />
-            ))}
-          </ul>
-        )}
-
-        {!loading && filtered.length === 0 && (
-          <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface-2">
-              <svg viewBox="0 0 20 20" fill="none" className="h-5 w-5 text-muted">
-                <path d="M4 5h12M4 10h8M4 15h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-            </div>
-            <p className="text-xs text-muted">{t("noExpenses")}</p>
-          </div>
-        )}
-
-        {!loading && filtered.length > 0 && (
-          <ul>
-            {filtered.map((exp) => {
-              const isSelected = selectedId === exp.id;
-              const secondary = needsExtraction(exp) ? tc("loading") : secondaryLine(exp);
-
-              return (
-                <li key={exp.id}>
-                  <button
-                    onClick={() => onSelect(exp)}
-                    className={`group w-full border-b py-3 pl-3 pr-3 text-left transition-all ${
-                      isSelected
-                        ? "border-b-subtle bg-accent-muted"
-                        : "border-b-subtle hover:bg-surface-2"
-                    }`}
-                  >
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span className={`truncate text-xs font-medium leading-snug ${isSelected ? "text-primary" : "text-secondary group-hover:text-primary"}`}>
-                        {sanitizeDescription(exp.description, t("uploadedXml"), t("uploadedPdf"), t("uploadedDoc"))}
-                      </span>
-                      <span className={`shrink-0 tabular-nums text-xs font-semibold ${isSelected ? "text-primary" : "text-primary"}`}>
-                        ${formatAmount(exp.amount)}
-                      </span>
-                    </div>
-
-                    <div className="mt-1.5 flex items-center gap-1.5">
-                      <StatusDot status={exp.status} />
-                      <StatusText status={exp.status} className="text-[10px]" />
-                      {secondary && (
-                        <>
-                          <span className="text-muted">·</span>
-                          <span className={`truncate text-[10px] ${needsExtraction(exp) ? "italic text-warning" : "text-tertiary"}`}>
-                            {secondary}
-                          </span>
-                        </>
-                      )}
-                      <span className="ml-auto shrink-0 tabular-nums text-[10px] text-muted">
-                        {formatDate(exp.created_at)}
-                      </span>
-                    </div>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
       </div>
     </div>
   );

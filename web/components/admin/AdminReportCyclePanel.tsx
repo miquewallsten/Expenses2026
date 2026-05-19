@@ -11,9 +11,10 @@ import {
 } from "@/components/admin/shared/AdminPatterns";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { getAuthHeaders } from "@/lib/session";
+import { apiCall, apiPost } from "@/lib/api/client";
 import { Zap, Loader2, CheckCircle2, AlertTriangle, Save } from "lucide-react";
 
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 interface CycleSettings {
   id: number;
@@ -40,7 +41,7 @@ interface BundleResult {
 }
 
 function fmtDt(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return " - ";
   return new Date(iso).toLocaleString(undefined, {
     month: "short", day: "numeric", year: "numeric",
     hour: "2-digit", minute: "2-digit",
@@ -72,9 +73,8 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
 
   // Load settings
   useEffect(() => {
-    fetch(`${API}/admin/report-cycle/${companyId}`)
-      .then((r) => r.json())
-      .then(setSettings)
+    apiCall(`/admin/report-cycle/${companyId}`)
+      .then((d: any) => setSettings(d))
       .catch(() => setError(t("failedLoadSettings")));
   }, [companyId]);
 
@@ -88,10 +88,7 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch(`${API}/admin/report-cycle/${companyId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const res = await apiPost(`/admin/report-cycle/${companyId}`, {
           enabled: settings.enabled,
           frequency: settings.frequency,
           day_of_week: settings.day_of_week,
@@ -100,11 +97,9 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
           auto_submit: settings.auto_submit,
           bundle_statuses: settings.bundle_statuses,
           report_name_template: settings.report_name_template,
-        }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const updated = await res.json();
-      setSettings(updated);
+        });
+      const updated: any = await (res as any).json();
+      setSettings(updated as any);
       setDirty(false);
     } catch (e: any) {
       setError(e.message ?? tc("save"));
@@ -118,15 +113,11 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
     setLastResult(null);
     setError(null);
     try {
-      const res = await fetch(`${API}/admin/report-cycle/${companyId}/trigger`, {
-        method: "POST",
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const result: BundleResult = await res.json();
+      const result: BundleResult = await apiPost(`/admin/report-cycle/${companyId}/trigger`);
       setLastResult(result);
       // Refresh settings to get updated last_run_at / next_run_at
-      const fresh = await fetch(`${API}/admin/report-cycle/${companyId}`).then((r) => r.json());
-      setSettings(fresh);
+      const data = await apiCall(`/admin/report-cycle/${companyId}`);
+      setSettings(data as any);
     } catch (e: any) {
       setError(e.message ?? t("failedLoadSettings"));
     } finally {
@@ -301,7 +292,7 @@ export default function AdminReportCyclePanel({ companyId }: { companyId: number
           type="button"
           onClick={handleSave}
           disabled={saving || !dirty}
-          className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-surface-2 px-4 py-2 text-[11px] font-semibold text-secondary transition-all hover:bg-surface-3 hover:text-primary disabled:opacity-40"
+          className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-default bg-surface-2 px-4 py-2 text-[11px] font-semibold text-secondary transition-all hover:bg-surface-3 hover:text-primary disabled:opacity-40"
         >
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
           {saving ? tc("saving") : t("saveSettings")}

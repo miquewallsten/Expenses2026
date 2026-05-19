@@ -166,7 +166,23 @@ def compute_policy_checks(db: Session, expense: Expense) -> list[dict]:
     doc_types = _doc_types(db, expense.id)
 
     xml_mode = (policy.xml_required_mode or "").lower()
-    if xml_mode in ("always", "mxn_only"):
+    # Multi-currency: international expenses (non-MXN) don't require CFDI XML
+    expense_currency = getattr(expense, "currency", "MXN") or "MXN"
+    is_international = expense_currency != "MXN"
+
+    if is_international:
+        # International expenses never require CFDI XML (foreign vendors don't issue CFDI)
+        rows.append(
+            {
+                "group": "policy",
+                "code": "XML_REQUIRED",
+                "label": "CFDI XML requerido",
+                "status": "not_applicable",
+                "message": "Gasto internacional — CFDI XML no requerido.",
+                "source": "expense_policy",
+            }
+        )
+    elif xml_mode in ("always", "mxn_only"):
         has_xml = "cfdi_xml" in doc_types
         rows.append(
             {

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * StatusNextAction — unified status + guided-action strip.
+ * StatusNextAction - unified status + guided-action strip.
  *
  * Renders one horizontal bar:
  *   [ raw-status chip ]  module-framed explanation  ·  Next action to take  [ N ⚠ ]
@@ -14,7 +14,7 @@
 import { AlertTriangle } from "lucide-react";
 import type { ExpenseDecision } from "@/lib/my-work/expenseDecision";
 
-// Mirrors STATUS_CLS used across modules — keep in sync if palette changes.
+// Mirrors STATUS_CLS used across modules - keep in sync if palette changes.
 const STATUS_BADGE: Record<string, string> = {
   draft:            "bg-surface-2 text-secondary border-default",
   submitted:        "bg-accent-muted text-accent border-sky-500/30",
@@ -36,13 +36,13 @@ export default function StatusNextAction({ decision, className = "" }: Props) {
   const { primaryStatus, nextAction } = decision;
   const { currentStatus, blockerCount } = decision.assistantContext;
 
-  // Empty-decision sentinel: no item selected — render nothing.
+  // Empty-decision sentinel: no item selected - render nothing.
   if (!currentStatus) return null;
 
   return (
     <div className={`flex min-w-0 items-center gap-2 ${className}`}>
 
-      {/* Raw-status chip — color encodes lifecycle stage */}
+      {/* Raw-status chip - color encodes lifecycle stage */}
       <span
         className={`shrink-0 rounded border px-1.5 py-px text-[8px] font-bold uppercase tracking-widest ${chipCls(currentStatus)}`}
       >
@@ -57,12 +57,12 @@ export default function StatusNextAction({ decision, className = "" }: Props) {
       {/* Visual separator */}
       <span className="shrink-0 select-none text-[10px] text-muted" aria-hidden>·</span>
 
-      {/* Next action — the single highest-priority CTA */}
+      {/* Next action - the single highest-priority CTA */}
       <span className="min-w-0 flex-1 truncate text-[10px] font-medium text-secondary">
         {nextAction}
       </span>
 
-      {/* Blocker count badge — only when blockers exist */}
+      {/* Blocker count badge - only when blockers exist */}
       {blockerCount > 0 && (
         <span className="flex shrink-0 items-center gap-1 rounded border border-red-500/25 bg-red-500/[0.07] px-1.5 py-px text-[8px] font-semibold text-error/65">
           <AlertTriangle className="h-2 w-2" />

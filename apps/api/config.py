@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://127.0.0.1:11434"
     ollama_model: str = ""
     ollama_num_ctx: int = 32768
-    cors_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    cors_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://127.0.0.1:3001"]
 
     # Auth — AUTH_SECRET must be explicitly set in production.
     auth_secret: str = _DEV_AUTH_SECRET_SENTINEL

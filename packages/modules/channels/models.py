@@ -17,8 +17,9 @@ import json
 from datetime import datetime
 
 from sqlalchemy import (
-    Boolean, Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint,
+    Boolean, Column, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint,
 )
+from sqlalchemy import text
 from sqlalchemy.sql import func
 
 from apps.api.db import Base
@@ -40,6 +41,7 @@ class ChannelSettings(Base):
     wa_access_token       = Column(Text,        nullable=True)   # System user token
     wa_webhook_verify_token = Column(String(128), nullable=True) # Random secret for Meta verification
     wa_display_name       = Column(String(120), nullable=True)
+    wa_allowed_roles      = Column(Text, nullable=True, default="employee,manager,admin")  # Comma-separated roles allowed to use WhatsApp
 
     # ── Inbound Email ─────────────────────────────────────────────────────────
     # The corporate address employees forward expenses to (e.g. gastos@company.com)
@@ -117,6 +119,15 @@ class ChannelMessage(Base):
     error_detail = Column(Text, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    __table_args__ = (
+        Index(
+            "uq_channel_messages_wa_message_id",
+            "wa_message_id",
+            unique=True,
+            postgresql_where=text("wa_message_id IS NOT NULL"),
+            sqlite_where=text("wa_message_id IS NOT NULL"),
+        ),
+    )
 
 
 class ChannelVerification(Base):

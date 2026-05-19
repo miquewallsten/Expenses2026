@@ -114,9 +114,7 @@ export function useCopilot(module?: string): UseCopilotResult {
   useEffect(() => {
     const base =
       process.env.NEXT_PUBLIC_API_BASE_URL ||
-      (typeof window !== "undefined"
-        ? `${window.location.protocol}//${window.location.hostname}:8000`
-        : "http://localhost:8000");
+      `${window.location.protocol}//${window.location.hostname}:8000`;
 
     const wsUrl = base.replace(/^http/, "ws") + "/ws/copilot";
     let ws: WebSocket | null = null;

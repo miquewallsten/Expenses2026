@@ -1,13 +1,13 @@
 "use client";
 
 /**
- * AccountingReviewModule — accounting review queue inside the My Work portal.
+ * AccountingReviewModule - accounting review queue inside the My Work portal.
  *
  * Layout: queue list  |  readiness + required fields + decision block.
  *
  * Deep diagnostics (classification explanation, póliza generation) and raw
  * document info are collapsed by default.  No accounting-portal-page
- * assumptions leak in — all config/identity comes from context.
+ * assumptions leak in - all config/identity comes from context.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -26,6 +26,7 @@ import ReviewActionBar from "@/components/review/ReviewActionBar";
 import { useMyWorkContext } from "@/context/MyWorkContext";
 import { useUserContext } from "@/context/UserContext";
 import { apiCall, apiPost } from "@/lib/api/client";
+import { statusClasses } from "@/lib/status-styles";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
 import {
   MODULE_IDS,
@@ -87,16 +88,7 @@ interface PolizaResult {
 }
 
 // ---------------------------------------- Helpers 
-const STATUS_CLS: Record<string, string> = {
-  draft:            "bg-surface-2 text-secondary border-default",
-  submitted:        "bg-accent-muted text-accent border-sky-500/30",
-  manager_approved: "bg-violet-500/15 text-violet-300 border-violet-500/30",
-  approved:         "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
-  rejected:         "bg-error-muted text-error border-error",
-};
-function statusCls(s: string) {
-  return STATUS_CLS[s] ?? "bg-surface-2 text-secondary border-default";
-}
+// status styles via statusClasses() from @/lib/status-styles
 
 // ---------------------------------------- Collapsible 
 function Collapsible({
@@ -162,7 +154,7 @@ function QueueList({
             {Object.entries(summary.statuses).map(([s, n]) => (
               <span
                 key={s}
-                className={`rounded border px-1.5 py-px text-[8px] font-semibold uppercase tracking-wider ${statusCls(s)}`}
+                className={`rounded border px-1.5 py-px text-[8px] font-semibold uppercase tracking-wider ${statusClasses(s)}`}
               >
                 {n} {s}
               </span>
@@ -190,7 +182,7 @@ function QueueList({
               >
                 <div className="mb-0.5 flex items-center justify-between gap-2">
                   <span className="truncate text-[11px] font-medium text-secondary">{e.description}</span>
-                  <span className={`shrink-0 rounded-full border px-1.5 py-px text-[8px] font-bold uppercase tracking-widest ${statusCls(e.status)}`}>
+                  <span className={`shrink-0 rounded-full border px-1.5 py-px text-[8px] font-bold uppercase tracking-widest ${statusClasses(e.status)}`}>
                     {e.status}
                   </span>
                 </div>
@@ -249,7 +241,7 @@ function ReadinessBlock({ blockers, defaultOpen }: { blockers: BlockersResult; d
           </div>
         )}
 
-        {/* Hard blockers — always visible */}
+        {/* Hard blockers - always visible */}
         {ab.length > 0 && (
           <ul className="space-y-0.5">
             {ab.map((msg, i) => (
@@ -261,7 +253,7 @@ function ReadinessBlock({ blockers, defaultOpen }: { blockers: BlockersResult; d
           </ul>
         )}
 
-        {/* Póliza blockers — visible (actionable: prevent póliza generation) */}
+        {/* Póliza blockers - visible (actionable: prevent póliza generation) */}
         {pb.length > 0 && (
           <ul className={`space-y-0.5${ab.length > 0 ? " mt-1" : ""}`}>
             {pb.map((msg, i) => (
@@ -273,7 +265,7 @@ function ReadinessBlock({ blockers, defaultOpen }: { blockers: BlockersResult; d
           </ul>
         )}
 
-        {/* Advisory notices — collapsed info */}
+        {/* Advisory notices - collapsed info */}
         {ws.length > 0 && (
           <div className={ab.length > 0 || pb.length > 0 ? "mt-1" : ""}>
             <button
@@ -510,8 +502,8 @@ function AccountingDetail({
   const summaryRows: [string, string][] = [
     [tm("fields.description"), expense.description],
     [tm("fields.amount"),      `$${expense.amount.toFixed(2)}`],
-    [tm("fields.category"),    expense.detected_category ?? "—"],
-    [ta("account"),            expense.account_code ?? "—"],
+    [tm("fields.category"),    expense.detected_category ?? " - "],
+    [ta("account"),            expense.account_code ?? " - "],
     [tm("fields.created"),     new Date(expense.created_at).toLocaleString()],
   ];
 
@@ -540,7 +532,7 @@ function AccountingDetail({
         <StatusNextAction decision={decision} />
 
         {/* Summary table */}
-        <div className="divide-y divide-white/[0.05] overflow-hidden rounded-xl border border-default bg-black/20">
+        <div className="divide-y divide-subtle overflow-hidden rounded-xl border border-default bg-black/20">
           {summaryRows.map(([label, value]) => (
             <div key={label} className="flex items-center justify-between gap-4 px-4 py-2">
               <span className="shrink-0 text-[10px] font-bold uppercase tracking-widest text-muted">{label}</span>
@@ -885,7 +877,7 @@ export default function AccountingReviewModule() {
   return (
     <div className="flex h-full overflow-hidden">
 
-      {/* Queue list — hidden on mobile when detail is showing */}
+      {/* Queue list - hidden on mobile when detail is showing */}
       <div
         className={[
           moduleIsNarrow && activeMobilePane === "detail" ? "hidden" : "flex",
@@ -902,7 +894,7 @@ export default function AccountingReviewModule() {
         />
       </div>
 
-      {/* Detail — hidden on mobile when list is showing */}
+      {/* Detail - hidden on mobile when list is showing */}
       <div className={`${activeMobilePane === "list" ? "hidden" : "flex"} min-w-0 flex-1 flex-col overflow-hidden`}>
         <AccountingDetail
           expense={selected}

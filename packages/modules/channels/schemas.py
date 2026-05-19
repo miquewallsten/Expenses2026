@@ -20,6 +20,7 @@ class ChannelSettingsBase(BaseModel):
     wa_access_token:        str | None = None
     wa_webhook_verify_token: str | None = None
     wa_display_name:        str | None = None
+    wa_allowed_roles:       str | None = None   # Comma-separated roles allowed on WhatsApp
 
     # Email
     email_inbound_address: str | None = None
@@ -69,6 +70,7 @@ class ChannelSettingsUpdate(BaseModel):
     wa_access_token:         str | None = None   # None = don't change; "" = clear
     wa_webhook_verify_token: str | None = None
     wa_display_name:         str | None = None
+    wa_allowed_roles:        str | None = None
 
     email_inbound_address: str | None = None
     email_webhook_secret:  str | None = None

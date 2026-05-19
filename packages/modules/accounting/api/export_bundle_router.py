@@ -15,6 +15,7 @@ import logging
 from fastapi import APIRouter, Depends, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from packages.core.platform.module_gate import require_module
 from apps.api.auth import require_admin, require_same_company, get_current_user
 from apps.api.deps import get_db
 from packages.modules.accounting.service.export_bundle_service import build_export_bundle

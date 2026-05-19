@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useUserContext } from "@/context/UserContext";
 import { apiCall, apiPost } from "@/lib/api/client";
+import { statusClasses, EXPENSE_STATUS_STYLES } from "@/lib/status-styles";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -30,13 +31,6 @@ interface Expense {
 type SortKey = keyof Pick<Expense, "amount" | "description" | "status" | "detected_category" | "expense_date" | "created_at">;
 type SortDir = "asc" | "desc";
 
-const STATUS_COLORS: Record<string, string> = {
-  draft:     "text-muted bg-surface-2 border-default",
-  submitted: "text-accent/70 bg-accent/[0.08] border-sky-500/20",
-  approved:  "text-emerald-300/70 bg-emerald-500/[0.08] border-emerald-500/20",
-  rejected:  "text-error/70 bg-red-500/[0.08] border-red-500/20",
-  processed: "text-accent/70 bg-indigo-500/[0.08] border-indigo-500/20",
-};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -45,9 +39,9 @@ function fmt(n: number) {
 }
 
 function fmtDate(s: string | null | undefined) {
-  if (!s) return "—";
+  if (!s) return " - ";
   const d = new Date(s);
-  return isNaN(d.getTime()) ? "—" : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return isNaN(d.getTime()) ? " - " : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 function parseDate(s: string | null | undefined): Date | null {
@@ -60,7 +54,7 @@ function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min
 
 // ── Tiny SVG sparkline ─────────────────────────────────────────────────────────
 
-function Sparkline({ data, w = 120, h = 32, color = "#6366f1" }: { data: number[]; w?: number; h?: number; color?: string }) {
+function Sparkline({ data, w = 120, h = 32, color = "var(--color-accent)" }: { data: number[]; w?: number; h?: number; color?: string }) {
   if (data.length < 2) return <div style={{ width: w, height: h }} />;
   const max = Math.max(...data, 1);
   const pts = data.map((v, i) => {
@@ -136,15 +130,15 @@ function MonthlyChart({ buckets }: { buckets: { label: string; total: number; co
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: H }}>
       <defs>
         <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#6366f1" stopOpacity="0.18" />
-          <stop offset="100%" stopColor="#6366f1" stopOpacity="0.01" />
+          <stop offset="0%" stopColor="var(--color-accent)" stopOpacity="0.18" />
+          <stop offset="100%" stopColor="var(--color-accent)" stopOpacity="0.01" />
         </linearGradient>
       </defs>
       {/* Y grid + labels */}
       {yTicks.map((t) => (
         <g key={t.v}>
-          <line x1={PAD_L} y1={t.y} x2={W - 8} y2={t.y} stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
-          <text x={PAD_L - 4} y={t.y + 3.5} textAnchor="end" fill="rgba(255,255,255,0.22)" fontSize="8">
+          <line x1={PAD_L} y1={t.y} x2={W - 8} y2={t.y} stroke="var(--color-subtle)" strokeWidth="1" />
+          <text x={PAD_L - 4} y={t.y + 3.5} textAnchor="end" fill="var(--color-tertiary)" fontSize="8">
             {t.v >= 1000 ? `$${(t.v / 1000).toFixed(0)}k` : `$${t.v.toFixed(0)}`}
           </text>
         </g>
@@ -152,12 +146,12 @@ function MonthlyChart({ buckets }: { buckets: { label: string; total: number; co
       {/* Area fill */}
       {areaD && <path d={areaD} fill="url(#chartFill)" />}
       {/* Line */}
-      {lineD && <path d={lineD} fill="none" stroke="#6366f1" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />}
+      {lineD && <path d={lineD} fill="none" stroke="var(--color-accent)" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />}
       {/* X labels + dots */}
       {pts.map((p) => (
         <g key={p.label}>
-          <circle cx={p.x} cy={p.y} r="2.5" fill="#6366f1" opacity="0.8" />
-          <text x={p.x} y={H - 6} textAnchor="middle" fill="rgba(255,255,255,0.25)" fontSize="8">{p.label}</text>
+          <circle cx={p.x} cy={p.y} r="2.5" fill="var(--color-accent)" opacity="0.8" />
+          <text x={p.x} y={H - 6} textAnchor="middle" fill="var(--color-tertiary)" fontSize="8">{p.label}</text>
         </g>
       ))}
     </svg>
@@ -166,7 +160,7 @@ function MonthlyChart({ buckets }: { buckets: { label: string; total: number; co
 
 // ── KPI card ──────────────────────────────────────────────────────────────────
 
-function KpiCard({ label, value, sub, sparkData, color = "#6366f1" }: {
+function KpiCard({ label, value, sub, sparkData, color = "var(--color-accent)" }: {
   label: string; value: string; sub?: string; sparkData?: number[]; color?: string;
 }) {
   return (
@@ -317,7 +311,16 @@ function AiInsightPanel({ expenses, visible, onClose }: {
 
 // ── Main module ───────────────────────────────────────────────────────────────
 
-const CATEGORY_COLORS = ["#6366f1","#22d3ee","#a78bfa","#34d399","#f59e0b","#f87171","#e879f9","#38bdf8"];
+const CATEGORY_COLORS = [
+  "var(--color-accent)",
+  "var(--color-cyan-400)",
+  "var(--color-violet-400)",
+  "var(--color-emerald-400)",
+  "var(--color-amber-400)",
+  "var(--color-rose-400)",
+  "var(--color-violet-300)",
+  "var(--color-blue-400)",
+];
 
 type DatePreset = "all" | "30d" | "90d" | "ytd" | "custom";
 
@@ -643,9 +646,9 @@ export default function MyReportsModule() {
               {/* KPI row */}
               <div className="grid grid-cols-4 gap-3">
                 <KpiCard label={tr("totalSpend")} value={fmt(totalAmt)} sub={tr("expenseCountSub", { count: filtered.length })} sparkData={sparkData} />
-                <KpiCard label={tr("avgPerExpense")} value={fmt(avgAmt)} color="#22d3ee" />
-                <KpiCard label={tr("submittedApproved")} value={String(submitted)} sub={tr("percentOfTotal", { pct: filtered.length ? Math.round((submitted/filtered.length)*100) : 0 })} color="#34d399" />
-                <KpiCard label={tc("draft")} value={String(byStatus["draft"] ?? 0)} sub={tr("pendingAction")} color="#f59e0b" />
+                <KpiCard label={tr("avgPerExpense")} value={fmt(avgAmt)} color="var(--color-cyan-400)" />
+                <KpiCard label={tr("submittedApproved")} value={String(submitted)} sub={tr("percentOfTotal", { pct: filtered.length ? Math.round((submitted/filtered.length)*100) : 0 })} color="var(--color-emerald-400)" />
+                <KpiCard label={tc("draft")} value={String(byStatus["draft"] ?? 0)} sub={tr("pendingAction")} color="var(--color-amber-400)" />
               </div>
 
               {/* Monthly chart */}
@@ -678,7 +681,7 @@ export default function MyReportsModule() {
                   <HBarChart data={
                     Object.entries(byStatus)
                       .sort((a,b)=>b[1]-a[1])
-                      .map(([label, value], i) => ({ label, value, color: CATEGORY_COLORS[i] ?? "#6366f1" }))
+                      .map(([label, value], i) => ({ label, value, color: CATEGORY_COLORS[i] ?? "var(--color-accent)" }))
                   } />
                 </div>
               </div>
@@ -702,11 +705,11 @@ export default function MyReportsModule() {
                     {sorted.slice(0, 8).map((e) => (
                       <tr key={e.id} className="border-b border-subtle hover:bg-surface-1">
                         <td className="max-w-[180px] truncate px-4 py-1.5 text-secondary">{e.description}</td>
-                        <td className="px-3 py-1.5 text-muted">{e.detected_category ?? "—"}</td>
+                        <td className="px-3 py-1.5 text-muted">{e.detected_category ?? " - "}</td>
                         <td className="px-3 py-1.5 text-muted">{fmtDate(e.expense_date ?? e.created_at)}</td>
                         <td className="px-3 py-1.5 text-right tabular-nums text-secondary">{fmt(e.amount)}</td>
                         <td className="px-3 py-1.5">
-                          <span className={`rounded border px-1.5 py-px text-[9px] capitalize ${STATUS_COLORS[e.status] ?? "text-muted bg-surface-2 border-subtle"}`}>
+                          <span className={`rounded border px-1.5 py-px text-[9px] capitalize ${statusClasses(e.status)}`}>
                             {e.status}
                           </span>
                         </td>
@@ -755,16 +758,16 @@ export default function MyReportsModule() {
                   {sorted.map((e) => (
                     <tr key={e.id} className="border-b border-subtle hover:bg-surface-1 transition-colors">
                       <td className="max-w-[200px] truncate px-3 py-1.5 text-secondary">{e.description}</td>
-                      <td className="px-3 py-1.5 text-muted">{e.detected_category ?? "—"}</td>
+                      <td className="px-3 py-1.5 text-muted">{e.detected_category ?? " - "}</td>
                       <td className="px-3 py-1.5 tabular-nums text-muted">{fmtDate(e.expense_date ?? e.created_at)}</td>
                       <td className="px-3 py-1.5 text-right tabular-nums text-secondary">{fmt(e.amount)}</td>
                       <td className="px-3 py-1.5">
-                        <span className={`rounded border px-1.5 py-px text-[9px] capitalize ${STATUS_COLORS[e.status] ?? "text-muted bg-surface-2 border-subtle"}`}>
+                        <span className={`rounded border px-1.5 py-px text-[9px] capitalize ${statusClasses(e.status)}`}>
                           {e.status}
                         </span>
                       </td>
-                      <td className="px-3 py-1.5 text-muted">{e.expense_type ?? "—"}</td>
-                      <td className="px-3 py-1.5 font-mono text-[9px] text-muted">{e.account_code ?? "—"}</td>
+                      <td className="px-3 py-1.5 text-muted">{e.expense_type ?? " - "}</td>
+                      <td className="px-3 py-1.5 font-mono text-[9px] text-muted">{e.account_code ?? " - "}</td>
                     </tr>
                   ))}
                   {sorted.length === 0 && (

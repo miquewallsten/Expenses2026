@@ -72,7 +72,7 @@ export interface PurchaseRequisitionFormProps {
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 const TYPE_OPTIONS = [
-  { value: "",          label: "— Select type —" },
+  { value: "",          label: " -  Select type  - " },
   { value: "travel",    label: "Travel / Transportation" },
   { value: "hotel",     label: "Hotel / Accommodation" },
   { value: "equipment", label: "Equipment / Hardware" },
@@ -92,13 +92,13 @@ const TYPE_LABELS: Record<string, string> = Object.fromEntries(
 );
 
 function fmt(v: number | null | undefined, currency?: string | null) {
-  if (v == null) return "—";
+  if (v == null) return " - ";
   const n = Number(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return currency ? `${currency} ${n}` : n;
 }
 
 function fmtDate(iso?: string | null) {
-  if (!iso) return "—";
+  if (!iso) return " - ";
   return new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
 }
 
@@ -116,13 +116,13 @@ function Cell({ label, value, span = 1 }: { label: string; value?: string | null
         {label}
       </div>
       <div className="pt-1 text-[11px] text-slate-800">
-        {value || <span className="text-slate-300 italic">—</span>}
+        {value || <span className="text-slate-300 italic"> - </span>}
       </div>
     </div>
   );
 }
 
-// Editable field cell — shows input/select/textarea when editable
+// Editable field cell - shows input/select/textarea when editable
 const fieldBase =
   "w-full border-0 border-b border-slate-200 bg-transparent px-0 pt-1 pb-0.5 text-[11px] text-slate-800 outline-none placeholder-slate-300 focus:border-slate-500 focus:ring-0";
 
@@ -153,7 +153,7 @@ function ECell({
         <input
           type={inputType}
           value={value ?? ""}
-          placeholder={placeholder ?? "—"}
+          placeholder={placeholder ?? " - "}
           onChange={(e) => onChange?.(e.target.value)}
           className={fieldBase}
         />
@@ -181,7 +181,7 @@ export default function PurchaseRequisitionForm({
 
   const currency = data.currency ?? null;
 
-  // Build items — fall back to legacy free-form details if items array absent
+  // Build items - fall back to legacy free-form details if items array absent
   const items: LineItem[] = Array.isArray(data.items) && data.items.length > 0
     ? data.items
     : [];
@@ -208,7 +208,7 @@ export default function PurchaseRequisitionForm({
     ([k, v]) => !knownKeys.includes(k) && v != null && typeof v !== "object"
   );
 
-  // Field-change helper — merges a single key and fires onDataChange
+  // Field-change helper - merges a single key and fires onDataChange
   const change = useCallback(
     (field: string, value: unknown) => onDataChange?.({ ...data, [field]: value || null }),
     [data, onDataChange]
@@ -250,7 +250,7 @@ export default function PurchaseRequisitionForm({
   return (
     <div className="h-full overflow-y-auto bg-slate-100 p-4">
       <div
-        className="mx-auto max-w-[680px] bg-white shadow-sm ring-1 ring-slate-200"
+        className="mx-auto max-w-[680px] bg-surface-1 border border-default rounded-lg"
         style={{ fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif" }}
       >
         {/* ── Header ──────────────────────────────────────────────────── */}
@@ -291,7 +291,7 @@ export default function PurchaseRequisitionForm({
           {/* ── Section A: Requestor ──────────────────────────────────── */}
           <section className="pb-4">
             <h2 className="mb-3 text-[8px] font-bold uppercase tracking-widest text-slate-400">
-              A — Requestor
+              A - Requestor
             </h2>
             <div className="grid grid-cols-3 gap-x-6 gap-y-3">
               <Cell label="Requestor Name" value={requesterName} span={2} />
@@ -319,7 +319,7 @@ export default function PurchaseRequisitionForm({
           {/* ── Section B: Request Details ────────────────────────────── */}
           <section className="py-4">
             <h2 className="mb-3 text-[8px] font-bold uppercase tracking-widest text-slate-400">
-              B — Request Details
+              B - Request Details
             </h2>
             <div className="grid grid-cols-3 gap-x-6 gap-y-3">
               {editable ? (
@@ -351,7 +351,7 @@ export default function PurchaseRequisitionForm({
           {(editable || hasVendor) && (
             <section className="py-4">
               <h2 className="mb-3 text-[8px] font-bold uppercase tracking-widest text-slate-400">
-                C — Preferred Vendor (if known)
+                C - Preferred Vendor (if known)
               </h2>
               <div className="grid grid-cols-3 gap-x-6 gap-y-3">
                 {editable ? (
@@ -377,7 +377,7 @@ export default function PurchaseRequisitionForm({
           {/* ── Section D: Line Items ─────────────────────────────────── */}
           <section className="py-4">
             <h2 className="mb-3 text-[8px] font-bold uppercase tracking-widest text-slate-400">
-              D — Items / Services Requested
+              D - Items / Services Requested
             </h2>
             <table className="w-full border-collapse text-[10px]">
               <thead>
@@ -407,14 +407,14 @@ export default function PurchaseRequisitionForm({
                         ? <input type="number" value={it.qty ?? ""} min={0}
                             onChange={(e) => updateItem(i, "qty", e.target.value)}
                             className="w-full border-0 border-b border-slate-200 bg-transparent text-center text-[10px] text-slate-800 outline-none focus:border-slate-500" />
-                        : <span className="text-slate-600">{it.qty ?? "—"}</span>}
+                        : <span className="text-slate-600">{it.qty ?? " - "}</span>}
                     </td>
                     <td className="py-1.5 pr-2 text-center">
                       {editable
                         ? <input type="text" value={it.unit ?? ""} placeholder="ea"
                             onChange={(e) => updateItem(i, "unit", e.target.value)}
                             className="w-full border-0 border-b border-slate-200 bg-transparent text-center text-[10px] text-slate-800 outline-none placeholder-slate-300 focus:border-slate-500" />
-                        : <span className="text-slate-500">{it.unit ?? "—"}</span>}
+                        : <span className="text-slate-500">{it.unit ?? " - "}</span>}
                     </td>
                     <td className="py-1.5 pr-2 text-right">
                       {editable
@@ -440,7 +440,7 @@ export default function PurchaseRequisitionForm({
                     <tr key={n} className="border-b border-slate-100">
                       <td className="py-1.5 pr-1 text-slate-200">{n}</td>
                       <td className="py-1.5 pr-2" colSpan={editable ? 5 : 4}>
-                        <span className="italic text-slate-200">—</span>
+                        <span className="italic text-slate-200"> - </span>
                       </td>
                       {editable && <td />}
                     </tr>
@@ -493,7 +493,7 @@ export default function PurchaseRequisitionForm({
           {/* ── Section E: Justification ──────────────────────────────── */}
           <section className="py-4">
             <h2 className="mb-3 text-[8px] font-bold uppercase tracking-widest text-slate-400">
-              E — Justification / Business Purpose
+              E - Justification / Business Purpose
             </h2>
             {editable ? (
               <textarea
@@ -505,7 +505,7 @@ export default function PurchaseRequisitionForm({
               />
             ) : (
               <div className="min-h-[48px] rounded border border-slate-200 px-3 py-2 text-[11px] text-slate-700">
-                {data.justification || <span className="italic text-slate-300">—</span>}
+                {data.justification || <span className="italic text-slate-300"> - </span>}
               </div>
             )}
           </section>
@@ -525,7 +525,7 @@ export default function PurchaseRequisitionForm({
             <section className="py-4">
               <h2 className="mb-3 flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-widest text-slate-400">
                 <Paperclip className="h-2.5 w-2.5" />
-                F — Supporting Documents &amp; References
+                F - Supporting Documents &amp; References
               </h2>
               <table className="w-full border-collapse text-[10px]">
                 <thead>
@@ -563,7 +563,7 @@ export default function PurchaseRequisitionForm({
                         {att.attachment_type === "url" ? "URL / Link" : (att.mime_type?.split("/")[1]?.toUpperCase() ?? "File")}
                       </td>
                       <td className="py-1.5 text-right text-slate-400">
-                        {att.file_size ? fmtBytes(att.file_size) : "—"}
+                        {att.file_size ? fmtBytes(att.file_size) : " - "}
                       </td>
                     </tr>
                   ))}
@@ -575,7 +575,7 @@ export default function PurchaseRequisitionForm({
           {/* ── Section G: For Purchasing Use ─────────────────────────── */}
           <section className="pt-4">
             <h2 className="mb-3 text-[8px] font-bold uppercase tracking-widest text-slate-400">
-              G — For Purchasing / Accounting Use
+              G - For Purchasing / Accounting Use
             </h2>
             <div className="grid grid-cols-3 gap-x-6 gap-y-5">
               {(["Approved By", "Date", "PO / Reference No."] as const).map((lbl) => (

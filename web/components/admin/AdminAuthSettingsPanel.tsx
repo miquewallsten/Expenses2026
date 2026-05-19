@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { getAuthHeaders } from "@/lib/session";
+import { apiCall, apiPost } from "@/lib/api/client";
 import { Lock, Globe, Shield, Plus, Trash2, Save, Loader2, Check, AlertCircle } from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -64,7 +66,7 @@ function DomainListEditor({
           value={input}
           onChange={(e) => { setInput(e.target.value); setError(null); }}
           onKeyDown={handleKeyDown}
-          className="flex-1 rounded border border-default bg-surface-1 px-2.5 py-1.5 font-mono text-[11px] text-secondary placeholder:text-muted outline-none focus:bg-accent-muted"
+          className="flex-1 rounded border border-default bg-surface-1 px-3 py-1.5 font-mono text-[11px] text-secondary placeholder:text-muted outline-none focus:bg-accent-muted"
         />
         <button
           type="button"
@@ -173,7 +175,7 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
   const [allowedDomains,      setAllowedDomains]      = useState<string[]>([]);
   const [sessionTimeout,      setSessionTimeout]      = useState(24);
 
-  // Demo mode — localStorage only, not persisted to API
+  // Demo mode - localStorage only, not persisted to API
   const [demoMode, setDemoMode] = useState(false);
   useEffect(() => {
     setDemoMode(localStorage.getItem("demo_mode_enabled") === "true");
@@ -187,10 +189,9 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`${API}/admin/auth-settings/${companyId}`)
-      .then((r) => r.ok ? r.json() : null)
+    apiCall<AuthSettings | null>(`/admin/auth-settings/${companyId}`)
       .catch(() => null)
-      .then((d: AuthSettings | null) => {
+      .then((d) => {
         if (d) {
           setSettings(d);
           setMagicLinkEnabled(d.magic_link_enabled);
@@ -204,16 +205,11 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
   const handleSave = async () => {
     setSaving(true); setError(null); setSaved(false);
     try {
-      const res = await fetch(`${API}/admin/auth-settings/${companyId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      await apiPost(`/admin/auth-settings/${companyId}`, {
           magic_link_enabled: magicLinkEnabled,
           allowed_email_domains: allowedDomains,
           session_timeout_hours: sessionTimeout,
-        }),
-      });
-      if (!res.ok) throw new Error(`${res.status}`);
+        });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (e: any) {
@@ -235,8 +231,8 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
   return (
     <div className="max-w-2xl space-y-4">
       {/* Premium header */}
-      <div className="relative overflow-hidden rounded-lg border border-default bg-gradient-to-r from-surface-1 via-surface-1 to-violet-500/[0.02] px-4 py-3">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--color-violet-500)/5%,_transparent_50%)]" />
+      <div className="rounded-lg border border-default bg-surface-1 px-4 py-3">
+        <div className="" />
         <div className="relative flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10">
             <Lock className="h-4 w-4 text-violet-400" />
@@ -250,8 +246,8 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
 
       {/* ── Magic Link ─────────────────────────────────────────────────────── */}
       <div className="relative overflow-hidden rounded-lg border border-default">
-        <div className="absolute inset-0 bg-gradient-to-br from-success/[0.01] via-transparent to-transparent pointer-events-none" />
-        <div className="relative flex items-center gap-2.5 border-b border-subtle bg-gradient-to-r from-surface-1 to-success/[0.02] px-4 py-3">
+        <div className="" />
+        <div className="flex items-center gap-2.5 border-b border-subtle bg-surface-1 px-4 py-3">
           <div className="flex h-6 w-6 items-center justify-center rounded-md bg-accent/10">
             <Globe className="h-3.5 w-3.5 text-accent" />
           </div>
@@ -305,7 +301,7 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
 
       {/* ── SSO ────────────────────────────────────────────────────────────── */}
       <div className="relative overflow-hidden rounded-lg border border-subtle opacity-70">
-        <div className="absolute inset-0 bg-gradient-to-br from-violet-500/[0.01] via-transparent to-transparent pointer-events-none" />
+        <div className="" />
         <div className="relative flex items-center gap-2.5 border-b border-subtle bg-surface-1 px-4 py-3">
           <div className="flex h-6 w-6 items-center justify-center rounded-md bg-violet-500/10">
             <Shield className="h-3.5 w-3.5 text-violet-400" />

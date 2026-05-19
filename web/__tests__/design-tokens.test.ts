@@ -13,40 +13,41 @@ import {
 describe('design-tokens', () => {
   describe('surfaces', () => {
     it('has 4 surface levels', () => {
-      expect(Object.keys(surfaces)).toHaveLength(4);
+      expect(Object.keys(surfaces)).toHaveLength(5);
     });
 
     it('uses CSS custom properties', () => {
-      expect(surfaces[0]).toBe('var(--surface-0)');
-      expect(surfaces[1]).toBe('var(--surface-1)');
-      expect(surfaces[2]).toBe('var(--surface-2)');
-      expect(surfaces[3]).toBe('var(--surface-3)');
+      expect(surfaces[0]).toBe('var(--color-surface-0)');
+      expect(surfaces[1]).toBe('var(--color-surface-1)');
+      expect(surfaces[2]).toBe('var(--color-surface-2)');
+      expect(surfaces[3]).toBe('var(--color-surface-3)');
+      expect(surfaces[4]).toBe('var(--color-surface-4)');
     });
   });
 
   describe('borders', () => {
     it('has 4 border tokens', () => {
-      expect(Object.keys(borders)).toHaveLength(4);
+      expect(Object.keys(borders)).toHaveLength(3);
     });
 
     it('uses CSS custom properties', () => {
-      expect(borders.hairline).toBe('var(--border-hairline)');
-      expect(borders.subtle).toBe('var(--border-subtle)');
-      expect(borders.standard).toBe('var(--border-standard)');
-      expect(borders.active).toBe('var(--border-active)');
+      expect(borders.subtle).toBe('var(--color-subtle)');
+      expect(borders.default).toBe('var(--color-default)');
+      expect(borders.strong).toBe('var(--color-strong)');
     });
   });
 
   describe('shadows', () => {
     it('has 4 shadow levels', () => {
-      expect(Object.keys(shadows)).toHaveLength(4);
+      expect(Object.keys(shadows)).toHaveLength(5);
     });
 
     it('uses CSS custom properties', () => {
-      expect(shadows[1]).toBe('var(--shadow-1)');
-      expect(shadows[2]).toBe('var(--shadow-2)');
-      expect(shadows[3]).toBe('var(--shadow-3)');
-      expect(shadows[4]).toBe('var(--shadow-4)');
+      expect(shadows.sm).toBe('var(--shadow-sm)');
+      expect(shadows.md).toBe('var(--shadow-md)');
+      expect(shadows.lg).toBe('var(--shadow-lg)');
+      expect(shadows.glow).toBe('var(--shadow-glow)');
+      expect(shadows.glowAi).toBe('var(--shadow-glow-ai)');
     });
   });
 

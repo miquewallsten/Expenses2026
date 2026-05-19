@@ -5,6 +5,8 @@ from sqlalchemy.orm import Session
 from apps.api.auth import get_current_user, require_same_company
 from apps.api.deps import get_db
 from packages.core.platform.models_user import User
+from packages.core.platform.service_permissions import list_permissions as resolve_user_permissions
+from packages.core.platform.service_permissions import invalidate_cache
 from packages.core.platform.schemas_role import (
     RoleCreate,
     RoleRead,
@@ -36,7 +38,9 @@ def create_role_route(data: RoleCreate, db: Session = Depends(get_db), current_u
     if not getattr(current_user, "is_super_admin", False):
         require_same_company(data.company_id, current_user)
     try:
-        return create_role(db, data)
+        result = create_role(db, data)
+        invalidate_cache()
+        return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -55,7 +59,9 @@ def create_permission_route(data: PermissionCreate, db: Session = Depends(get_db
     if current_user.role != "admin" and not getattr(current_user, "is_super_admin", False):
         raise HTTPException(status_code=403, detail="Admin access required")
     try:
-        return create_permission(db, data)
+        result = create_permission(db, data)
+        invalidate_cache()
+        return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -71,6 +77,7 @@ def assign_permission_route(data: RolePermissionCreate, db: Session = Depends(ge
         raise HTTPException(status_code=403, detail="Admin access required")
     try:
         assign_permission_to_role(db, data)
+        invalidate_cache()
         return {"status": "ok"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -82,6 +89,7 @@ def assign_user_role_route(data: UserRoleCreate, db: Session = Depends(get_db), 
         raise HTTPException(status_code=403, detail="Admin access required")
     try:
         assign_role_to_user(db, data)
+        invalidate_cache()
         return {"status": "ok"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -89,5 +97,12 @@ def assign_user_role_route(data: UserRoleCreate, db: Session = Depends(get_db), 
 
 @router.get("/user-permissions/{user_id}", response_model=UserPermissionsResponse)
 def get_user_permissions_route(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    keys = get_permission_keys_for_user(db, user_id)
+    """Return the full permission set for a user.
+    Uses the service_permissions resolver which includes built-in role defaults
+    (e.g. admin gets ALL permissions), not just explicit DB-row assignments.
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        return UserPermissionsResponse(user_id=user_id, permission_keys=[])
+    keys = resolve_user_permissions(db, user)
     return UserPermissionsResponse(user_id=user_id, permission_keys=keys)

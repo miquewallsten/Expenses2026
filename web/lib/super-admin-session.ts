@@ -3,6 +3,9 @@
  *
  * Stored in localStorage as "superAdminSession" (separate from "session").
  * Uses a separate JWT issued by /auth/super-admin/login.
+ *
+ * All localStorage reads are safe because the HydrationGuard ensures
+ * components only render on the client where localStorage is available.
  */
 
 export interface SuperAdminSession {
@@ -15,7 +18,6 @@ export interface SuperAdminSession {
 const STORAGE_KEY = "superAdminSession";
 
 export function getSuperAdminSession(): SuperAdminSession | null {
-  if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? (JSON.parse(raw) as SuperAdminSession) : null;

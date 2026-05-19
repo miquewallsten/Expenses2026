@@ -295,11 +295,11 @@ export default function EmployeeUploadPage() {
         )}
 
         {/* Hero header */}
-        <div className="mb-10 rounded-3xl border border-subtle bg-gradient-to-r from-sky-500/10 via-blue-500/10 to-emerald-500/10 p-8 shadow-2xl shadow-black/20 backdrop-blur">
+        <div className="mb-10 rounded-3xl border border-subtle bg-surface-1 p-8 shadow-lg">
           <div className="flex items-start justify-between gap-6">
             <div>
               <p className="mb-3 text-sm uppercase tracking-[0.25em] text-secondary">{t("portalLabel")}</p>
-              <h1 className="text-4xl font-semibold tracking-tight">{t("heading")}</h1>
+              <h1 className="text-xl font-semibold tracking-tight">{t("heading")}</h1>
               <p className="mt-3 max-w-2xl text-sm text-secondary">
                 {t("hint")}
               </p>
@@ -322,7 +322,7 @@ export default function EmployeeUploadPage() {
         >
           <input {...getInputProps()} />
           <div className="mx-auto max-w-2xl">
-            <div className="mb-4 text-5xl">⬆</div>
+            <div className="mb-4 text-3xl">⬆</div>
             <h2 className="text-2xl font-medium">
               {isDragActive ? t("dropActive") : t("dropIdle")}
             </h2>
@@ -339,7 +339,7 @@ export default function EmployeeUploadPage() {
             return (
               <div
                 key={file.localId}
-                className="rounded-3xl border border-subtle bg-surface-1 p-5 shadow-xl shadow-black/10 backdrop-blur"
+                className="rounded-3xl border border-subtle bg-surface-1 p-5 shadow-xl shadow-black/10 backdrop-blur-[2px]"
               >
                 {/* Card header */}
                 <div className="mb-3 flex items-start justify-between gap-4">
@@ -375,7 +375,7 @@ export default function EmployeeUploadPage() {
                           ] as [string, string | null | undefined][]).map(([label, val]) => (
                             <div key={label}>
                               <div className="text-[9px] font-bold uppercase tracking-widest text-muted">{label}</div>
-                              <div className="text-[11px] font-mono text-secondary truncate">{val ?? "—"}</div>
+                              <div className="text-[11px] font-mono text-secondary truncate">{val ?? " - "}</div>
                             </div>
                           ))}
                         </div>
@@ -387,13 +387,13 @@ export default function EmployeeUploadPage() {
                         <div className="space-y-1.5">
                           <div>
                             <div className="text-[9px] font-bold uppercase tracking-widest text-muted">Emisor</div>
-                            <div className="text-[11px] text-secondary truncate">{file.extractedData.emisor_nombre ?? "—"}</div>
-                            <div className="text-[10px] font-mono text-tertiary truncate">{file.extractedData.emisor_rfc ?? "—"}</div>
+                            <div className="text-[11px] text-secondary truncate">{file.extractedData.emisor_nombre ?? " - "}</div>
+                            <div className="text-[10px] font-mono text-tertiary truncate">{file.extractedData.emisor_rfc ?? " - "}</div>
                           </div>
                           <div className="border-t border-subtle pt-1.5">
                             <div className="text-[9px] font-bold uppercase tracking-widest text-muted">Receptor</div>
-                            <div className="text-[11px] text-secondary truncate">{file.extractedData.receptor_nombre ?? "—"}</div>
-                            <div className="text-[10px] font-mono text-tertiary truncate">{file.extractedData.receptor_rfc ?? "—"}</div>
+                            <div className="text-[11px] text-secondary truncate">{file.extractedData.receptor_nombre ?? " - "}</div>
+                            <div className="text-[10px] font-mono text-tertiary truncate">{file.extractedData.receptor_rfc ?? " - "}</div>
                           </div>
                         </div>
                       </div>
@@ -403,7 +403,7 @@ export default function EmployeeUploadPage() {
                         <div className="mb-2 text-[10px] font-bold uppercase tracking-widest text-muted">Line Item</div>
                         <div>
                           <div className="text-[9px] font-bold uppercase tracking-widest text-muted">Description</div>
-                          <div className="text-[11px] text-secondary mb-1.5">{file.extractedData.descripcion ?? "—"}</div>
+                          <div className="text-[11px] text-secondary mb-1.5">{file.extractedData.descripcion ?? " - "}</div>
                         </div>
                       </div>
 
@@ -413,11 +413,11 @@ export default function EmployeeUploadPage() {
                         <div className="space-y-1.5">
                           <div>
                             <div className="text-[9px] font-bold uppercase tracking-widest text-muted">UUID</div>
-                            <div className="text-[10px] font-mono text-tertiary break-all">{file.extractedData.uuid ?? "—"}</div>
+                            <div className="text-[10px] font-mono text-tertiary break-all">{file.extractedData.uuid ?? " - "}</div>
                           </div>
                           <div>
                             <div className="text-[9px] font-bold uppercase tracking-widest text-muted">Invoice Date</div>
-                            <div className="text-[11px] font-mono text-secondary">{file.extractedData.fecha ?? "—"}</div>
+                            <div className="text-[11px] font-mono text-secondary">{file.extractedData.fecha ?? " - "}</div>
                           </div>
                         </div>
                       </div>
@@ -438,7 +438,7 @@ export default function EmployeeUploadPage() {
                           ] as [string, string | null | undefined][]).map(([label, val]) => (
                             <div key={label}>
                               <div className="text-[9px] font-bold uppercase tracking-widest text-muted">{label}</div>
-                              <div className="text-[11px] font-mono text-secondary truncate">{val ?? "—"}</div>
+                              <div className="text-[11px] font-mono text-secondary truncate">{val ?? " - "}</div>
                             </div>
                           ))}
                         </div>
@@ -486,7 +486,7 @@ export default function EmployeeUploadPage() {
       </div>
 
       {/* Sticky action bar */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-subtle bg-surface-0 backdrop-blur px-6 py-4">
+      <div className="fixed bottom-0 left-0 right-0 border-t border-subtle bg-surface-0 backdrop-blur-[2px] px-6 py-4">
         <div className="mx-auto max-w-7xl flex items-center justify-end gap-4">
           {blockedCount > 0 && (
             <span className="text-xs text-error/80">

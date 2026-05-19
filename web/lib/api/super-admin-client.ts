@@ -38,12 +38,12 @@ export interface SuperAdminApiCallOptions extends Omit<RequestInit, "body"> {
 }
 
 function getApiBase(): string {
-  return (
-    process.env.NEXT_PUBLIC_API_BASE_URL ||
-    (typeof window !== "undefined"
-      ? `${window.location.protocol}//${window.location.hostname}:8000`
-      : "http://localhost:8000")
-  );
+  // Client-only: HydrationGuard ensures we never run during SSR.
+  const envBase = process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (envBase && !envBase.includes("FRONTEND_HOST_PORT")) {
+    return envBase.replace(/\/+$/, "");
+  }
+  return `${window.location.protocol}//${window.location.hostname}:8000`;
 }
 
 function buildUrl(path: string): string {
@@ -54,7 +54,6 @@ function buildUrl(path: string): string {
 }
 
 function handle401() {
-  if (typeof window === "undefined") return;
   clearSuperAdminSession();
   if (!window.location.pathname.startsWith("/super-admin/login")) {
     window.location.href = "/super-admin/login";

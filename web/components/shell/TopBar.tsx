@@ -7,6 +7,7 @@ import { Bot, LogOut, Menu, Search, Settings, Bell, ChevronDown } from "lucide-r
 import { clearSession, getCurrentRole, getStoredSession } from "@/lib/session";
 import { useTranslations } from "next-intl";
 import SettingsModal from "./SettingsModal";
+import ThemeToggle from "./ThemeToggle";
 
 interface TopBarProps {
   title?: string;
@@ -105,12 +106,13 @@ export default function TopBar({ title, portal, onMenuOpen, onAiOpen }: TopBarPr
           type="button"
           title={t("notifications")}
           aria-label={t("notifications")}
-          className="relative flex h-7 w-7 items-center justify-center rounded text-secondary transition-colors hover:bg-surface-2 hover:text-primary"
+          className="flex h-7 w-7 items-center justify-center rounded text-secondary transition-colors hover:bg-surface-2 hover:text-primary"
         >
           <Bell className="h-3.5 w-3.5" />
-          {/* Notification dot */}
-          <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-accent" />
         </button>
+
+        {/* Theme toggle */}
+        <ThemeToggle />
 
         {/* Settings */}
         <button

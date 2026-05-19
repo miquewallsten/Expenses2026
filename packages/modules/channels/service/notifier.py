@@ -26,6 +26,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from packages.core.platform.models_user import User
+from packages.core.platform.models_platform_settings import PlatformSettings
 from packages.modules.channels.models import (
     ChannelSettings,
     NotificationDispatch,
@@ -149,6 +150,18 @@ def _deliver(
         if not recipient.email:
             _record_failure(db, row, "no_email_address", suppress=True)
             return
+        # Also send push notification if available
+        try:
+            from packages.core.platform.service_notification_delivery import NOTIFICATION_DELIVERY
+            NOTIFICATION_DELIVERY.send_push_notification(
+                company_id=req.company_id,
+                user_id=recipient.user_id,
+                title=req.message.subject or req.event_type,
+                message=req.message.text or "",
+            )
+        except Exception:
+            pass  # Push is best-effort, never block
+            return
         _send_email(db, req, recipient, row)
     elif channel == "whatsapp":
         if not recipient.whatsapp:
@@ -165,6 +178,9 @@ def _send_email(
     recipient: Recipient,
     row: NotificationDispatch,
 ) -> None:
+    # ── Resolve SMTP Strategy ──────────────────────────────────────────────────
+    
+    # 1. Try company specific settings
     settings = (
         db.query(ChannelSettings)
         .filter(
@@ -173,18 +189,37 @@ def _send_email(
         )
         .one_or_none()
     )
+    
     host = settings.email_smtp_host if settings else None
+    port = settings.email_smtp_port if settings else 587
+    user = settings.email_smtp_user if settings else None
+    pwd  = settings.email_smtp_password if settings else None
+    frm_addr = settings.email_smtp_from or user or "noreply@local"
+    
+    # 2. Fall back to Platform Settings if this is a platform-wide event (id=0)
+    # OR if company settings are incomplete (important for first tenant onboarding)
+    if not host or req.company_id == 0:
+        platform = db.query(PlatformSettings).first()
+        if platform and platform.smtp_host:
+            host = platform.smtp_host
+            port = platform.smtp_port
+            user = platform.smtp_user
+            pwd  = platform.smtp_password
+            frm_addr = platform.smtp_from_email or platform.smtp_user
+            log.info("Using Master Platform Mailbox for dispatch company=%s", req.company_id)
+
     if not host:
         log.warning(
-            "No SMTP configured for company %s — recording dispatch but skipping send",
+            "No SMTP configured (Company nor Platform) for company %s — recorded but skipped",
             req.company_id,
         )
         _record_failure(db, row, "no_smtp_configured", suppress=True)
         return
 
+    # ── Compose Message ────────────────────────────────────────────────────────
     msg = MIMEMultipart("alternative")
     msg["Subject"] = req.message.subject or req.event_type
-    msg["From"] = settings.email_smtp_from or settings.email_smtp_user or "noreply@local"
+    msg["From"] = frm_addr
     msg["To"] = recipient.email or ""
 
     if req.message.text:
@@ -192,13 +227,14 @@ def _send_email(
     if req.message.html:
         msg.attach(MIMEText(req.message.html, "html", "utf-8"))
 
+    # ── Dispatch ───────────────────────────────────────────────────────────────
     row.attempts += 1
     db.commit()
     try:
-        with smtplib.SMTP(host, settings.email_smtp_port or 587, timeout=15) as smtp:
+        with smtplib.SMTP(host, port or 587, timeout=15) as smtp:
             smtp.starttls()
-            if settings.email_smtp_user and settings.email_smtp_password:
-                smtp.login(settings.email_smtp_user, settings.email_smtp_password)
+            if user and pwd:
+                smtp.login(user, pwd)
             smtp.send_message(msg)
     except Exception as exc:
         _record_failure(db, row, f"smtp:{exc}")

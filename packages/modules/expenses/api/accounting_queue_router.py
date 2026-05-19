@@ -1,3 +1,5 @@
+from fastapi import APIRouter, Depends
+from packages.core.platform.module_gate import require_module
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -11,7 +13,7 @@ from packages.modules.expenses.service.review_queue_service import (
     list_accounting_queue_paginated,
 )
 
-router = APIRouter(prefix="/accounting/queue", tags=["accounting"])
+router = APIRouter(prefix="/accounting/queue", tags=["accounting"], dependencies=[Depends(require_module("accounting"))])
 
 
 class PaginatedQueueResponse(BaseModel):

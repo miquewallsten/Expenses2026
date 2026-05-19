@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Send, Bot, X, Loader2 } from "lucide-react";
-import { apiPost } from "@/lib/api/client";
+import { superAdminPost } from "@/lib/api/super-admin-client";
 import { renderContent } from "@/lib/chat/renderContent";
 
 interface Message {
@@ -26,6 +26,7 @@ export default function LLMConfigAssistant({ currentProvider, currentModel }: LL
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -42,12 +43,12 @@ export default function LLMConfigAssistant({ currentProvider, currentModel }: LL
     setLoading(true);
 
     try {
-      const data = await apiPost<{ content?: string }>(`/ai/llm-config-assistant`, {
-        prompt: userMsg,
-        current_provider: currentProvider,
-        current_model: currentModel,
-        history: messages.map((m) => ({ role: m.role, content: m.content })),
+      const data = await superAdminPost<{ content?: string; session_id?: string }>("/super-admin/agent/chat", {
+        message: userMsg,
+        persona: "admin",
+        session_id: sessionId,
       });
+      if (data.session_id) setSessionId(data.session_id);
       const reply = data.content || "Sorry, I couldn't process that.";
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
     } catch (_err) {
@@ -86,14 +87,14 @@ export default function LLMConfigAssistant({ currentProvider, currentModel }: LL
                 className={`text-[11px] leading-relaxed ${
                   m.role === "user"
                     ? "ml-4 rounded-xl bg-blue-500/15 px-3 py-2 text-indigo-100/90 ring-1 ring-inset ring-blue-500/20"
-                    : "mr-4 rounded-xl bg-surface-1 px-3 py-2 text-secondary ring-1 ring-inset ring-white/[0.05]"
+                    : "mr-4 rounded-xl bg-surface-1 px-3 py-2 text-secondary ring-1 ring-inset ring-subtle"
                 }`}
               >
                 {m.role === "assistant" ? renderContent(m.content) : m.content}
               </div>
             ))}
             {loading && (
-              <div className="mr-4 flex items-center gap-2 rounded-xl bg-surface-1 px-3 py-2 ring-1 ring-inset ring-white/[0.05]">
+              <div className="mr-4 flex items-center gap-2 rounded-xl bg-surface-1 px-3 py-2 ring-1 ring-inset ring-subtle">
                 <span className="inline-flex gap-1">
                   {[0, 1, 2].map((d) => (
                     <span

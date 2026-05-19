@@ -2,12 +2,13 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from apps.api.auth import require_admin, require_same_company, get_current_user
+from packages.core.platform.module_gate import require_module
 from apps.api.deps import get_db
 from packages.core.platform.models_user import User
 from packages.core.platform.models_archive_config import ArchiveConfig
 from packages.modules.archive.schemas.archive_config import ArchiveConfigRead, ArchiveConfigUpdate
 
-router = APIRouter(prefix="/admin/archive-config", dependencies=[Depends(require_admin)], tags=["archive-config"])
+router = APIRouter(prefix="/admin/archive-config", dependencies=[Depends(require_admin), Depends(require_module("archive"))], tags=["archive-config"])
 
 _DEFAULT_FILE_PATTERN   = "{company}_{date}_{expense_id}"
 _DEFAULT_FOLDER_PATTERN = "{year}/{month}"

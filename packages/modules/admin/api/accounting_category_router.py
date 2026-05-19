@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
+from packages.core.platform.module_gate import require_module
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from apps.api.auth import get_current_user, require_admin, require_same_company
+from apps.api.auth import get_current_user, require_permission, require_same_company
 from packages.core.platform.models_user import User
 from apps.api.deps import get_db
 from packages.core.platform.models_accounting_category import (
@@ -16,7 +18,7 @@ from packages.modules.admin.schemas.accounting_category import (
 router = APIRouter(
     prefix="/admin/accounting-categories",
     tags=["admin"],
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_permission("accounting:configure")), Depends(require_module("accounting"))],
 )
 
 

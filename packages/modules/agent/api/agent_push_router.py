@@ -12,11 +12,12 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from apps.api.auth import get_current_user, require_same_company
+from packages.core.platform.models_user import User as UserModel
 from apps.api.deps import get_db
 from packages.core.platform.models_user import User
 
 from ..core.agent_push_service import AgentNotification, PUSH_SERVICE
-from ..core.notification_service import NOTIFICATION_SERVICE
+from ..core.notification_service_db import DB_NOTIFICATION_SERVICE
 
 router = APIRouter(prefix="/push", tags=["agent-push"])
 
@@ -60,7 +61,11 @@ def notify_user(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Send a notification to a user."""
-    require_same_company(current_user.company_id, current_user)
+    # Verify the target user belongs to the same company
+    target_user = db.query(UserModel).filter(UserModel.id == body.user_id).first()
+    if not target_user or target_user.company_id != current_user.company_id:
+        raise HTTPException(status_code=404, detail="User not found")
+    require_same_company(target_user.company_id, current_user)
     notif = AgentNotification(
         id="",
         type=body.type,  # type: ignore[arg-type]
@@ -69,6 +74,18 @@ def notify_user(
         action=body.action,
     )
     pushed = PUSH_SERVICE.send_notification(body.user_id, notif)
+    # Push via WebSocket if the user is connected
+    try:
+        from ..api.agent_ws import manager as ws_manager
+        import asyncio
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            loop.create_task(ws_manager.send_to_user(body.user_id, {
+                "type": "notification",
+                "data": {"id": pushed.id, "type": pushed.type, "title": pushed.title, "message": pushed.message},
+            }))
+    except Exception:
+        pass
     return {"ok": True, "notification_id": pushed.id}
 
 
@@ -104,7 +121,8 @@ def get_notifications(
     """Get all active notifications for the current user (push + announcements)."""
     require_same_company(current_user.company_id, current_user)
     push_notes = PUSH_SERVICE.get_user_notifications(current_user.id)
-    announcements = NOTIFICATION_SERVICE.get_user_notifications(
+    announcements = DB_NOTIFICATION_SERVICE.get_user_notifications(
+        db,
         user_id=current_user.id,
         user_role=current_user.role,
         company_id=current_user.company_id,
@@ -134,7 +152,7 @@ def dismiss_notification(
     """Dismiss a notification for the current user."""
     require_same_company(current_user.company_id, current_user)
     push_ok = PUSH_SERVICE.dismiss_notification(current_user.id, body.notification_id)
-    ann_ok = NOTIFICATION_SERVICE.dismiss_notification(current_user.id, body.notification_id)
+    ann_ok = DB_NOTIFICATION_SERVICE.dismiss_notification(db, current_user.id, body.notification_id)
     return {"ok": push_ok or ann_ok}
 
 
@@ -146,7 +164,8 @@ def send_announcement(
 ) -> dict[str, Any]:
     """Broadcast an announcement to targeted users."""
     require_same_company(body.company_id, current_user)
-    ann = NOTIFICATION_SERVICE.send_announcement(
+    ann = DB_NOTIFICATION_SERVICE.send_announcement(
+        db,
         company_id=body.company_id,
         title=body.title,
         message=body.message,
@@ -155,14 +174,3 @@ def send_announcement(
     )
     return {"ok": True, "announcement_id": ann.id}
 
-
-# ── WebSocket stub ───────────────────────────────────────────────────────────
-
-@router.get("/ws/agent-events")
-def agent_events_ws_stub() -> dict[str, str]:
-    """WebSocket endpoint placeholder.
-
-    In production this should be upgraded to a true WebSocket handler
-    (``from fastapi import WebSocket``) and wired into a connection manager.
-    """
-    return {"status": "stub", "detail": "WebSocket not yet implemented"}

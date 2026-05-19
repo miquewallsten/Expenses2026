@@ -1,6 +1,8 @@
 from sqlalchemy.orm import Session
 
 from packages.core.platform.models import Company
+from packages.core.platform.models_channels import CompanyChannelConfig
+from packages.core.platform.models_auth_settings import CompanyAuthSettings
 from packages.core.platform.schemas import CompanyCreate, CompanyUpdate
 
 
@@ -12,6 +14,12 @@ def create_company(db: Session, payload: CompanyCreate) -> Company:
 
     company = Company(name=payload.name, slug=payload.slug)
     db.add(company)
+    db.flush() # Get company.id
+
+    # Create associated settings rows
+    db.add(CompanyChannelConfig(company_id=company.id))
+    db.add(CompanyAuthSettings(company_id=company.id))
+
     db.commit()
     db.refresh(company)
     return company

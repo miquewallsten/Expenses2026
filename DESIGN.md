@@ -233,3 +233,83 @@ When shadows are absolutely necessary (modals, dropdowns), use:
 - **Don't** use em dashes (`—`). Use commas, colons, semicolons, periods, or parentheses.
 - **Don't** create identical card grids with icon + heading + text repeated endlessly. Vary the layout. Not every section needs a card.
 - **Don't** reach for a modal as the first solution. Exhaust inline and progressive alternatives first. Modals are usually laziness.
+## 7. Shell Architecture (GUARDRAIL - Do Not Change)
+
+The mywork shell layout is frozen. Any modification to this section requires explicit user approval.
+
+### Three-Column Layout (Desktop >=1024px)
+
+```
++------------+---------------------------+---------------+
+| Sidebar    |       Workspace           |  Copilot      |
+| 48/240px   |  flex-1                   |  280-720px    |
+| rail/      |  (active module content)  |  resizable   |
+| expanded   |                           |  collapsible  |
++------------+---------------------------+---------------+
+```
+
+### Rules
+
+1. **Sidebar**: Collapsible rail (48px collapsed, 240px expanded). Icons only when collapsed, icons+labels when expanded. Theme toggle + Settings gear in sidebar footer. No greeting banners. No hero headers. No overlines. Module active state: accent tint background + left accent bar.
+
+2. **Workspace**: `flex-1` between sidebar and copilot. No top bar, no header banner, no hero section. Content starts immediately.
+
+3. **Copilot**: Always present as flex column. Starts expanded (320px default). Resizable via drag handle (280-720px). Collapsible to 40px rail with Sparkles icon. Never hidden by default.
+
+4. **Theme Toggle**: Cycles dark -> light -> system. Located in sidebar footer (both collapsed and expanded states) and in mobile drawer.
+
+5. **Mobile (<768px)**: Bottom tab bar with top 4 modules + "More" + AI toggle. Full nav in slide-out drawer. Copilot as sheet overlay.
+
+6. **Tablet (768-1023px)**: Sidebar collapsed to 48px rail. Copilot as column.
+
+### Component Boundaries
+
+- `web/app/mywork/page.tsx` - Shell layout, responsive breakpoints, sidebar, mobile bar
+- `web/components/my-work/MyWorkSidebar.tsx` - Expanded module list with groups/visibility
+- `web/components/agent/CopilotLauncher.tsx` - Copilot panel (column/sheet modes)
+- `web/context/CopilotSidebarContext.tsx` - Copilot open/width state (default: open=true, width=320)
+- `web/components/shell/ThemeToggle.tsx` - Theme cycle button
+- `web/components/shell/ThemeProvider.tsx` - Theme state + data-theme sync
+
+### Forbidden Changes
+
+These modifications are BLOCKED without explicit user sign-off:
+
+- Adding hero banners, greeting cards, or "Good morning" headers to the workspace
+- Removing or hiding the copilot panel by default
+- Moving the theme toggle out of the sidebar footer
+- Adding a top bar / toolbar above the workspace
+- Changing sidebar widths (48px collapsed, 240px expanded)
+- Renaming the copilot from "Copilot" to any other name in UI-facing strings
+- Adding decorative gradients, blur blobs, or side-stripe borders >1px
+- Re-introducing HeroHeader, TopBar, or equivalent components in the mywork shell
+
+### Color Tokens (Semantic Only)
+
+All colors use CSS custom properties defined in `web/app/globals.css`. Dual theme support via `:root` (dark) and `html.light` overrides.
+
+| Token | Dark | Light | Usage |
+|-------|------|-------|-------|
+| --color-surface-0 | #0f0f14 | #f8f8fa | Canvas / app bg |
+| --color-surface-1 | #16161e | #ffffff | Panel / sidebar bg |
+| --color-surface-2 | #1e1e28 | #f0f0f4 | Hover / elevated |
+| --color-surface-3 | #282834 | #e4e4ec | Deep hover |
+| --color-primary | #f8f8fa | #12121a | Primary text |
+| --color-secondary | #a8a8b8 | #505068 | Secondary text |
+| --color-tertiary | #707088 | #808098 | Tertiary text |
+| --color-muted | #505068 | #909098 | Muted text |
+| --color-accent | #3b82f6 | #3b82f6 | Primary accent |
+| --color-accent-hover | #2563eb | #2563eb | Accent hover |
+| --color-subtle | #2a2a38 | #e0e0e8 | Hairline borders |
+| --color-default | #3a3a4a | #c8c8d4 | Standard borders |
+
+### Forbidden CSS Patterns
+
+- No `dark:` prefix - theming handled by `html.light` CSS overrides
+- No raw hex/rgb in className - use semantic tokens (bg-surface-0, text-primary, border-subtle)
+- No `bg-black/*`, `text-white/*`, `border-white/*` - use utility classes
+- No `bg-gradient-*` on cards/buttons/sections
+- No `backdrop-blur` >2px, no `blur-2xl`/`blur-3xl` decorative blobs
+- No `text-3xl`+ hero metrics (max `text-xl` for numbers)
+- No `border-l-2`+ side-stripe accent strips
+- No em dashes, use ` - ` instead

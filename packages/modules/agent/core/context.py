@@ -19,7 +19,7 @@ from typing import Literal
 from sqlalchemy.orm import Session
 
 
-Persona = Literal["admin", "employee", "procurement", "finance_manager", "super_admin"]
+Persona = Literal["admin", "accounting"]
 
 
 @dataclass

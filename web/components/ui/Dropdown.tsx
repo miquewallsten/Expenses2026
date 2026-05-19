@@ -14,7 +14,7 @@ import {
 import { cn } from "@/lib/cn";
 
 export interface DropdownProps {
-  trigger: ReactElement<{ onClick?: (e: MouseEvent) => void }>;
+  trigger: ReactElement<{ onClick?: (e: MouseEvent) => void; "aria-haspopup"?: string; "aria-expanded"?: boolean }>;
   children: ReactNode;
   align?: "start" | "end";
   className?: string;
@@ -49,6 +49,8 @@ export function Dropdown({
           trigger.props.onClick?.(e);
           setOpen((v) => !v);
         },
+        "aria-haspopup": "true",
+        "aria-expanded": open,
       })
     : trigger;
 

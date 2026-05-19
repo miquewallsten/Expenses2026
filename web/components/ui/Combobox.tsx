@@ -86,7 +86,7 @@ export function Combobox({
   }
 
   return (
-    <div ref={wrapRef} className={cn("relative", className)}>
+    <div ref={wrapRef} role="combobox" aria-expanded={open} className={cn("relative", className)}>
       <div
         className={cn(
           "flex items-center h-8 rounded-md border bg-surface-1",
@@ -96,8 +96,9 @@ export function Combobox({
         )}
       >
         <input
-          aria-expanded={open}
           aria-autocomplete="list"
+          aria-controls="combobox-listbox"
+          aria-activedescendant={open && filtered[activeIndex] ? `combobox-option-${activeIndex}` : undefined}
           disabled={disabled}
           value={open ? query : selected?.label ?? ""}
           placeholder={placeholder}
@@ -123,12 +124,14 @@ export function Combobox({
       </div>
       {open && filtered.length > 0 && (
         <div
+          id="combobox-listbox"
           role="listbox"
           className="absolute mt-1 z-40 w-full max-h-60 overflow-auto rounded-md border border-subtle bg-surface-1 shadow-xl py-1"
         >
           {filtered.map((opt, i) => (
             <button
               key={opt.value}
+              id={`combobox-option-${i}`}
               role="option"
               aria-selected={i === activeIndex}
               onMouseEnter={() => setActiveIndex(i)}

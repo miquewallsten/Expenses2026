@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "i18n:check": "node scripts/i18n-check.mjs",
-    "i18n:check:parity": "node scripts/i18n-check.mjs --parity-only"
+    "i18n:check:parity": "node scripts/i18n-check.mjs --parity-only",
+    "design-lint": "bash scripts/design-lint.sh"
   },
   "dependencies": {
     "lucide-react": "^1.8.0",
@@ -18,7 +19,8 @@
     "next-intl": "^4.9.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "react-dropzone": "^15.0.0"
+    "react-dropzone": "^15.0.0",
+    "recharts": "^3.8.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

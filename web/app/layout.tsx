@@ -4,9 +4,10 @@ import { LocaleProvider } from "@/context/LocaleContext";
 import DevLoginCheat from "@/components/dev/DevLoginCheat";
 import { ErrorBoundary } from "@/components/shell/ErrorBoundary";
 import { ToastProvider } from "@/components/ui/Toast";
-import CopilotLauncher from "@/components/agent/CopilotLauncher";
 import PwaBootstrap from "@/components/pwa/PwaBootstrap";
 import { ThemeProvider } from "@/components/shell/ThemeProvider";
+import HydrationGuard from "@/components/shell/HydrationGuard";
+import HtmlLang from "@/components/shell/HtmlLang";
 
 // ── Viewport ─────────────────────────────────────────────────────────────────
 //
@@ -23,7 +24,7 @@ export const viewport: Viewport = {
 
 // ── Metadata ─────────────────────────────────────────────────────────────────
 export const metadata: Metadata = {
-  title: "My Work — OpsFlow",
+  title: "My Work - OpsFlow",
   description: "Financial operations management platform",
   manifest: "/manifest.json",
   appleWebApp: {
@@ -44,19 +45,22 @@ export default function RootLayout({
     <html
       lang="es"
       className="antialiased"
+      data-theme="dark"
       suppressHydrationWarning
     >
       <body className="h-full overflow-hidden bg-surface-0 text-primary">
-        <ThemeProvider>
-          <ErrorBoundary>
-            <LocaleProvider>
-              <ToastProvider>{children}</ToastProvider>
-              <CopilotLauncher />
-              <PwaBootstrap />
-            </LocaleProvider>
-          </ErrorBoundary>
-          <DevLoginCheat />
-        </ThemeProvider>
+        <HydrationGuard>
+          <ThemeProvider>
+            <ErrorBoundary>
+              <LocaleProvider>
+                <HtmlLang />
+                <ToastProvider>{children}</ToastProvider>
+                <PwaBootstrap />
+              </LocaleProvider>
+            </ErrorBoundary>
+          </ThemeProvider>
+        </HydrationGuard>
+        {process.env.NODE_ENV === "development" && <DevLoginCheat />}
       </body>
     </html>
   );

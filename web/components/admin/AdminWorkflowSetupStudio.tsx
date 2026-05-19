@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Save, Loader2, CheckCircle2, Sparkles, AlertTriangle, AlertCircle, GitBranch } from "lucide-react";
-import { apiCall, HttpError } from "@/lib/api/client";
+import { apiCall, apiPost, HttpError } from "@/lib/api/client";
 import {
   getPortalConfigConflicts,
   type PortalConfigConflict,
@@ -172,7 +172,7 @@ export default function AdminWorkflowSetupStudio({
 
   const localWarnings = buildLocalWarnings(form, expensePolicy, accountingSetup, approvalSetup);
 
-  // Cross-domain conflicts — use live form as workflow_setup
+  // Cross-domain conflicts - use live form as workflow_setup
   const configConflicts: PortalConfigConflict[] = getPortalConfigConflicts({
     company_setup:    companySetup    ?? {},
     expense_policy:   expensePolicy   ?? {},
@@ -200,7 +200,7 @@ export default function AdminWorkflowSetupStudio({
             type="button"
             onClick={save}
             disabled={saving || !dirty}
-            className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-500 to-indigo-600 px-4 py-1.5 text-[11px] font-semibold text-white shadow-sm shadow-indigo-500/20 transition-all hover:shadow-md hover:shadow-indigo-500/30 disabled:opacity-40 disabled:shadow-none"
+            className="flex items-center gap-2 rounded-lg bg-accent px-4 py-1.5 text-[11px] font-semibold text-white shadow-sm transition-all hover:bg-accent-hover disabled:opacity-40"
           >
             {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
             {tc("save")}
@@ -223,8 +223,8 @@ export default function AdminWorkflowSetupStudio({
               key={i}
               className={`flex items-start gap-2 rounded border px-3 py-2 ${
                 c.severity === "critical"
-                  ? "border-red-500/15 bg-red-500/[0.04]"
-                  : "border-amber-500/15 bg-amber-500/[0.04]"
+                  ? "border-error/15 bg-error/[0.04]"
+                  : "border-warning/15 bg-warning/[0.04]"
               }`}
             >
               {c.severity === "critical" ? (
@@ -244,7 +244,7 @@ export default function AdminWorkflowSetupStudio({
       {localWarnings.length > 0 && (
         <div className="space-y-1.5">
           {localWarnings.map((w, i) => (
-            <div key={i} className="flex items-start gap-2 rounded border border-amber-500/15 bg-amber-500/[0.04] px-3 py-2">
+            <div key={i} className="flex items-start gap-2 rounded border border-warning/15 bg-warning/[0.04] px-3 py-2">
               <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-warning/55" />
               <p className="text-[10px] leading-relaxed text-warning/55">{w}</p>
             </div>
@@ -252,7 +252,7 @@ export default function AdminWorkflowSetupStudio({
         </div>
       )}
 
-      {/* A — Workflow Mode */}
+      {/* A - Workflow Mode */}
       <div>
         <PatternSectionLabel>{t("sectionA")}</PatternSectionLabel>
         <SectionPanel>
@@ -262,7 +262,7 @@ export default function AdminWorkflowSetupStudio({
               onChange={(e) => set("default_expense_workflow_mode", e.target.value)}
               className={`${inputClasses.select} w-44`}
             >
-              <option value="">—</option>
+              <option value=""> - </option>
               {WORKFLOW_MODE_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
@@ -282,7 +282,7 @@ export default function AdminWorkflowSetupStudio({
         </SectionPanel>
       </div>
 
-      {/* B — Submission Controls */}
+      {/* B - Submission Controls */}
       <div>
         <PatternSectionLabel>{t("sectionB")}</PatternSectionLabel>
         <SectionPanel>
@@ -304,7 +304,7 @@ export default function AdminWorkflowSetupStudio({
         </SectionPanel>
       </div>
 
-      {/* C — Routing Rules */}
+      {/* C - Routing Rules */}
       <div>
         <PatternSectionLabel>{t("sectionC")}</PatternSectionLabel>
         <SectionPanel>
@@ -350,7 +350,7 @@ export default function AdminWorkflowSetupStudio({
         </SectionPanel>
       </div>
 
-      {/* D — Employee Guidance */}
+      {/* D - Employee Guidance */}
       <div>
         <PatternSectionLabel>{t("sectionD")}</PatternSectionLabel>
         <SectionPanel>
@@ -360,7 +360,7 @@ export default function AdminWorkflowSetupStudio({
         </SectionPanel>
       </div>
 
-      {/* E — AI Assistance */}
+      {/* E - AI Assistance */}
       <div>
         <PatternSectionLabel>{t("sectionE")}</PatternSectionLabel>
         <SectionPanel>

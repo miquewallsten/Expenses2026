@@ -148,7 +148,7 @@ function ModuleRow({
     } ${isComing ? "opacity-60" : ""} bg-surface-1`}>
       {/* Gradient background for installed modules */}
       {isInstalled && (
-        <div className="absolute inset-0 bg-gradient-to-br from-success/[0.02] via-transparent to-transparent pointer-events-none" />
+        <div className="" />
       )}
 
       {/* Main row */}
@@ -310,13 +310,13 @@ function ModuleRow({
 
       {/* Inline config panel */}
       {phase === "showConfig" && mod.key === "purchase_requests" && (
-        <div className="border-t border-subtle bg-black/10 px-4 py-3">
+        <div className="border-t border-subtle section-subtle px-4 py-3">
           <p className="text-[10px] text-muted">{tm("purchaseRequestsConfigNote")}</p>
         </div>
       )}
 
       {phase === "showConfig" && mod.key === "amex_reconciliation" && (
-        <div className="border-t border-subtle bg-black/10 px-4 py-3">
+        <div className="border-t border-subtle section-subtle px-4 py-3">
           <p className="text-[10px] text-muted">{tm("amexReconciliationConfigNote")}</p>
         </div>
       )}

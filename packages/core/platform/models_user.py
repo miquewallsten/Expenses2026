@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, JSON, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from apps.api.db import Base
@@ -26,6 +26,8 @@ class User(Base):
     department: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     job_title: Mapped[Optional[str]] = mapped_column(String(150), nullable=True)
     phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    # Responsibility tags, e.g. ["PAYMENT_STAMP", "SAT_RECONCILER"]
+    tags: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True)
 
     # ── Org assignment ──────────────────────────────────────────────────────────
     # Soft FK — avoids complex cross-model dependency during migrations
@@ -43,6 +45,9 @@ class User(Base):
     can_create_corporate_expenses: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     can_invoice_corporation: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     is_amex_reconciler: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    # Subcontractor user — can submit invoices/expenses as a subcontractor.
+    # Only relevant when the subcontractor add-on is installed.
+    is_subcontractor: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     requires_time_tracking: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     has_executive_reporting: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     # Accounting access: when True, user can access Accounting Review and Finance Analytics.

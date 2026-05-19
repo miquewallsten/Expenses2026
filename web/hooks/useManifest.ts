@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import type { PermissionManifest } from "@/types/mywork";
 import { fetchManifest } from "@/lib/mywork/manifest";
 
@@ -13,7 +13,6 @@ interface CacheEntry {
 }
 
 function readCache(): CacheEntry | null {
-  if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(CACHE_KEY);
     if (!raw) return null;
@@ -26,7 +25,6 @@ function readCache(): CacheEntry | null {
 }
 
 function writeCache(manifest: PermissionManifest) {
-  if (typeof window === "undefined") return;
   try {
     localStorage.setItem(
       CACHE_KEY,
@@ -38,7 +36,6 @@ function writeCache(manifest: PermissionManifest) {
 }
 
 function clearCache() {
-  if (typeof window === "undefined") return;
   localStorage.removeItem(CACHE_KEY);
 }
 

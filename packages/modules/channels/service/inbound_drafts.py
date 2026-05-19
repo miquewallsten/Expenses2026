@@ -178,3 +178,147 @@ def try_create_draft_from_email(
             return None
 
     return None
+
+
+
+# ── PDF / Image Receipt Handling ──────────────────────────────────────────────
+
+def _is_receipt_attachment(att: InboundAttachment) -> bool:
+    """Check if attachment looks like a receipt (PDF or image)."""
+    name = (att.filename or "").lower()
+    ctype = (att.content_type or "").lower()
+    # PDFs
+    if name.endswith(".pdf") or "pdf" in ctype:
+        return True
+    # Images
+    if name.endswith((".jpg", ".jpeg", ".png", ".heic", ".webp")):
+        return True
+    if ctype in ("image/jpeg", "image/png", "image/heic", "image/webp"):
+        return True
+    return False
+
+
+def _persist_attachment(company_id: int, filename: str, data: bytes) -> str:
+    """Save a binary attachment to disk and return the path."""
+    target_dir = _STORAGE_ROOT / "inbound-attachments" / str(company_id)
+    target_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now(tz=timezone.utc).strftime("%Y%m%dT%H%M%S")
+    safe = re.sub(r"[^A-Za-z0-9._-]+", "_", filename) or "attachment"
+    path = target_dir / f"{timestamp}_{safe}"
+    path.write_bytes(data)
+    return str(path)
+
+
+def try_create_draft_from_receipt(
+    db: Session, norm: NormalizedMessage, extracted_data: dict | None = None
+) -> Expense | None:
+    """Create a draft expense from a PDF/image receipt attachment.
+
+    This is for international or non-CFDI expenses where the receipt is a
+    photo or PDF but not a Mexican CFDI XML. Uses AI receipt extraction if
+    available, falls back to minimal data from the email body.
+
+    Args:
+        db: Database session
+        norm: Normalized message with attachments
+        extracted_data: Optional pre-extracted data dict with keys:
+            amount, description, currency, supplier, date
+
+    Returns:
+        Created Expense or None if no receipt attachments found.
+    """
+    receipt_atts = [a for a in (norm.attachments or []) if _is_receipt_attachment(a)]
+
+    if not receipt_atts:
+        return None
+
+    for att in receipt_atts:
+        att_bytes = _decode(att)
+        if not att_bytes:
+            continue
+
+        # Persist the file
+        try:
+            stored_at = _persist_attachment(
+                norm.company_id, att.filename or "receipt", att_bytes
+            )
+        except Exception:
+            log.exception("Receipt persist failed for company %s", norm.company_id)
+            stored_at = None
+
+        # Use extracted data if available (from AI receipt extraction service)
+        amount = None
+        description = f"Receipt from email — {att.filename or 'attachment'}"
+        currency = "MXN"
+        supplier = None
+
+        if extracted_data:
+            try:
+                from decimal import Decimal, InvalidOperation as _IE
+                if extracted_data.get("amount"):
+                    amount = Decimal(str(extracted_data["amount"]))
+                description = extracted_data.get("description", description)
+                currency = extracted_data.get("currency", "MXN")
+                supplier = extracted_data.get("supplier")
+            except Exception:
+                pass
+
+        # If no extracted data, try to use AI receipt extraction
+        if amount is None:
+            try:
+                from packages.modules.expenses.service.ai_receipt_extraction_service import (
+                    AIReceiptExtractionService,
+                )
+                ai_svc = AIReceiptExtractionService()
+                ai_result = ai_svc.extract_from_bytes(att_bytes, att.filename or "receipt")
+                if ai_result and ai_result.get("amount"):
+                    amount = ai_result["amount"]
+                    if ai_result.get("supplier"):
+                        supplier = ai_result["supplier"]
+                        description = f"Receipt — {supplier}"
+                    if ai_result.get("currency"):
+                        currency = ai_result["currency"]
+            except Exception:
+                log.info("AI receipt extraction not available or failed, creating minimal draft")
+
+        if amount is None:
+            # Create a placeholder draft with zero amount — user must fill in
+            amount = Decimal("0")
+            description = f"[Review needed] Receipt from email — {att.filename or 'attachment'}"
+
+        try:
+            expense = Expense(
+                company_id=norm.company_id,
+                amount=amount,
+                description=description[:255],
+                status="draft",
+                currency=currency,
+                notes=f"sender={norm.sender_ref} path={stored_at or 'unstored'}"
+                + (f" supplier={supplier}" if supplier else ""),
+            )
+            db.add(expense)
+            db.commit()
+            db.refresh(expense)
+
+            log_event(
+                db=db,
+                entity_type="expense",
+                entity_id=expense.id,
+                action="created_from_email_receipt",
+                actor_user_id=None,
+                detail_text=(
+                    f"sender={norm.sender_ref} file={att.filename or 'n/a'} "
+                    f"path={stored_at or 'unstored'} currency={currency}"
+                ),
+                company_id=norm.company_id,
+            )
+            return expense
+        except Exception:
+            log.exception(
+                "Failed to create draft expense from receipt for company %s",
+                norm.company_id,
+            )
+            db.rollback()
+            return None
+
+    return None

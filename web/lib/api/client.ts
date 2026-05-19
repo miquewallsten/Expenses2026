@@ -55,12 +55,18 @@ export interface ApiCallOptions extends Omit<RequestInit, "body"> {
 }
 
 function getApiBase(): string {
-  return (
-    process.env.NEXT_PUBLIC_API_BASE_URL ||
-    (typeof window !== "undefined"
-      ? `${window.location.protocol}//${window.location.hostname}:8000`
-      : "http://localhost:8000")
-  );
+  let base = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+  
+  // Sanitize: remove any trailed garbage from malformed .env files
+  if (base.includes("FRONTEND_HOST_PORT")) {
+    base = base.split("FRONTEND_HOST_PORT")[0];
+  }
+  
+  if (!process.env.NEXT_PUBLIC_API_BASE_URL) {
+    return `${window.location.protocol}//${window.location.hostname}:8000`;
+  }
+  
+  return base;
 }
 
 function buildUrl(path: string): string {
@@ -71,7 +77,27 @@ function buildUrl(path: string): string {
 }
 
 function handle401() {
-  if (typeof window === "undefined") return;
+  // Check if JWT is actually expired before clearing session
+  // A 401 from a single endpoint doesn't always mean the session is invalid
+  const session = getStoredSession();
+  if (session?.token) {
+    const parts = session.token.split(".");
+    if (parts.length === 3) {
+      try {
+        const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+        if (typeof payload.exp === "number" && payload.exp * 1000 >= Date.now()) {
+          // JWT is still valid — this 401 might be from a specific endpoint
+          // Don't log out the entire session
+          return;
+        }
+      } catch {}
+    }
+  } else {
+    // No JWT session — likely a DevLoginCheat (X-User-Id header) session.
+    // A 401 on one endpoint should NOT force a full logout.
+    return;
+  }
+  // JWT is expired — full logout
   clearStoredSession();
   if (!window.location.pathname.startsWith("/login")) {
     window.location.href = "/login";
@@ -108,7 +134,7 @@ export async function apiCall<T = unknown>(
     const session = getStoredSession();
     if (session?.token) {
       headers.set("Authorization", `Bearer ${session.token}`);
-    } else if (typeof window !== "undefined") {
+    } else {
       // Dev fallback — the backend still honours X-User-Id header.
       const devId =
         localStorage.getItem("currentUserId") ||

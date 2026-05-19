@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * AmexReconciliationModule — workspace for matching an American Express
+ * AmexReconciliationModule - workspace for matching an American Express
  * monthly statement to CFDI (XML + PDF) invoice pairs.
  *
  * Flow
@@ -186,7 +186,7 @@ export default function AmexReconciliationModule() {
       setProjects(Array.isArray(pr) ? pr : []);
       setCategories(Array.isArray(cg) ? cg : Array.isArray((cg as { items?: Category[] })?.items) ? (cg as { items: Category[] }).items : []);
     } catch {
-      // Silent — aux data is not critical
+      // Silent - aux data is not critical
     }
   }, [companyId]);
 
@@ -656,7 +656,7 @@ function StatementDetailView(props: DetailProps) {
 
           <div className="min-h-0 flex-1 overflow-auto">
             <table className="w-full border-collapse text-[12px]">
-              <thead className="sticky top-0 z-10 bg-surface-1/80 backdrop-blur">
+              <thead className="sticky top-0 z-10 bg-surface-1/80 backdrop-blur-[2px]">
                 <tr className="text-left text-[10px] font-medium uppercase tracking-wider text-muted">
                   <th className="w-8 border-b border-subtle px-2 py-2">
                     <input
@@ -828,7 +828,7 @@ function LineRow(props: LineRowProps) {
         />
       </td>
       <td className="whitespace-nowrap px-2 py-1.5 text-[11px] text-secondary tabular-nums">
-        {line.posted_date ? fmtDate(line.posted_date) : "—"}
+        {line.posted_date ? fmtDate(line.posted_date) : " - "}
       </td>
       <td className="max-w-[16rem] truncate px-2 py-1.5 text-secondary" title={line.description}>
         <div className="flex items-center gap-2">
@@ -848,7 +848,7 @@ function LineRow(props: LineRowProps) {
           }
           className="w-full rounded border border-subtle bg-surface-1 px-1.5 py-1 text-[11px] text-secondary focus:border-amber-500/50 focus:outline-none disabled:opacity-50"
         >
-          <option value="">—</option>
+          <option value=""> - </option>
           {projects.map((p) => (
             <option key={p.id} value={p.id}>
               {p.code ? `${p.code} · ` : ""}
@@ -864,7 +864,7 @@ function LineRow(props: LineRowProps) {
           onChange={(e) => onPatch({ category_code: e.target.value || null })}
           className="w-full rounded border border-subtle bg-surface-1 px-1.5 py-1 text-[11px] text-secondary focus:border-amber-500/50 focus:outline-none disabled:opacity-50"
         >
-          <option value="">—</option>
+          <option value=""> - </option>
           {categories.map((c) => (
             <option key={c.id} value={c.code}>
               {c.code} · {c.name}
@@ -909,10 +909,10 @@ function LineRow(props: LineRowProps) {
           >
             <option value="">
               {line.status === "missing"
-                ? t("amex.missingShort", "— factura pendiente —")
+                ? t("amex.missingShort", " -  factura pendiente  - ")
                 : line.status === "no_invoice"
-                  ? t("amex.noInvoiceShort", "— sin factura —")
-                  : t("amex.chooseInvoice", "— emparejar —")}
+                  ? t("amex.noInvoiceShort", " -  sin factura  - ")
+                  : t("amex.chooseInvoice", " -  emparejar  - ")}
             </option>
             {unmatchedDocs.length > 0 && (
               <optgroup label={t("amex.availableCfdi", "Facturas disponibles")}>
@@ -1053,14 +1053,14 @@ function DocCard({
         </div>
         <div className="min-w-0 flex-1">
           <div className="truncate font-medium text-secondary">
-            {doc.emisor_name ?? doc.emisor_rfc ?? "—"}
+            {doc.emisor_name ?? doc.emisor_rfc ?? " - "}
           </div>
           <div className="flex items-center gap-2 text-muted">
             <span className="font-mono tabular-nums">
-              {doc.total ? fmtMoney(doc.total, "MXN") : "—"}
+              {doc.total ? fmtMoney(doc.total, "MXN") : " - "}
             </span>
             <span>·</span>
-            <span>{doc.invoice_date ? fmtDate(doc.invoice_date) : "—"}</span>
+            <span>{doc.invoice_date ? fmtDate(doc.invoice_date) : " - "}</span>
           </div>
           {doc.uuid && (
             <div className="truncate font-mono text-[9px] text-muted" title={doc.uuid}>
@@ -1230,7 +1230,7 @@ function ProgressPill({
 
 function fmtMoney(amount: string | number, currency: string): string {
   const n = typeof amount === "string" ? Number(amount) : amount;
-  if (!Number.isFinite(n)) return "—";
+  if (!Number.isFinite(n)) return " - ";
   try {
     return new Intl.NumberFormat("es-MX", {
       style: "currency",

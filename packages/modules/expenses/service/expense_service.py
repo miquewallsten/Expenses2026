@@ -170,7 +170,7 @@ def create_expense(db: Session, payload: ExpenseCreate) -> Expense:
 
 
 def list_expenses(db: Session, company_id: int | None = None, status: str | None = None) -> list[Expense]:
-    query = db.query(Expense)
+    query = db.query(Expense).filter(Expense.is_deleted == False)
     if company_id is not None:
         query = query.filter(Expense.company_id == company_id)
     if status is not None:
@@ -206,7 +206,7 @@ def list_expenses_paginated(
     limit = min(limit, 100)
     offset = (page - 1) * limit
 
-    query = db.query(Expense).options(
+    query = db.query(Expense).filter(Expense.is_deleted == False).options(
         joinedload(Expense.documents),
         joinedload(Expense.category),
     )
@@ -328,7 +328,9 @@ def update_expense(db: Session, expense_id: int, payload: ExpenseUpdate) -> Expe
 
 
 def delete_expense(db: Session, expense_id: int) -> bool:
-    expense = db.query(Expense).filter(Expense.id == expense_id).first()
+    """Soft-delete an expense. Only draft expenses can be deleted."""
+    from datetime import datetime, timezone
+    expense = db.query(Expense).filter(Expense.id == expense_id, Expense.is_deleted == False).first()
 
     if not expense:
         return False
@@ -336,18 +338,33 @@ def delete_expense(db: Session, expense_id: int) -> bool:
     if expense.status != "draft":
         raise ValueError("Only draft expenses can be deleted")
 
-    db.delete(expense)
+    expense.is_deleted = True
+    expense.deleted_at = datetime.now(tz=timezone.utc)
     db.commit()
     return True
 
 
+def restore_expense(db: Session, expense_id: int) -> Expense | None:
+    """Restore a soft-deleted expense back to draft."""
+    expense = db.query(Expense).filter(Expense.id == expense_id, Expense.is_deleted == True).first()
+
+    if not expense:
+        return None
+
+    expense.is_deleted = False
+    expense.deleted_at = None
+    db.commit()
+    db.refresh(expense)
+    return expense
+
+
 def get_expense_summary(db: Session, company_id: int | None = None) -> dict:
-    query = db.query(Expense)
+    query = db.query(Expense).filter(Expense.is_deleted == False)
 
     if company_id is not None:
         query = query.filter(Expense.company_id == company_id)
 
-    expenses = query.all()
+    expenses = query.filter(Expense.is_deleted == False).all()
 
     return {
         "total": len(expenses),

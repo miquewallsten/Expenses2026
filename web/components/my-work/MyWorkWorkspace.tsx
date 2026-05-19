@@ -20,7 +20,7 @@ function ModuleLoadingFallback() {
 
 // ── Fallback when no module is active ────────────────────────────────────────
 //
-// Shown when `visibleModules` is empty — i.e. the admin hasn't configured
+// Shown when `visibleModules` is empty - i.e. the admin hasn't configured
 // anything that this user's role can use yet. Explains *why* and points the
 // right person at the right place to fix it.
 

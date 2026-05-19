@@ -23,16 +23,14 @@ export type QueuedUpload = {
 export type QueuedUploadInput = Omit<QueuedUpload, "id" | "queuedAt">;
 
 function idbAvailable(): boolean {
-  return typeof window !== "undefined" && "indexedDB" in window;
+  return "indexedDB" in window;
 }
 
 function emitQueueChanged() {
-  if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
-    try {
-      window.dispatchEvent(new Event("opsflow:queue-changed"));
-    } catch {
-      // ignore in environments without Event constructor
-    }
+  try {
+    window.dispatchEvent(new Event("opsflow:queue-changed"));
+  } catch {
+    // ignore in environments without Event constructor
   }
 }
 

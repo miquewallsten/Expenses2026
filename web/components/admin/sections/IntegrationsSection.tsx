@@ -1,25 +1,17 @@
 "use client";
 
 /**
- * Phase 4.3 — Admin integrations panel section.
+ * ERP Connections manager — universal integration configuration.
  *
- * Read-only-first observability + manual "Run now" for the integrations
- * registered for this company. Backed by the existing /integrations API
- * shipped in Phase 4.1+4.3:
- *   GET  /integrations
- *   GET  /integrations/{id}/endpoints
- *   GET  /integrations/{id}/runs?limit=50
- *   POST /integrations/{id}/run  { endpoint, period? }
- *
- * Styling matches /admin/onboarding (zinc-950 chrome, dense rows, no big
- * cards). No create/edit — those endpoints don't exist on the backend yet.
+ * Shows all registered integrations for the company with status,
+ * endpoints, and last sync info. Supports "Run Now" for manual syncs.
+ * The creation flow is currently admin-only (backend endpoint needed).
  */
 
 import {
   PremiumHeader,
   SectionPanel,
   Row,
-  Toggle,
   SectionLabel,
   inputClasses,
   SECTION_ACCENTS,
@@ -35,29 +27,18 @@ import {
   CircleDashed,
   Plug,
   RefreshCw,
+  Plus,
+  ArrowRightLeft,
+  ExternalLink,
 } from "lucide-react";
-import { getAuthHeaders } from "@/lib/session";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { apiCall, apiPost } from "@/lib/api/client";
 
 // ── Types ────────────────────────────────────────────────────────────────────
-
-type IntegrationKind = "erp" | "bank_statement" | "hris" | "generic_webhook";
-type SyncStatus =
-  | "pending"
-  | "running"
-  | "succeeded"
-  | "failed"
-  | "partial";
-type EndpointName =
-  | "export_polizas"
-  | "sync_users"
-  | "sync_cost_centers";
 
 interface Integration {
   id: number;
   company_id: number;
-  kind: IntegrationKind;
+  kind: string;
   vendor: string;
   name: string;
   is_enabled: boolean;
@@ -82,7 +63,7 @@ interface SyncRun {
   integration_id: number;
   endpoint: string;
   direction: "outbound" | "inbound";
-  status: SyncStatus;
+  status: string;
   started_at: string;
   finished_at: string | null;
   items_ok: number;
@@ -91,37 +72,56 @@ interface SyncRun {
   request_id: string | null;
 }
 
-const RUNNABLE_ENDPOINTS: EndpointName[] = [
-  "export_polizas",
-  "sync_users",
-  "sync_cost_centers",
-];
+// ── Vendor info ──────────────────────────────────────────────────────────────
 
-// ── Component ──────────────────────────────────────────────────────────────────
+const VENDOR_INFO: Record<string, { label: string; desc: string }> = {
+  contpaqi: { label: "CONTPAQi", desc: "Exportación de pólizas en formato XML CONTPAQi" },
+  aspel: { label: "Aspel COI", desc: "Exportación batch de pólizas para Aspel COI" },
+  sap: { label: "SAP", desc: "Integración con SAP ERP vía API o archivo" },
+  netsuite: { label: "NetSuite", desc: "Sincronización bidireccional con Oracle NetSuite" },
+  oracle: { label: "Oracle JDE", desc: "Integración con Oracle JD Edwards" },
+  quickbooks: { label: "QuickBooks", desc: "Sincronización con QuickBooks Online" },
+  xero: { label: "Xero", desc: "Conexión vía API con Xero" },
+  custom: { label: "Personalizado", desc: "Webhook genérico o CSV/JSON personalizado" },
+};
+
+const KIND_LABELS: Record<string, string> = {
+  erp: "ERP",
+  bank_statement: "Estado de cuenta",
+  hris: "RRHH",
+  generic_webhook: "Webhook",
+};
+
+const ENDPOINT_LABELS: Record<string, string> = {
+  export_polizas: "Exportar pólizas",
+  export_approved_expenses: "Exportar gastos aprobados",
+  receive_payment_confirmations: "Recibir confirmaciones de pago",
+  sync_users: "Sincronizar usuarios",
+  sync_cost_centers: "Sincronizar centros de costo",
+  sync_accounting_categories: "Sincronizar categorías contables",
+};
+
+// ── Component ────────────────────────────────────────────────────────────────
 
 export default function IntegrationsSection() {
   const t = useTranslations("admin.integrations");
-  const [integrations, setIntegrations] = useState<Integration[] | null>(null);
+  const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [activeId, setActiveId] = useState<number | null>(null);
   const [endpoints, setEndpoints] = useState<IntegrationEndpoint[]>([]);
   const [runs, setRuns] = useState<SyncRun[]>([]);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [running, setRunning] = useState<EndpointName | null>(null);
+  const [running, setRunning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // List load
   const loadList = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const r = await fetch(`${API}/integrations`, {
-        headers: getAuthHeaders(),
-      });
-      if (!r.ok) throw new Error(`${r.status}`);
-      const rows: Integration[] = await r.json();
-      setIntegrations(rows);
-      if (rows.length && activeId == null) setActiveId(rows[0].id);
+      const data = await apiCall(`/integrations`);
+      const list = Array.isArray(data) ? data : [];
+      setIntegrations(list);
+      if (list.length > 0 && activeId == null) setActiveId(list[0].id);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -129,358 +129,212 @@ export default function IntegrationsSection() {
     }
   }, [activeId]);
 
-  useEffect(() => {
-    void loadList();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const loadDetail = useCallback(async (id: number) => {
+    setDetailLoading(true);
+    try {
+      const [eR, rR]: any[] = await Promise.all([
+        apiCall(`/integrations/${id}/endpoints`),
+        apiCall(`/integrations/${id}/runs?limit=20`),
+      ]);
+      setEndpoints(Array.isArray(eR) ? eR : eR?.endpoints ?? []);
+      setRuns(Array.isArray(rR) ? rR : rR?.runs ?? []);
+    } finally {
+      setDetailLoading(false);
+    }
+  }, []);
 
-  // Detail load
-  const loadDetail = useCallback(
-    async (id: number) => {
-      setDetailLoading(true);
-      try {
-        const [eR, rR] = await Promise.all([
-          fetch(`${API}/integrations/${id}/endpoints`, {
-            headers: getAuthHeaders(),
-          }),
-          fetch(`${API}/integrations/${id}/runs?limit=50`, {
-            headers: getAuthHeaders(),
-          }),
-        ]);
-        if (eR.ok) setEndpoints(await eR.json());
-        if (rR.ok) setRuns(await rR.json());
-      } finally {
-        setDetailLoading(false);
-      }
-    },
-    [],
-  );
+  useEffect(() => { loadList(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (activeId != null) loadDetail(activeId); }, [activeId, loadDetail]);
 
-  useEffect(() => {
-    if (activeId != null) void loadDetail(activeId);
-  }, [activeId, loadDetail]);
+  const triggerRun = async (endpoint: string) => {
+    if (activeId == null) return;
+    setRunning(endpoint);
+    try {
+      await apiPost(`/integrations/${activeId}/run`, { endpoint });
+      await loadDetail(activeId);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setRunning(null);
+    }
+  };
 
-  const triggerRun = useCallback(
-    async (endpoint: EndpointName) => {
-      if (activeId == null) return;
-      setRunning(endpoint);
-      try {
-        const r = await fetch(`${API}/integrations/${activeId}/run`, {
-          method: "POST",
-          headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
-          body: JSON.stringify({ endpoint }),
-        });
-        if (!r.ok) {
-          const msg = await r.text();
-          setError(msg || `${r.status}`);
-        } else {
-          await loadDetail(activeId);
-        }
-      } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
-      } finally {
-        setRunning(null);
-      }
-    },
-    [activeId, loadDetail],
-  );
-
-  const active = useMemo(
-    () => integrations?.find((i) => i.id === activeId) ?? null,
-    [integrations, activeId],
-  );
-
-  if (loading && !integrations) {
-    return (
-      <div className="flex items-center justify-center py-20 text-tertiary">
-        <Loader2 className="h-5 w-5 animate-spin" />
-      </div>
-    );
-  }
+  const activeIntegration = integrations.find((i) => i.id === activeId);
+  const vendorInfo = activeIntegration ? VENDOR_INFO[activeIntegration.vendor] : null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      <SectionPanel>
         <PremiumHeader
+          icon={<ArrowRightLeft className="h-4 w-4" />}
+          title={t("listLabel")}
+          subtitle={t("intro")}
           section="integrations"
-          icon={<Plug className="h-4 w-4" />}
-          title={t("title")}
-          subtitle="External System Connections"
           action={
             <button
               type="button"
-              onClick={() => void loadList()}
-              className="flex items-center gap-1.5 rounded-lg border border-default bg-surface-1 px-3 py-1.5 text-[10px] font-semibold text-tertiary transition hover:border-strong hover:text-secondary"
+              onClick={loadList}
+              disabled={loading}
+              className="flex items-center gap-1.5 rounded-md border border-default bg-surface-2 px-3 py-1.5 text-[10px] font-medium text-secondary hover:border-strong disabled:opacity-50"
             >
-              <RefreshCw className="h-3.5 w-3.5" />
+              <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
               {t("refresh")}
             </button>
           }
         />
 
-        {error && (
-          <div className="rounded-lg border border-error bg-rose-500/[0.06] px-3 py-2 text-[10.5px] text-rose-200/85">
-            <AlertTriangle className="mr-2 inline h-3.5 w-3.5 shrink-0" />
-            {error}
-          </div>
-        )}
+        <div className="px-4 pb-4 pt-3">
+          {error && (
+            <div className="mb-3 flex items-center gap-2 rounded-md border border-error/20 bg-error/5 px-3 py-2 text-[10px] text-error">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              {error}
+            </div>
+          )}
 
-        {!integrations || integrations.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-default bg-surface-1 px-6 py-16 text-center">
-            <p className="text-[12px] font-medium text-primary">{t("emptyTitle")}</p>
-            <p className="mt-1 text-[10.5px] text-muted">{t("emptyBody")}</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-12 gap-6 items-start">
-            <aside className="col-span-4 space-y-2">
-              <SectionLabel>{t("listLabel")}</SectionLabel>
-              <ul className="space-y-1.5">
-                {integrations.map((it) => {
-                  const isActive = it.id === activeId;
-                  return (
-                    <li key={it.id}>
-                      <button
-                        type="button"
-                        onClick={() => setActiveId(it.id)}
-                        className={`flex w-full items-center justify-between rounded-xl border p-2.5 text-left text-[11px] transition-all ${
-                          isActive
-                            ? "border-accent/40 bg-accent/10 text-primary shadow-sm"
-                            : "border-transparent bg-surface-1 text-secondary hover:bg-surface-2"
-                        }`}
-                      >
-                        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                          <span className="truncate font-semibold">
-                            {it.name}
-                          </span>
-                          <span className="truncate text-[9.5px] text-muted font-medium uppercase tracking-wide">
-                            {it.vendor} · {t(`kind.${it.kind}`)}
-                          </span>
-                        </span>
-                        <span
-                          className={`ml-2 h-1.5 w-1.5 shrink-0 rounded-full ${
-                            it.is_enabled ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.4)]" : "bg-white/10"
-                          }`}
-                        />
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </aside>
-
-            <section className="col-span-8 rounded-xl border border-default bg-surface-1 overflow-hidden shadow-sm">
-              {active ? (
-                <DetailPane
-                  active={active}
-                  endpoints={endpoints}
-                  runs={runs}
-                  running={running}
-                  detailLoading={detailLoading}
-                  onRun={triggerRun}
-                  t={t}
-                />
-              ) : (
-                <div className="px-5 py-20 text-center text-[11px] text-muted italic">
-                  {t("selectPrompt")}
-                </div>
-              )}
-            </section>
-          </div>
-        )}
-    </div>
-  );
-}
-
-// ── Detail pane ──────────────────────────────────────────────────────────────
-
-function DetailPane({
-  active,
-  endpoints,
-  runs,
-  running,
-  detailLoading,
-  onRun,
-  t,
-}: {
-  active: Integration;
-  endpoints: IntegrationEndpoint[];
-  runs: SyncRun[];
-  running: EndpointName | null;
-  detailLoading: boolean;
-  onRun: (e: EndpointName) => void;
-  t: ReturnType<typeof useTranslations>;
-}) {
-  return (
-    <div className="divide-y divide-white/5">
-      <header className="flex items-center justify-between bg-surface-2/30 px-5 py-4">
-        <div className="space-y-0.5">
-          <h2 className="text-[14px] font-bold text-primary tracking-tight">
-            {active.name}
-          </h2>
-          <div className="flex items-center gap-2 text-[10px] font-medium text-tertiary uppercase tracking-wider">
-            <span>{active.vendor}</span>
-            <span className="text-white/10">•</span>
-            <span>{t(`kind.${active.kind}`)}</span>
-            <span className="text-white/10">•</span>
-            {active.is_enabled ? (
-              <span className="text-emerald-400">{t("enabled")}</span>
-            ) : (
-              <span className="text-warning">{t("disabled")}</span>
-            )}
-          </div>
-        </div>
-      </header>
-
-      <section className="px-5 py-4 space-y-3">
-        <SectionLabel>{t("runNow")}</SectionLabel>
-        <div className="flex flex-wrap gap-2">
-          {RUNNABLE_ENDPOINTS.map((ep) => {
-            const isRunning = running === ep;
-            const disabled = !active.is_enabled || running !== null;
-            return (
-              <button
-                key={ep}
-                type="button"
-                onClick={() => onRun(ep)}
-                disabled={disabled}
-                className="flex items-center gap-2 rounded-lg border border-accent/20 bg-accent/5 px-3 py-1.5 text-[10.5px] font-semibold text-accent transition-all hover:bg-accent/10 disabled:opacity-30"
-              >
-                {isRunning ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Play className="h-3.5 w-3.5 fill-current" />
-                )}
-                {t(`endpoint.${ep}`)}
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="px-5 py-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <SectionLabel>{t("endpointsLabel")}</SectionLabel>
-          {detailLoading && (
-            <Loader2 className="h-3.5 w-3.5 animate-spin text-muted" />
+          {loading ? (
+            <div className="flex items-center justify-center py-8"><Loader2 className="h-4 w-4 animate-spin text-muted" /></div>
+          ) : integrations.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <Plug className="h-8 w-8 text-muted/30 mb-2" />
+              <p className="text-[11px] font-medium text-secondary">{t("emptyTitle")}</p>
+              <p className="text-[9px] text-muted mt-1">{t("emptyBody")}</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {integrations.map((ig) => {
+                const vInfo = VENDOR_INFO[ig.vendor];
+                const isActive = activeId === ig.id;
+                return (
+                  <button
+                    key={ig.id}
+                    type="button"
+                    onClick={() => setActiveId(ig.id)}
+                    className={`flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left transition-all ${
+                      isActive ? "border-accent/30 bg-accent/5" : "border-default hover:border-strong hover:bg-surface-1/50"
+                    }`}
+                  >
+                    <div className={`flex h-8 w-8 items-center justify-center rounded-md ${ig.is_enabled ? "bg-success/10" : "bg-surface-2"}`}>
+                      <ArrowRightLeft className={`h-4 w-4 ${ig.is_enabled ? "text-success" : "text-muted"}`} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-semibold text-primary truncate">{ig.name}</p>
+                      <p className="text-[9px] text-muted">
+                        {vInfo?.label ?? ig.vendor} · {KIND_LABELS[ig.kind] ?? ig.kind}
+                      </p>
+                    </div>
+                    <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest ${
+                      ig.is_enabled ? "border-success/20 bg-success/10 text-success" : "border-default bg-surface-2 text-muted"
+                    }`}>
+                      {ig.is_enabled ? t("enabled") : t("disabled")}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           )}
         </div>
-        {endpoints.length === 0 ? (
-          <p className="py-2 text-[10.5px] text-muted italic">{t("noEndpoints")}</p>
-        ) : (
-          <div className="overflow-hidden rounded-lg border border-white/5 bg-black/10">
-            <ul className="divide-y divide-white/5">
-              {endpoints.map((ep) => (
-                <li
-                  key={ep.id}
-                  className="flex items-center gap-3 px-3 py-2 text-[10.5px]"
-                >
-                  <span className={`h-1.5 w-1.5 rounded-full ${ep.is_enabled ? "bg-emerald-400" : "bg-white/10"}`} />
-                  <span className="flex-1 font-mono font-medium text-secondary">
-                    {ep.endpoint}
-                  </span>
-                  <span className="text-muted text-[10px] font-medium px-2 py-0.5 rounded-md bg-white/5 border border-white/5">
-                    {ep.auth_strategy ?? "—"}
-                  </span>
-                  <span className="hidden md:inline font-mono text-[9.5px] text-muted">
-                    {ep.schedule_cron ?? t("noSchedule")}
-                  </span>
-                  <StatusBadge status={ep.last_status} t={t} />
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </section>
+      </SectionPanel>
 
-      <section className="px-5 py-4 space-y-3">
-        <SectionLabel>{t("runsLabel")}</SectionLabel>
-        {runs.length === 0 ? (
-          <p className="py-2 text-[10.5px] text-muted italic">{t("noRuns")}</p>
-        ) : (
-          <div className="overflow-hidden rounded-lg border border-white/5">
-            <ul className="divide-y divide-white/5">
-              {runs.map((r) => (
-                <li
-                  key={r.id}
-                  className="group flex flex-col gap-1.5 px-3 py-2.5 transition-colors hover:bg-white/[0.02]"
-                >
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="font-mono text-[10px] font-semibold text-secondary tabular-nums">
-                        {fmtDateTime(r.started_at)}
-                      </span>
-                      <span className="truncate font-mono text-[10px] text-tertiary">
-                        {r.endpoint}
-                      </span>
+      {/* ── Integration detail ────────────────────────────────────────────────── */}
+      {activeIntegration && (
+        <SectionPanel>
+          <PremiumHeader
+            icon={<Plug className="h-4 w-4" />}
+            title={activeIntegration.name}
+            subtitle={vendorInfo?.desc ?? `${KIND_LABELS[activeIntegration.kind] ?? activeIntegration.kind} · ${activeIntegration.vendor}`}
+            section="integrations"
+          />
+
+          <div className="px-4 pb-4 pt-3 space-y-4">
+            {/* Vendor info */}
+            <div className="rounded-md border border-default bg-surface-1 px-3 py-2">
+              <div className="flex items-center gap-2 mb-2">
+                <ArrowRightLeft className="h-3.5 w-3.5 text-accent" />
+                <span className="text-[10px] font-semibold text-primary">{vendorInfo?.label ?? activeIntegration.vendor}</span>
+                <span className="text-[9px] text-muted">· {KIND_LABELS[activeIntegration.kind] ?? activeIntegration.kind}</span>
+              </div>
+              <p className="text-[9px] text-muted">{vendorInfo?.desc ?? "Conexión con sistema externo"}</p>
+            </div>
+
+            {/* Endpoints */}
+            <div>
+              <SectionLabel>{t("endpointsLabel")}</SectionLabel>
+              {detailLoading ? (
+                <div className="flex items-center justify-center py-4"><Loader2 className="h-3 w-3 animate-spin text-muted" /></div>
+              ) : endpoints.length === 0 ? (
+                <p className="py-2 text-[10px] text-muted italic">{t("noEndpoints")}</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {endpoints.map((ep) => {
+                    const epLabel = ENDPOINT_LABELS[ep.endpoint] ?? ep.endpoint;
+                    return (
+                      <div key={ep.id} className="flex items-center gap-3 rounded-md border border-default px-3 py-2">
+                        <span className={`h-2 w-2 rounded-full ${ep.is_enabled ? "bg-success" : "bg-muted/40"}`} />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] font-medium text-secondary">{epLabel}</p>
+                          <p className="text-[9px] text-muted font-mono">{ep.endpoint}</p>
+                        </div>
+                        {ep.auth_strategy && (
+                          <span className="text-[8px] text-muted rounded border border-default bg-surface-2 px-1.5 py-0.5">{ep.auth_strategy}</span>
+                        )}
+                        {ep.last_status && (
+                          <span className={`text-[8px] font-bold uppercase rounded-md border px-1.5 py-0.5 ${
+                            ep.last_status === "succeeded" ? "border-success/20 bg-success/10 text-success" :
+                            ep.last_status === "failed" ? "border-error/20 bg-error/10 text-error" :
+                            "border-default bg-surface-2 text-muted"
+                          }`}>
+                            {ep.last_status}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => triggerRun(ep.endpoint)}
+                          disabled={running === ep.endpoint || !activeIntegration.is_enabled}
+                          className="flex items-center gap-1 rounded-md border border-accent/20 bg-accent/5 px-2 py-1 text-[9px] font-semibold text-accent hover:bg-accent/10 disabled:opacity-40"
+                        >
+                          {running === ep.endpoint ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Play className="h-2.5 w-2.5" />}
+                          {t("runNow")}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Run history */}
+            <div>
+              <SectionLabel>{t("runsLabel")}</SectionLabel>
+              {detailLoading ? (
+                <div className="flex items-center justify-center py-4"><Loader2 className="h-3 w-3 animate-spin text-muted" /></div>
+              ) : runs.length === 0 ? (
+                <p className="py-2 text-[10px] text-muted italic">{t("noRuns")}</p>
+              ) : (
+                <div className="space-y-1">
+                  {runs.slice(0, 8).map((r) => (
+                    <div key={r.id} className="flex items-center gap-3 rounded-md border border-default px-3 py-1.5">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className="text-[9px] font-mono text-secondary">{r.endpoint}</span>
+                        <span className="text-[8px] text-muted">{r.direction === "outbound" ? "→" : "←"}</span>
+                        <span className={`text-[8px] font-bold uppercase ${
+                          r.status === "succeeded" ? "text-success" :
+                          r.status === "failed" ? "text-error" :
+                          r.status === "running" ? "text-accent" : "text-muted"
+                        }`}>
+                          {r.status}
+                        </span>
+                      </div>
+                      <span className="text-[8px] text-muted tabular-nums">{new Date(r.started_at).toLocaleString("es-MX", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                      <span className="text-[8px] text-success/80">✓{r.items_ok}</span>
+                      {r.items_failed > 0 && <span className="text-[8px] text-error/80">✗{r.items_failed}</span>}
                     </div>
-                    <RunStatusBadge status={r.status} t={t} />
-                  </div>
-                  <div className="flex items-center gap-3 text-[9px] font-bold uppercase tracking-widest">
-                    <span className="text-muted">{r.direction === "outbound" ? "Export" : "Import"}</span>
-                    <span className="text-white/5">•</span>
-                    <span className="text-emerald-400/80">OK {r.items_ok}</span>
-                    <span className="text-white/5">•</span>
-                    <span className="text-rose-400/80">ERR {r.items_failed}</span>
-                  </div>
-                  {r.error_summary && (
-                    <div className="mt-0.5 rounded-md bg-rose-500/10 border border-rose-500/20 px-2.5 py-1.5 font-mono text-[9px] text-rose-300/90 leading-normal break-all">
-                      {r.error_summary}
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        )}
-      </section>
+        </SectionPanel>
+      )}
     </div>
   );
-}
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function StatusBadge({
-  status,
-  t,
-}: {
-  status: string | null;
-  t: ReturnType<typeof useTranslations>;
-}) {
-  if (!status) return <span className="text-[9.5px] text-muted">—</span>;
-  const colors = {
-    succeeded: "border-emerald-500/20 bg-emerald-500/10 text-emerald-400",
-    failed: "border-rose-500/20 bg-rose-500/10 text-rose-400",
-    partial: "border-amber-500/20 bg-amber-500/10 text-amber-400",
-  };
-  const tone = colors[status as keyof typeof colors] || "border-white/5 bg-white/5 text-muted";
-  return (
-    <span className={`inline-block rounded-md border px-1.5 py-0.5 text-[8.5px] font-bold uppercase tracking-widest ${tone}`}>
-      {t(`status.${status}`)}
-    </span>
-  );
-}
-
-function RunStatusBadge({
-  status,
-  t,
-}: {
-  status: SyncStatus;
-  t: ReturnType<typeof useTranslations>;
-}) {
-  const Icon = status === "succeeded" ? CheckCircle2 : status === "failed" ? XCircle : status === "partial" ? AlertTriangle : CircleDashed;
-  const colors = {
-    succeeded: "text-emerald-400",
-    failed: "text-rose-400",
-    partial: "text-amber-400",
-    pending: "text-muted animate-pulse",
-    running: "text-accent animate-spin-slow",
-  };
-  return (
-    <span className={`flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest ${colors[status]}`}>
-      <Icon className="h-3 w-3" />
-      {t(`status.${status}`)}
-    </span>
-  );
-}
-
-function fmtDateTime(iso: string): string {
-  return iso.replace("T", " ").slice(0, 16);
 }

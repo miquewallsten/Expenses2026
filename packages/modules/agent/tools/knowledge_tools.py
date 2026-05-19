@@ -12,7 +12,7 @@ from ..core.knowledge import get_chunk, hybrid_search_knowledge
 from ..core.registry import REGISTRY, ToolResult, ToolSpec
 
 
-_ALL_PERSONAS = frozenset(("admin", "employee", "procurement"))
+_ALL_PERSONAS = frozenset(("admin", "accounting"))
 
 
 # ── how_to ──────────────────────────────────────────────────────────────────

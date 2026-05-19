@@ -129,10 +129,10 @@ def _apply_update_archive_config(ctx: AgentContext, args: dict[str, Any]) -> dic
 
 REGISTRY.register(ToolSpec(name="read_archive_config", description="Lee la configuración de archivado.",
                            category="read", input_schema=Empty, handler=_read_archive_config,
-                           personas=frozenset({"admin"})))
+                           personas=frozenset({"admin"}), required_module="archive"))
 REGISTRY.register(ToolSpec(name="update_archive_config", description="Actualiza la configuración de archivado.",
                            category="config", input_schema=ArchivePatch, handler=_handle_update_archive_config,
-                           personas=frozenset({"admin"}), destructive=True, requires_confirmation=True))
+                           personas=frozenset({"admin"}), destructive=True, requires_confirmation=True, required_module="archive"))
 register_applier("update_archive_config", _apply_update_archive_config)
 
 

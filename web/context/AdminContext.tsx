@@ -4,18 +4,21 @@ import { createContext, useContext, useState, useCallback, type ReactNode } from
 
 export type AdminSection =
   | "overview"
+  | "operations"
   | "onboarding"
   | "company-setup"
   | "expense-policy"
+  | "addons"
   | "approval-workflow"
   | "users-roles"
-  | "accounting-setup"
   | "integrations"
+  | "accounting-setup"
+  | "report-builder"
   | "platform-api"
-  | "export"
+  | "notifications"
   | "audit-log"
   | "cfdi-watcher"
-  | "notifications";
+  | "export"
 
 interface AdminContextValue {
   activeSection: AdminSection;

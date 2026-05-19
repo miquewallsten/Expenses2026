@@ -79,7 +79,7 @@ REGISTRY.register(ToolSpec(
     category="entity",
     input_schema=_CreateExpenseArgs,
     handler=_handle_create_expense,
-    personas=frozenset({"admin", "employee"}),
+    personas=frozenset({"accounting", "admin"}),
 ))
 
 
@@ -124,7 +124,7 @@ REGISTRY.register(ToolSpec(
     category="read",
     input_schema=_PendingArgs,
     handler=_handle_list_pending,
-    personas=frozenset({"admin", "manager", "finance_manager"}),
+    personas=frozenset({"accounting", "admin"}),
 ))
 
 
@@ -186,7 +186,7 @@ REGISTRY.register(ToolSpec(
     category="entity",
     input_schema=_ApproveArgs,
     handler=_handle_approve,
-    personas=frozenset({"admin", "manager", "finance_manager"}),
+    personas=frozenset({"accounting", "admin"}),
     destructive=True,
     requires_confirmation=True,
 ))
@@ -252,7 +252,7 @@ REGISTRY.register(ToolSpec(
     category="entity",
     input_schema=_RejectArgs,
     handler=_handle_reject,
-    personas=frozenset({"admin", "manager", "finance_manager"}),
+    personas=frozenset({"accounting", "admin"}),
     destructive=True,
     requires_confirmation=True,
 ))
@@ -305,5 +305,5 @@ REGISTRY.register(ToolSpec(
     category="read",
     input_schema=_ReimbursementArgs,
     handler=_handle_reimbursement_status,
-    personas=frozenset({"admin", "employee", "manager", "finance_manager"}),
+    personas=frozenset({"accounting", "admin"}),
 ))

@@ -28,8 +28,8 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useMemo,
   useRef,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
@@ -46,6 +46,7 @@ import type {
   SelectedWorkItem,
 } from "@/types";
 import { EMPTY_SELECTED_WORK_ITEM } from "@/types";
+import { usePortalConfigContext } from "@/context/PortalConfigContext";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -134,56 +135,40 @@ const MyWorkContext = createContext<MyWorkContextValue | null>(null);
 export function MyWorkProvider({ children, initialModuleId }: { children: ReactNode; initialModuleId?: string | null }) {
   const user = useUserContext();
 
-  const [portalConfig, setPortalConfig] = useState<PortalConfig | null>(null);
-  const [configLoading, setConfigLoading] = useState(true);
+  // Config comes from PortalConfigContext (parent provider)
+  const portalCfg = usePortalConfigContext();
+  const portalConfig = portalCfg.effectiveConfig;
+  const configLoading = portalCfg.configLoading;
   const [activeModuleId, setActiveModuleId] = useState<string | null>(null);
   const [selectedItem, setSelectedItemState] = useState<SelectedWorkItem>(EMPTY_SELECTED_WORK_ITEM);
 
   const abortRef = useRef<AbortController | null>(null);
 
-  // ── Fetch portal config ─────────────────────────────────────────────────
-  //
-  // Re-fetches whenever the resolved companyId changes (e.g. after login or
-  // impersonation switch).  While user.loading is still true, companyId is
-  // null and we skip the fetch to avoid a redundant /1 call.
-
-  useEffect(() => {
-    if (user.loading) return;
-
-    const cid = user.companyId ?? 1;
-
-    abortRef.current?.abort();
-    const ac = new AbortController();
-    abortRef.current = ac;
-
-    setConfigLoading(true);
-
-    fetch(`${API}/admin/portal-config/${cid}`, {
-      signal: ac.signal,
-      headers: user.userIdStr ? { "X-User-Id": user.userIdStr } : {},
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .catch((err) => {
-        if ((err as { name?: string }).name === "AbortError") return "aborted";
-        return null;
-      })
-      .then((cfg) => {
-        if (cfg === "aborted") return;
-        setPortalConfig(cfg ?? null);
-        setConfigLoading(false);
-      });
-
-    return () => { ac.abort(); };
-  }, [user.loading, user.companyId, user.userIdStr]);
 
   // ── Build ModuleVisibilityContext from live data ─────────────────────────
+  // Merge portal-derived data with the access profile's enabled_modules.
+  // The access profile is the freshest source (refreshes every 60s/on focus),
+  // while portalConfig is loaded once on mount.
+
+  const accessDerived = useMemo(() => {
+    const base = portalConfig?.derived ?? null;
+    // If UserContext provides enabledModules from /access profile, prefer those
+    // (they're auto-corrected against module enablement)
+    if (user.enabledModules && user.enabledModules.length > 0) {
+      return {
+        ...(base ?? { allocation_dimensions: [], allow_split_allocations: false, tickets_allowed: false, international_expenses_allowed: false, xml_required_mode: "optional", pdf_pair_required_for_cfdi: false, allow_document_free_expenses: false, manager_flow_enabled: false, accounting_flow_enabled: false, workflow_mode: "manual" }),
+        enabled_modules: user.enabledModules,
+      };
+    }
+    return base;
+  }, [portalConfig, user.enabledModules]);
 
   const visibilityCtx = useMemo<ModuleVisibilityContext>(() => ({
     role: user.role,
     permissionKeys: user.permissionKeys,
-    derived: portalConfig?.derived ?? null,
+    derived: accessDerived,
     capabilities: user.capabilities,
-  }), [user.role, user.permissionKeys, user.capabilities, portalConfig]);
+  }), [user.role, user.permissionKeys, user.capabilities, accessDerived]);
 
   // ── Compute visible modules ──────────────────────────────────────────────
 

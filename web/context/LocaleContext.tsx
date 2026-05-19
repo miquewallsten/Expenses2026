@@ -31,6 +31,9 @@ const LocaleContext = createContext<LocaleContextValue>({
 });
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
+  // Start with "es" to match server-rendered lang="es" on <html>.
+  // Reading localStorage in initial state causes hydration mismatch,
+  // so we defer to useEffect (runs after hydration).
   const [locale, setLocaleState] = useState<Locale>("es");
 
   useEffect(() => {

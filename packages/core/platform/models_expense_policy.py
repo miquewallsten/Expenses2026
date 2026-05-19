@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Integer, String, func
+from sqlalchemy import Boolean, DateTime, Integer, Numeric, String, func
+from decimal import Decimal
 from sqlalchemy.orm import Mapped, mapped_column
 
 from apps.api.db import Base
@@ -59,6 +60,20 @@ class CompanyExpensePolicy(Base):
     # still block on missing XML.  Intended use: set xml_required_mode="never",
     # require_proof=False, require_justification=False.
     allow_document_free_expenses: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    # Budget enforcement
+    monthly_budget_per_employee: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    budget_enforcement: Mapped[str] = mapped_column(
+        String(20), default="none", server_default="none", nullable=False,
+        # "none" — no budget enforcement
+        # "warn" — warn when over budget but allow submission
+        # "block" — block expenses that exceed budget
+    )
+
+    # Pre-paid wallet settings
+    wallet_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
+    wallet_auto_deduct: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
+    wallet_currency: Mapped[str] = mapped_column(String(3), default="MXN", server_default="MXN", nullable=False)
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)

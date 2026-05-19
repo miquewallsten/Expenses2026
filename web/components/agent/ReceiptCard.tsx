@@ -10,7 +10,7 @@ interface Props {
   companyId: number;
   receipt:   AgentReceipt;
   onChanged?: (updated: AgentReceipt) => void;
-  /** Fires once after a successful confirm — host can refetch affected data. */
+  /** Fires once after a successful confirm - host can refetch affected data. */
   onConfirmed?: (tool: string) => void;
 }
 
@@ -171,14 +171,14 @@ function DiffBlock({ preview }: { preview: Record<string, unknown> }) {
     return <p className="text-xs text-muted">{t("noPreview")}</p>;
   }
   return (
-    <pre className="max-h-48 overflow-auto rounded bg-black/40 p-2 text-[11px] leading-relaxed text-tertiary">
+    <pre className="max-h-48 overflow-auto rounded bg-surface-3 p-2 text-[11px] leading-relaxed text-tertiary">
       {JSON.stringify(cleaned, null, 2)}
     </pre>
   );
 }
 
 function renderVal(v: unknown): string {
-  if (v === null || v === undefined) return "—";
+  if (v === null || v === undefined) return " - ";
   if (typeof v === "boolean") return v ? "true" : "false";
   if (typeof v === "object") return JSON.stringify(v);
   return String(v);

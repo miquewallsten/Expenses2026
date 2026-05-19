@@ -52,6 +52,9 @@ export function Tab({ value, children }: { value: string; children: ReactNode })
     <button
       role="tab"
       aria-selected={active}
+      aria-controls={`panel-${value}`}
+      id={`tab-${value}`}
+      tabIndex={active ? 0 : -1}
       onClick={() => ctx.onChange(value)}
       className={cn(
         "px-3 h-8 text-[11px] font-medium uppercase tracking-widest",
@@ -84,5 +87,5 @@ export function TabPanel({
   value: string;
   children: ReactNode;
 }) {
-  return <div role="tabpanel">{children}</div>;
+  return <div role="tabpanel" id={`panel-${_value}`} aria-labelledby={`tab-${_value}`}>{children}</div>;
 }

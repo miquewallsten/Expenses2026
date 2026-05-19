@@ -36,13 +36,13 @@ function getConfig(status: string) {
 
 // ── Components ────────────────────────────────────────────────────────────────
 
-/** Tiny colored dot — used in compact list rows */
+/** Tiny colored dot - used in compact list rows */
 export function StatusDot({ status, className = "" }: { status: string; className?: string }) {
   const cfg = getConfig(status);
   return <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${cfg.dot} ${className}`} />;
 }
 
-/** Inline text in status color — used in list row secondary lines */
+/** Inline text in status color - used in list row secondary lines */
 export function StatusText({ status, children, className = "" }: { status: string; children?: React.ReactNode; className?: string }) {
   const cfg = getConfig(status);
   return (
@@ -52,7 +52,7 @@ export function StatusText({ status, children, className = "" }: { status: strin
   );
 }
 
-/** Pill badge — used in queue rows and card headers */
+/** Pill badge - used in queue rows and card headers */
 export function StatusBadge({
   status,
   label,

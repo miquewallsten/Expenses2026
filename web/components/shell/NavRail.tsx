@@ -22,11 +22,11 @@ interface NavRailProps {
   onToggle: () => void;
   items: NavRailItem[];
   hideToggle?: boolean;
-  /** Content rendered below nav items with a divider — used in merged-nav mode. */
+  /** Content rendered below nav items with a divider - used in merged-nav mode. */
   footerSlot?: ReactNode;
   /** When true, fills parent width instead of using fixed 72/260px. Used in merged-nav mode. */
   fullWidth?: boolean;
-  /** Company logo URL — displayed in the header bar when expanded. */
+  /** Company logo URL - displayed in the header bar when expanded. */
   logoUrl?: string | null;
 }
 
@@ -73,13 +73,14 @@ export default function NavRail({ collapsed, onToggle, items, hideToggle = false
 
   return (
     <nav
+      aria-label="Main navigation"
       className={`flex shrink-0 flex-col overflow-hidden bg-surface-1 ${
         fullWidth
           ? "w-full"
           : `border-r border-subtle transition-[width] duration-200 ${collapsed ? "w-14" : "w-52"}`
       }`}
     >
-      {/* Header bar — hidden when fullWidth and no portal items */}
+      {/* Header bar - hidden when fullWidth and no portal items */}
       {!(fullWidth && groups.length === 0) && (
       <div className="flex h-9 shrink-0 items-center gap-2 border-b border-subtle px-2">
         {!collapsed && (
@@ -143,6 +144,7 @@ export default function NavRail({ collapsed, onToggle, items, hideToggle = false
                         <Link
                           href={item.href}
                           title={collapsed ? itemLabel(item) : undefined}
+                          aria-current={item.active ? "page" : undefined}
                           className={`group relative flex items-center gap-2.5 rounded py-1.5 text-xs font-medium leading-none transition-colors ${
                             collapsed ? "justify-center px-2" : "px-2.5"
                           } ${
@@ -183,7 +185,7 @@ export default function NavRail({ collapsed, onToggle, items, hideToggle = false
         )}
       </div>
 
-      {/* Help footer — hidden when fullWidth and no portal items */}
+      {/* Help footer - hidden when fullWidth and no portal items */}
       {!(fullWidth && groups.length === 0) && (
       <div className={`shrink-0 border-t border-subtle py-2 ${collapsed ? "px-2" : "px-2.5"}`}>
         <Link

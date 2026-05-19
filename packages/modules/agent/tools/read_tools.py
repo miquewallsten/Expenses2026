@@ -79,7 +79,7 @@ REGISTRY.register(ToolSpec(
     category="read",
     input_schema=Empty,
     handler=_read_expense_policy,
-    personas=frozenset({"admin", "employee"}),
+    personas=frozenset({"admin"}),
 ))
 
 
@@ -152,7 +152,7 @@ REGISTRY.register(ToolSpec(
     category="read",
     input_schema=ListCategoriesArgs,
     handler=_list_accounting_categories,
-    personas=frozenset({"admin", "employee"}),
+    personas=frozenset({"admin"}),
 ))
 
 
@@ -179,7 +179,7 @@ REGISTRY.register(ToolSpec(
     category="read",
     input_schema=Empty,
     handler=_expense_counts,
-    personas=frozenset({"admin", "employee"}),
+    personas=frozenset({"admin"}),
 ))
 
 

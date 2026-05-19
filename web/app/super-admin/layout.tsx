@@ -2,44 +2,48 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import Link from "next/link";
 import { getSuperAdminSession, clearSuperAdminSession } from "@/lib/super-admin-session";
+import { useTranslations } from "next-intl";
 import {
-  LayoutDashboard, Building2, Users, Cpu, Activity,
-  Shield, Lightbulb, LogOut, ChevronRight
+  LayoutDashboard, Network, Building2, Users, Settings2,
+  LogOut, KeyRound, Shield, LayoutGrid,
 } from "lucide-react";
+import NavRail, { type NavRailItem } from "@/components/shell/NavRail";
+import ThemeToggle from "@/components/shell/ThemeToggle";
 
-const NAV_ITEMS = [
-  { href: "/super-admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/super-admin/tenants", label: "Tenants", icon: Building2 },
-  { href: "/super-admin/users", label: "Users", icon: Users },
-  { href: "/super-admin/llm-config", label: "LLM Config", icon: Cpu },
-  { href: "/super-admin/agents", label: "Agent Definitions", icon: Activity },
-  { href: "/super-admin/ai-policy", label: "AI Policies", icon: Shield },
-  { href: "/super-admin/insights", label: "Insights", icon: Lightbulb },
+const NAV_ITEMS: { href: string; key: string; group: string }[] = [
+  { href: "/super-admin/dashboard", key: "dashboard", group: "Operations" },
+  { href: "/super-admin/agent-center", key: "agentCenter", group: "Operations" },
+  { href: "/super-admin/llm-config", key: "llmConfig", group: "Operations" },
+  { href: "/super-admin/tenants", key: "tenants", group: "Administration" },
+  { href: "/super-admin/users", key: "users", group: "Administration" },
+  { href: "/super-admin/ai-policy", key: "aiPolicy", group: "Administration" },
+  { href: "/super-admin/settings", key: "settings", group: "Administration" },
 ];
 
-/**
- * Super Admin layout — guards every /super-admin/* route.
- *
- * Uses independent authentication stored in superAdminSession.
- * Redirects to /super-admin/login if not authenticated.
- *
- * Cross-tenant scope: AI engine governance, kNN category memory,
- * cross-tenant agent usage rollups, daily insight digest.
- */
+const ICON_MAP: Record<string, typeof LayoutDashboard> = {
+  dashboard: LayoutDashboard,
+  agentCenter: Network,
+  llmConfig: KeyRound,
+  tenants: Building2,
+  users: Users,
+  aiPolicy: Shield,
+  settings: Settings2,
+};
+
 export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const t = useTranslations("superAdmin");
+  const tn = useTranslations("nav");
   const [ok, setOk] = useState<boolean | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
-    // Don't redirect on the login page itself
     if (pathname === "/super-admin/login") {
       setOk(true);
       return;
     }
-
     const session = getSuperAdminSession();
     if (!session?.token) {
       router.replace("/super-admin/login");
@@ -55,58 +59,72 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
 
   if (ok !== true) {
     return (
-      <div className="flex h-screen items-center justify-center bg-surface-0 text-[11px] text-tertiary">
-        Verifying access…
+      <div className="flex h-screen items-center justify-center bg-surface-0">
+        <div className="flex items-center gap-3 text-[11px] text-secondary">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-strong border-t-accent" />
+          {t("verifyingAccess")}
+        </div>
       </div>
     );
   }
 
   const isLoginPage = pathname === "/super-admin/login";
 
-  return (
-    <div className="flex h-screen flex-col bg-surface-0">
-      {!isLoginPage && (
-        <>
-          {/* Top bar */}
-          <div className="flex h-8 shrink-0 items-center justify-between border-b border-rose-500/25 bg-rose-950/30 px-3">
-            <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-rose-300/80">
-              <span className="font-bold">Super Admin</span>
-              <span className="text-error/40">·</span>
-              <span className="text-rose-300/55">Cross-tenant</span>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-1 rounded px-2 py-1 text-[10px] text-rose-300/70 hover:bg-rose-500/10 hover:text-rose-200"
-            >
-              <LogOut className="h-3 w-3" />
-              Logout
-            </button>
-          </div>
+  const navItems: NavRailItem[] = NAV_ITEMS.map((item) => {
+    const label = tn(item.key) || item.key;
+    return {
+      key: item.key,
+      label,
+      href: item.href,
+      active: pathname === item.href || pathname.startsWith(item.href + "/"),
+      group: item.group,
+    };
+  });
 
-          {/* Navigation */}
-          <nav className="flex h-9 shrink-0 items-center gap-1 border-b border-subtle bg-surface-1 px-3">
-            {NAV_ITEMS.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-1.5 rounded px-2 py-1.5 text-[10px] font-medium transition-colors ${
-                    isActive
-                      ? "bg-accent-muted text-accent"
-                      : "text-muted hover:bg-surface-2 hover:text-secondary"
-                  }`}
-                >
-                  <Icon className="h-3 w-3" />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-        </>
+  const footerSlot = (
+    <div className="space-y-1 px-2 pb-2">
+      <button
+        onClick={handleLogout}
+        className="flex w-full items-center gap-2.5 rounded px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-surface-2 hover:text-secondary"
+      >
+        <LogOut className="h-3.5 w-3.5 shrink-0" />
+        {!collapsed && <span>{t("logout")}</span>}
+      </button>
+    </div>
+  );
+
+  return (
+    <div className="flex h-screen bg-surface-0">
+      {!isLoginPage && (
+        <NavRail
+          collapsed={collapsed}
+          onToggle={() => setCollapsed((c) => !c)}
+          items={navItems}
+          footerSlot={footerSlot}
+          logoUrl={null}
+        />
       )}
-      <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        {!isLoginPage && (
+          <header className="flex h-10 shrink-0 items-center gap-2 border-b border-subtle bg-surface-1 px-3">
+            <div className="flex items-center gap-2">
+              <div className="flex h-6 w-6 items-center justify-center rounded bg-accent/15">
+                <LayoutGrid className="h-3.5 w-3.5 text-accent" />
+              </div>
+              <span className="text-[11px] font-semibold text-primary">{tn("superAdmin")}</span>
+            </div>
+            <div className="h-3 w-px bg-surface-2" />
+            <span className="text-[9px] font-medium uppercase tracking-[0.06em] text-tertiary">
+              {t("platformAdmin")}
+            </span>
+            <div className="flex-1" />
+            <ThemeToggle />
+          </header>
+        )}
+        <main className="flex-1 overflow-auto bg-surface-0">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

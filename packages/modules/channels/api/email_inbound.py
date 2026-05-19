@@ -247,19 +247,41 @@ def _process_email(parsed: dict[str, Any], db: Session) -> None:
         try:
             from packages.modules.channels.service.inbound_drafts import (
                 try_create_draft_from_email,
+                try_create_draft_from_receipt,
             )
 
-            try_create_draft_from_email(db, norm)
+            draft = try_create_draft_from_email(db, norm)
+            if not draft:
+                # No CFDI found — try receipt extraction (PDF/image)
+                try_create_draft_from_receipt(db, norm)
         except Exception:
-            log.exception("inbound CFDI draft creation crashed")
+            log.exception("inbound draft creation crashed")
+
+        # Log the inbound message to the audit trail
+        try:
+            from packages.modules.channels.models import ChannelMessage
+            msg_log = ChannelMessage(
+                company_id=company_id,
+                channel="email",
+                direction="inbound",
+                sender_ref=from_addr,
+                thread_id=message_id or from_addr,
+                body=body[:4000] if body else None,
+                intent="expense_submission" if norm.attachments else "general_chat",
+                status="received",
+            )
+            db.add(msg_log)
+            db.commit()
+        except Exception:
+            log.exception("Failed to log inbound email message")
 
         # Dispatch to autonomous agent
         CHANNEL_DISPATCHER.dispatch(
             db=db,
             channel_type="email",
-            user=norm.sender_ref, # Using email as user_id for now (engine handles it)
+            message=norm.body or "",
+            user_id=norm.sender_ref,  # email string — resolved to User inside dispatcher
             company_id=company_id,
-            message=norm.body,
             confidence=1.0,
         )
 

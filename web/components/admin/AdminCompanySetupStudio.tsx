@@ -190,10 +190,10 @@ function LegalEntityForm({
   };
 
   const fieldClass =
-    "w-full rounded-lg border border-white/10 bg-surface-2 px-3 py-2 text-[11px] text-primary placeholder:text-muted outline-none transition-all focus:border-accent/40 focus:bg-surface-3 hover:border-white/20";
+    "w-full rounded-lg border border-default bg-surface-2 px-3 py-2 text-[11px] text-primary placeholder:text-muted outline-none transition-all focus:border-accent/40 focus:bg-surface-3 hover:border-strong";
 
   return (
-    <div className="space-y-4 rounded-xl border border-white/10 bg-surface-1 p-4">
+    <div className="space-y-3 rounded-md border border-default bg-surface-1 p-3">
       <div className="flex items-center gap-2">
         <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-accent/20">
           <Building2 className="h-3 w-3 text-accent" />
@@ -223,14 +223,14 @@ function LegalEntityForm({
         <div>
           <p className="mb-1 text-[10px] font-medium text-secondary">{t("countryLabel")}</p>
           <select className={fieldClass} value={form.country_code ?? ""} onChange={(e) => set("country_code", e.target.value)}>
-            <option value="">—</option>
+            <option value=""> - </option>
             {COUNTRY_OPTIONS_T.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
         <div>
           <p className="mb-1 text-[10px] font-medium text-secondary">{t("currencyLabel")}</p>
           <select className={fieldClass} value={form.base_currency ?? ""} onChange={(e) => set("base_currency", e.target.value)}>
-            <option value="">—</option>
+            <option value=""> - </option>
             {CURRENCY_OPTIONS_T.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
@@ -272,7 +272,7 @@ function LegalEntityForm({
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2">
+        <div className="flex items-center gap-2 rounded-md border border-error/20 bg-error/5 px-3 py-2">
           <AlertCircle className="h-3.5 w-3.5 text-error" />
           <p className="text-[10px] text-error font-medium">{error}</p>
         </div>
@@ -283,7 +283,7 @@ function LegalEntityForm({
           type="button"
           onClick={save}
           disabled={saving}
-          className="flex items-center gap-2 rounded-lg bg-accent/80 px-4 py-2 text-[11px] font-semibold text-white transition-all hover:bg-accent disabled:opacity-40"
+          className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-[11px] font-semibold text-white shadow-sm transition-all hover:bg-accent-hover disabled:opacity-40"
         >
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
           {isEdit ? t("update") : t("create")}
@@ -291,7 +291,7 @@ function LegalEntityForm({
         <button
           type="button"
           onClick={onCancel}
-          className="flex items-center gap-2 rounded-lg border border-white/10 bg-surface-2 px-3 py-2 text-[11px] font-medium text-secondary transition-colors hover:bg-surface-3 hover:text-primary"
+          className="flex items-center gap-2 rounded-lg border border-default bg-surface-2 px-3 py-2 text-[11px] font-medium text-secondary transition-colors hover:bg-surface-3 hover:text-primary"
         >
           <X className="h-3.5 w-3.5" /> {tc("cancel")}
         </button>
@@ -527,7 +527,7 @@ export default function AdminCompanySetupStudio({
             type="button"
             onClick={save}
             disabled={!dirty || saving}
-            className="flex items-center gap-2 rounded-lg bg-emerald-500/80 px-4 py-1.5 text-[11px] font-semibold text-white transition-all hover:bg-emerald-500 disabled:opacity-40"
+            className="flex items-center gap-2 rounded-lg bg-accent px-4 py-1.5 text-[11px] font-semibold text-white shadow-sm transition-all hover:bg-accent-hover disabled:opacity-40"
           >
             {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
             {tc("save")}
@@ -543,13 +543,13 @@ export default function AdminCompanySetupStudio({
       />
 
       {error && (
-        <div className="mb-3 flex items-start gap-2 rounded border border-error bg-rose-500/[0.06] px-3 py-2 text-[10.5px] text-rose-200/85">
+        <div className="mb-3 flex items-start gap-2 rounded border border-error/20 bg-error/5 px-3 py-2 text-error/85">
           <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
           <span className="break-all">{error}</span>
         </div>
       )}
 
-      {/* A — Company Identity */}
+      {/* A - Company Identity */}
       <div>
         <PatternSectionLabel>{t("sectionA")}</PatternSectionLabel>
         <SectionPanel>
@@ -602,7 +602,7 @@ export default function AdminCompanySetupStudio({
               onChange={(e) => set("country_code", e.target.value)}
               className={`${inputClasses.select} w-52`}
             >
-              <option value="">—</option>
+              <option value=""> - </option>
               {COUNTRY_OPTIONS_T.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </Row>
@@ -613,7 +613,7 @@ export default function AdminCompanySetupStudio({
               onChange={(e) => set("base_currency", e.target.value)}
               className={`${inputClasses.select} w-52`}
             >
-              <option value="">—</option>
+              <option value=""> - </option>
               {CURRENCY_OPTIONS_T.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </Row>
@@ -624,7 +624,7 @@ export default function AdminCompanySetupStudio({
               onChange={(e) => set("timezone", e.target.value)}
               className={`${inputClasses.select} w-52`}
             >
-              <option value="">—</option>
+              <option value=""> - </option>
               {TIMEZONE_OPTIONS_T.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </Row>
@@ -635,7 +635,7 @@ export default function AdminCompanySetupStudio({
               onChange={(e) => set("language_code", e.target.value)}
               className={`${inputClasses.select} w-52`}
             >
-              <option value="">—</option>
+              <option value=""> - </option>
               {LANGUAGE_OPTIONS_T.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </Row>
@@ -646,14 +646,14 @@ export default function AdminCompanySetupStudio({
               onChange={(e) => set("industry", e.target.value)}
               className={`${inputClasses.select} w-52`}
             >
-              <option value="">—</option>
+              <option value=""> - </option>
               {INDUSTRY_OPTIONS_T.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </Row>
         </SectionPanel>
       </div>
 
-      {/* B — Organization Model */}
+      {/* B - Organization Model */}
       <div>
         <PatternSectionLabel>{t("sectionB")}</PatternSectionLabel>
         <SectionPanel>
@@ -663,7 +663,7 @@ export default function AdminCompanySetupStudio({
               onChange={(e) => set("employee_count_range", e.target.value)}
               className={`${inputClasses.select} w-52`}
             >
-              <option value="">—</option>
+              <option value=""> - </option>
               {EMPLOYEE_RANGE_OPTIONS_T.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </Row>
@@ -673,7 +673,7 @@ export default function AdminCompanySetupStudio({
         </SectionPanel>
       </div>
 
-      {/* C — Allocation & Operations */}
+      {/* C - Allocation & Operations */}
       <div>
         <PatternSectionLabel>{t("sectionC")}</PatternSectionLabel>
         <SectionPanel>
@@ -692,7 +692,7 @@ export default function AdminCompanySetupStudio({
         </SectionPanel>
       </div>
 
-      {/* D — Module Activation */}
+      {/* D - Module Activation */}
       <div>
         <PatternSectionLabel>{t("sectionD")}</PatternSectionLabel>
         <SectionPanel>
@@ -710,7 +710,7 @@ export default function AdminCompanySetupStudio({
         </SectionPanel>
       </div>
 
-      {/* E — Legal Entities */}
+      {/* E - Legal Entities */}
       <div>
         <PatternSectionLabel>{t("sectionE")}</PatternSectionLabel>
 
@@ -730,12 +730,12 @@ export default function AdminCompanySetupStudio({
                   <p className="text-[11px] font-medium text-primary">{e.entity_name}</p>
                   {e.entity_code && <p className="font-mono text-[9px] text-muted">{e.entity_code}</p>}
                 </div>
-                <span className="font-mono text-[10px] text-secondary">{e.rfc || "—"}</span>
+                <span className="font-mono text-[10px] text-secondary">{e.rfc || " - "}</span>
                 <span className={`text-[10px] ${e.is_reimbursement_entity ? "text-success font-medium" : "text-muted"}`}>
-                  {e.is_reimbursement_entity ? "✓" : "—"}
+                  {e.is_reimbursement_entity ? "✓" : " - "}
                 </span>
                 <span className={`text-[10px] ${e.is_invoice_receiver_entity ? "text-success font-medium" : "text-muted"}`}>
-                  {e.is_invoice_receiver_entity ? "✓" : "—"}
+                  {e.is_invoice_receiver_entity ? "✓" : " - "}
                 </span>
                 <div className="flex items-center gap-2 justify-end">
                   <button
@@ -749,7 +749,7 @@ export default function AdminCompanySetupStudio({
                     type="button"
                     onClick={() => handleDeleteEntity(e.id)}
                     disabled={deletingId === e.id}
-                    className="rounded p-1 text-muted transition-colors hover:bg-error-muted hover:text-error disabled:opacity-40"
+                    className="rounded p-1 text-muted transition-colors hover:bg-error/10 hover:text-error disabled:opacity-40"
                   >
                     {deletingId === e.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                   </button>

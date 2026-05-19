@@ -1,5 +1,4 @@
-"""
-Admin API for channel configuration and message monitoring.
+"""Admin API for channel configuration and message monitoring.
 
 Endpoints
 ---------
@@ -8,12 +7,15 @@ GET  /admin/channels/settings/{company_id}/{channel} — get one channel config
 PUT  /admin/channels/settings/{company_id}/{channel} — upsert channel config
 GET  /admin/channels/messages/{company_id}           — paginated message log
 POST /admin/channels/test/{company_id}/{channel}     — send a test message
+POST /admin/channels/test-connection/{company_id}/{channel} — verify credentials
 """
 
 from __future__ import annotations
 
 import secrets
 from typing import Literal
+
+from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -131,11 +133,9 @@ def send_test_message(
         .first()
     )
     if not settings or not settings.is_enabled:
-        raise HTTPException(status_code=400, detail="Channel is not enabled")
+        raise HTTPException(status_code=400, detail="Channel not configured or not enabled")
 
     if channel == "whatsapp":
-        if not settings.wa_phone_number_id or not settings.wa_access_token:
-            raise HTTPException(status_code=400, detail="WhatsApp credentials not configured")
         from packages.modules.channels.service.whatsapp_client import send_text
         try:
             result = send_text(
@@ -168,6 +168,67 @@ def send_test_message(
             return {"ok": True}
         except Exception as exc:
             raise HTTPException(status_code=502, detail=str(exc))
+
+    raise HTTPException(status_code=400, detail="Unknown channel")
+
+
+@router.post("/test-connection/{company_id}/{channel}")
+def test_channel_connection(
+    company_id: int,
+    channel: Literal["whatsapp", "email"],
+    payload: Dict[str, Any],
+    db: Session = Depends(get_db),
+) -> dict:
+    """Test connection/credentials for a channel.
+
+    For WhatsApp: verifies credentials by calling the Meta Graph API.
+    For Email: tests SMTP or IMAP connection with provided credentials (on-the-fly).
+    """
+    if channel == "whatsapp":
+        settings = (
+            db.query(ChannelSettings)
+            .filter(ChannelSettings.company_id == company_id, ChannelSettings.channel == "whatsapp")
+            .first()
+        )
+        if not settings:
+            return {"ok": False, "error": "WhatsApp not configured for this company"}
+        if not settings.wa_phone_number_id or not settings.wa_access_token:
+            return {"ok": False, "error": "WhatsApp credentials incomplete (phone_number_id or access_token missing)"}
+
+        from packages.modules.channels.service.whatsapp_client import verify_credentials
+        return verify_credentials(settings.wa_phone_number_id, settings.wa_access_token)
+
+    elif channel == "email":
+        import asyncio
+        from packages.core.platform.service.mail_tester import test_smtp_connection, test_imap_connection
+
+        test_type = payload.get("type", "smtp")
+        config = payload.get("config", {})
+
+        # Fix: run async function properly in a sync FastAPI handler
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop and loop.is_running():
+            # We're inside an already-running event loop (ASGI) — use a thread
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                if test_type == "smtp":
+                    result = pool.submit(asyncio.run, test_smtp_connection(config)).result()
+                elif test_type == "imap":
+                    result = pool.submit(asyncio.run, test_imap_connection(config)).result()
+                else:
+                    raise HTTPException(status_code=400, detail="Invalid test type. Use 'smtp' or 'imap'.")
+                return result
+        else:
+            if test_type == "smtp":
+                return asyncio.run(test_smtp_connection(config))
+            elif test_type == "imap":
+                return asyncio.run(test_imap_connection(config))
+            else:
+                raise HTTPException(status_code=400, detail="Invalid test type. Use 'smtp' or 'imap'.")
 
     raise HTTPException(status_code=400, detail="Unknown channel")
 

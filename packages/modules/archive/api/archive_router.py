@@ -76,11 +76,12 @@ from fastapi import APIRouter, Depends, Depends, File, Form, HTTPException, Uplo
 from sqlalchemy.orm import Session
 
 from apps.api.auth import require_admin, require_same_company, get_current_user
+from packages.core.platform.module_gate import require_module
 from apps.api.deps import get_db
 from packages.modules.archive.schemas.archive_file import ArchiveFileRead
 from packages.modules.archive.service.archive_service import store_file
 
-router = APIRouter(prefix="/archive", dependencies=[Depends(require_admin)], tags=["archive"])
+router = APIRouter(prefix="/archive", dependencies=[Depends(require_admin), Depends(require_module("archive"))], tags=["archive"])
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────

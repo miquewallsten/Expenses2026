@@ -78,6 +78,7 @@ def _build_primary() -> Provider | None:
                 kind="ollama",
                 base_url=base,
                 model=model,
+                api_key=os.getenv("OLLAMA_API_KEY") or os.getenv("LLM_API_KEY") or "",
                 num_ctx=int(os.getenv("LLM_NUM_CTX") or os.getenv("OLLAMA_NUM_CTX", "32768")),
             )
         # Ollama not available — fall through to legacy openai default
@@ -113,7 +114,7 @@ def _build_primary() -> Provider | None:
         kind="ollama",
         base_url=base,
         model=model,
-        api_key=os.getenv("LLM_API_KEY") or "",
+        api_key=os.getenv("OLLAMA_API_KEY") or os.getenv("LLM_API_KEY") or "",
         num_ctx=int(os.getenv("LLM_NUM_CTX") or os.getenv("OLLAMA_NUM_CTX", "32768")),
     )
 
@@ -133,6 +134,54 @@ def _ensure_initialized() -> None:
 
 
 def _get_provider() -> Provider | None:
+    _ensure_initialized()
+    return _PROVIDER
+
+
+def resolve_provider_from_db(db, company_id: int | None = None) -> Provider | None:
+    """
+    Resolve LLM provider from DB config (Super Admin) with fallback to env vars.
+    
+    Resolution chain:
+    1. Company-specific config from DB (if company_id provided)
+    2. Global config from DB (company_id = NULL)
+    3. Environment variables fallback
+    
+    This enables Super Admin LLM config to work for all AI features, not just agents.
+    """
+    # Import here to avoid circular dependency
+    from packages.modules.agent.core.llm_provider_service import LLM_PROVIDER_SERVICE
+    
+    try:
+        config = LLM_PROVIDER_SERVICE.resolve_provider(db, company_id=company_id)
+        
+        # Only use DB config if it's a real row (has id), not the hardcoded fallback
+        if config and getattr(config, "id", None) is not None:
+            # Validate viability (cloud providers need API key or custom base_url)
+            if not LLM_PROVIDER_SERVICE._is_viable(config):
+                log.warning(
+                    "DB LLM config %s/%s is not viable; falling back to env vars",
+                    config.provider, config.model_name,
+                )
+            else:
+                # Build Provider from DB config
+                api_key = LLM_PROVIDER_SERVICE.resolve_api_key(config) or ""
+                kind = (config.provider or "ollama").lower()
+                # Map ollama-cloud to ollama (same API, different base_url)
+                if kind == "ollama-cloud":
+                    kind = "ollama"
+                
+                return Provider(
+                    kind=kind,
+                    base_url=(config.base_url or "").rstrip("/"),
+                    model=config.model_name or "",
+                    api_key=api_key,
+                    num_ctx=getattr(config, "num_ctx", 32768) or 32768,
+                )
+    except Exception as exc:
+        log.warning("Failed to resolve LLM provider from DB: %s", exc)
+    
+    # Fallback to environment variables
     _ensure_initialized()
     return _PROVIDER
 
@@ -263,6 +312,7 @@ def _build_payload(
         "messages": messages,
         "stream": stream,
         "options": options,
+        "keep_alive": os.getenv("OLLAMA_KEEP_ALIVE", "5m"),
     }
     if tools:
         payload["tools"] = tools
@@ -397,12 +447,11 @@ def _iter_stream_text(p: Provider, resp: requests.Response) -> Generator[str, No
 
 # ── Public meta ──────────────────────────────────────────────────────────────
 
-def list_models() -> list[str]:
-    """Return available model names from the provider."""
-    _ensure_initialized()
-    if _PROVIDER is None:
+def list_models(provider: Provider | None = None) -> list[str]:
+    """Return available model names from the provider (or env provider if None)."""
+    p = provider or _get_provider()
+    if p is None:
         return []
-    p = _PROVIDER
     try:
         if p.kind == "openai":
             base = p.base_url
@@ -430,14 +479,23 @@ def list_models() -> list[str]:
         return []
 
 
-def resolve_model() -> str | None:
-    _ensure_initialized()
-    return _PROVIDER.model if _PROVIDER else None
+def resolve_model(provider: Provider | None = None) -> str | None:
+    """Return the model name from provider (or env provider if None).
+
+    Checks the thread-local contextvar override first (set by scoped_model),
+    then falls back to the provider/model resolution chain.
+    """
+    override = get_model_override()
+    if override:
+        return override
+    p = provider or _get_provider()
+    return p.model if p else None
 
 
-def is_available() -> bool:
-    _ensure_initialized()
-    return _PROVIDER is not None
+def is_available(provider: Provider | None = None) -> bool:
+    """Check if a provider is available (or env provider if None)."""
+    p = provider or _get_provider()
+    return p is not None
 
 
 def _not_configured() -> dict:
@@ -485,20 +543,21 @@ def _chat_single(
     temperature: float,
     top_p: float | None = None,
     num_ctx: int | None = None,
+    provider: Provider | None = None,
 ) -> dict:
-    provider = _get_provider()
-    if not provider:
+    p = provider or _get_provider()
+    if not p:
         return _not_configured()
 
     try:
         data = _post_chat(
-            provider, messages=messages, temperature=temperature,
+            p, messages=messages, temperature=temperature,
             top_p=top_p, num_ctx=num_ctx,
         )
-        return {"ok": True, "model": provider.model, "content": _extract_content(data), "error": None}
+        return {"ok": True, "model": p.model, "content": _extract_content(data), "error": None}
     except Exception as exc:
-        log.error("LLM '%s' (%s) failed: %s", provider.kind, provider.model, exc)
-        return _error_result(provider.model, exc)
+        log.error("LLM '%s' (%s) failed: %s", p.kind, p.model, exc)
+        return _error_result(p.model, exc)
 
 
 # ── Single-turn chat ────────────────────────────────────────────────────────
@@ -509,6 +568,7 @@ def chat_with_ollama(
     temperature: float = 0.5,
     top_p: float = 0.9,
     num_ctx: int | None = None,
+    provider: Provider | None = None,
 ) -> dict:
     """Single-turn chat. Returns { ok, model, content, error }."""
     messages = [
@@ -517,6 +577,7 @@ def chat_with_ollama(
     ]
     return _chat_single(
         messages=messages, temperature=temperature, top_p=top_p, num_ctx=num_ctx,
+        provider=provider,
     )
 
 
@@ -527,10 +588,12 @@ def chat_with_messages(
     temperature: float = 0.5,
     top_p: float = 0.9,
     num_ctx: int | None = None,
+    provider: Provider | None = None,
 ) -> dict:
     """Multi-turn chat. Returns { ok, model, content, error }."""
     return _chat_single(
         messages=messages, temperature=temperature, top_p=top_p, num_ctx=num_ctx,
+        provider=provider,
     )
 
 
@@ -543,11 +606,12 @@ def chat_with_tools(
     tool_executor: Any,
     temperature: float = 0.3,
     num_ctx: int | None = None,
-    max_iterations: int = 6,
+    max_iterations: int = 20,
+    provider: Provider | None = None,
 ) -> dict:
-    """Agentic tool-use loop against the configured provider."""
-    provider = _get_provider()
-    if not provider:
+    """Agentic tool-use loop against the configured provider (or provided provider)."""
+    p = provider or _get_provider()
+    if not p:
         return _not_configured()
 
     messages: list[dict] = [
@@ -557,11 +621,11 @@ def chat_with_tools(
     try:
         for _ in range(max_iterations):
             payload = _build_payload(
-                provider, messages=messages, temperature=temperature,
+                p, messages=messages, temperature=temperature,
                 num_ctx=num_ctx, stream=False, tools=tools,
             )
             response = requests.post(
-                _chat_url(provider), json=payload, headers=_headers(provider, False), timeout=300,
+                _chat_url(p), json=payload, headers=_headers(p, False), timeout=300,
             )
             response.raise_for_status()
             data = response.json()
@@ -571,7 +635,7 @@ def chat_with_tools(
             content    = msg.get("content", "") or ""
 
             if not tool_calls:
-                return {"ok": True, "model": provider.model, "content": content, "error": None}
+                return {"ok": True, "model": p.model, "content": content, "error": None}
 
             messages.append({"role": "assistant", "content": content, "tool_calls": tool_calls})
 
@@ -596,13 +660,13 @@ def chat_with_tools(
             "content": "Based on everything gathered, provide your final answer now.",
         })
         data = _post_chat(
-            provider, messages=messages, temperature=temperature, top_p=None, num_ctx=num_ctx,
+            p, messages=messages, temperature=temperature, top_p=None, num_ctx=num_ctx,
         )
-        return {"ok": True, "model": provider.model, "content": _extract_content(data), "error": None}
+        return {"ok": True, "model": p.model, "content": _extract_content(data), "error": None}
 
     except Exception as exc:
-        log.error("LLM tool loop on '%s' (%s) failed: %s", provider.kind, provider.model, exc)
-        return _error_result(provider.model, exc)
+        log.error("LLM tool loop on '%s' (%s) failed: %s", p.kind, p.model, exc)
+        return _error_result(p.model, exc)
 
 
 # ── SSE streaming ─────────────────────────────────────────────────────────────
@@ -632,22 +696,23 @@ def _stream_single(
     messages: list[dict],
     temperature: float,
     num_ctx: int | None,
+    provider: Provider | None = None,
 ) -> Generator[str, None, None]:
-    """Yield SSE-frame strings from the configured provider."""
-    provider = _get_provider()
-    if not provider:
+    """Yield SSE-frame strings from the configured provider (or provided provider)."""
+    p = provider or _get_provider()
+    if not p:
         yield f"data: {json.dumps({'error': 'No LLM model configured'})}\n\n"
         yield "data: [DONE]\n\n"
         return
 
     try:
         for text in _stream_one(
-            provider, messages=messages, temperature=temperature, num_ctx=num_ctx,
+            p, messages=messages, temperature=temperature, num_ctx=num_ctx,
         ):
             yield f"data: {json.dumps({'text': text})}\n\n"
         yield "data: [DONE]\n\n"
     except Exception as exc:
-        log.error("LLM stream on '%s' failed: %s", provider.kind, exc)
+        log.error("LLM stream on '%s' failed: %s", p.kind, exc)
         yield f"data: {json.dumps({'error': str(exc)})}\n\n"
         yield "data: [DONE]\n\n"
 
@@ -657,6 +722,7 @@ def stream_chat_sse(
     user_prompt: str,
     temperature: float = 0.5,
     num_ctx: int | None = None,
+    provider: Provider | None = None,
 ) -> Generator[str, None, None]:
     """SSE streaming generator (single-turn). Each yield: 'data: {...}\\n\\n'."""
     messages = [
@@ -665,6 +731,7 @@ def stream_chat_sse(
     ]
     yield from _stream_single(
         messages=messages, temperature=temperature, num_ctx=num_ctx,
+        provider=provider,
     )
 
 
@@ -672,10 +739,12 @@ def stream_chat_with_messages_sse(
     messages: list[dict],
     temperature: float = 0.5,
     num_ctx: int | None = None,
+    provider: Provider | None = None,
 ) -> Generator[str, None, None]:
     """Multi-turn SSE streaming. Same SSE format as stream_chat_sse()."""
     yield from _stream_single(
         messages=messages, temperature=temperature, num_ctx=num_ctx,
+        provider=provider,
     )
 
 
@@ -684,17 +753,19 @@ def stream_chat_with_messages_sse(
 def provider_from_config(config: dict) -> Provider | None:
     """Build a Provider from an LLMProviderConfig dict."""
     kind = config.get("provider", "ollama").strip().lower()
-    # Map ollama-cloud to ollama (same API, different base URL)
+    # Ollama Cloud uses OpenAI-compatible API (/v1/chat/completions)
+    # Local Ollama uses native API (/api/chat)
     if kind == "ollama-cloud":
-        kind = "ollama"
+        kind = "openai"
     model = config.get("model_name", "")
     if not model:
         return None
-    # Resolve API key from env var reference
-    api_key = ""
-    env_ref = config.get("api_key_env_ref", "")
-    if env_ref:
-        api_key = os.environ.get(env_ref, "")
+    # Resolve API key: direct value takes priority, then env var reference
+    api_key = config.get("api_key", "") or ""
+    if not api_key:
+        env_ref = config.get("api_key_env_ref", "")
+        if env_ref:
+            api_key = os.environ.get(env_ref, "")
     return Provider(
         kind=kind,
         base_url=(config.get("base_url") or "").rstrip("/") or "http://127.0.0.1:11434",
@@ -712,7 +783,7 @@ def chat_with_tools_dynamic(
     provider: Provider,
     temperature: float = 0.3,
     num_ctx: int | None = None,
-    max_iterations: int = 6,
+    max_iterations: int = 20,
 ) -> dict:
     """Agentic tool-use loop against an explicit provider (no env vars)."""
     messages: list[dict] = [

@@ -1,24 +1,40 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useUserContext } from "@/context/UserContext";
+import { useMyWorkContext } from "@/context/MyWorkContext";
+import { usePortalConfigContext } from "@/context/PortalConfigContext";
+import {
+  ADMIN_SETTINGS_VISIBILITY,
+  ADMIN_OPS_VISIBILITY,
+  getVisibleAdminSettingsSections,
+  getVisibleAdminOpsSections,
+} from "@/modules/my-work/moduleRegistry";
+import type { ModuleVisibilityContext } from "@/types";
 import { useAdminContext, type AdminSection } from "@/context/AdminContext";
 import { apiCall } from "@/lib/api/client";
 import AnnouncementPanel from "@/components/admin/AnnouncementPanel";
 import AdminCompanySetupStudio from "@/components/admin/AdminCompanySetupStudio";
 import AdminUsersPanel from "@/components/admin/AdminUsersPanel";
 import AdminPoliciesPanel from "@/components/admin/AdminPoliciesPanel";
-import AdminAccountingSetupStudio from "@/components/admin/AdminAccountingSetupStudio";
-import AdminWorkflowMapPanel from "@/components/admin/AdminWorkflowMapPanel";
-import AdminOnboardingCopilot from "@/components/admin/AdminOnboardingCopilot";
+
+
+
+
+
+
+import AdminApprovalWorkflowPanel from "@/components/admin/AdminApprovalWorkflowPanel";
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
-import AuditLogSection from "@/components/admin/sections/AuditLogSection";
-import CfdiWatcherSection from "@/components/admin/sections/CfdiWatcherSection";
-import ExportSection from "@/components/admin/sections/ExportSection";
-import IntegrationsSection from "@/components/admin/sections/IntegrationsSection";
-import PlatformApiSection from "@/components/admin/sections/PlatformApiSection";
-import AdminOverviewPanel from "@/components/admin/AdminOverviewPanel";
+
+import IntegrationsHubSection from "@/components/admin/sections/IntegrationsHubSection";
+import AddOnsSection from "@/components/admin/sections/AddOnsSection";
+
+import AdminAccountingHub from "@/components/admin/AdminAccountingHub";
+import AdminConfigOverview from "@/components/admin/AdminConfigOverview";
+import AdminReportBuilderPanel from "@/components/admin/AdminReportBuilderPanel";
+import AdminOperationsOverview from "@/components/admin/AdminOperationsOverview";
 import { Settings, Bell, LayoutGrid } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 interface AdminData {
@@ -54,12 +70,60 @@ async function fetchAdminData(companyId: number): Promise<AdminData> {
 }
 
 export default function AdminModule() {
-  const { companyId } = useUserContext();
+  const { companyId, ...user } = useUserContext();
+  const t = useTranslations("admin");
   const { activeSection, setActiveSection, setOnboardingCompleted } = useAdminContext();
+  const { activeModule } = useMyWorkContext();
   const [data, setData] = useState<AdminData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Sync activeModule.adminSection -> activeSection
+  useEffect(() => {
+    const section = activeModule?.adminSection;
+    if (section && section !== activeSection) {
+      setActiveSection(section as any);
+    }
+  }, [activeModule?.adminSection, activeSection, setActiveSection]);
+
+  // ── Admin section visibility ──────────────────────────────────────────────
+  // Gate which sections the current user can see based on role/permissions/capabilities.
+  const portalCfg = usePortalConfigContext();
+
+  const adminVisCtx: ModuleVisibilityContext = useMemo(() => ({
+    role: user.role,
+    permissionKeys: user.permissionKeys,
+    derived: portalCfg.effectiveConfig?.derived ?? null,
+    capabilities: user.capabilities,
+  }), [user.role, user.permissionKeys, user.capabilities, portalCfg.effectiveConfig?.derived]);
+
+  const visibleSettingIds = useMemo(
+    () => new Set(getVisibleAdminSettingsSections(adminVisCtx).map((s) => s.id)),
+    [adminVisCtx],
+  );
+  const visibleOpsIds = useMemo(
+    () => new Set(getVisibleAdminOpsSections(adminVisCtx).map((s) => s.id)),
+    [adminVisCtx],
+  );
+
+  function canSeeSection(id: string): boolean {
+    return visibleSettingIds.has(id) || visibleOpsIds.has(id) || id === "overview" || id === "operations";
+  }
+
+  // ── Auto-redirect if active section becomes invisible ──────────────────────
+  // If the user's active section is no longer visible (e.g. role changed),
+  // redirect to "overview" which is always visible.
+  const allVisibleIds = useMemo(
+    () => new Set([...visibleSettingIds, ...visibleOpsIds, "overview", "operations"]),
+    [visibleSettingIds, visibleOpsIds],
+  );
+
+  useEffect(() => {
+    if (activeSection && !allVisibleIds.has(activeSection)) {
+      setActiveSection("overview");
+    }
+  }, [activeSection, allVisibleIds, setActiveSection]);
 
   // Determine if onboarding is incomplete once data loads
   const onboardingCompleted = data?.companySetup?.onboarding_completed_at != null;
@@ -94,7 +158,7 @@ export default function AdminModule() {
       })
       .catch((e: unknown) => {
         if (active) {
-          const msg = e instanceof Error ? e.message : "Failed to load admin data";
+          const msg = e instanceof Error ? e.message : t("failedToLoadAdmin");
           setError(msg);
         }
       });
@@ -174,7 +238,7 @@ export default function AdminModule() {
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-error-muted">
             <Settings className="h-5 w-5 text-error" />
           </div>
-          <p className="text-sm font-medium text-primary">Failed to load admin data</p>
+          <p className="text-sm font-medium text-primary">{t("failedToLoadAdmin")}</p>
           <p className="mt-1 text-xs text-tertiary">{error}</p>
           <button
             type="button"
@@ -192,27 +256,39 @@ export default function AdminModule() {
     <main className="min-h-0 h-full flex-1 overflow-y-auto bg-surface-0 pb-20 scroll-smooth" data-testid="admin-module">
         <div className="mx-auto max-w-5xl px-8 py-8 space-y-10">
           {activeSection === "overview" && (
-            <AdminOverviewPanel
+            <AdminConfigOverview
               portalConfig={data.portalConfig}
               companySetup={data.companySetup}
               expensePolicy={data.expensePolicy}
               accountingSetup={data.accountingSetup}
               approvalSetup={data.approvalSetup}
               workflowSetup={data.workflowSetup}
+              companyId={companyId}
               onNavigate={(section: any) => {
                 const map: Record<string, AdminSection> = {
                   "Company Setup": "company-setup",
                   "Rules": "expense-policy",
-                  "Accounting Setup": "accounting-setup",
                   "Workflow": "approval-workflow",
-                  "Onboarding": "onboarding"
+                  "Onboarding": "onboarding",
+                  "Add-Ons": "addons",
+                  "Accounting Setup": "accounting-setup",
+                  "Report Builder": "report-builder",
+                  "Users & Roles": "users-roles",
+                  "Integrations": "integrations",
+                  "Notifications": "notifications",
+                  "Audit Log": "audit-log",
+                  "Operations": "operations",
                 };
-                setActiveSection(map[section] || "overview");
+                setActiveSection(map[section] || (section as AdminSection));
               }}
             />
           )}
 
-          {activeSection === "company-setup" && (
+          {activeSection === "operations" && companyId && (
+            <AdminOperationsOverview companyId={companyId} />
+          )}
+
+          {activeSection === "company-setup" && canSeeSection("company-setup") && (
             <AdminCompanySetupStudio
               companyId={companyId}
               setup={data.companySetup}
@@ -231,7 +307,7 @@ export default function AdminModule() {
             />
           )}
 
-          {activeSection === "expense-policy" && (
+          {activeSection === "expense-policy" && canSeeSection("expense-policy") && (
             <AdminPoliciesPanel
               companyId={companyId}
               expensePolicy={data.expensePolicy}
@@ -239,18 +315,19 @@ export default function AdminModule() {
             />
           )}
 
-          {activeSection === "approval-workflow" && (
-            <AdminWorkflowMapPanel
+          {activeSection === "approval-workflow" && canSeeSection("approval-workflow") && (
+            <AdminApprovalWorkflowPanel
               companyId={companyId}
               workflowSetup={data.workflowSetup}
+              approvalSetup={data.approvalSetup}
               companySetup={data.companySetup}
               expensePolicy={data.expensePolicy}
               accountingSetup={data.accountingSetup}
-              onWorkflowSaved={refreshWorkflowSetup}
+              onSaved={refreshWorkflowSetup}
             />
           )}
 
-          {activeSection === "users-roles" && (
+          {activeSection === "users-roles" && canSeeSection("users-roles") && (
             <AdminUsersPanel
               companyId={companyId}
               users={data.users}
@@ -259,8 +336,19 @@ export default function AdminModule() {
             />
           )}
 
-          {activeSection === "accounting-setup" && (
-            <AdminAccountingSetupStudio
+          {activeSection === "addons" && canSeeSection("addons") && (
+            <AddOnsSection companyId={companyId} companySetup={data.companySetup} onNavigate={(section) => setActiveSection(section as AdminSection)} />
+          )}
+          {activeSection === "integrations" && canSeeSection("integrations") && <IntegrationsHubSection />}
+          
+          {activeSection === "notifications" && canSeeSection("notifications") && (
+            <div className="space-y-6">
+              <AnnouncementPanel />
+            </div>
+          )}
+
+          {activeSection === "accounting-setup" && canSeeSection("accounting-setup") && (
+            <AdminAccountingHub
               companyId={companyId}
               setup={data.accountingSetup}
               companySetup={data.companySetup}
@@ -269,16 +357,12 @@ export default function AdminModule() {
             />
           )}
 
-          {activeSection === "integrations" && <IntegrationsSection />}
-          {activeSection === "platform-api" && <PlatformApiSection />}
-          {activeSection === "export" && <ExportSection />}
-          {activeSection === "audit-log" && <AuditLogSection />}
-          {activeSection === "cfdi-watcher" && <CfdiWatcherSection />}
-          
-          {activeSection === "notifications" && (
-            <div className="space-y-6">
-              <AnnouncementPanel />
-            </div>
+          {activeSection === "report-builder" && canSeeSection("report-builder") && companyId && (
+            <AdminReportBuilderPanel companyId={companyId} />
+          )}
+
+          {activeSection === "audit-log" && canSeeSection("audit-log") && companyId && (
+            <AdminOperationsOverview companyId={companyId} />
           )}
         </div>
       </main>

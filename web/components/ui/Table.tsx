@@ -40,7 +40,7 @@ export function TBody({
 }: HTMLAttributes<HTMLTableSectionElement>) {
   return (
     <tbody
-      className={cn("divide-y divide-white/[0.06]", className)}
+      className={cn("divide-y divide-subtle", className)}
       {...rest}
     />
   );

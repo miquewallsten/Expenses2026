@@ -265,12 +265,75 @@ def submit_expense(db: Session, expense: Expense, actor_user_id: int | None = No
             "documents have failed validation."
         )
 
+    # ── Precondition: budget enforcement ─────────────────────────────────────
+    # When budget_enforcement is "block", submission is rejected if the
+    # employee's month-to-date spending plus this expense exceeds their budget.
+    # "warn" allows submission but the blocker service flags it as a warning.
+    from packages.core.platform.models_expense_policy import CompanyExpensePolicy as _Policy
+    _policy = db.query(_Policy).filter(
+        _Policy.company_id == expense.company_id
+    ).first()
+    if _policy and _policy.monthly_budget_per_employee and _policy.budget_enforcement == "block":
+        from decimal import Decimal as _Decimal
+        from sqlalchemy import func as _sa_func
+        from datetime import datetime as _dt, timezone as _tz
+        _now = _dt.now(_tz.utc)
+        _month_start = _now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        _total_spent = (
+            db.query(_sa_func.coalesce(_sa_func.sum(Expense.amount_mxn), 0))
+            .filter(
+                Expense.company_id == expense.company_id,
+                Expense.user_id == expense.user_id,
+                Expense.status != "rejected",
+                Expense.is_deleted == False,  # noqa: E712
+                Expense.created_at >= _month_start,
+            )
+        ).scalar() or _Decimal("0")
+        _current_amount = expense.amount_mxn or expense.amount
+        _projected = _total_spent + _current_amount
+        if _projected > _policy.monthly_budget_per_employee:
+            _over_by = _projected - _policy.monthly_budget_per_employee
+            raise ValueError(
+                f"Expense {expense.id} exceeds monthly budget: "
+                f"${_projected:.2f} / ${_policy.monthly_budget_per_employee:.2f} "
+                f"(over by ${_over_by:.2f})."
+            )
+
     # ── Target status ─────────────────────────────────────────────────────────
     # The submit action always moves the expense into the review pipeline.
     # The single supported entry-point status for both manager and accounting
     # queues is "submitted" — routing to the correct queue is handled by the
     # queue services at read time, not at write time.
     result = _apply_transition(db, expense, _STATUS_SUBMITTED, actor_user_id=actor_user_id)
+
+    # ── Wallet deduction (prepaid wallet) ──────────────────────────────────
+    # If the company has wallets enabled and auto-deduct is on, deduct from the
+    # employee's wallet when the expense is submitted.
+    try:
+        from packages.core.platform.models_expense_policy import CompanyExpensePolicy
+        policy = db.query(CompanyExpensePolicy).filter(
+            CompanyExpensePolicy.company_id == result.company_id
+        ).first()
+        if policy and policy.wallet_enabled and policy.wallet_auto_deduct:
+            from packages.core.platform.models_wallet import EmployeeWallet
+            wallet = db.query(EmployeeWallet).filter(
+                EmployeeWallet.company_id == result.company_id,
+                EmployeeWallet.user_id == result.user_id,
+                EmployeeWallet.is_active == True,
+            ).first()
+            if wallet and wallet.balance >= (result.amount_mxn or result.amount):
+                from packages.core.platform.service_wallet import WALLET_SERVICE
+                WALLET_SERVICE.deduct(
+                    db=db,
+                    company_id=result.company_id,
+                    user_id=result.user_id,
+                    amount=result.amount_mxn or result.amount,
+                    expense_id=result.id,
+                    description=f"Expense #{result.id} deduction",
+                )
+    except Exception:
+        pass  # Best-effort; never block submission
+
     # Phase 5.5 hookup: evaluate routing rules and write a sidecar audit
     # entry capturing the decision. Best-effort — never blocks submission.
     try:
@@ -475,7 +538,46 @@ def accounting_approve_expense(db: Session, expense: Expense, actor_user_id: int
 
     _assert_accounting_eligible(expense, approval)
 
-    return _apply_transition(db, expense, _STATUS_APPROVED, actor_user_id=actor_user_id)
+    result = _apply_transition(db, expense, _STATUS_APPROVED, actor_user_id=actor_user_id)
+
+    # ── Wallet reimbursement ────────────────────────────────────────────────
+    # When an expense is approved and the wallet auto-deducted on submit,
+    # reimburse the wallet so the employee can use the funds again.
+    try:
+        from packages.core.platform.models_expense_policy import CompanyExpensePolicy
+        policy = db.query(CompanyExpensePolicy).filter(
+            CompanyExpensePolicy.company_id == result.company_id
+        ).first()
+        if policy and policy.wallet_enabled and policy.wallet_auto_deduct:
+            from packages.core.platform.models_wallet import EmployeeWallet
+            wallet = db.query(EmployeeWallet).filter(
+                EmployeeWallet.company_id == result.company_id,
+                EmployeeWallet.user_id == result.user_id,
+                EmployeeWallet.is_active == True,
+            ).first()
+            if wallet:
+                from packages.core.platform.service_wallet import WALLET_SERVICE
+                WALLET_SERVICE.reimburse(
+                    db=db,
+                    company_id=result.company_id,
+                    user_id=result.user_id,
+                    amount=result.amount_mxn or result.amount,
+                    expense_id=result.id,
+                    description=f"Expense #{result.id} reimbursement",
+                )
+    except Exception:
+        pass  # Best-effort; never block approval
+
+    # ── Auto-generate accounting event (poliza) if configured ──────────────
+    # After approval, check if the company requires automatic poliza generation.
+    # This is a best-effort hook — failures are logged but never block approval.
+    try:
+        from packages.modules.accounting.service.poliza_auto_generate_service import on_expense_approved
+        on_expense_approved(db, result.id)
+    except Exception as exc:
+        _log.warning("Auto poliza generation failed for expense %s: %s", result.id, exc)
+
+    return result
 
 
 def accounting_reject_expense(

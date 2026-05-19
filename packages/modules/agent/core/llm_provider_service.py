@@ -7,6 +7,7 @@ import time
 import urllib.request
 from typing import Any
 
+from packages.core.platform.crypto_utils import decrypt_secret, encrypt_secret
 from packages.modules.agent.models_definitions import LLMProviderConfig
 
 log = logging.getLogger(__name__)
@@ -80,25 +81,31 @@ class LLMProviderService:
     def resolve_provider(self, db, company_id: int | None = None) -> LLMProviderConfig:
         """
         Resolution chain:
-        1. Active company-specific config.
-        2. Active global config.
+        1. Active global config (Super Admin default — always preferred).
+        2. Active company-specific override (only if explicitly set and viable).
         3. Env-driven fallback (auto-detects Ollama).
+
+        The Super Admin sets the global config via /agent/llm/global-config.
+        Companies can override it only if they have their own active config
+        that is viable (has API keys, reachable, etc.).
         """
-        # 1. Try company override
+        # 1. Always start with the global config (set by Super Admin)
+        global_config = db.query(LLMProviderConfig).filter(
+            LLMProviderConfig.company_id == None,
+            LLMProviderConfig.is_active == True
+        ).first()
+
+        # 2. Try company override — only use if it's viable
         if company_id is not None:
             company_config = db.query(LLMProviderConfig).filter(
                 LLMProviderConfig.company_id == company_id,
                 LLMProviderConfig.is_active == True
             ).first()
-            if company_config:
+            if company_config and self._is_viable(company_config):
                 return company_config
 
-        # 2. Try global override
-        global_config = db.query(LLMProviderConfig).filter(
-            LLMProviderConfig.company_id == None,
-            LLMProviderConfig.is_active == True
-        ).first()
-        if global_config:
+        # Use global config if viable
+        if global_config and self._is_viable(global_config):
             return global_config
 
         # 3. Env / auto-detect fallback
@@ -106,9 +113,14 @@ class LLMProviderService:
 
     def resolve_api_key(self, config: LLMProviderConfig) -> str | None:
         """
-        Resolves the API key from the environment variable referenced in the config.
-        Never stores raw keys in the database.
+        Resolves the API key. Decrypts stored key first,
+        then falls back to the environment variable reference.
         """
+        # 1. Direct key — decrypt if Fernet-encrypted
+        if config.api_key:
+            return decrypt_secret(config.api_key)
+
+        # 2. Env var ref
         if not config.api_key_env_ref:
             return None
         
@@ -128,14 +140,21 @@ class LLMProviderService:
 
         if existing:
             for k, v in data.items():
-                setattr(existing, k, v)
+                if k == "api_key" and v:
+                    setattr(existing, k, encrypt_secret(v))
+                else:
+                    setattr(existing, k, v)
             config = existing
         else:
+            # Encrypt api_key before storage
+            raw_api_key = data.get("api_key")
+            encrypted_key = encrypt_secret(raw_api_key) if raw_api_key else None
             config = LLMProviderConfig(
                 company_id=company_id,
                 provider=data.get("provider", "ollama"),
                 base_url=data.get("base_url"),
                 api_key_env_ref=data.get("api_key_env_ref"),
+                api_key=encrypted_key,
                 model_name=data.get("model_name", "llama3.2"),
                 is_active=data.get("is_active", True),
             )
@@ -152,20 +171,37 @@ class LLMProviderService:
         provider = data.get("provider", "ollama")
         base_url = (data.get("base_url") or "http://localhost:11434").rstrip("/")
         model = data.get("model_name", "llama3.2")
+        api_key = data.get("api_key")
+        
+        if not api_key and data.get("api_key_env_ref"):
+            api_key = os.environ.get(data.get("api_key_env_ref"))
 
         started = time.monotonic()
         try:
-            # ollama and ollama-cloud use the same native API
-            if provider in ("ollama", "ollama-cloud"):
-                # For ollama-cloud, we can't list models remotely, just return success
-                if provider == "ollama-cloud":
+            if provider == "ollama-cloud":
+                # Ollama Cloud uses OpenAI-compatible API (/v1/models)
+                headers = {"Content-Type": "application/json"}
+                if api_key:
+                    headers["Authorization"] = f"Bearer {api_key}"
+                req = urllib.request.Request(
+                    f"{base_url}/models",
+                    method="GET",
+                    headers=headers
+                )
+                with urllib.request.urlopen(req, timeout=10.0) as resp:
+                    body = resp.read()
+                    data = json.loads(body)
+                    models = [m.get("id", "") for m in data.get("data", [])]
                     latency_ms = int((time.monotonic() - started) * 1000)
+                    model_found = any(model in m for m in models)
                     return {
                         "ok": True,
-                        "detail": f"Ollama Cloud configured with model {model!r}.",
+                        "detail": f"Ollama Cloud connected; {len(models)} model(s) available."
+                                  + (" Model present." if model_found else f" Model {model!r} not found in list."),
                         "latency_ms": latency_ms,
                     }
-                # Local ollama - check if model exists
+            elif provider == "ollama":
+                # Local Ollama uses native API (/api/tags)
                 req = urllib.request.Request(
                     f"{base_url}/api/tags",
                     method="GET",

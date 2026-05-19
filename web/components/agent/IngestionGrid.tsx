@@ -16,7 +16,7 @@ interface Props {
 
 /**
  * Read-only grid for ingestion receipts (accounting catalog, user roster, org
- * entities). The applier ultimately uses `args.rows` — preview is capped at
+ * entities). The applier ultimately uses `args.rows` - preview is capped at
  * 20 rows for UI readability, with a "+N more" indicator.
  */
 export default function IngestionGrid({ receipt, rows, columns }: Props) {
@@ -82,7 +82,7 @@ export default function IngestionGrid({ receipt, rows, columns }: Props) {
 }
 
 function renderCell(v: unknown): string {
-  if (v === null || v === undefined) return "—";
+  if (v === null || v === undefined) return " - ";
   if (typeof v === "boolean") return v ? "✓" : "✗";
   if (typeof v === "object") return JSON.stringify(v);
   return String(v);

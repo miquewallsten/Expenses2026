@@ -35,3 +35,16 @@ env/
 celerybeat-schedule
 celerybeat-schedule.*
 .worktrees/
+
+# Runtime / local
+uploads/
+storage/agent_uploads/
+test-results/
+.agents/
+.superpowers/
+.gstack/
+.claude/
+.vscode/
+*.bak
+*.new
+*.orig

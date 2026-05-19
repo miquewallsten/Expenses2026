@@ -85,6 +85,14 @@ def create_expense_route(payload: ExpenseCreate, db: Session = Depends(get_db), 
         if payload.user_id and payload.user_id != current_user.id:
             # Check if secretary relationship exists
             is_delegated = db.query(User).filter(User.id == payload.user_id, User.delegates_for_user_id == current_user.id).first()
+            # Check delegation date range if present
+            if is_delegated and is_delegated.delegation_starts_at:
+                from datetime import datetime, timezone
+                now = datetime.now(timezone.utc)
+                if is_delegated.delegation_ends_at and now > is_delegated.delegation_ends_at:
+                    is_delegated = None  # Delegation has expired
+                if is_delegated and now < is_delegated.delegation_starts_at:
+                    is_delegated = None  # Delegation hasn't started yet
             if not is_delegated and not has_permission(db, current_user, "expense:create:any"):
                 raise HTTPException(status_code=403, detail="Not authorized to create for this user")
         

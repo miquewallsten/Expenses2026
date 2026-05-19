@@ -12,15 +12,20 @@ effectively opt-in — only ``hard_mode=True`` routes to the hosted model in pra
 The actual HTTP call stays inside ``apps.api.ai.ollama_client`` — ``chat_with_tools``
 calls ``resolve_model()`` itself. Here we only decide *which* model to prefer
 and expose a ``select_model(...)`` helper. When a hosted model is chosen we
-override ``OLLAMA_MODEL`` for the scope of the turn (simpler than threading a
-``model=`` kwarg through the existing client).
+set a contextvar for the scope of the turn (thread-safe, unlike os.environ).
 """
 
 from __future__ import annotations
 
 import os
+from contextvars import ContextVar
 from contextlib import contextmanager
 from typing import Iterator
+
+
+# Thread-safe override for the current Ollama model.  When set, ``resolve_model()``
+# in ``apps.api.ai.ollama_client`` should read this instead of ``os.environ``.
+_ollama_model_override: ContextVar[str | None] = ContextVar("ollama_model_override", default=None)
 
 
 HARD_MODE_TOOL_THRESHOLD = 999  # effectively opt-in: only hard_mode=True routes to the hosted model
@@ -30,7 +35,7 @@ def select_model(*, tool_count: int, hard_mode: bool = False) -> tuple[str, str]
     """Return ``(provider, model)`` for this turn.
 
     This does NOT change any global state — it just indicates the preference.
-    The caller uses :func:`scoped_model` to actually swap the env var.
+    The caller uses :func:`scoped_model` to actually set the contextvar.
     """
     hosted_enabled = (os.getenv("AGENT_HOSTED_ENABLED") or "").lower() in ("1", "true", "yes")
     hosted_model = os.getenv("AGENT_HOSTED_MODEL") or ""
@@ -44,17 +49,20 @@ def select_model(*, tool_count: int, hard_mode: bool = False) -> tuple[str, str]
 
 @contextmanager
 def scoped_model(model: str) -> Iterator[None]:
-    """Temporarily set ``OLLAMA_MODEL`` for the duration of the context.
+    """Temporarily set the Ollama model for the duration of the context.
 
-    Used when we want ``chat_with_tools`` (which reads ``OLLAMA_MODEL`` via
-    ``resolve_model()``) to use a specific model without re-plumbing its API.
+    Uses a ``ContextVar`` instead of ``os.environ`` so that concurrent requests
+    in different threads/coroutines don't clobber each other's model selection.
+    ``resolve_model()`` in ``ollama_client`` should call ``get_model_override()``
+    to pick this up.
     """
-    prev = os.environ.get("OLLAMA_MODEL")
-    os.environ["OLLAMA_MODEL"] = model
+    token = _ollama_model_override.set(model)
     try:
         yield
     finally:
-        if prev is None:
-            os.environ.pop("OLLAMA_MODEL", None)
-        else:
-            os.environ["OLLAMA_MODEL"] = prev
+        _ollama_model_override.reset(token)
+
+
+def get_model_override() -> str | None:
+    """Return the current thread-local model override, or None."""
+    return _ollama_model_override.get()

@@ -27,6 +27,57 @@ export interface ModuleVisibilityContext {
 }
 
 /**
+ * Admin section visibility rule.
+ * Each admin section declares which roles/permissions/capabilities grant access.
+ * Visibility logic: a user can see a section if ANY of the following are true:
+ *   - Their role is in `roles` (if `roles` is non-empty)
+ *   - They hold any permission in `permissions` (if `permissions` is non-empty)
+ *   - They have any capability flag in `capabilities` set to true (if `capabilities` is non-empty)
+ * If ALL three arrays are empty, the section is visible to anyone who can see the admin module.
+ */
+export interface AdminSectionVisibility {
+  /** Section id matching AdminSection type */
+  id: string;
+  /** Roles that can see this section. Empty = not gated by role. */
+  roles: string[];
+  /** Permission keys that can see this section. Empty = not gated by permission. */
+  permissions: string[];
+  /** Capability flags that can see this section. Empty = not gated by capability. */
+  capabilities: (keyof import("./user").UserCapabilities)[];
+}
+
+/**
+ * Determine whether an admin section is visible for the given user context.
+ * Uses the same ModuleVisibilityContext as module registry checks.
+ */
+export function isAdminSectionVisible(
+  section: AdminSectionVisibility,
+  ctx: ModuleVisibilityContext,
+): boolean {
+  // Admin and super_admin always see every section (consistent with UserContext.hasPermission)
+  if (ctx.role === "admin" || ctx.role === "super_admin") {
+    return true;
+  }
+
+  const hasRole = (r: string) => ctx.role === r;
+  const hasPerm = (k: string) => ctx.permissionKeys.includes(k);
+  const hasCap = (k: keyof import("./user").UserCapabilities) =>
+    ctx.capabilities?.[k] === true;
+
+  // If all gates are empty, section is visible to anyone with admin access
+  if (section.roles.length === 0 && section.permissions.length === 0 && section.capabilities.length === 0) {
+    return true;
+  }
+
+  // User passes if they satisfy ANY non-empty gate
+  if (section.roles.length > 0 && section.roles.some(hasRole)) return true;
+  if (section.permissions.length > 0 && section.permissions.some(hasPerm)) return true;
+  if (section.capabilities.length > 0 && section.capabilities.some(hasCap)) return true;
+
+  return false;
+}
+
+/**
  * Module definition for the MyWork portal.
  * Each entry in MY_WORK_MODULES implements this interface.
  */
@@ -55,6 +106,8 @@ export interface MyWorkModule {
    * component should define its own prop interface and cast or default-handle
    * any extras.
    */
+  /** When set, clicking this module also switches the admin context to this section. */
+  adminSection?: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   component: ComponentType<any>;
 }

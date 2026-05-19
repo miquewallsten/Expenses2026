@@ -38,6 +38,7 @@ class CompanySetup(Base):
     archive_module_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     purchase_requests_module_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     amex_reconciliation_module_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    dev_login_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     # AI context (fed to Copilot prompts; not behavioral)
     ai_setup_notes: Mapped[str | None] = mapped_column(Text, nullable=True)

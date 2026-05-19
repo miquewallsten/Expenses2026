@@ -259,7 +259,7 @@ function DimensionTab({ kind, companyId }: { kind: Kind; companyId: number }) {
               <th className="px-3 py-2 w-20"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/[0.04]">
+          <tbody className="divide-y divide-subtle">
             {/* Add row */}
             <tr className="bg-surface-1">
               <td className="px-3 py-1.5">
@@ -445,7 +445,7 @@ function ImportDialog({
 
   const reparseWithCols = () => {
     if (!preview || !rawFile) return;
-    // Refetch with same file — server re-suggests but we'll override mapping on commit
+    // Refetch with same file - server re-suggests but we'll override mapping on commit
     // For mapping preview, just rebuild client-side
   };
 
@@ -495,7 +495,7 @@ function ImportDialog({
   const pickable = preview?.rows.filter((r) => r.name && r.code && !r.duplicate).length ?? 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overlay-backdrop p-4">
       <div className="w-full max-w-2xl overflow-hidden rounded-lg border border-default bg-surface-0 shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-subtle px-4 py-3">
@@ -561,7 +561,7 @@ function ImportDialog({
                     onChange={(e) => setCodeCol(e.target.value)}
                     className="w-full rounded border border-default bg-surface-1 px-2 py-1 text-[11px] text-secondary outline-none focus:bg-accent-muted"
                   >
-                    <option value="">—</option>
+                    <option value=""> - </option>
                     {preview.headers.map((h) => <option key={h} value={h}>{h}</option>)}
                   </select>
                 </div>
@@ -572,7 +572,7 @@ function ImportDialog({
                     onChange={(e) => setNameCol(e.target.value)}
                     className="w-full rounded border border-default bg-surface-1 px-2 py-1 text-[11px] text-secondary outline-none focus:bg-accent-muted"
                   >
-                    <option value="">—</option>
+                    <option value=""> - </option>
                     {preview.headers.map((h) => <option key={h} value={h}>{h}</option>)}
                   </select>
                 </div>
@@ -589,12 +589,12 @@ function ImportDialog({
                       <th className="px-2 py-1.5 w-24"></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/[0.04]">
+                  <tbody className="divide-y divide-subtle">
                     {mappedPreview.slice(0, 15).map((r) => (
                       <tr key={r.row} className={r.duplicate ? "text-muted" : "text-secondary"}>
                         <td className="px-2 py-1 text-muted">{r.row}</td>
-                        <td className="px-2 py-1 font-mono">{r.code ?? "—"}</td>
-                        <td className="px-2 py-1">{r.name ?? "—"}</td>
+                        <td className="px-2 py-1 font-mono">{r.code ?? " - "}</td>
+                        <td className="px-2 py-1">{r.name ?? " - "}</td>
                         <td className="px-2 py-1 text-right">
                           {r.duplicate && (
                             <span className="rounded border border-amber-500/20 bg-warning-muted px-1.5 py-0.5 text-[8px] font-semibold uppercase text-warning/70">

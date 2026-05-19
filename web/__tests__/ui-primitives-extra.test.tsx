@@ -43,7 +43,7 @@ describe("Select / Textarea", () => {
   it("Textarea has focus ring styles", () => {
     render(<Textarea placeholder="focus-test" />);
     expect(screen.getByPlaceholderText("focus-test")).toHaveClass("focus:ring-2");
-    expect(screen.getByPlaceholderText("focus-test")).toHaveClass("focus:ring-indigo-400/20");
+    expect(screen.getByPlaceholderText("focus-test")).toHaveClass("focus:ring-blue-400/20");
   });
 
   it("Textarea has invalid focus ring styles", () => {
@@ -115,7 +115,7 @@ describe("Table primitives", () => {
     );
     const tbody = container.querySelector("tbody");
     expect(tbody).toHaveClass("divide-y");
-    expect(tbody).toHaveClass("divide-white/[0.06]");
+    expect(tbody).toHaveClass("divide-subtle");
   });
 
   it("has subtle hover state on rows", () => {

@@ -1,20 +1,16 @@
 "use client";
 
 /**
- * Phase 3.3 — Top-level error boundary.
+ * Top-level error boundary.
  *
- * Catches render-phase exceptions in client components and shows the
- * dark-enterprise <ErrorState/> with the captured request_id (when the
- * error is an HttpError from the centralized API client).
- *
- * Server-side errors are handled by Next's app/error.tsx convention; this
- * boundary is mounted inside the root layout so client-side runtime errors
- * never blank the screen.
+ * Catches render-phase exceptions in client components and shows an
+ * error state with optional retry. Detects HttpError by duck-typing
+ * to avoid importing the api/client module at the layout level (which
+ * would pull in the session module and its Node Buffer polyfill chain).
  */
 
 import React from "react";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { HttpError } from "@/lib/api/client";
 
 interface Props {
   children: React.ReactNode;
@@ -22,6 +18,16 @@ interface Props {
 
 interface State {
   error: Error | null;
+}
+
+/** Duck-type check for HttpError without importing it. */
+function getRequestId(error: Error): string | undefined {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const obj = error as any;
+  if (obj?.requestId && typeof obj.requestId === "string") {
+    return obj.requestId;
+  }
+  return undefined;
 }
 
 export class ErrorBoundary extends React.Component<Props, State> {
@@ -32,12 +38,8 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    // Lightweight client-side breadcrumb. The Phase 2.5 backend will already
-    // have logged the request_id for any HttpError that surfaced here.
-    if (typeof window !== "undefined") {
-      // eslint-disable-next-line no-console
-      console.error("[ErrorBoundary]", error, info.componentStack);
-    }
+    // eslint-disable-next-line no-console
+    console.error("[ErrorBoundary]", error, info.componentStack);
   }
 
   reset = () => this.setState({ error: null });
@@ -46,8 +48,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
     const { error } = this.state;
     if (!error) return this.props.children;
 
-    const requestId =
-      error instanceof HttpError ? error.requestId : undefined;
+    const requestId = getRequestId(error);
     const message = error.message || "Unexpected error";
 
     return (

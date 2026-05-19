@@ -38,10 +38,15 @@ def build_user_read(db: Session, user: User) -> dict:
         "can_create_corporate_expenses": user.can_create_corporate_expenses,
         "can_invoice_corporation": user.can_invoice_corporation,
         "is_amex_reconciler": user.is_amex_reconciler,
+        "is_subcontractor": user.is_subcontractor,
         "requires_time_tracking": user.requires_time_tracking,
         "has_executive_reporting": user.has_executive_reporting,
+        "can_access_accounting": user.can_access_accounting,
+        "can_view_analytics": user.can_view_analytics,
         "invited_at": user.invited_at,
         "last_login_at": user.last_login_at,
+        "whatsapp_phone": user.whatsapp_phone,
+        "whatsapp_verified": user.whatsapp_verified,
         "created_at": user.created_at,
         "project_ids": [a.project_id for a in assignments],
     }
@@ -72,6 +77,7 @@ def create_user(db: Session, payload: UserCreate) -> User:
         can_create_corporate_expenses=payload.can_create_corporate_expenses,
         can_invoice_corporation=payload.can_invoice_corporation,
         is_amex_reconciler=payload.is_amex_reconciler,
+        is_subcontractor=payload.is_subcontractor,
         requires_time_tracking=payload.requires_time_tracking,
         has_executive_reporting=payload.has_executive_reporting,
     )
@@ -115,8 +121,12 @@ _UPDATABLE_FIELDS: set[str] = {
     "can_create_corporate_expenses",
     "can_invoice_corporation",
     "is_amex_reconciler",
+    "is_subcontractor",
     "requires_time_tracking",
     "has_executive_reporting",
+    "can_access_accounting",
+    "can_view_analytics",
+    "whatsapp_phone",
 }
 
 

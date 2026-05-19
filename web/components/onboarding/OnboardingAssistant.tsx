@@ -124,7 +124,7 @@ export function OnboardingAssistant({
               className={`rounded-xl px-3.5 py-2.5 ${
                 message.role === "user"
                   ? "ml-4 bg-blue-500/15 text-indigo-100/90 ring-1 ring-inset ring-blue-500/20"
-                  : "mr-4 bg-surface-1 text-secondary ring-1 ring-inset ring-white/[0.05]"
+                  : "mr-4 bg-surface-1 text-secondary ring-1 ring-inset ring-subtle"
               }`}
             >
               <div className="text-[11px] leading-relaxed">
@@ -135,7 +135,7 @@ export function OnboardingAssistant({
 
           {/* Typing indicator */}
           {isTyping && (
-            <div className="mr-4 rounded-xl bg-surface-1 px-3.5 py-2.5 ring-1 ring-inset ring-white/[0.05]">
+            <div className="mr-4 rounded-xl bg-surface-1 px-3.5 py-2.5 ring-1 ring-inset ring-subtle">
               <div className="flex items-center gap-2">
                 <span className="inline-flex gap-1">
                   {[0, 1, 2].map((d) => (

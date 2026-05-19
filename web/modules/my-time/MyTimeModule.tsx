@@ -18,6 +18,9 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
+import { apiCall, apiPost, apiDelete } from "@/lib/api/client";
+import { STATUS_TONE_STYLES } from "@/lib/status-styles";
+import { useTranslations } from "next-intl";
 import { useUserContext } from "@/context/UserContext";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -62,16 +65,13 @@ interface WeekView {
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+// DAY_LABELS replaced by t("dayMon") etc.
 
-const STATUS_CONFIG: Record<string, { cls: string; label: string }> = {
-  draft:     { cls: "text-muted",          label: "Draft" },
-  submitted: { cls: "text-blue-300/70",        label: "Submitted" },
-  approved:  { cls: "text-emerald-300/70",     label: "Approved" },
-  rejected:  { cls: "text-error/70",         label: "Rejected" },
-  partial:   { cls: "text-warning/70",       label: "Partial" },
-  empty:     { cls: "text-muted",           label: "Empty" },
-};
+// Status labels are now i18n-driven via useTranslations("timeTracking")
+function statusToneCls(s: string): string {
+  const tone = STATUS_TONE_STYLES[s === "draft" || s === "empty" ? "muted" : s === "submitted" ? "info" : s === "partial" ? "warning" : s];
+  return tone ? `${tone.bg} ${tone.text}` : "bg-surface-2 text-muted";
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -139,7 +139,7 @@ function HoursCell({
     setEditing(false);
   }
 
-  const statusCls = STATUS_CONFIG[status]?.cls ?? "";
+  const statusCls = statusToneCls(status);
 
   if (editing) {
     return (
@@ -207,6 +207,7 @@ function AddRowDialog({
 }) {
   const [projectId, setProjectId] = useState<number | "">("");
   const [activityId, setActivityId] = useState<number | "">("");
+  const t = useTranslations("timeTracking");
 
   const key = `${projectId}-${activityId}`;
   const alreadyAdded = projectId !== "" && existingPairs.has(key);
@@ -215,14 +216,14 @@ function AddRowDialog({
     <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
       <div className="w-72 overflow-hidden rounded-lg border border-strong bg-surface-1 shadow-xl">
         <div className="flex h-9 items-center justify-between border-b border-default px-3">
-          <span className="text-[11px] font-semibold text-secondary">Add Project Row</span>
+          <span className="text-[11px] font-semibold text-secondary">{t("addProjectRow")}</span>
           <button onClick={onClose} className="text-muted hover:text-secondary">
             <XCircle className="h-3.5 w-3.5" />
           </button>
         </div>
         <div className="space-y-3 p-3">
           <div>
-            <label className="mb-1 block text-[9px] font-bold uppercase tracking-widest text-muted">Project</label>
+            <label className="mb-1 block text-[9px] font-bold uppercase tracking-widest text-muted">{t("project")}</label>
             <select
               value={projectId}
               onChange={(e) => setProjectId(e.target.value === "" ? "" : Number(e.target.value))}
@@ -235,13 +236,13 @@ function AddRowDialog({
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-[9px] font-bold uppercase tracking-widest text-muted">Activity (optional)</label>
+            <label className="mb-1 block text-[9px] font-bold uppercase tracking-widest text-muted">{t("activityOptional")}</label>
             <select
               value={activityId}
               onChange={(e) => setActivityId(e.target.value === "" ? "" : Number(e.target.value))}
               className="w-full rounded border border-default bg-surface-2 px-2 py-1.5 text-[10px] text-secondary outline-none focus:border-default"
             >
-              <option value="">— None —</option>
+              <option value=""> -  None  - </option>
               {activities.map((a) => (
                 <option key={a.id} value={a.id}>{a.discipline ? `[${a.discipline}] ` : ""}{a.name}</option>
               ))}
@@ -273,6 +274,7 @@ function AddRowDialog({
 
 export default function MyTimeModule() {
   const { userId, companyId, displayName } = useUserContext();
+  const t = useTranslations("timeTracking");
 
   const [weekStart, setWeekStart] = useState(() => isoMonday(new Date()));
   const [weekView, setWeekView] = useState<WeekView | null>(null);
@@ -283,23 +285,20 @@ export default function MyTimeModule() {
   const [savingCells, setSavingCells] = useState<Set<string>>(new Set());
   const [showAddRow, setShowAddRow] = useState(false);
 
-  // Extra rows the user added locally (not yet in the DB — no entries yet)
+  // Extra rows the user added locally (not yet in the DB - no entries yet)
   const [extraRows, setExtraRows] = useState<{ project_id: number; activity_id: number | null }[]>([]);
 
   const loadWeek = useCallback(async () => {
     if (!companyId || !userId) return;
     setLoading(true);
     try {
-      const res = await fetch(
-        `${API}/time/${companyId}/entries/week?user_id=${userId}&week_start=${weekStart}`
-      );
-      if (res.ok) {
-        const data: WeekView = await res.json();
+      const data: any = await apiCall(`/time/${companyId}/entries/week?user_id=${userId}&week_start=${weekStart}`);
         setWeekView(data);
         // Drop extra rows that now appear in DB data
-        const dbPairs = new Set(data.rows.map((r) => `${r.project_id}-${r.activity_id}`));
-        setExtraRows((prev) => prev.filter((r) => !dbPairs.has(`${r.project_id}-${r.activity_id}`)));
-      }
+        if (data?.rows) {
+          const dbPairs = new Set(data.rows.map((r: any) => `${r.project_id}-${r.activity_id}`));
+          setExtraRows((prev: any) => prev.filter((r: any) => !dbPairs.has(`${r.project_id}-${r.activity_id}`)));
+        }
     } finally {
       setLoading(false);
     }
@@ -312,8 +311,8 @@ export default function MyTimeModule() {
   useEffect(() => {
     if (!companyId) return;
     Promise.all([
-      fetch(`${API}/time/${companyId}/projects`).then((r) => r.json()),
-      fetch(`${API}/time/${companyId}/activities`).then((r) => r.json()),
+      apiCall<any>(`/time/${companyId}/projects`),
+      apiCall<any>(`/time/${companyId}/activities`),
     ]).then(([p, a]) => {
       setProjects(p ?? []);
       setActivities(a ?? []);
@@ -361,19 +360,12 @@ export default function MyTimeModule() {
     const key = `${projectId}-${activityId}-${entryDate}`;
     setSavingCells((prev) => new Set(prev).add(key));
     try {
-      await fetch(
-        `${API}/time/${companyId}/entries?user_id=${userId}&user_name=${encodeURIComponent(displayName ?? "")}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+      await apiPost(`/time/${companyId}/entries`, {
             project_id: projectId,
             activity_id: activityId,
             entry_date: entryDate,
             hours,
-          }),
-        }
-      );
+          });
       await loadWeek();
     } finally {
       setSavingCells((prev) => { const s = new Set(prev); s.delete(key); return s; });
@@ -386,7 +378,7 @@ export default function MyTimeModule() {
     const key = `${projectId}-${activityId}-${entryDate}`;
     setSavingCells((prev) => new Set(prev).add(key));
     try {
-      await fetch(`${API}/time/${companyId}/entries/${entryId}?user_id=${userId}`, { method: "DELETE" });
+      await apiDelete(`/time/${companyId}/entries/${entryId}`);
       await loadWeek();
     } finally {
       setSavingCells((prev) => { const s = new Set(prev); s.delete(key); return s; });
@@ -397,10 +389,7 @@ export default function MyTimeModule() {
     if (!companyId || !userId || submitting) return;
     setSubmitting(true);
     try {
-      await fetch(
-        `${API}/time/${companyId}/entries/submit-week?user_id=${userId}&week_start=${weekStart}`,
-        { method: "POST" }
-      );
+      await apiPost(`/time/${companyId}/entries/submit-week`, { user_id: userId });
       await loadWeek();
     } finally {
       setSubmitting(false);
@@ -424,7 +413,7 @@ export default function MyTimeModule() {
           <ChevronLeft className="h-3.5 w-3.5" />
         </button>
         <span className="text-[11px] font-semibold text-tertiary">
-          {weekView ? fmtWeekRange(weekView.week_start, weekView.week_end) : "Loading…"}
+          {weekView ? fmtWeekRange(weekView.week_start, weekView.week_end) : t("loading")}
         </span>
         <button
           type="button"
@@ -444,8 +433,8 @@ export default function MyTimeModule() {
         <div className="ml-auto flex items-center gap-2">
           {/* Week status pill */}
           {weekStatus !== "empty" && (
-            <span className={`text-[9px] font-bold uppercase tracking-wider ${STATUS_CONFIG[weekStatus]?.cls ?? "text-muted"}`}>
-              {STATUS_CONFIG[weekStatus]?.label}
+            <span className={`text-[9px] font-bold uppercase tracking-wider ${statusToneCls(weekStatus)}`}>
+              {t(weekStatus)}
             </span>
           )}
           {/* Total hours */}
@@ -478,7 +467,7 @@ export default function MyTimeModule() {
           )}
           {weekStatus === "rejected" && (
             <span className="flex items-center gap-1 text-[10px] text-error/60">
-              <XCircle className="h-3 w-3" /> Rejected — fix &amp; resubmit
+              <XCircle className="h-3 w-3" /> Rejected - fix &amp; resubmit
             </span>
           )}
         </div>
@@ -506,14 +495,14 @@ export default function MyTimeModule() {
                         isToday ? "text-accent" : "text-muted"
                       }`}
                     >
-                      <div>{DAY_LABELS[i]}</div>
+                      <div>{t(`day${["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][i]}`)}</div>
                       <div className={`font-normal normal-case tracking-normal ${isToday ? "text-accent/50" : "text-muted"}`}>
                         {fmtShortDate(d)}
                       </div>
                     </th>
                   );
                 })}
-                <th className="w-14 px-2 py-2 text-center text-[9px] font-bold uppercase tracking-widest text-muted">Total</th>
+                <th className="w-14 px-2 py-2 text-center text-[9px] font-bold uppercase tracking-widest text-muted">{t("total")}</th>
                 <th className="w-8" />
               </tr>
             </thead>
@@ -597,7 +586,7 @@ export default function MyTimeModule() {
                     return (
                       <td key={d} className="px-1 py-1.5 text-center">
                         <span className={`text-[10px] font-bold ${t > 0 ? (over ? "text-warning/70" : "text-secondary") : "text-muted"}`}>
-                          {t > 0 ? Number(t).toFixed(1) : "—"}
+                          {t > 0 ? Number(t).toFixed(1) : " - "}
                         </span>
                       </td>
                     );

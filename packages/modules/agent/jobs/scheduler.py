@@ -45,6 +45,22 @@ def _job_daily_insight_digest() -> None:
             pass
 
 
+def _job_cleanup() -> None:
+    log.info("Running agent data cleanup…")
+    from packages.modules.agent.jobs.cleanup import run_cleanup
+    db, gen = _open_session()
+    try:
+        result = run_cleanup()
+        log.info("Agent cleanup: %s", result)
+    except Exception:
+        log.exception("agent cleanup job crashed")
+    finally:
+        try:
+            next(gen)
+        except StopIteration:
+            pass
+
+
 def start_scheduler() -> BackgroundScheduler | None:
     """Create and start the agent scheduler if enabled. Idempotent."""
     global _scheduler
@@ -63,6 +79,14 @@ def start_scheduler() -> BackgroundScheduler | None:
         _job_daily_insight_digest,
         trigger=CronTrigger(hour=2, minute=0),
         id="agent.daily_insight_digest",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
+    sched.add_job(
+        _job_cleanup,
+        trigger=CronTrigger(hour=3, minute=0),
+        id="agent.daily_cleanup",
         replace_existing=True,
         max_instances=1,
         coalesce=True,

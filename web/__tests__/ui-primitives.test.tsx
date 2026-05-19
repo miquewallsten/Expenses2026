@@ -14,7 +14,7 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { ErrorState } from "../components/ui/ErrorState";
 import { Skeleton } from "../components/ui/Skeleton";
 import { Tooltip } from "../components/ui/Tooltip";
-import { Modal } from "../components/ui/Modal";
+import Modal from "../components/ui/Modal";
 import { ToastProvider, useToast } from "../components/ui/Toast";
 
 describe("Button", () => {
@@ -93,7 +93,7 @@ describe("Input", () => {
   it("has focus ring styles", () => {
     render(<Input placeholder="focus" />);
     expect(screen.getByPlaceholderText("focus")).toHaveClass("focus:ring-2");
-    expect(screen.getByPlaceholderText("focus")).toHaveClass("focus:ring-indigo-400/20");
+    expect(screen.getByPlaceholderText("focus")).toHaveClass("focus:ring-blue-400/20");
   });
 
   it("has invalid focus ring styles", () => {

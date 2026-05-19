@@ -10,9 +10,9 @@ interface StepBasicsProps {
 }
 
 const CURRENCIES = [
-  { value: "MXN", label: "MXN — Peso Mexicano" },
-  { value: "USD", label: "USD — US Dollar" },
-  { value: "EUR", label: "EUR — Euro" },
+  { value: "MXN", label: "MXN - Peso Mexicano" },
+  { value: "USD", label: "USD - US Dollar" },
+  { value: "EUR", label: "EUR - Euro" },
 ];
 
 const TIMEZONES = [

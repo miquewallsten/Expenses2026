@@ -17,17 +17,10 @@ async function uploadOne(row: QueuedUpload): Promise<boolean> {
     });
     return true;
   } catch (e) {
-    // 4xx is a permanent failure (auth / validation / wrong company). Drop
-    // the row so we don't loop forever; the user can re-capture if needed.
     if (e instanceof HttpError && e.status >= 400 && e.status < 500) return true;
     return false;
   }
 }
-
-// PWA install prompt + service worker registrar.
-// - Registers /sw.js (production only — dev SW caching makes Turbopack a nightmare).
-// - Listens for `beforeinstallprompt`, shows a dismissable banner (admins +
-//   employees alike). Stores dismissal in localStorage so we don't nag.
 
 type BIPEvent = Event & {
   prompt: () => Promise<void>;
@@ -42,20 +35,22 @@ export default function PwaBootstrap() {
   const [evt, setEvt] = useState<BIPEvent | null>(null);
   const [visible, setVisible] = useState(false);
 
-  // Register SW.
+  // Register SW (production only). In development, unregister any stale SW.
   useEffect(() => {
-    if (typeof window === "undefined") return;
     if (!("serviceWorker" in navigator)) return;
-    if (process.env.NODE_ENV !== "production") return;
-    navigator.serviceWorker.register("/sw.js").catch(() => {
-      /* swallow: SW registration is best-effort */
-    });
+    if (process.env.NODE_ENV === "production") {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    } else {
+      // In dev mode, unregister any existing service worker to prevent
+      // stale cached chunks from causing module instantiation errors.
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(reg => reg.unregister());
+      }).catch(() => {});
+    }
   }, []);
 
   // Capture install prompt.
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
     const dismissedAt = Number(localStorage.getItem(DISMISS_KEY) || 0);
     if (dismissedAt && Date.now() - dismissedAt < DISMISS_TTL_MS) return;
 
@@ -68,10 +63,8 @@ export default function PwaBootstrap() {
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
-  // Drain the offline upload queue when we boot online and whenever the
-  // browser flips back to online. Best-effort, never blocks UI.
+  // Drain offline upload queue.
   useEffect(() => {
-    if (typeof window === "undefined") return;
     const drain = () => {
       void drainUploadQueue(uploadOne);
     };

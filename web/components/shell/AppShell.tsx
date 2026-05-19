@@ -176,7 +176,7 @@ export default function AppShell({
         {navDrawerOpen && (
           <>
             <div
-              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[1px]"
+              className="fixed inset-0 z-40 overlay-backdrop-blur"
               onClick={() => setNavDrawerOpen(false)}
               aria-hidden="true"
             />
@@ -208,7 +208,7 @@ export default function AppShell({
         {aiPanel && aiSheetOpen && (
           <>
             <div
-              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[1px]"
+              className="fixed inset-0 z-40 overlay-backdrop-blur"
               onClick={() => setAiSheetOpen(false)}
               aria-hidden="true"
             />
@@ -309,7 +309,7 @@ export default function AppShell({
         {aiPanel && aiSheetOpen && (
           <>
             <div
-              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[1px]"
+              className="fixed inset-0 z-40 overlay-backdrop-blur"
               onClick={() => setAiSheetOpen(false)}
               aria-hidden="true"
             />

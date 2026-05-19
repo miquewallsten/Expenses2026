@@ -5,7 +5,6 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from packages.modules.agent.core.context import AgentContext, Persona
 from packages.modules.agent.core.engine import run_turn
 from packages.modules.channels.schemas import NormalizedMessage
 import re
@@ -108,23 +107,57 @@ def process_message(db: Session, message: NormalizedMessage) -> dict[str, Any]:
     Returns:
         Agent processing result with reply and extracted data
     """
+    from packages.core.platform.models_user import User as UserModel
+
+    # Look up the user by sender reference (email or phone).
+    # Fall back to None if no matching user is found.
+    sender = (
+        db.query(UserModel)
+        .filter(
+            UserModel.company_id == message.company_id,
+            UserModel.email == message.sender_ref,
+        )
+        .first()
+    )
+    if sender is None:
+        # Also try matching by phone if available
+        sender = (
+            db.query(UserModel)
+            .filter(
+                UserModel.company_id == message.company_id,
+                UserModel.phone == message.sender_ref,
+            )
+            .first()
+        )
+
+    # If we cannot identify the user, fall back to NL expense parsing
+    if sender is None:
+        log.warning("No user found for sender_ref=%s in company=%s, using NL parsing fallback",
+                     message.sender_ref, message.company_id)
+        intent = _classify_intent(message.body or "", bool(message.attachments))
+        if intent == "nl_expense_filing":
+            reply = _handle_nl_expense_filing(db, message, user_id=0)
+            return {"reply": reply, "extracted_fields": None, "ready_to_submit": False}
+        return {
+            "reply": "No pude identificar tu cuenta. Por favor contacta al administrador.",
+            "extracted_fields": None,
+            "ready_to_submit": False,
+        }
+
     try:
-        # Create agent context for this message
-        context = AgentContext(
+        result = run_turn(
+            db=db,
+            user=sender,
             company_id=message.company_id,
-            user_id=message.from_user_id,
-            persona=Persona.EMPLOYEE,
+            persona="admin",  # TODO: Add "employee" persona — channel users submit expenses
+            user_message=message.body or "",
             session_id=f"channel_{message.channel}_{message.message_id}",
-            initial_message=message.body or "",
         )
         
-        # Run agent turn
-        result = run_turn(db, context)
-        
         return {
-            "reply": result.content,
-            "extracted_fields": result.extracted_fields,
-            "ready_to_submit": result.ready_to_submit,
+            "reply": result.get("content", ""),
+            "extracted_fields": None,
+            "ready_to_submit": result.get("ok", False),
         }
         
     except Exception as exc:

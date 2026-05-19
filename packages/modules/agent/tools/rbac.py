@@ -43,14 +43,7 @@ def _list_roles(ctx: AgentContext, _: Empty) -> ToolResult:
     )
 
 
-REGISTRY.register(ToolSpec(
-    name="list_roles",
-    description="Lista los roles de la empresa (key, nombre, descripción).",
-    category="read",
-    input_schema=Empty,
-    handler=_list_roles,
-    personas=frozenset({"admin"}),
-))
+# Removed duplicate list_roles (see admin_tools.py)
 
 
 def _list_permissions(ctx: AgentContext, _: Empty) -> ToolResult:

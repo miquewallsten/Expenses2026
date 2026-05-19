@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Phase 4.8 frontend — SAT cancel watcher reversal panel section.
+ * Phase 4.8 frontend - SAT cancel watcher reversal panel section.
  *
  * Wraps GET /expenses/cfdi/cancelled and POST /expenses/cfdi/recheck/{id}.
  * Read-only triage list of expenses whose CFDI flipped to Cancelado, with a
@@ -25,9 +25,8 @@ import {
   SectionPanel,
   SectionLabel,
 } from "@/components/admin/shared/AdminPatterns";
-import { getAuthHeaders } from "@/lib/session";
+import { apiCall, apiPost } from "@/lib/api/client";
 
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 interface CancelledRow {
   id: number;
@@ -58,14 +57,8 @@ export default function CfdiWatcherSection() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API}/expenses/cfdi/cancelled`, {
-        headers: { ...getAuthHeaders() },
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || `${res.status}`);
-      }
-      setRows((await res.json()) as CancelledRow[]);
+      const data = await apiCall<CancelledRow[]>(`/expenses/cfdi/cancelled`);
+      setRows(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
     } finally {
@@ -82,18 +75,7 @@ export default function CfdiWatcherSection() {
       setBusyId(row.id);
       setError(null);
       try {
-        const res = await fetch(`${API}/expenses/cfdi/recheck/${row.id}`, {
-          method: "POST",
-          headers: { ...getAuthHeaders() },
-        });
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(text || `${res.status}`);
-        }
-        const body = (await res.json()) as {
-          cfdi_status: string;
-          cfdi_last_checked_at: string;
-        };
+        const body = await apiPost<{ cfdi_status: string; cfdi_last_checked_at: string }>(`/expenses/cfdi/recheck/${row.id}`);
         // If still Cancelado, just refresh timestamp; else drop from list.
         if (body.cfdi_status === "Cancelado") {
           setRows((prev) =>
@@ -120,10 +102,7 @@ export default function CfdiWatcherSection() {
     setBatchSummary(null);
     setError(null);
     try {
-      const res = await fetch(`${API}/expenses/cfdi/recheck-pending`, {
-        method: "POST",
-        headers: { ...getAuthHeaders() },
-      });
+      const res: any = await apiPost(`/expenses/cfdi/recheck-pending`);
       if (!res.ok) {
         const text = await res.text();
         throw new Error(text || `${res.status}`);
@@ -221,7 +200,7 @@ export default function CfdiWatcherSection() {
             <div className="overflow-hidden">
               <table className="w-full text-[11px]">
                 <thead>
-                  <tr className="border-b border-white/5 bg-surface-2/30 text-[9px] uppercase tracking-widest text-muted">
+                  <tr className="border-b border-subtle bg-surface-2/30 text-[9px] uppercase tracking-widest text-muted">
                     <th className="p-3 font-semibold">{t("th.expense")}</th>
                     <th className="p-3 font-semibold">{t("th.amount")}</th>
                     <th className="p-3 font-semibold">{t("th.uuid")}</th>
@@ -229,7 +208,7 @@ export default function CfdiWatcherSection() {
                     <th className="p-3 w-32" />
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-subtle">
                   {rows.map((r) => (
                     <tr
                       key={r.id}
@@ -247,8 +226,8 @@ export default function CfdiWatcherSection() {
                           </Link>
                         </div>
                         <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-wide text-muted">
-                          <span>{r.expense_date ?? "—"}</span>
-                          <span className="text-white/5">•</span>
+                          <span>{r.expense_date ?? " - "}</span>
+                          <span className="separator-dot">•</span>
                           <span>{r.status}</span>
                           {r.cfdi_amount_mismatch && (
                             <span className="ml-1 text-rose-400">Mismatch Detected</span>
@@ -261,14 +240,14 @@ export default function CfdiWatcherSection() {
                         </div>
                       </td>
                       <td className="p-3">
-                        <code className="text-[9.5px] text-tertiary font-mono bg-white/5 px-1.5 py-0.5 rounded">
-                          {r.cfdi_uuid?.slice(0, 8) ?? "—"}…{r.cfdi_uuid?.slice(-8)}
+                        <code className="text-[9.5px] text-tertiary font-mono bg-surface-2 px-1.5 py-0.5 rounded">
+                          {r.cfdi_uuid?.slice(0, 8) ?? " - "}…{r.cfdi_uuid?.slice(-8)}
                         </code>
                       </td>
                       <td className="p-3 text-right text-muted font-medium">
                         {r.cfdi_last_checked_at
                           ? new Date(r.cfdi_last_checked_at).toLocaleDateString()
-                          : "—"}
+                          : " - "}
                       </td>
                       <td className="p-3 text-right">
                         <button

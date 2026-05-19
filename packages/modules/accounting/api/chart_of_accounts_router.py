@@ -24,6 +24,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
 from apps.api.auth import require_admin
+from packages.core.platform.module_gate import require_module
 from apps.api.deps import get_db
 from packages.modules.accounting.service.bulk_simulator_service import bulk_simulate
 from packages.modules.accounting.service.poliza_export_service import (

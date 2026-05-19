@@ -45,6 +45,7 @@ class LLMProviderConfig(Base):
     provider: Mapped[str] = mapped_column(String(32), nullable=False, default="ollama")
     base_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     api_key_env_ref: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    api_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
     model_name: Mapped[str] = mapped_column(String(128), nullable=False, default="llama3.2")
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())

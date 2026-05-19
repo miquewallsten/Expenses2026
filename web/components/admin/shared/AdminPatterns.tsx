@@ -25,6 +25,7 @@ export const SECTION_ACCENTS = {
   modules: { bg: "bg-ai/10", text: "text-ai", border: "border-ai/20" },
   channels: { bg: "bg-accent/10", text: "text-accent", border: "border-accent/20" },
   overview: { bg: "bg-accent/10", text: "text-accent", border: "border-accent/20" },
+  "settings": { bg: "bg-slate-500/10", text: "text-slate-400", border: "border-slate-500/20" },
   default: { bg: "bg-surface-2", text: "text-secondary", border: "border-default" },
 } as const;
 
@@ -49,7 +50,7 @@ export function PremiumHeader({ icon, title, subtitle, section = "default", badg
   const accent = SECTION_ACCENTS[section];
 
   return (
-    <div className="relative overflow-hidden rounded-lg border border-white/10 bg-surface-1 px-4 py-3">
+    <div className="relative overflow-hidden rounded-lg border border-default bg-surface-1 px-4 py-3">
       <div className="relative flex items-center justify-between">
         <div className="flex items-center gap-3">
           {/* Icon container with colored background */}
@@ -262,7 +263,7 @@ export function Toggle({ value, onChange, disabled = false, size = "md" }: Toggl
       className={`relative inline-flex shrink-0 items-center rounded-full border transition-colors disabled:opacity-30 ${
         value
           ? "border-accent/40 bg-accent/20"
-          : "border-white/10 bg-surface-2"
+          : "border-default bg-surface-2"
       } ${sizeClasses}`}
     >
       <span className={`absolute top-0.5 ${knobSize} rounded-full bg-white transition-transform ${knobTranslate}`} />
@@ -289,8 +290,8 @@ export function SectionLabel({ children }: { children: ReactNode }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const inputClasses = {
-  base: "rounded-lg border border-white/10 bg-surface-1 px-3 py-2 text-[11px] text-primary outline-none placeholder:text-muted focus:border-accent/40 focus:bg-surface-2 transition-all hover:border-white/20",
-  select: "rounded-lg border border-white/10 bg-surface-1 px-3 py-1.5 text-[10px] text-secondary outline-none focus:border-accent/40 focus:bg-surface-2 transition-all hover:border-white/20",
-  textarea: "rounded-lg border border-white/10 bg-surface-1 px-3 py-2 text-[11px] text-primary outline-none placeholder:text-muted focus:border-accent/40 focus:bg-surface-2 transition-all resize-none hover:border-white/20",
-  mono: "rounded-lg border border-white/10 bg-surface-1 px-3 py-2 font-mono text-[10px] text-secondary outline-none placeholder:text-muted focus:border-accent/40 focus:bg-surface-2 transition-all hover:border-white/20",
+  base: "rounded-lg border border-default bg-surface-1 px-3 py-2 text-[11px] text-primary outline-none placeholder:text-muted focus:border-accent/40 focus:bg-surface-2 transition-all hover:border-strong",
+  select: "rounded-lg border border-default bg-surface-1 px-3 py-1.5 text-[10px] text-secondary outline-none focus:border-accent/40 focus:bg-surface-2 transition-all hover:border-strong",
+  textarea: "rounded-lg border border-default bg-surface-1 px-3 py-2 text-[11px] text-primary outline-none placeholder:text-muted focus:border-accent/40 focus:bg-surface-2 transition-all resize-none hover:border-strong",
+  mono: "rounded-lg border border-default bg-surface-1 px-3 py-2 font-mono text-[10px] text-secondary outline-none placeholder:text-muted focus:border-accent/40 focus:bg-surface-2 transition-all hover:border-strong",
 };

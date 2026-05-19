@@ -28,20 +28,20 @@ export function buildGlobalNav(context: NavigationContext): GlobalNavItem[] {
   if (role !== null) {
     items.push({
       key: "employee",
-      label: "My Work",
+      label: "myWork",
       href: "/mywork",
-      group: "Workspaces",
+      group: "Workspaces",  // i18n key for nav.groups.Workspaces
       active: currentPortal === "employee",
     });
   }
 
   // ── Super Admin — system-wide administration ──────────────────────────────
-  if (role === "admin" && hasPermission("super_admin_access")) {
+  if (role === "super_admin") {
     items.push({
       key: "super-admin",
-      label: "Super Admin",
+      label: "superAdmin",
       href: "/super-admin",
-      group: "Administration",
+      group: "Administration",  // i18n key for nav.groups.Administration
       active: currentPortal === ("super-admin" as never),
     });
   }

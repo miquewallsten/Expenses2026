@@ -3,7 +3,7 @@
 
 import { apiCall, apiPost } from "@/lib/api/client";
 
-export type AgentPersona = "admin" | "employee" | "procurement" | "finance_manager" | "manager";
+export type AgentPersona = "admin" | "employee" | "procurement" | "accounting" | "manager" | "super_admin";
 
 export interface AgentToolCall {
   tool:    string;

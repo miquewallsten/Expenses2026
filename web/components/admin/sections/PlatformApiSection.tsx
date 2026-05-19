@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Phase 4.2 frontend — platform API admin section.
+ * Phase 4.2 frontend - platform API admin section.
  *
  * Wraps GET/POST/DELETE /admin/platform-api/{cid}/keys and
  * GET/POST/PATCH/DELETE /admin/platform-api/{cid}/webhooks.
@@ -34,7 +34,9 @@ import {
   Check,
   AlertTriangle,
 } from "lucide-react";
-import { getCurrentCompanyId, getAuthHeaders } from "@/lib/session";
+import { getCurrentCompanyId } from "@/lib/session";
+import { apiCall, apiPost, apiPatch, apiDelete } from "@/lib/api/client";
+import { copyToClipboard } from "@/lib/copy";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -106,11 +108,8 @@ export default function PlatformApiSection() {
   const loadKeys = useCallback(async (cid: number) => {
     setKeysLoading(true);
     try {
-      const res = await fetch(`${API}/admin/platform-api/${cid}/keys`, {
-        headers: { ...getAuthHeaders() },
-      });
-      if (!res.ok) throw new Error((await res.text()) || `${res.status}`);
-      setKeys(await res.json());
+      const res: any = await apiCall(`/admin/platform-api/${cid}/keys`);
+      setKeys(Array.isArray(res) ? res : res?.keys ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
     } finally {
@@ -121,11 +120,8 @@ export default function PlatformApiSection() {
   const loadHooks = useCallback(async (cid: number) => {
     setHooksLoading(true);
     try {
-      const res = await fetch(`${API}/admin/platform-api/${cid}/webhooks`, {
-        headers: { ...getAuthHeaders() },
-      });
-      if (!res.ok) throw new Error((await res.text()) || `${res.status}`);
-      setHooks(await res.json());
+      const res: any = await apiCall(`/admin/platform-api/${cid}/webhooks`);
+      setHooks(Array.isArray(res) ? res : res?.webhooks ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
     } finally {
@@ -149,15 +145,12 @@ export default function PlatformApiSection() {
     setBusyId("new-key");
     setError(null);
     try {
-      const res = await fetch(`${API}/admin/platform-api/${companyId}/keys`, {
-        method: "POST",
-        headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ name: keyName.trim(), scopes: keyScopes }),
+      const body: any = await apiPost(`/admin/platform-api/${companyId}/keys`, {
+        name: keyName.trim(),
+        scopes: keyScopes,
       });
-      if (!res.ok) throw new Error((await res.text()) || `${res.status}`);
-      const body = (await res.json()) as { row: ApiKeyRow; plaintext: string };
-      setKeys((prev) => [body.row, ...prev]);
-      setRevealedKey(body.plaintext);
+      setKeys((prev) => [body?.row ?? body, ...prev]);
+      setRevealedKey(body?.plaintext ?? body?.key ?? "");
       setKeyName("");
       setKeyScopes(["expenses:read"]);
     } catch (e) {
@@ -174,11 +167,7 @@ export default function PlatformApiSection() {
       setBusyId(`key-${row.id}`);
       setError(null);
       try {
-        const res = await fetch(
-          `${API}/admin/platform-api/${companyId}/keys/${row.id}`,
-          { method: "DELETE", headers: { ...getAuthHeaders() } },
-        );
-        if (!res.ok) throw new Error((await res.text()) || `${res.status}`);
+        await apiDelete(`/admin/platform-api/${companyId}/keys/${row.id}`);
         setKeys((prev) =>
           prev.map((k) =>
             k.id === row.id ? { ...k, revoked_at: new Date().toISOString() } : k,
@@ -198,20 +187,11 @@ export default function PlatformApiSection() {
     setBusyId("new-hook");
     setError(null);
     try {
-      const res = await fetch(
-        `${API}/admin/platform-api/${companyId}/webhooks`,
-        {
-          method: "POST",
-          headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
-          body: JSON.stringify({
-            event_type: hookEvent.trim(),
-            target_url: hookUrl.trim(),
-            description: hookDesc.trim() || null,
-          }),
-        },
-      );
-      if (!res.ok) throw new Error((await res.text()) || `${res.status}`);
-      const body = (await res.json()) as { row: WebhookRow; secret: string };
+      const body = await apiPost<{ row: WebhookRow; secret: string }>(`/admin/platform-api/${companyId}/webhooks`, {
+        event_type: hookEvent.trim(),
+        target_url: hookUrl.trim(),
+        description: hookDesc.trim() || null,
+      });
       setHooks((prev) => [body.row, ...prev]);
       setRevealedSecret(body.secret);
       setHookUrl("");
@@ -229,16 +209,9 @@ export default function PlatformApiSection() {
       setBusyId(`hook-${row.id}`);
       setError(null);
       try {
-        const res = await fetch(
-          `${API}/admin/platform-api/${companyId}/webhooks/${row.id}`,
-          {
-            method: "PATCH",
-            headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
-            body: JSON.stringify({ is_enabled: !row.is_enabled }),
-          },
-        );
-        if (!res.ok) throw new Error((await res.text()) || `${res.status}`);
-        const updated = (await res.json()) as WebhookRow;
+        const updated = await apiPatch<WebhookRow>(`/admin/platform-api/${companyId}/webhooks/${row.id}`, {
+        is_enabled: !row.is_enabled,
+      });
         setHooks((prev) => prev.map((h) => (h.id === row.id ? updated : h)));
       } catch (e) {
         setError(e instanceof Error ? e.message : "Error");
@@ -256,11 +229,7 @@ export default function PlatformApiSection() {
       setBusyId(`hook-${row.id}`);
       setError(null);
       try {
-        const res = await fetch(
-          `${API}/admin/platform-api/${companyId}/webhooks/${row.id}`,
-          { method: "DELETE", headers: { ...getAuthHeaders() } },
-        );
-        if (!res.ok) throw new Error((await res.text()) || `${res.status}`);
+        await apiDelete(`/admin/platform-api/${companyId}/webhooks/${row.id}`);
         setHooks((prev) => prev.filter((h) => h.id !== row.id));
       } catch (e) {
         setError(e instanceof Error ? e.message : "Error");
@@ -273,7 +242,7 @@ export default function PlatformApiSection() {
 
   const copy = useCallback(async (val: string) => {
     try {
-      await navigator.clipboard.writeText(val);
+      await copyToClipboard(val);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
@@ -322,14 +291,14 @@ export default function PlatformApiSection() {
           <p className="text-[10.5px] text-cyan-100/70 mb-3 leading-relaxed">
             {revealedKey ? t("keys.revealBody") : t("webhooks.revealBody")}
           </p>
-          <div className="flex items-center gap-3 rounded-lg border border-cyan-500/20 bg-black/40 px-3 py-2">
+          <div className="flex items-center gap-3 rounded-lg border border-cyan-500/20 section-subtle px-3 py-2">
             <code className="flex-1 break-all font-mono text-[11px] text-cyan-100">
               {revealedKey || revealedSecret}
             </code>
             <button
               type="button"
               onClick={() => copy((revealedKey || revealedSecret)!)}
-              className="flex items-center gap-2 rounded-md border border-white/10 bg-white/5 px-2.5 py-1.5 text-[10px] font-semibold text-secondary transition-all hover:bg-white/10"
+              className="flex items-center gap-2 rounded-md border border-default bg-surface-2 px-2.5 py-1.5 text-[10px] font-semibold text-secondary transition-all hover:bg-surface-2"
             >
               {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
               {copied ? t("copied") : t("copy")}
@@ -382,7 +351,7 @@ export default function PlatformApiSection() {
                             className={`rounded-md border px-2 py-1 font-mono text-[9.5px] font-semibold transition-all ${
                               on
                                 ? "border-cyan-500/40 bg-accent/10 text-cyan-300"
-                                : "border-white/5 bg-white/2 hover:border-white/10 text-muted"
+                                : "border-subtle bg-surface-1 hover:border-default text-muted"
                             }`}
                           >
                             {s}
@@ -405,7 +374,7 @@ export default function PlatformApiSection() {
              </div>
            </div>
 
-           <div className="border-t border-white/5 bg-surface-2/20">
+           <div className="border-t border-subtle bg-surface-2/20">
               {keysLoading ? (
                 <div className="p-10 text-center text-muted"><Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />{t("loading")}</div>
               ) : keys.length === 0 ? (
@@ -413,7 +382,7 @@ export default function PlatformApiSection() {
               ) : (
                 <table className="w-full text-left text-[10.5px]">
                    <thead>
-                     <tr className="border-b border-white/5 text-[9px] uppercase tracking-widest text-muted">
+                     <tr className="border-b border-subtle text-[9px] uppercase tracking-widest text-muted">
                         <th className="p-3 font-semibold">{t("keys.th.name")}</th>
                         <th className="p-3 font-semibold">{t("keys.th.scopes")}</th>
                         <th className="p-3 font-semibold text-right">{t("keys.th.status")}</th>
@@ -422,28 +391,28 @@ export default function PlatformApiSection() {
                    </thead>
                    <tbody>
                       {keys.map(k => (
-                        <tr key={k.id} className="border-b border-white/5 last:border-0 group">
+                        <tr key={k.id} className="border-b border-subtle last:border-0 group">
                            <td className="p-3">
                               <div className="font-semibold text-primary">{k.name}</div>
                               <div className="font-mono text-[9px] text-muted">{k.key_prefix}…</div>
                            </td>
                            <td className="p-3">
                               <div className="flex flex-wrap gap-1">
-                                {k.scopes.map(s => <span key={s} className="px-1.5 py-0.5 rounded bg-white/5 border border-white/5 font-mono text-[9px] text-tertiary">{s}</span>)}
+                                {k.scopes.map(s => <span key={s} className="px-1.5 py-0.5 rounded bg-surface-2 border border-subtle font-mono text-[9px] text-tertiary">{s}</span>)}
                               </div>
                            </td>
                            <td className="p-3 text-right">
                               {k.revoked_at ? (
                                 <span className="text-[9px] font-bold uppercase text-rose-400/70 border border-rose-400/20 bg-rose-400/5 px-1.5 py-0.5 rounded">{t("keys.statusRevoked")}</span>
                               ) : (
-                                <span className="text-[9px] font-bold uppercase text-emerald-400/70 border border-emerald-400/20 bg-emerald-400/5 px-1.5 py-0.5 rounded">{t("keys.statusActive")}</span>
+                                <span className="text-[9px] font-bold uppercase text-emerald-400/70 border border-success/20 bg-success/5 px-1.5 py-0.5 rounded">{t("keys.statusActive")}</span>
                               )}
                            </td>
                            <td className="p-3 text-right">
                               {!k.revoked_at && (
                                 <button
                                   onClick={() => revokeKey(k)}
-                                  className="p-1.5 rounded-md hover:bg-rose-500/10 text-muted hover:text-rose-400 transition-colors opacity-0 group-hover:opacity-100"
+                                  className="p-1.5 rounded-md hover:bg-error/10 text-muted hover:text-error transition-colors opacity-0 group-hover:opacity-100"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </button>
@@ -507,7 +476,7 @@ export default function PlatformApiSection() {
              </div>
           </div>
 
-          <div className="border-t border-white/5 bg-surface-2/20">
+          <div className="border-t border-subtle bg-surface-2/20">
               {hooksLoading ? (
                 <div className="p-10 text-center text-muted"><Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />{t("loading")}</div>
               ) : hooks.length === 0 ? (
@@ -515,7 +484,7 @@ export default function PlatformApiSection() {
               ) : (
                 <table className="w-full text-left text-[10.5px]">
                    <thead>
-                     <tr className="border-b border-white/5 text-[9px] uppercase tracking-widest text-muted">
+                     <tr className="border-b border-subtle text-[9px] uppercase tracking-widest text-muted">
                         <th className="p-3 font-semibold">{t("webhooks.th.event")}</th>
                         <th className="p-3 font-semibold">{t("webhooks.th.target")}</th>
                         <th className="p-3 font-semibold text-right">{t("webhooks.th.status")}</th>
@@ -524,7 +493,7 @@ export default function PlatformApiSection() {
                    </thead>
                    <tbody>
                       {hooks.map(h => (
-                        <tr key={h.id} className="border-b border-white/5 last:border-0 group">
+                        <tr key={h.id} className="border-b border-subtle last:border-0 group">
                            <td className="p-3">
                               <div className="font-semibold text-primary">{h.event_type}</div>
                               <div className="text-[9px] text-muted">{h.description || "No description"}</div>
@@ -534,22 +503,22 @@ export default function PlatformApiSection() {
                            </td>
                            <td className="p-3 text-right">
                               {h.is_enabled ? (
-                                <span className="text-[8px] font-bold uppercase text-emerald-400/80 border border-emerald-400/20 bg-emerald-400/5 px-1.5 py-0.5 rounded">{t("webhooks.statusEnabled")}</span>
+                                <span className="text-[8px] font-bold uppercase text-success border border-success/20 bg-success/5 px-1.5 py-0.5 rounded">{t("webhooks.statusEnabled")}</span>
                               ) : (
-                                <span className="text-[8px] font-bold uppercase text-muted border border-white/10 bg-white/5 px-1.5 py-0.5 rounded">{t("webhooks.statusDisabled")}</span>
+                                <span className="text-[8px] font-bold uppercase text-muted border border-default bg-surface-2 px-1.5 py-0.5 rounded">{t("webhooks.statusDisabled")}</span>
                               )}
                            </td>
                            <td className="p-3 text-right">
                               <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button
                                   onClick={() => toggleHook(h)}
-                                  className="p-1.5 rounded-md hover:bg-white/5 text-muted transition-colors"
+                                  className="p-1.5 rounded-md hover:bg-surface-2 text-muted transition-colors"
                                 >
                                   {h.is_enabled ? <PowerOff className="h-3 w-3" /> : <Power className="h-3 w-3" />}
                                 </button>
                                 <button
                                   onClick={() => deleteHook(h)}
-                                  className="p-1.5 rounded-md hover:bg-rose-500/10 text-muted hover:text-rose-400 transition-colors"
+                                  className="p-1.5 rounded-md hover:bg-error/10 text-muted hover:text-error transition-colors"
                                 >
                                   <Trash2 className="h-3 w-3" />
                                 </button>

@@ -27,6 +27,7 @@ class CompanySetupBase(BaseModel):
     accounting_module_enabled: bool = True
     archive_module_enabled: bool = True
     purchase_requests_module_enabled: bool = False
+    amex_reconciliation_module_enabled: bool = False
     ai_copilot_enabled: bool = True
     ai_setup_completed: bool = False
     ai_setup_notes: str | None = None
@@ -60,6 +61,7 @@ class CompanySetupUpdate(BaseModel):
     accounting_module_enabled: bool | None = None
     archive_module_enabled: bool | None = None
     purchase_requests_module_enabled: bool | None = None
+    amex_reconciliation_module_enabled: bool | None = None
     ai_copilot_enabled: bool | None = None
     ai_setup_completed: bool | None = None
     ai_setup_notes: str | None = None

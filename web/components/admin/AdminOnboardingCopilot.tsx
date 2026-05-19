@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * AdminOnboardingCopilot — AI-guided conversational onboarding for new admins.
+ * AdminOnboardingCopilot - AI-guided conversational onboarding for new admins.
  *
  * Replaces the rigid step-by-step wizard with a natural chat experience.
  * The Copilot asks about the company, understands intent, and configures
@@ -265,7 +265,7 @@ export default function AdminOnboardingCopilot({ companyId, onComplete, onSkip }
                 className={`max-w-[90%] rounded-xl px-3.5 py-2.5 text-[11px] leading-relaxed ${
                   msg.role === "user"
                     ? "bg-blue-500/15 text-indigo-100/90 ring-1 ring-inset ring-blue-500/20"
-                    : "bg-surface-1 text-secondary ring-1 ring-inset ring-white/[0.05]"
+                    : "bg-surface-1 text-secondary ring-1 ring-inset ring-subtle"
                 }`}
               >
                 {msg.role === "assistant" ? renderContent(msg.content) : msg.content}
@@ -301,7 +301,7 @@ export default function AdminOnboardingCopilot({ companyId, onComplete, onSkip }
 
           {loading && (
             <div className="flex justify-start">
-              <div className="flex items-center gap-2 rounded-xl bg-surface-1 px-3.5 py-2.5 ring-1 ring-inset ring-white/[0.05]">
+              <div className="flex items-center gap-2 rounded-xl bg-surface-1 px-3.5 py-2.5 ring-1 ring-inset ring-subtle">
                 <div className="flex gap-0.5">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent/60" style={{ animationDelay: "0ms" }} />
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent/60" style={{ animationDelay: "150ms" }} />

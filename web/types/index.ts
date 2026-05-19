@@ -21,9 +21,10 @@ export { DEFAULT_USER_CAPABILITIES } from "./user";
 export type {
   ModuleVisibilityContext,
   MyWorkModule,
+  AdminSectionVisibility,
   SelectedWorkItem,
 } from "./modules";
-export { EMPTY_SELECTED_WORK_ITEM } from "./modules";
+export { EMPTY_SELECTED_WORK_ITEM, isAdminSectionVisible } from "./modules";
 
 // Agent / Action types (from mywork.ts)
 export type {

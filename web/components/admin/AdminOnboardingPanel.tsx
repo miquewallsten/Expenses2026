@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * AdminOnboardingPanel — single Onboarding entry for /admin worklist.
+ * AdminOnboardingPanel - single Onboarding entry for /admin worklist.
  * Renders the Phase 4.6 onboarding wizard body (numbered step strip +
  * checklist + go-live tile) without page-level chrome so it can be
  * embedded inside the worklist content area or wrapped by a standalone
@@ -101,8 +101,7 @@ export default function AdminOnboardingPanel({ companyId, onNavigate }: Props) {
     try {
       const body = await apiCall<ChecklistResponse>(`/admin/company-setup/${companyId}/checklist`);
       // Hydrate client-side completion for the profile step (no backend support).
-      const profileDone = typeof window !== "undefined" &&
-        window.localStorage.getItem(`profile_complete:${companyId}`) === "1";
+      const profileDone = localStorage.getItem(`profile_complete:${companyId}`) === "1";
       body.items = {
         ...body.items,
         profile: {
@@ -188,7 +187,7 @@ export default function AdminOnboardingPanel({ companyId, onNavigate }: Props) {
       {/* Progress bar */}
       <div className="relative h-1 w-full overflow-hidden rounded-full bg-surface-2">
         <div
-          className="h-full bg-gradient-to-r from-success via-success to-success/70 transition-all duration-500"
+          className="h-full bg-success transition-all duration-500"
           style={{ width: `${progressPct}%` }}
         />
       </div>
@@ -261,7 +260,7 @@ export default function AdminOnboardingPanel({ companyId, onNavigate }: Props) {
           <AdminProfileInterview
             companyId={companyId ?? 0}
             onCompleted={() => {
-              if (typeof window !== "undefined" && companyId != null) {
+              if (companyId != null) {
                 window.localStorage.setItem(`profile_complete:${companyId}`, "1");
               }
               void load();
@@ -435,7 +434,7 @@ function GoLivePanel({
           : t("steps.go_live.bodyNotReady")}
       </p>
 
-      <ul className="mt-3 divide-y divide-white/[0.04] rounded border border-subtle">
+      <ul className="mt-3 divide-y divide-subtle rounded border border-subtle">
         {STEP_KEYS.map((key) => {
           const it = data.items[key];
           return (

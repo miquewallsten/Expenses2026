@@ -3,22 +3,12 @@
 /**
  * UserContext — user identity, role, and permissions.
  *
- * Current implementation:
- *   - userId / companyId / role are read from localStorage (via lib/session.ts)
- *   - permissionKeys are fetched from the already-wired /roles/user-permissions
- *     endpoint once on mount and whenever userId changes
+ * Fetches from /access/{userId}/profile (resolved access profile) with fallback
+ * to /users/{userId} + /roles/user-permissions/{userId} if the access endpoint
+ * is unavailable.
  *
- * Future-auth migration path:
- *   1. Replace the localStorage reads with tokens / JWT claims from your auth
- *      provider (e.g. NextAuth session, Clerk, Auth0).
- *   2. The `UserProvider` contract — and all `useUserContext()` call sites —
- *      do not need to change; only the data sources inside the provider change.
- *   3. If the auth token already contains permission scopes, remove the
- *      permissionKeys fetch and map scopes into the same string[] shape.
- *
- * The provider intentionally does NOT block rendering: it starts with
- * `loading: true` and resolves asynchronously.  Components must handle
- * the loading state themselves or wait via the `loading` flag.
+ * Auto-refreshes on window focus and every 60s so admin changes propagate
+ * without a page reload.
  */
 
 import {
@@ -36,61 +26,32 @@ import {
   getCurrentRole,
   getCurrentCompanyId,
   getStoredSession,
+  isSessionExpired,
+  clearStoredSession,
 } from "@/lib/session";
 import type { UserCapabilities, UserRole } from "@/types";
+import { apiCall } from "@/lib/api/client";
 import { DEFAULT_USER_CAPABILITIES } from "@/types";
 
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+const CAPABILITIES_POLL_INTERVAL = 60_000; // 60 seconds
 
 export interface UserContextValue {
-  /** Numeric user id (null while unauthenticated or loading) */
   userId: number | null;
-  /** String user id as sent in the X-User-Id header */
   userIdStr: string | null;
-  /** Company the user belongs to */
   companyId: number | null;
-  /**
-   * The user's current primary role string.  Null when session has no role.
-   * Kept as the raw string so callers handle unknown future roles gracefully.
-   */
   role: string | null;
-  /**
-   * All roles the user holds.  Currently derived from the single `role`
-   * session value; will map to a real roles array once multi-role is supported.
-   */
   roles: UserRole[];
-  /**
-   * Flat list of fine-grained permission keys fetched from
-   * /roles/user-permissions/:userId.  Empty while loading or when the user
-   * has no explicit permissions beyond what their role grants.
-   */
   permissionKeys: string[];
-  /** Per-user capability flags configured by admin */
   capabilities: UserCapabilities;
-  /** Full name of the authenticated user — null while loading */
+  enabledModules: string[];
   displayName: string | null;
-  /** True while the initial identity / permissions load is in flight */
   loading: boolean;
-  /**
-   * Check a single permission key.
-   * Returns true when the key is in `permissionKeys` OR when the user is an
-   * admin (admins implicitly pass all permission checks).
-   */
   hasPermission: (key: string) => boolean;
-  /** Check whether the user holds a specific role */
   hasRole: (...roles: UserRole[]) => boolean;
-  /**
-   * Re-read session values and re-fetch permissions.  Call this after a
-   * login/logout or when impersonation changes.
-   */
   refresh: () => void;
 }
 
-// ── Context ────────────────────────────────────────────────────────────────────
-
 const UserContext = createContext<UserContextValue | null>(null);
-
-// ── Provider ───────────────────────────────────────────────────────────────────
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [userId, setUserId] = useState<number | null>(null);
@@ -99,33 +60,131 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<string | null>(null);
   const [permissionKeys, setPermissionKeys] = useState<string[]>([]);
   const [capabilities, setCapabilities] = useState<UserCapabilities>(DEFAULT_USER_CAPABILITIES);
+  const [enabledModules, setEnabledModules] = useState<string[]>([]);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-
-  // Monotonically increasing refresh token — increment to trigger a full reload.
   const [refreshToken, setRefreshToken] = useState(0);
 
   const refresh = useCallback(() => setRefreshToken((n) => n + 1), []);
-
-  // Track in-flight fetch so we can cancel on refresh / unmount.
   const abortRef = useRef<AbortController | null>(null);
 
+  // ── Fetch user data ──────────────────────────────────────────────────────
+  // Try /access/{id}/profile first, fall back to /users/{id} + /roles/user-permissions/{id}
+
+  const fetchUserData = useCallback((rawId: string, bearerToken: string | null, signal?: AbortSignal) => {
+    // Check JWT expiry before making any request
+    if (bearerToken && isSessionExpired(bearerToken)) {
+      clearStoredSession();
+      if (!window.location.pathname.startsWith("/login")) {
+        window.location.href = "/login";
+      }
+      return;
+    }
+
+    const authOpts = { signal, authenticated: !!bearerToken };
+
+    // Try the access profile endpoint first
+    apiCall<{
+      user_id: number;
+      company_id: number;
+      email: string;
+      full_name: string;
+      role: string;
+      is_active: boolean;
+      is_super_admin: boolean;
+      capabilities: Record<string, boolean>;
+      permission_keys: string[];
+      enabled_modules: string[];
+      auto_corrected: Record<string, string>;
+      delegates_for_user_id: number | null;
+      delegates_for_user_name: string | null;
+    }>(`/access/${rawId}/profile`, authOpts)
+      .then((data) => {
+        if (!data || !data.user_id) return;
+        // Sync role/companyId from API to correct stale localStorage values
+        if (data.role) setRole(data.role);
+        if (data.company_id) setCompanyId(data.company_id);
+        setDisplayName(data.full_name ?? null);
+        setPermissionKeys(data.permission_keys ?? []);
+        setEnabledModules(data.enabled_modules ?? []);
+        setCapabilities({
+          can_create_expenses:           data.capabilities?.can_create_expenses           ?? true,
+          can_create_corporate_expenses: data.capabilities?.can_create_corporate_expenses ?? false,
+          can_invoice_corporation:       data.capabilities?.can_invoice_corporation       ?? false,
+          is_amex_reconciler:            data.capabilities?.is_amex_reconciler            ?? false,
+          is_subcontractor:             data.capabilities?.is_subcontractor              ?? false,
+          requires_time_tracking:       data.capabilities?.requires_time_tracking        ?? false,
+          has_executive_reporting:      data.capabilities?.has_executive_reporting       ?? false,
+          can_access_accounting:        data.capabilities?.can_access_accounting         ?? false,
+          can_view_analytics:           data.capabilities?.can_view_analytics            ?? false,
+          delegates_for_user_id:        data.delegates_for_user_id                      ?? null,
+          delegates_for_user_name:      data.delegates_for_user_name                    ?? null,
+          delegation_starts_at:         null,
+          delegation_ends_at:           null,
+        });
+        setLoading(false);
+      })
+      .catch(() => {
+        // Access endpoint not available — use legacy endpoints
+        // Use redirectOn401: false so a 401 here doesn't trigger auto-logout
+        // (the activity timeout handles session expiry)
+        const safeOpts = { signal, authenticated: !!bearerToken, redirectOn401: false };
+
+        Promise.all([
+          apiCall<{ permission_keys: string[] }>(`/roles/user-permissions/${rawId}`, safeOpts)
+            .catch(() => ({ permission_keys: [] })),
+          apiCall<Record<string, any>>(`/users/${rawId}`, safeOpts)
+            .catch(() => null),
+        ]).then(([permData, userData]) => {
+          if (permData) setPermissionKeys(permData?.permission_keys ?? []);
+          if (userData) {
+            // Sync role/companyId from API to correct stale localStorage values
+            if (userData.role) setRole(userData.role);
+            if (userData.company_id) setCompanyId(userData.company_id);
+            setDisplayName(userData.full_name ?? null);
+            setCapabilities({
+              can_create_expenses:           userData.can_create_expenses           ?? true,
+              can_create_corporate_expenses: userData.can_create_corporate_expenses ?? false,
+              can_invoice_corporation:       userData.can_invoice_corporation       ?? false,
+              is_amex_reconciler:            userData.is_amex_reconciler            ?? false,
+              is_subcontractor:             userData.is_subcontractor              ?? false,
+              requires_time_tracking:       userData.requires_time_tracking        ?? false,
+              has_executive_reporting:      userData.has_executive_reporting       ?? false,
+              can_access_accounting:        userData.can_access_accounting          ?? false,
+              can_view_analytics:           userData.can_view_analytics            ?? false,
+              delegates_for_user_id:        userData.delegates_for_user_id         ?? null,
+              delegates_for_user_name:      userData.delegates_for_user_name       ?? null,
+              delegation_starts_at:         userData.delegation_starts_at          ?? null,
+              delegation_ends_at:           userData.delegation_ends_at            ?? null,
+            });
+            // Derive enabled modules from user capabilities and company config
+            const mods: string[] = [];
+            if (userData.can_create_expenses !== false) mods.push('expenses');
+            if (userData.requires_time_tracking) mods.push('time_allocation');
+            if (userData.can_access_accounting) mods.push('accounting');
+            if (userData.is_amex_reconciler) mods.push('amex_reconciliation');
+            setEnabledModules(prev => prev.length > 0 ? prev : mods);
+          }
+          setLoading(false);
+        }).catch(() => {
+          // Both endpoints failed — keep whatever we have
+          setLoading(false);
+        });
+      });
+  }, []);
+
+  // ── Initial load ────────────────────────────────────────────────────────
+
   useEffect(() => {
-    // Cancel any previous in-flight fetch.
     abortRef.current?.abort();
     const ac = new AbortController();
     abortRef.current = ac;
 
     setLoading(true);
 
-    // ── Read identity from session ─────────────────────────────────────────
-    // Prefer the JWT session written by magic link verify; fall back to the
-    // legacy localStorage values for backwards compatibility.
-
     const stored = getStoredSession();
-
-    const rawId      = stored ? String(stored.userId) : getCurrentUserId();
-    const rawRole    = stored ? stored.role            : getCurrentRole();
+    const rawId = stored ? String(stored.userId) : getCurrentUserId();
+    const rawRole = stored ? (stored.role as string) : getCurrentRole();
     const rawCompany = stored ? String(stored.companyId) : getCurrentCompanyId();
     const bearerToken = stored?.token ?? null;
 
@@ -137,63 +196,57 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setCompanyId(isNaN(numCompany ?? NaN) ? null : numCompany);
     setRole(rawRole);
 
-    // ── Fetch permissions ──────────────────────────────────────────────────
     if (!rawId) {
       setPermissionKeys([]);
       setCapabilities(DEFAULT_USER_CAPABILITIES);
+      setEnabledModules([]);
       setLoading(false);
       return;
     }
 
-    const headers: Record<string, string> = bearerToken
-      ? { Authorization: `Bearer ${bearerToken}` }
-      : { "X-User-Id": rawId };
-
-    Promise.all([
-      fetch(`${API}/roles/user-permissions/${rawId}`, { signal: ac.signal, headers })
-        .then((r) => (r.ok ? r.json() : { permission_keys: [] }))
-        .catch((err) => ((err as { name?: string }).name === "AbortError" ? null : { permission_keys: [] })),
-      fetch(`${API}/users/${rawId}`, { signal: ac.signal, headers })
-        .then((r) => (r.ok ? r.json() : null))
-        .catch((err) => ((err as { name?: string }).name === "AbortError" ? null : null)),
-    ]).then(([permData, userData]) => {
-      if (permData === null && userData === null) return; // both aborted
-      if (permData !== null) setPermissionKeys(permData?.permission_keys ?? []);
-      if (userData) {
-        setDisplayName(userData.full_name ?? null);
-        setCapabilities({
-          can_create_expenses:         userData.can_create_expenses         ?? true,
-          can_create_corporate_expenses: userData.can_create_corporate_expenses ?? false,
-          can_invoice_corporation:     userData.can_invoice_corporation     ?? false,
-          is_amex_reconciler:          userData.is_amex_reconciler          ?? false,
-          requires_time_tracking:      userData.requires_time_tracking      ?? false,
-          has_executive_reporting:     userData.has_executive_reporting     ?? false,
-          can_access_accounting:       userData.can_access_accounting        ?? false,
-          can_view_analytics:          userData.can_view_analytics          ?? false,
-          delegates_for_user_id:       userData.delegates_for_user_id       ?? null,
-          delegates_for_user_name:     userData.delegates_for_user_name     ?? null,
-        });
-      }
-      setLoading(false);
-    });
+    fetchUserData(rawId, bearerToken, ac.signal);
 
     return () => {
       ac.abort();
     };
-  }, [refreshToken]);
+  }, [refreshToken, fetchUserData]);
 
-  // ── Derived helpers ────────────────────────────────────────────────────────
+  // ── Auto-refresh every 60s ──────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!userIdStr) return;
+    const stored = getStoredSession();
+    const bearerToken = stored?.token ?? null;
+    const interval = setInterval(() => {
+      fetchUserData(userIdStr, bearerToken);
+    }, CAPABILITIES_POLL_INTERVAL);
+    return () => clearInterval(interval);
+  }, [userIdStr, fetchUserData]);
+
+  // ── Refresh on window focus ─────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!userIdStr) return;
+    const stored = getStoredSession();
+    const bearerToken = stored?.token ?? null;
+    const onFocus = () => {
+      fetchUserData(userIdStr, bearerToken);
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [userIdStr, fetchUserData]);
+
+  // ── Derived helpers ──────────────────────────────────────────────────────
 
   const roles = useMemo<UserRole[]>(() => {
     if (!role) return [];
-    // Admins implicitly hold all roles so role-checks work without listing them
-    // all.  Once the API returns a real roles array, replace this derivation.
-    if (role === "admin") return ["employee", "manager", "accounting", "admin", "executive", "secretary"];
+    if (role === "admin" || role === "super_admin") return ["employee", "manager", "accounting", "admin", "executive", "secretary"];
+    if (role === "accountant") return ["accountant", "accounting"] as UserRole[];
     return [role as UserRole];
   }, [role]);
 
   const hasPermission = useCallback(
-    (key: string) => role === "admin" || permissionKeys.includes(key),
+    (key: string) => role === "admin" || role === "super_admin" || permissionKeys.includes(key),
     [role, permissionKeys],
   );
 
@@ -211,26 +264,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
       roles,
       permissionKeys,
       capabilities,
+      enabledModules,
       displayName,
       loading,
       hasPermission,
       hasRole,
       refresh,
     }),
-    [userId, userIdStr, companyId, role, roles, permissionKeys, capabilities, displayName, loading, hasPermission, hasRole, refresh],
+    [userId, userIdStr, companyId, role, roles, permissionKeys, capabilities, enabledModules, displayName, loading, hasPermission, hasRole, refresh],
   );
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }
 
-// ── Hook ───────────────────────────────────────────────────────────────────────
-
-/**
- * Returns the current user context.
- * Must be called inside a `<UserProvider>` tree.
- * Throws a descriptive error if used outside the provider so misconfiguration
- * surfaces immediately in development.
- */
 export function useUserContext(): UserContextValue {
   const ctx = useContext(UserContext);
   if (!ctx) {

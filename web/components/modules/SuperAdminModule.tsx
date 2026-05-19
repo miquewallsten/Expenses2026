@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Brain, Zap, Building2, Activity, BarChart3 } from "lucide-react";
+import { Brain, Zap, Building2, Activity, BarChart3, Network, Settings2 } from "lucide-react";
 import { getStoredSession } from "@/lib/session";
 
 interface Tile {
@@ -13,10 +13,22 @@ interface Tile {
 
 const TILES: Tile[] = [
   {
+    href: "/super-admin/orchestrator",
+    title: "Visual Orchestrator",
+    subtitle: "Map the brain - Lola core, personas, and toolsets",
+    icon: <Network className="h-3.5 w-3.5" />,
+  },
+  {
     href: "/super-admin/agents",
     title: "Agent Builder",
     subtitle: "Create and configure AI agents, personas, and tools",
     icon: <Brain className="h-3.5 w-3.5" />,
+  },
+  {
+    href: "/super-admin/platform-config",
+    title: "Platform Configuration",
+    subtitle: "Master corporate SMTP and WhatsApp strategy",
+    icon: <Settings2 className="h-3.5 w-3.5" />,
   },
   {
     href: "/super-admin/llm-config",

@@ -13,7 +13,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from apps.api.auth import get_current_user, require_admin, require_same_company
+from apps.api.auth import get_current_user, require_permission, require_same_company
 from apps.api.deps import get_db
 from packages.core.platform.models_export_job import ExportJob, ExportStatus
 from packages.core.platform.models_user import User
@@ -30,7 +30,7 @@ from packages.modules.admin.service.storage_usage_service import StorageUsageSer
 router = APIRouter(
     prefix="/admin/export",
     tags=["admin", "export"],
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_permission("expense:export"))],
 )
 
 

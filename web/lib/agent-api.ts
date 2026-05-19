@@ -1,18 +1,13 @@
 // web/lib/agent-api.ts
 // API client for the unified Agent backend.
+// Uses the centralized apiCall client for auth, error handling, and 401 redirect.
+// Only raw fetch() remains for FormData uploads and SSE streaming.
 
-import { getStoredSession } from "@/lib/session";
-
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
-function authHeaders(): HeadersInit {
-  const s = getStoredSession();
-  return s ? { Authorization: `Bearer ${s.token}` } : {};
-}
+import { apiCall, apiPost, apiDelete } from "@/lib/api/client";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type Persona = "admin" | "finance_manager" | "employee" | "expense" | "accounting";
+export type Persona = "admin" | "employee" | "expense" | "accounting" | "manager" | "super_admin";
 
 export interface ChatRequest {
   message: string;
@@ -122,21 +117,7 @@ export async function sendChatMessage(
   companyId: number,
   request: ChatRequest,
 ): Promise<ChatResponse> {
-  const response = await fetch(`${BASE}/agent/chat/${companyId}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(),
-    },
-    body: JSON.stringify(request),
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Chat request failed: ${response.status} - ${text}`);
-  }
-
-  return response.json();
+  return apiPost<ChatResponse>(`/agent/chat/${companyId}`, request);
 }
 
 // ── Sessions ──────────────────────────────────────────────────────────────────
@@ -145,32 +126,14 @@ export async function listSessions(
   companyId: number,
   limit: number = 20,
 ): Promise<AgentSession[]> {
-  const response = await fetch(
-    `${BASE}/agent/sessions/${companyId}?limit=${limit}`,
-    { headers: authHeaders() },
-  );
-
-  if (!response.ok) {
-    throw new Error(`Failed to list sessions: ${response.status}`);
-  }
-
-  return response.json();
+  return apiCall<AgentSession[]>(`/agent/sessions/${companyId}?limit=${limit}`);
 }
 
 export async function getSession(
   companyId: number,
   sessionId: string,
 ): Promise<SessionDetail> {
-  const response = await fetch(
-    `${BASE}/agent/sessions/${companyId}/${sessionId}`,
-    { headers: authHeaders() },
-  );
-
-  if (!response.ok) {
-    throw new Error(`Failed to get session: ${response.status}`);
-  }
-
-  return response.json();
+  return apiCall<SessionDetail>(`/agent/sessions/${companyId}/${sessionId}`);
 }
 
 // ── Receipts ──────────────────────────────────────────────────────────────────
@@ -179,122 +142,58 @@ export async function getReceipt(
   companyId: number,
   receiptId: string,
 ): Promise<Receipt> {
-  const response = await fetch(
-    `${BASE}/agent/receipts/${companyId}/${receiptId}`,
-    { headers: authHeaders() },
-  );
-
-  if (!response.ok) {
-    throw new Error(`Failed to get receipt: ${response.status}`);
-  }
-
-  return response.json();
+  return apiCall<Receipt>(`/agent/receipts/${companyId}/${receiptId}`);
 }
 
 export async function confirmReceipt(
   receiptId: string,
   companyId: number,
 ): Promise<{ ok: boolean; receipt: Receipt; result: Record<string, unknown> }> {
-  const response = await fetch(`${BASE}/agent/confirm`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(),
-    },
-    body: JSON.stringify({ receipt_id: receiptId, company_id: companyId }),
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Failed to confirm receipt: ${response.status} - ${text}`);
-  }
-
-  return response.json();
+  return apiPost(`/agent/confirm`, { receipt_id: receiptId, company_id: companyId });
 }
 
 export async function rejectReceipt(
   receiptId: string,
   companyId: number,
-): Promise<{ ok: boolean; receipt: Receipt }> {
-  const response = await fetch(`${BASE}/agent/reject`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(),
-    },
-    body: JSON.stringify({ receipt_id: receiptId, company_id: companyId }),
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Failed to reject receipt: ${response.status} - ${text}`);
-  }
-
-  return response.json();
+  reason?: string,
+): Promise<{ ok: boolean; receipt_id: string }> {
+  return apiPost(`/agent/reject`, { receipt_id: receiptId, company_id: companyId, reason });
 }
 
-// ── Insights ─────────────────────────────────────────────────────────────────
+// ── Audit ────────────────────────────────────────────────────────────────────
+
+export async function getAuditLog(
+  companyId: number,
+  limit: number = 50,
+): Promise<any[]> {
+  return apiCall(`/agent/audit/${companyId}?limit=${limit}`);
+}
+
+// ── Insights ──────────────────────────────────────────────────────────────────
 
 export async function listInsights(
   companyId: number,
-  refresh: boolean = false,
 ): Promise<AgentInsight[]> {
-  const response = await fetch(
-    `${BASE}/agent/insights/${companyId}?refresh=${refresh}`,
-    { headers: authHeaders() },
-  );
-
-  if (!response.ok) {
-    throw new Error(`Failed to list insights: ${response.status}`);
-  }
-
-  return response.json();
+  return apiCall<AgentInsight[]>(`/agent/insights/${companyId}`);
 }
 
-export async function setInsightStatus(
+export async function dismissInsight(
   companyId: number,
   insightId: number,
-  status: "acknowledged" | "resolved" | "dismissed",
-): Promise<{ ok: boolean; id: number; status: string }> {
-  const response = await fetch(
-    `${BASE}/agent/insights/${companyId}/${insightId}/status`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...authHeaders(),
-      },
-      body: JSON.stringify({ status }),
-    },
-  );
-
-  if (!response.ok) {
-    throw new Error(`Failed to update insight status: ${response.status}`);
-  }
-
-  return response.json();
+): Promise<{ ok: boolean }> {
+  return apiPost(`/agent/insights/${companyId}/${insightId}/dismiss`);
 }
 
-// ── Memory ───────────────────────────────────────────────────────────────────
+// ── Memory ────────────────────────────────────────────────────────────────────
 
 export async function listMemory(
   companyId: number,
-  kind?: string,
-  limit: number = 50,
-): Promise<TenantMemory[]> {
-  const params = new URLSearchParams({ limit: String(limit) });
-  if (kind) params.append("kind", kind);
-
-  const response = await fetch(
-    `${BASE}/agent/memory/${companyId}?${params}`,
-    { headers: authHeaders() },
-  );
-
-  if (!response.ok) {
-    throw new Error(`Failed to list memory: ${response.status}`);
-  }
-
-  return response.json();
+  opts?: { kind?: string; limit?: number },
+): Promise<any[]> {
+  const params = new URLSearchParams();
+  if (opts?.limit) params.append("limit", String(opts.limit));
+  if (opts?.kind) params.append("kind", opts.kind);
+  return apiCall(`/agent/memory/${companyId}?${params}`);
 }
 
 export async function createMemory(
@@ -306,40 +205,14 @@ export async function createMemory(
     scope?: "company" | "user";
   },
 ): Promise<{ ok: boolean; id: number; key: string; kind: string }> {
-  const response = await fetch(`${BASE}/agent/memory/${companyId}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(),
-    },
-    body: JSON.stringify(data),
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Failed to create memory: ${response.status} - ${text}`);
-  }
-
-  return response.json();
+  return apiPost(`/agent/memory/${companyId}`, data);
 }
 
 export async function deleteMemory(
   companyId: number,
   memId: number,
 ): Promise<{ ok: boolean; id: number }> {
-  const response = await fetch(
-    `${BASE}/agent/memory/${companyId}/${memId}`,
-    {
-      method: "DELETE",
-      headers: authHeaders(),
-    },
-  );
-
-  if (!response.ok) {
-    throw new Error(`Failed to delete memory: ${response.status}`);
-  }
-
-  return response.json();
+  return apiDelete(`/agent/memory/${companyId}/${memId}`);
 }
 
 // ── Tenant Memory ────────────────────────────────────────────────────────────
@@ -348,16 +221,7 @@ export async function listTenantMemory(
   companyId: number,
   agentKey: string = "admin",
 ): Promise<TenantMemory[]> {
-  const response = await fetch(
-    `${BASE}/agent/tenant-memory/${companyId}?agent_key=${agentKey}`,
-    { headers: authHeaders() },
-  );
-
-  if (!response.ok) {
-    throw new Error(`Failed to list tenant memory: ${response.status}`);
-  }
-
-  return response.json();
+  return apiCall<TenantMemory[]>(`/agent/tenant-memory/${companyId}?agent_key=${agentKey}`);
 }
 
 export async function deleteTenantMemory(
@@ -365,19 +229,7 @@ export async function deleteTenantMemory(
   key: string,
   agentKey: string = "admin",
 ): Promise<{ ok: boolean; key: string }> {
-  const response = await fetch(
-    `${BASE}/agent/tenant-memory/${companyId}/${key}?agent_key=${agentKey}`,
-    {
-      method: "DELETE",
-      headers: authHeaders(),
-    },
-  );
-
-  if (!response.ok) {
-    throw new Error(`Failed to delete tenant memory: ${response.status}`);
-  }
-
-  return response.json();
+  return apiDelete(`/agent/tenant-memory/${companyId}/${key}?agent_key=${agentKey}`);
 }
 
 // ── Workflow ────────────────────────────────────────────────────────────────
@@ -390,58 +242,21 @@ export async function startWorkflow(
     context?: Record<string, unknown>;
   },
 ): Promise<WorkflowProgress> {
-  const response = await fetch(`${BASE}/agent/workflow/${companyId}/start`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(),
-    },
-    body: JSON.stringify(data),
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Failed to start workflow: ${response.status} - ${text}`);
-  }
-
-  return response.json();
+  return apiPost<WorkflowProgress>(`/agent/workflow/${companyId}/start`, data);
 }
 
 export async function getWorkflow(
   companyId: number,
   workflowKey: string,
 ): Promise<WorkflowProgress> {
-  const response = await fetch(
-    `${BASE}/agent/workflow/${companyId}?workflow_key=${workflowKey}`,
-    { headers: authHeaders() },
-  );
-
-  if (!response.ok) {
-    throw new Error(`Failed to get workflow: ${response.status}`);
-  }
-
-  return response.json();
+  return apiCall<WorkflowProgress>(`/agent/workflow/${companyId}?workflow_key=${workflowKey}`);
 }
 
 export async function advanceWorkflow(
   companyId: number,
   workflowKey: string,
 ): Promise<WorkflowProgress> {
-  const response = await fetch(`${BASE}/agent/workflow/${companyId}/advance`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(),
-    },
-    body: JSON.stringify({ workflow_key: workflowKey }),
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Failed to advance workflow: ${response.status} - ${text}`);
-  }
-
-  return response.json();
+  return apiPost<WorkflowProgress>(`/agent/workflow/${companyId}/advance`, { workflow_key: workflowKey });
 }
 
 // ── Upload ──────────────────────────────────────────────────────────────────
@@ -457,13 +272,18 @@ export async function uploadFile(
   size_bytes: number;
   session_id?: string;
 }> {
+  // FormData upload — must use raw fetch (apiCall doesn't support multipart)
+  const { getStoredSession } = await import("@/lib/session");
+  const BASE = process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+  const s = getStoredSession();
+  const headers: HeadersInit = s ? { Authorization: `Bearer ${s.token}` } : {};
   const formData = new FormData();
   formData.append("file", file);
   if (sessionId) formData.append("session_id", sessionId);
 
   const response = await fetch(`${BASE}/agent/upload/${companyId}`, {
     method: "POST",
-    headers: authHeaders(),
+    headers,
     body: formData,
   });
 

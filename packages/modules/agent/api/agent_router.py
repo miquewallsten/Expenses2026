@@ -99,7 +99,7 @@ def chat(
     require_same_company(cid, current_user)
 
     # Admin-only personas.
-    if body.persona in ("admin", "finance_manager") and not has_permission(db, current_user, f"agent:chat:{body.persona}"):
+    if body.persona in ("admin", "accounting") and not has_permission(db, current_user, f"agent:chat:{body.persona}"):
         raise HTTPException(status_code=403, detail="Admin persona requires admin role")
 
     result = run_turn(
@@ -161,19 +161,34 @@ async def stream_turn(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """SSE streaming variant of /agent/chat — emits incremental events."""
+    """SSE streaming variant of /agent/chat — emits truly incremental events.
+
+    Uses ``run_turn_stream`` which yields events as they happen:
+    tool_call_start, tool_call_done, receipt_created, text_delta, final.
+    The final assistant text is streamed token-by-token from the LLM.
+    """
     require_same_company(cid, current_user)
-    if persona in ("admin", "finance_manager") and not has_permission(db, current_user, f"agent:chat:{persona}"):
+    if persona in ("admin", "accounting") and not has_permission(db, current_user, f"agent:chat:{persona}"):
         raise HTTPException(status_code=403, detail="Admin persona requires admin role")
 
     async def event_gen():
-        # Run the synchronous engine off the event loop so we can monitor
-        # the request for client disconnects in parallel.
         from starlette.concurrency import run_in_threadpool
+        from ..core.engine import run_turn_stream
 
-        turn_task = asyncio.create_task(
-            run_in_threadpool(
-                run_turn,
+        # PEP 479: StopIteration cannot propagate through an async generator,
+        # so we use a sentinel value instead of catching StopIteration across
+        # the run_in_threadpool boundary.
+        _EXHAUSTED = object()
+
+        def _safe_next(gen):
+            try:
+                return next(gen)
+            except StopIteration:
+                return _EXHAUSTED
+
+        # Run the streaming generator in a thread pool
+        def _sync_gen():
+            return run_turn_stream(
                 db=db,
                 user=current_user,
                 company_id=cid,
@@ -182,59 +197,62 @@ async def stream_turn(
                 session_id=session_id,
                 hard_mode=hard_mode,
             )
-        )
 
-        # Heartbeat-style poll: wait for the turn while watching for disconnect.
-        while not turn_task.done():
-            if await request.is_disconnected():
-                turn_task.cancel()
-                yield _sse_pack("cancelled", {"reason": "client_disconnected"})
-                return
-            try:
-                await asyncio.wait_for(asyncio.shield(turn_task), timeout=0.1)
-            except asyncio.TimeoutError:
-                continue
-            except asyncio.CancelledError:
-                yield _sse_pack("cancelled", {"reason": "client_disconnected"})
-                return
+        gen = await run_in_threadpool(_sync_gen)
 
         try:
-            result = turn_task.result()
-        except Exception as exc:  # pragma: no cover - defensive
+            while True:
+                # Get next event from the generator in the thread pool
+                event = await run_in_threadpool(_safe_next, gen)
+                if event is _EXHAUSTED:
+                    break
+                if isinstance(event, dict) and event.get('type') == 'error':
+                    yield _sse_pack('final', {'ok': False, 'error': event.get('error', 'Unknown error'), 'content': '', 'tool_calls': [], 'pending': []})
+                    return
+
+                if await request.is_disconnected():
+                    yield _sse_pack("cancelled", {"reason": "client_disconnected"})
+                    return
+
+                # Map event type to SSE event name
+                evt_type = event.get("type", "unknown")
+                if evt_type == "text_delta":
+                    yield _sse_pack("text_delta", {"delta": event.get("delta", "")})
+                elif evt_type == "tool_call_start":
+                    yield _sse_pack("tool_call_start", {
+                        "tool": event.get("tool"),
+                        "args_summary": event.get("args_summary", "")[:120],
+                    })
+                elif evt_type == "tool_call_done":
+                    yield _sse_pack("tool_call_done", {
+                        "tool": event.get("tool"),
+                        "status": event.get("status"),
+                        "summary": event.get("summary"),
+                        "duration_ms": event.get("duration_ms"),
+                    })
+                elif evt_type == "receipt_created":
+                    yield _sse_pack("receipt_created", {
+                        "receipt_id": event.get("receipt_id"),
+                        "tool": event.get("tool"),
+                        "summary": event.get("summary"),
+                    })
+                elif evt_type == "final":
+                    yield _sse_pack("final", {
+                        "ok": event.get("ok", False),
+                        "error": event.get("error"),
+                        "session_id": event.get("session_id"),
+                        "content": event.get("content", ""),
+                        "tool_calls": event.get("tool_calls", []),
+                        "pending": event.get("pending", []),
+                    })
+                elif evt_type == "start":
+                    yield _sse_pack("start", {"session_id": event.get("session_id")})
+                else:
+                    # Unknown event type — forward as-is
+                    yield _sse_pack(evt_type, {k: v for k, v in event.items() if k != "type"})
+        except Exception as exc:
             yield _sse_pack("final", {"ok": False, "error": str(exc), "content": "", "tool_calls": [], "pending": []})
-            return
 
-        # Replay tool calls in order as discrete events.
-        for call in result.get("tool_calls") or []:
-            if await request.is_disconnected():
-                yield _sse_pack("cancelled", {"reason": "client_disconnected"})
-                return
-            yield _sse_pack("tool_call_start", {
-                "tool": call.get("tool"),
-                "args_summary": call.get("summary", "")[:120],
-            })
-            yield _sse_pack("tool_call_done", {
-                "tool":        call.get("tool"),
-                "status":      call.get("status"),
-                "summary":     call.get("summary"),
-                "duration_ms": call.get("duration_ms"),
-            })
-
-        # Stream the final content as text deltas.
-        for delta in _chunk_text(result.get("content") or ""):
-            if await request.is_disconnected():
-                yield _sse_pack("cancelled", {"reason": "client_disconnected"})
-                return
-            yield _sse_pack("text_delta", {"delta": delta})
-
-        yield _sse_pack("final", {
-            "ok":         result.get("ok", False),
-            "error":      result.get("error"),
-            "session_id": result.get("session_id"),
-            "content":    result.get("content", ""),
-            "tool_calls": result.get("tool_calls") or [],
-            "pending":    result.get("pending") or [],
-        })
 
     return StreamingResponse(
         event_gen(),
@@ -436,6 +454,12 @@ _ALLOWED_MIME = {
     "text/csv", "text/plain", "application/pdf",
     "application/vnd.ms-excel",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",  # .docx
+    "application/msword",  # .doc
+    "image/jpeg", "image/png", "image/gif", "image/webp", "image/bmp", "image/tiff",
+    "application/vnd.oasis.opendocument.spreadsheet",  # .ods
+    "application/xml", "text/xml",  # CFDI XML files
+    "application/zip",  # .zip archives
 }
 
 
@@ -498,24 +522,23 @@ def chat_stream(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """SSE wrapper around :func:`run_turn`.
+    """SSE wrapper around :func:`run_turn_stream`.
 
-    We don't have a true token-streaming engine yet, so this endpoint
-    *progressively emits* the lifecycle events around a single ``run_turn`` call:
-    ``start`` → ``tool_call`` (one per tool) → ``final``. A future upgrade can
-    replace the body with a truly streaming loop without changing the client.
+    Emits truly incremental events as the agentic loop progresses:
+    ``start`` → ``tool_call_start``/``tool_call_done`` (per tool) → ``text_delta`` (token-by-token) → ``final``.
     """
     require_same_company(cid, current_user)
-    if body.persona in ("admin", "finance_manager") and not has_permission(db, current_user, f"agent:chat:{body.persona}"):
+    if body.persona in ("admin", "accounting") and not has_permission(db, current_user, f"agent:chat:{body.persona}"):
         raise HTTPException(status_code=403, detail="Admin persona requires admin role")
+
+    from ..core.engine import run_turn_stream
 
     def _event(kind: str, payload: dict[str, Any]) -> str:
         return f"event: {kind}\ndata: {json.dumps(payload, default=str)}\n\n"
 
     def gen():
-        yield _event("start", {"session_id": body.session_id, "persona": body.persona})
         try:
-            result = run_turn(
+            for event in run_turn_stream(
                 db=db,
                 user=current_user,
                 company_id=cid,
@@ -523,20 +546,13 @@ def chat_stream(
                 user_message=body.message,
                 hard_mode=body.hard_mode,
                 session_id=body.session_id,
-            )
+            ):
+                evt_type = event.get("type", "unknown")
+                payload = {k: v for k, v in event.items() if k != "type"}
+                yield _event(evt_type, payload)
         except Exception as exc:  # noqa: BLE001
             yield _event("error", {"error": str(exc)[:500]})
             return
-        for tc in result.get("tool_calls", []):
-            yield _event("tool_call", tc)
-        for p in result.get("pending", []):
-            yield _event("receipt_created", p)
-        yield _event("final", {
-            "session_id": result.get("session_id"),
-            "content":    result.get("content", ""),
-            "ok":         result.get("ok", True),
-            "error":      result.get("error"),
-        })
 
     return StreamingResponse(
         gen(),

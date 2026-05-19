@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session
 from apps.api.config import settings
 from apps.api.deps import get_db
 from packages.core.platform.models_user import User
+from packages.core.platform.service_permissions import has_permission
 
 _log = logging.getLogger(__name__)
 
@@ -88,7 +89,8 @@ def require_manager_or_accountant(current_user: User = Depends(get_current_user)
 
 
 def require_admin(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role != "admin":
+    """Gate for tenant admin actions. Also allows super_admin (platform operator)."""
+    if current_user.role != "admin" and not getattr(current_user, "is_super_admin", False):
         raise HTTPException(status_code=403, detail="Admin access required")
     return current_user
 
@@ -100,6 +102,43 @@ def require_super_admin(current_user: User = Depends(get_current_user)) -> User:
     if not getattr(current_user, "is_super_admin", False):
         raise HTTPException(status_code=403, detail="Super admin access required")
     return current_user
+
+
+
+
+def require_permission(action_key: str):
+    """Create a FastAPI dependency that checks a fine-grained permission.
+
+    Usage:
+        @router.get("/admin/audit-log/{company_id}")
+        def get_audit_log(
+            company_id: int,
+            db: Session = Depends(get_db),
+            current_user: User = Depends(require_permission("admin:audit:read")),
+        ):
+            ...
+
+    Admins implicitly pass all permission checks (has_permission returns True
+    for admin role).  If the action_key is not in the catalog, a 500 is raised
+    — this is intentional to catch typos at deployment time.
+    """
+    def _checker(
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db),
+    ) -> User:
+        try:
+            if has_permission(db, current_user, action_key):
+                return current_user
+        except ValueError:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Unknown permission key: {action_key!r}",
+            )
+        raise HTTPException(
+            status_code=403,
+            detail=f"Permission denied: {action_key}",
+        )
+    return _checker
 
 
 def require_same_company(target_company_id: int, current_user: User) -> None:

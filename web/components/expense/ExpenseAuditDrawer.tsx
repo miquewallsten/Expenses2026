@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { History, X } from "lucide-react";
 import { apiCall } from "@/lib/api/client";
 
-// Phase 4.9 — Per-expense audit drawer. Backend: GET /audit/expense/{id}.
+// Phase 4.9 - Per-expense audit drawer. Backend: GET /audit/expense/{id}.
 // Cursor-paginated, newest-first. Trigger button + slide-in right drawer.
 // Self-contained: any expense detail page can drop in <ExpenseAuditDrawer
 // expenseId={id} /> in its header action area.
@@ -117,7 +117,7 @@ export default function ExpenseAuditDrawer({ expenseId, variant = "icon" }: Prop
       {open && (
         <>
           <div
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-40 overlay-backdrop-blur"
             onClick={() => setOpen(false)}
             aria-hidden
           />

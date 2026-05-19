@@ -9,7 +9,7 @@
  * The current session stores one role at a time, but the context exposes
  * an array so callers do not need to change when multi-role support is introduced.
  */
-export type UserRole = "employee" | "manager" | "accounting" | "admin" | "executive" | "secretary";
+export type UserRole = "employee" | "manager" | "accounting" | "accountant" | "admin" | "executive" | "secretary";
 
 /**
  * Per-user capability flags — set by admin per user.
@@ -22,6 +22,8 @@ export interface UserCapabilities {
   can_create_corporate_expenses: boolean;
   can_invoice_corporation: boolean;
   is_amex_reconciler: boolean;
+  /** Subcontractor user — can submit invoices as a subcontractor. Only when add-on is installed. */
+  is_subcontractor: boolean;
   requires_time_tracking: boolean;
   has_executive_reporting: boolean;
   /** When true, admin can access Accounting Review and finance modules */
@@ -30,6 +32,8 @@ export interface UserCapabilities {
   can_view_analytics: boolean;
   delegates_for_user_id: number | null;
   delegates_for_user_name: string | null;
+  delegation_starts_at: string | null;
+  delegation_ends_at: string | null;
 }
 
 /**
@@ -40,10 +44,13 @@ export const DEFAULT_USER_CAPABILITIES: UserCapabilities = {
   can_create_corporate_expenses: false,
   can_invoice_corporation: false,
   is_amex_reconciler: false,
+  is_subcontractor: false,
   requires_time_tracking: false,
   has_executive_reporting: false,
   can_access_accounting: false,
   can_view_analytics: false,
   delegates_for_user_id: null,
   delegates_for_user_name: null,
+  delegation_starts_at: null,
+  delegation_ends_at: null,
 };

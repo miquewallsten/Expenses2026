@@ -188,10 +188,9 @@ export function AgentProvider({ children }: { children: ReactNode }) {
         const personaMap: Record<string, Persona> = {
           "admin-copilot": "admin",
           admin: "admin",
-          finance_manager: "finance_manager",
+          accounting: "accounting",
           employee: "employee",
           expense: "expense",
-          accounting: "accounting",
         };
         const persona = personaMap[agentKey] ?? "admin";
 

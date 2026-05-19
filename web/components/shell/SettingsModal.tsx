@@ -188,11 +188,17 @@ function SettingsDetail({ sectionKey }: { sectionKey: SectionKey }) {
   const { locale, setLocale } = useLocale();
   const themeCtx = useTheme();
   const [timezone, setTimezone]           = useState("America/Mexico_City");
-  const [localTheme, setLocalTheme] = useState<Theme>(() =>
-    (typeof window !== "undefined" ? (localStorage.getItem("pref_theme") ?? "dark") : "dark") as Theme
-  );
+  const [localTheme, setLocalTheme] = useState<Theme>("dark");
   const [aiOpen, setAiOpen]               = useState(false);
   const [saved, setSaved]                 = useState(false);
+
+  // Sync theme from localStorage after mount (avoids hydration mismatch)
+  useEffect(() => {
+    const stored = localStorage.getItem("pref_theme");
+    if (stored === "dark" || stored === "light" || stored === "system") {
+      setLocalTheme(stored as Theme);
+    }
+  }, []);
 
   const handleThemeChange = (next: Theme) => {
     setLocalTheme(next);
@@ -233,7 +239,7 @@ function SettingsDetail({ sectionKey }: { sectionKey: SectionKey }) {
         </p>
       </div>
 
-      <div className="space-y-4 rounded border border-default bg-black/20 p-4">
+      <div className="space-y-4 rounded border border-default section-subtle p-4">
         {(sectionKey === "languageRegion" || sectionKey === "profile") && (
           <>
             <div>
@@ -257,7 +263,7 @@ function SettingsDetail({ sectionKey }: { sectionKey: SectionKey }) {
         {sectionKey === "appearance" && (
           <div>
             <label className={labelCls}>{t("theme")}</label>
-            <div className="flex gap-1 rounded border border-default bg-black/[0.15] p-1">
+            <div className="flex gap-1 rounded border border-default section-subtle p-1">
               {(["dark", "light", "system"] as const).map((opt) => (
                 <button
                   key={opt}
@@ -338,7 +344,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px]"
+        className="fixed inset-0 z-50 overlay-backdrop-blur"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -348,7 +354,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
         role="dialog"
         aria-modal="true"
         aria-label={tn("settings")}
-        className="animate-slide-in-right fixed inset-y-0 right-0 z-50 flex w-[min(680px,100vw)] flex-col overflow-hidden bg-surface-0 shadow-2xl ring-1 ring-white/[0.07]"
+        className="animate-slide-in-right fixed inset-y-0 right-0 z-50 flex w-[min(680px,100vw)] flex-col overflow-hidden bg-surface-0 shadow-2xl ring-1 ring-subtle"
       >
         {/* Header */}
         <div className="flex h-9 shrink-0 items-center justify-between border-b border-default px-4">

@@ -52,12 +52,14 @@ from packages.core.platform.models_purchase_request import PurchaseRequest  # no
 from packages.core.platform.models_request_attachment import RequestAttachment  # noqa: F401
 from packages.core.platform.models_report_cycle import ReportCycleSettings  # noqa: F401
 from packages.core.platform.models_auth_settings import CompanyAuthSettings  # noqa: F401
+from packages.core.platform.models_channels import CompanyChannelConfig  # noqa: F401
 from packages.core.platform.models_storage_config import StorageConfig  # noqa: F401
 from packages.core.platform.models_storage_usage import StorageUsage  # noqa: F401
 from packages.core.platform.models_export_job import ExportJob  # noqa: F401
 from packages.core.platform.models_time_tracking import (  # noqa: F401
     TimeProject, TimeActivity, TimeAssignment, TimeEntry,
 )
+from packages.core.platform.models_platform_settings import PlatformSettings  # noqa: F401
 
 # Config engine
 from packages.core.config_engine.models import (  # noqa: F401
@@ -124,3 +126,15 @@ from packages.modules.agent.models_definitions import (  # noqa: F401
 from packages.modules.agent.models_tenant import (  # noqa: F401
     TenantAgentSession, TenantAgentMemory, TenantWorkflowProgress,
 )
+
+# User preferences (UI layout, nav customization, etc.)
+from packages.core.platform.models_user_preferences import UserPreferences  # noqa: F401
+
+
+# Subcontractor models — registered for table creation
+from packages.modules.subcontractor.models.subcontractor_invoice import (  # noqa: F401
+    SubcontractorInvoiceReport, SubcontractorInvoice,
+)
+# Time tracking salary config
+from packages.modules.time_tracking.models_salary import UserSalaryConfig  # noqa: F401
+

@@ -11,7 +11,6 @@ import { StepBasics } from "./StepBasics";
 import { StepRecommendations } from "./StepRecommendations";
 import { StepSmartConfig } from "./StepSmartConfig";
 import { StepReady } from "./StepReady";
-import { OnboardingAssistant } from "./OnboardingAssistant";
 
 interface OnboardingWizardProps {
   onComplete?: () => void;
@@ -178,17 +177,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         </div>
       </div>
 
-      {/* AI Assistant Rail */}
-      {state.currentStep !== "welcome" && state.currentStep !== "ready" && (
-        <div className="hidden w-80 shrink-0 lg:block">
-          <OnboardingAssistant
-            currentStep={state.currentStep}
-            aiContext={aiContext}
-            completedSteps={state.completedSteps}
-            companyType={state.companyProfile.companyType}
-          />
-        </div>
-      )}
+
     </div>
   );
 }

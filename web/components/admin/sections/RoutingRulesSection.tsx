@@ -8,13 +8,13 @@
  * shell as audit-log / platform-api / category-memory pages.
  *
  * Rule shape (matches engine contract):
- *   rule_key       — stable string, surfaces in audit logs
- *   priority       — int, higher wins on tie
- *   when_json      — predicate tree { all|any: [...] } | { field, op, value }
- *   approvers_json — array of { role } | { user_id }
- *   sla_hours      — optional int (escalation horizon)
- *   escalation_role — optional role name
- *   is_enabled     — toggle
+ *   rule_key       - stable string, surfaces in audit logs
+ *   priority       - int, higher wins on tie
+ *   when_json      - predicate tree { all|any: [...] } | { field, op, value }
+ *   approvers_json - array of { role } | { user_id }
+ *   sla_hours      - optional int (escalation horizon)
+ *   escalation_role - optional role name
+ *   is_enabled     - toggle
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -29,9 +29,9 @@ import {
   Sparkles,
   Trash2,
 } from "lucide-react";
-import { getCurrentCompanyId, getAuthHeaders } from "@/lib/session";
+import { getCurrentCompanyId } from "@/lib/session";
+import { apiCall, apiPost, apiPatch, apiDelete } from "@/lib/api/client";
 
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 interface Rule {
   id: number;
@@ -98,11 +98,9 @@ export default function RoutingRulesSection() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API}/admin/routing-rules/${cid}`, {
-        headers: { ...getAuthHeaders() },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const items: Rule[] = await res.json();
+      const res: any = await apiCall(`/admin/routing-rules/${cid}`);
+      if (!res?.ok) throw new Error(`HTTP ${res?.status ?? "unknown"}`);
+      const items: Rule[] = res ? await res.json() : [];
       setRules(items);
     } catch (e) {
       setError(e instanceof Error ? e.message : "load_failed");
@@ -157,19 +155,12 @@ export default function RoutingRulesSection() {
     setSaving(true);
     try {
       const isCreate = selectedId === "new";
-      const url = isCreate
-        ? `${API}/admin/routing-rules/${companyId}`
-        : `${API}/admin/routing-rules/${companyId}/${selectedId}`;
-      const res = await fetch(url, {
-        method: isCreate ? "POST" : "PATCH",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify(parsed),
-      });
-      if (!res.ok) {
-        const detail = await res.json().catch(() => ({}));
-        throw new Error(detail?.detail ?? `HTTP ${res.status}`);
-      }
-      const saved: Rule = await res.json();
+      const path = isCreate
+        ? `/admin/routing-rules/${companyId}`
+        : `/admin/routing-rules/${companyId}/${selectedId}`;
+      const saved: Rule = isCreate
+        ? await apiPost<Rule>(path, parsed)
+        : await apiPatch<Rule>(path, parsed);
       await load(companyId);
       setSelectedId(saved.id);
     } catch (e) {
@@ -184,13 +175,7 @@ export default function RoutingRulesSection() {
     if (!window.confirm(t("confirmDelete"))) return;
     setSaving(true);
     try {
-      const res = await fetch(
-        `${API}/admin/routing-rules/${companyId}/${selectedId}`,
-        { method: "DELETE", headers: { ...getAuthHeaders() } },
-      );
-      if (!res.ok && res.status !== 204) {
-        throw new Error(`HTTP ${res.status}`);
-      }
+      await apiDelete(`/admin/routing-rules/${companyId}/${selectedId}`);
       setSelectedId(null);
       await load(companyId);
     } catch (e) {
@@ -203,15 +188,7 @@ export default function RoutingRulesSection() {
   const handleToggle = async (rule: Rule) => {
     if (companyId == null) return;
     try {
-      const res = await fetch(
-        `${API}/admin/routing-rules/${companyId}/${rule.id}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-          body: JSON.stringify({ is_enabled: !rule.is_enabled }),
-        },
-      );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await apiCall(`/admin/routing-rules/${companyId}/${rule.id}`);
       await load(companyId);
     } catch (e) {
       setError(e instanceof Error ? e.message : "toggle_failed");
@@ -231,15 +208,7 @@ export default function RoutingRulesSection() {
     setProbeError(null);
     setProbing(true);
     try {
-      const res = await fetch(
-        `${API}/admin/routing-rules/${companyId}/preview`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-          body: JSON.stringify({ context: parsed }),
-        },
-      );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const res: any = await apiPost(`/admin/routing-rules/${companyId}/preview`, { context: parsed });
       setProbeResult(await res.json());
     } catch (e) {
       setProbeError(e instanceof Error ? e.message : "probe_failed");
@@ -260,7 +229,7 @@ export default function RoutingRulesSection() {
   return (
     <div className="min-h-screen bg-surface-0 text-primary">
       {/* Header */}
-      <header className="sticky top-0 z-10 border-b border-subtle bg-surface-0/95 backdrop-blur">
+      <header className="sticky top-0 z-10 border-b border-subtle bg-surface-0/95 backdrop-blur-[2px]">
         <div className="flex items-center justify-between px-4 py-2.5">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
@@ -314,7 +283,7 @@ export default function RoutingRulesSection() {
               {t("empty")}
             </div>
           ) : (
-            <ul className="divide-y divide-white/[0.04]">
+            <ul className="divide-y divide-subtle">
               {rules.map((r) => {
                 const active = r.id === selectedId;
                 return (
@@ -434,7 +403,7 @@ export default function RoutingRulesSection() {
         </section>
       </div>
 
-      {/* Probe panel — preview which rule fires for a hypothetical context */}
+      {/* Probe panel - preview which rule fires for a hypothetical context */}
       <div className="px-4 pb-6">
         <section className="rounded border border-violet-500/15 bg-violet-500/[0.02]">
           <div className="flex items-center justify-between border-b border-subtle px-3 py-2">
@@ -500,7 +469,7 @@ export default function RoutingRulesSection() {
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span className="text-tertiary">{t("roles")}:</span>
                         {probeResult.approver_roles.length === 0 ? (
-                          <span className="text-muted">—</span>
+                          <span className="text-muted"> - </span>
                         ) : (
                           probeResult.approver_roles.map((role) => (
                             <span
@@ -515,7 +484,7 @@ export default function RoutingRulesSection() {
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span className="text-tertiary">{t("userIds")}:</span>
                         {probeResult.approver_user_ids.length === 0 ? (
-                          <span className="text-muted">—</span>
+                          <span className="text-muted"> - </span>
                         ) : (
                           probeResult.approver_user_ids.map((uid) => (
                             <span

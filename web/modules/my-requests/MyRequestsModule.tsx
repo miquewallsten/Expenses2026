@@ -12,7 +12,6 @@ import {
   CheckCircle2,
   ChevronRight,
   Clock,
-  ExternalLink,
   FileText,
   Globe,
   HelpCircle,
@@ -26,9 +25,13 @@ import {
   Plus,
   Send,
   Trash2,
+  ExternalLink,
   XCircle,
   AlertCircle,
 } from "lucide-react";
+import { apiCall, apiPost, apiPatch, apiDelete } from "@/lib/api/client";
+import { getAuthHeaders } from "@/lib/session";
+import { statusClasses, REQUEST_STATUS_STYLES } from "@/lib/status-styles";
 import { useMyWorkContext } from "@/context/MyWorkContext";
 import { useUserContext } from "@/context/UserContext";
 import PurchaseRequisitionForm from "./PurchaseRequisitionForm";
@@ -137,20 +140,16 @@ const TYPE_LABELS: Record<string, string> = {
   other: "Other",
 };
 
-const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
-  draft:        { label: "Draft",        cls: "text-muted bg-surface-2" },
-  submitted:    { label: "Submitted",    cls: "text-blue-300/80 bg-blue-500/[0.10]" },
-  under_review: { label: "Under Review", cls: "text-warning/80 bg-amber-500/[0.10]" },
-  approved:     { label: "Approved",     cls: "text-emerald-300/80 bg-emerald-500/[0.10]" },
-  rejected:     { label: "Rejected",     cls: "text-error/80 bg-red-500/[0.10]" },
-  fulfilled:    { label: "Fulfilled",    cls: "text-purple-300/80 bg-purple-500/[0.10]" },
-  cancelled:    { label: "Cancelled",    cls: "text-muted bg-surface-2" },
+// Status styles via centralized status-styles + REQUEST_STATUS_STYLES
+const PR_STATUS_LABELS: Record<string, string> = {
+  draft: "Draft", submitted: "Submitted", under_review: "Under Review",
+  approved: "Approved", rejected: "Rejected", fulfilled: "Fulfilled", cancelled: "Cancelled",
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function fmtDate(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return " - ";
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
@@ -160,10 +159,9 @@ function TypeIcon({ type, className }: { type: string | null; className?: string
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.draft;
   return (
-    <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${cfg.cls}`}>
-      {cfg.label}
+    <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${statusClasses(status, REQUEST_STATUS_STYLES)}`}>
+      {PR_STATUS_LABELS[status] ?? status}
     </span>
   );
 }
@@ -203,7 +201,7 @@ function AttachmentsBar({
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/requests/${companyId}/${requestId}/attachments`);
+      const res: any = await apiCall(`/requests/${companyId}/${requestId}/attachments`);
       if (res.ok) setAttachments(await res.json());
     } finally {
       setLoading(false);
@@ -218,10 +216,10 @@ function AttachmentsBar({
     setSaving(true);
     const fd = new FormData();
     fd.append("file", file);
-    const res = await fetch(
-      `${API}/requests/${companyId}/${requestId}/attachments/file?uploader_id=${userId}`,
-      { method: "POST", body: fd }
-    );
+    // FormData upload - must use raw fetch (apiCall doesn't support multipart)
+    const res = await fetch(`${API}/requests/${companyId}/${requestId}/attachments/file`, {
+      method: "POST", headers: getAuthHeaders(), body: fd,
+    });
     if (res.ok) await load();
     setSaving(false);
     if (fileRef.current) fileRef.current.value = "";
@@ -230,24 +228,14 @@ function AttachmentsBar({
   async function handleAddUrl() {
     if (!urlInput.trim()) return;
     setSaving(true);
-    const res = await fetch(
-      `${API}/requests/${companyId}/${requestId}/attachments/url?uploader_id=${userId}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: urlInput.trim(), label: urlLabel.trim() || null }),
-      }
-    );
-    if (res.ok) { setUrlInput(""); setUrlLabel(""); setShowAdd(false); await load(); }
+      await apiPost(`/requests/${companyId}/${requestId}/attachments/url`, { url: urlInput.trim(), label: urlLabel.trim() });
+      setUrlInput(""); setUrlLabel(""); setShowAdd(false); await load();
     setSaving(false);
   }
 
   async function handleDelete(attId: number) {
-    const res = await fetch(
-      `${API}/requests/${companyId}/${requestId}/attachments/${attId}?requester_id=${userId}`,
-      { method: "DELETE" }
-    );
-    if (res.ok || res.status === 204) await load();
+      await apiDelete(`/requests/${companyId}/${requestId}/attachments/${attId}`);
+      await load();
   }
 
   if (loading) return null;
@@ -551,7 +539,7 @@ function ChatPanel({
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="h-3.5 w-3.5 text-success/60" />
               <span className="text-[10px] font-medium text-emerald-300/60">
-                All details gathered — ready to submit
+                All details gathered - ready to submit
               </span>
             </div>
             <button
@@ -593,7 +581,7 @@ function ChatPanel({
           </div>
           <button
             type="button"
-            title={webSearch ? "Web search ON — click to disable" : "Enable web search for research"}
+            title={webSearch ? "Web search ON - click to disable" : "Enable web search for research"}
             onClick={() => setWebSearch((v) => !v)}
             className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-lg border transition-colors ${
               webSearch
@@ -614,7 +602,7 @@ function ChatPanel({
         </div>
         {webSearch && (
           <p className="mt-1.5 text-[9px] text-accent/40">
-            Web search enabled — AI will look up relevant pricing and options
+            Web search enabled - AI will look up relevant pricing and options
           </p>
         )}
       </div>
@@ -664,7 +652,7 @@ function DetailPanel({
           <div className="flex items-center gap-2 rounded border border-emerald-500/20 bg-emerald-900/[0.08] px-3 py-2">
             <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success/60" />
             <span className="text-[10px] text-emerald-300/60">
-              Approved{req.reviewer_notes ? ` — ${req.reviewer_notes}` : ""}
+              Approved{req.reviewer_notes ? ` - ${req.reviewer_notes}` : ""}
             </span>
           </div>
         )}
@@ -672,7 +660,7 @@ function DetailPanel({
           <div className="flex items-center gap-2 rounded border border-red-500/20 bg-red-900/[0.08] px-3 py-2">
             <XCircle className="h-3.5 w-3.5 shrink-0 text-error/60" />
             <span className="text-[10px] text-error/60">
-              Rejected{req.rejection_reason ? ` — ${req.rejection_reason}` : ""}
+              Rejected{req.rejection_reason ? ` - ${req.rejection_reason}` : ""}
             </span>
           </div>
         )}
@@ -681,7 +669,7 @@ function DetailPanel({
             <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-purple-400/60" />
             <span className="text-[10px] text-purple-300/60">
               Fulfilled {req.fulfilled_at ? `on ${fmtDate(req.fulfilled_at)}` : ""}
-              {req.reviewer_notes ? ` — ${req.reviewer_notes}` : ""}
+              {req.reviewer_notes ? ` - ${req.reviewer_notes}` : ""}
             </span>
           </div>
         )}
@@ -689,7 +677,7 @@ function DetailPanel({
           <div className="flex items-center gap-2 rounded border border-blue-500/20 bg-blue-900/[0.08] px-3 py-2">
             <Clock className="h-3.5 w-3.5 shrink-0 text-blue-400/60" />
             <span className="text-[10px] text-blue-300/60">
-              Submitted {fmtDate(req.submitted_at)} — awaiting review
+              Submitted {fmtDate(req.submitted_at)} - awaiting review
             </span>
           </div>
         )}
@@ -712,7 +700,7 @@ function DetailPanel({
                     {key.replace(/_/g, " ")}
                   </span>
                   <span className="text-right text-[10px] font-medium text-secondary">
-                    {String(val ?? "—")}
+                    {String(val ?? " - ")}
                   </span>
                 </div>
               ))}
@@ -858,13 +846,8 @@ export default function MyRequestsModule() {
   const loadRequests = useCallback(async () => {
     if (!companyId || !userIdStr) return;
     try {
-      const res = await fetch(
-        `${API}/requests/${companyId}/my?requester_id=${userIdStr}`
-      );
-      if (res.ok) {
-        const data: PurchaseRequest[] = await res.json();
+      const data: any = await apiCall(`/requests/${companyId}/my`);
         setRequests(data);
-      }
     } catch {
       // silent
     } finally {
@@ -880,8 +863,8 @@ export default function MyRequestsModule() {
 
   useEffect(() => {
     if (!selectedId || !companyId) { setAttachments([]); return; }
-    fetch(`${API}/requests/${companyId}/${selectedId}/attachments`)
-      .then((r) => r.ok ? r.json() : [])
+    apiCall(`/requests/${companyId}/${selectedId}/attachments`)
+      .then((r: any) => r.ok ? r.json() : [])
       .then(setAttachments)
       .catch(() => setAttachments([]));
   }, [selectedId, companyId]);
@@ -906,12 +889,7 @@ export default function MyRequestsModule() {
     setError(null);
     try {
       const name = encodeURIComponent(displayName ?? "");
-      const res = await fetch(
-        `${API}/requests/${companyId}/new?requester_id=${userIdStr}&requester_name=${name}`,
-        { method: "POST" }
-      );
-      if (!res.ok) throw new Error("Failed to create request");
-      const req: PurchaseRequest = await res.json();
+      const req: PurchaseRequest = await apiPost(`/requests/${companyId}`, { title: name });
       setRequests((prev) => [req, ...prev]);
       setSelectedId(req.id);
       setChatMessages(req.conversation ?? []);
@@ -936,13 +914,7 @@ export default function MyRequestsModule() {
     setChatMessages((prev) => [...prev, userMsg]);
 
     try {
-      const res = await fetch(`${API}/requests/${companyId}/${selectedId}/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, research }),
-      });
-      if (!res.ok) throw new Error("Chat failed");
-      const data = await res.json();
+      const data: any = await apiPost(`/requests/${companyId}/${selectedId}/chat`, { message: text, research });
 
       const aiMsg: ChatMsg = { role: "assistant", content: data.reply };
       setChatMessages((prev) => [...prev, aiMsg]);
@@ -980,11 +952,7 @@ export default function MyRequestsModule() {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch(`${API}/requests/${companyId}/${selectedId}/submit`, {
-        method: "POST",
-      });
-      if (!res.ok) throw new Error("Submit failed");
-      const updated: PurchaseRequest = await res.json();
+      const updated: PurchaseRequest = await apiPost(`/requests/${companyId}/${selectedId}/submit`);
       setRequests((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
       setReadyToSubmit(false);
     } catch {
@@ -1000,11 +968,7 @@ export default function MyRequestsModule() {
     if (!selectedId || !companyId || cancelling) return;
     setCancelling(true);
     try {
-      const res = await fetch(`${API}/requests/${companyId}/${selectedId}/cancel`, {
-        method: "POST",
-      });
-      if (!res.ok) throw new Error("Cancel failed");
-      const updated: PurchaseRequest = await res.json();
+      const updated: PurchaseRequest = await apiPost(`/requests/${companyId}/${selectedId}/cancel`);
       setRequests((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
     } catch {
       setError("Failed to cancel. Please try again.");
@@ -1019,10 +983,8 @@ export default function MyRequestsModule() {
     if (!selectedId || !companyId || deleting || !canDelete) return;
     setDeleting(true);
     try {
-      const res = await fetch(`${API}/requests/${companyId}/${selectedId}`, {
-        method: "DELETE",
-      });
-      if (!res.ok && res.status !== 204) throw new Error("Delete failed");
+      await apiDelete(`/requests/${companyId}/${selectedId}`);
+      // apiDelete throws on non-2xx, so no res check needed
       setRequests((prev) => prev.filter((r) => r.id !== selectedId));
       setSelectedId(null);
       setChatMessages([]);
@@ -1048,13 +1010,9 @@ export default function MyRequestsModule() {
       if (patchTimer.current) clearTimeout(patchTimer.current);
       patchTimer.current = setTimeout(async () => {
         try {
-          await fetch(`${API}/requests/${companyId}/${selectedId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ details: updatedDetails }),
-          });
+      const data = await apiCall(`/requests/${companyId}/${selectedId}`);
         } catch {
-          // silent — local state already reflects the change
+          // silent - local state already reflects the change
         }
       }, 800);
     },
@@ -1131,9 +1089,9 @@ export default function MyRequestsModule() {
           <EmptyRight onNew={handleNew} />
         </div>
       ) : isDraft ? (
-        /* Draft: split — chat left, form preview right */
+        /* Draft: split - chat left, form preview right */
         <div className="flex min-w-0 flex-1 overflow-hidden">
-          {/* Chat panel — fixed width */}
+          {/* Chat panel - fixed width */}
           <div className="flex w-[340px] shrink-0 flex-col overflow-hidden border-r border-subtle bg-surface-0">
             {/* Chat header with delete */}
             <div className="flex h-9 shrink-0 items-center justify-between border-b border-subtle px-3">
@@ -1182,13 +1140,13 @@ export default function MyRequestsModule() {
             </div>
           </div>
 
-          {/* Form preview — fills rest */}
+          {/* Form preview - fills rest */}
           <div className="min-w-0 flex-1 overflow-hidden">
             <PurchaseRequisitionForm
               requestId={selected.id}
               requestNo={reqNo}
               requestDate={selected.created_at}
-              requesterName={displayName ?? selected.requester_name ?? "—"}
+              requesterName={displayName ?? selected.requester_name ?? " - "}
               companyId={String(companyId ?? "")}
               data={(selected.details ?? {}) as Parameters<typeof PurchaseRequisitionForm>[0]["data"]}
               attachments={attachments}
@@ -1213,7 +1171,7 @@ export default function MyRequestsModule() {
             {/* Requester */}
             <div className="mb-3">
               <p className="mb-1 text-[8px] font-bold uppercase tracking-widest text-muted">Submitted by</p>
-              <p className="text-[10px] text-tertiary">{selected.requester_name ?? "—"}</p>
+              <p className="text-[10px] text-tertiary">{selected.requester_name ?? " - "}</p>
               {selected.submitted_at && (
                 <p className="text-[9px] text-muted">{fmtDate(selected.submitted_at)}</p>
               )}
@@ -1288,7 +1246,7 @@ export default function MyRequestsModule() {
               requestId={selected.id}
               requestNo={reqNo}
               requestDate={selected.created_at}
-              requesterName={selected.requester_name ?? displayName ?? "—"}
+              requesterName={selected.requester_name ?? displayName ?? " - "}
               companyId={String(companyId ?? "")}
               data={(selected.details ?? {}) as Parameters<typeof PurchaseRequisitionForm>[0]["data"]}
               attachments={attachments}

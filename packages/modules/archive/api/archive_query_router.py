@@ -2,11 +2,12 @@ from fastapi import APIRouter, Depends, Depends
 from sqlalchemy.orm import Session
 
 from apps.api.auth import require_admin, require_same_company, get_current_user
+from packages.core.platform.module_gate import require_module
 from apps.api.deps import get_db
 from packages.core.platform.models_archive_file import ArchiveFile
 from packages.modules.archive.schemas.archive_file import ArchiveFileListResponse
 
-router = APIRouter(prefix="/archive/query", dependencies=[Depends(require_admin)], tags=["archive-query"])
+router = APIRouter(prefix="/archive/query", dependencies=[Depends(require_admin), Depends(require_module("archive"))], tags=["archive-query"])
 
 
 @router.get("/expense/{expense_id}", response_model=ArchiveFileListResponse)

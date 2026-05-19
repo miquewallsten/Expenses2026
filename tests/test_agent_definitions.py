@@ -29,7 +29,7 @@ def test_seed_is_idempotent(db_session, svc):
     svc.seed_defaults(db_session)
     svc.seed_defaults(db_session)
     count = db_session.query(AgentDefinition).count()
-    assert count == 7
+    assert count == 7  # orchestrator, config, expense, accounting, compliance, email, whatsapp
 
 
 def test_get_by_key(db_session, svc):

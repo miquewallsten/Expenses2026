@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * MyExpensesModule — workspace component for the "My Expenses" module.
+ * MyExpensesModule - workspace component for the "My Expenses" module.
  *
  * Renders a two-panel layout (list + upload  |  policy strip + detail)
  * that fills the full detail column provided by AppShell (detailFlush mode).
@@ -10,12 +10,13 @@
  * assumptions leak in.  The selection is kept in local state and broadcast
  * to context so MyWorkAssistant can react to it.
  *
- * Canonical expense draft state — including linked documents, parsed XML
- * data, and SAT validation status — is owned here.  EmployeeExpenseDetail
+ * Canonical expense draft state - including linked documents, parsed XML
+ * data, and SAT validation status - is owned here.  EmployeeExpenseDetail
  * receives it as props and fires onDocRefreshNeeded to trigger a reload.
  */
 
 import { useCallback, useMemo, useRef, useState, useEffect } from "react";
+import { Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
 import EmployeeExpenseList from "@/components/employee/EmployeeExpenseList";
@@ -48,7 +49,7 @@ interface Expense {
 }
 
 /**
- * Canonical expense draft state — the single source of truth for the
+ * Canonical expense draft state - the single source of truth for the
  * selected expense, its linked documents, and all derived XML / SAT data.
  * Owned by MyExpensesModule; passed down to EmployeeExpenseDetail as props.
  */
@@ -70,7 +71,8 @@ interface ExpenseDraftState {
 
 export default function MyExpensesModule() {
   const { effectiveConfig, setSelectedItem, clearSelectedItem } = useMyWorkContext();
-  const { userIdStr, companyId } = useUserContext();
+  const user = useUserContext();
+  const { userIdStr, companyId } = user;
   const te = useTranslations("employee");
   const tc = useTranslations("common");
 
@@ -143,7 +145,7 @@ export default function MyExpensesModule() {
   // for doc completeness / parsed XML) and re-broadcasts to context so
   // the Copilot assistant and deriveExpenseDecision see the full picture.
   const loadDraftDocs = useCallback(async (expenseId: number) => {
-    // Mark loading — seed a stub if this is a new selection.
+    // Mark loading - seed a stub if this is a new selection.
     setDraftState((prev) =>
       prev?.expenseId === expenseId
         ? { ...prev, loadingDocs: true }
@@ -186,7 +188,7 @@ export default function MyExpensesModule() {
         if (satRule) {
           satStatus = satRule.status === "failed" ? "error" : satRule.status === "warning" ? "warning" : "valid";
         } else {
-          // No stored SAT result yet — default to valid if XML parsed OK.
+          // No stored SAT result yet - default to valid if XML parsed OK.
           satStatus = parsedXml ? "valid" : null;
         }
       }
@@ -426,18 +428,36 @@ export default function MyExpensesModule() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
-  return (
-    <div className="flex h-full overflow-hidden">
+  const isDelegate = user.capabilities.delegates_for_user_id !== null;
+  const delegateName = user.capabilities.delegates_for_user_name;
 
-      {/* ── List pane — hidden on mobile when detail is showing ──────────── */}
+  return (
+    <div className="flex h-full flex-col overflow-hidden">
+      {isDelegate && (
+        <div className="flex items-center justify-between border-b border-warning/10 bg-warning/5 px-4 py-2">
+          <div className="flex items-center gap-2">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-warning/20 text-warning">
+              <Users className="h-3 w-3" />
+            </span>
+            <p className="text-[11px] font-medium text-secondary">
+              Actuando como <span className="font-bold text-primary">{delegateName}</span>
+            </p>
+          </div>
+          <span className="text-[10px] uppercase tracking-widest text-muted">Secretaría Ejecutiva</span>
+        </div>
+      )}
+
+      <div className="flex flex-1 overflow-hidden">
+
+      {/* ── List pane - hidden on mobile when detail is showing ──────────── */}
       <div
         className={[
           moduleIsNarrow && activeMobilePane === "detail" ? "hidden" : "flex",
-          isMobile ? "w-full border-b" : "w-72 border-r",
+          isMobile ? "w-full border-b" : "w-80 border-r",
           "shrink-0 flex-col overflow-hidden border-default",
         ].join(" ")}
       >
-        {/* Upload zone — tap-friendly on mobile */}
+        {/* Upload zone - tap-friendly on mobile */}
         {showSimpleForm ? (
           /* ── Simple-expense inline form ────────────────────────────────── */
           <div className="mx-3 mt-2 mb-1 shrink-0 rounded border border-default bg-surface-1 px-3 py-2.5">
@@ -569,7 +589,7 @@ export default function MyExpensesModule() {
         />
       </div>
 
-      {/* ── Detail pane — hidden on mobile when list is showing ──────────── */}
+      {/* ── Detail pane - hidden on mobile when list is showing ──────────── */}
       <div className={`${activeMobilePane === "list" ? "hidden" : "flex"} min-w-0 flex-1 flex-col overflow-hidden`}>
 
         <EmployeeExpenseDetail
@@ -611,6 +631,7 @@ export default function MyExpensesModule() {
         />
       </div>
 
+      </div>
     </div>
   );
 }

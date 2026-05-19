@@ -31,6 +31,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from packages.core.platform.module_gate import require_module
 from apps.api.auth import require_admin, require_same_company, get_current_user
 from apps.api.deps import get_db
 from packages.core.platform.models_export_config import ExportConfig

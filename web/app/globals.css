@@ -219,6 +219,10 @@ html.light {
   --color-warning: #c09010;
   --color-error: #d04050;
 
+  --color-success-muted: #20a08020;
+  --color-warning-muted: #c0901020;
+  --color-error-muted: #d0405020;
+
   --gradient-hero: linear-gradient(135deg, #f8f8fa 0%, #f0f0f8 50%, #f0f8f8 100%);
   --gradient-card: linear-gradient(180deg, #ffffff 0%, #f8f8fc 100%);
 
@@ -236,6 +240,68 @@ html.light {
 
   --color-white: #0a0a0a;
   --color-black: #ffffff;
+
+  /* Light mode shadows - softer, lifted appearance */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.10);
+  --shadow-xl: 0 8px 32px rgba(0, 0, 0, 0.12);
+  --shadow-glow: 0 0 16px rgba(37, 99, 235, 0.12);
+  --shadow-glow-ai: 0 0 16px rgba(32, 176, 176, 0.12);
+
+  /* Light mode blue scale */
+  --color-blue-50: #eff6ff;
+  --color-blue-100: #dbeafe;
+  --color-blue-200: #bfdbfe;
+  --color-blue-300: #93c5fd;
+  --color-blue-400: #60a5fa;
+  --color-blue-500: #2563eb;
+  --color-blue-600: #1d4ed8;
+  --color-blue-700: #1e40af;
+  --color-blue-800: #1e3a8a;
+  --color-blue-900: #172554;
+
+  /* Light mode cyan scale */
+  --color-cyan-50: #e8fffc;
+  --color-cyan-100: #c8fff6;
+  --color-cyan-200: #98f8ec;
+  --color-cyan-300: #60f0e0;
+  --color-cyan-400: #3dd6c8;
+  --color-cyan-500: #20c0b0;
+  --color-cyan-600: #10a098;
+  --color-cyan-700: #087878;
+
+  /* Light mode emerald/amber/rose/violet scales */
+  --color-emerald-50: #e8fff4;
+  --color-emerald-100: #c8ffe8;
+  --color-emerald-200: #98f8d8;
+  --color-emerald-300: #60f0c0;
+  --color-emerald-400: #34d399;
+  --color-emerald-500: #20b080;
+  --color-emerald-600: #108868;
+
+  --color-amber-50: #fffae8;
+  --color-amber-100: #fff0c8;
+  --color-amber-200: #f8e098;
+  --color-amber-300: #f0c860;
+  --color-amber-400: #fbbf24;
+  --color-amber-500: #e0a010;
+  --color-amber-600: #b87808;
+
+  --color-rose-50: #fff4f8;
+  --color-rose-100: #ffe8f0;
+  --color-rose-200: #f8d0e0;
+  --color-rose-300: #f0a8c8;
+  --color-rose-400: #f87171;
+  --color-rose-500: #e05060;
+  --color-rose-600: #b83048;
+
+  --color-violet-50: #f4f0ff;
+  --color-violet-100: #e8d8ff;
+  --color-violet-200: #d8b8f8;
+  --color-violet-300: #c090f0;
+  --color-violet-400: #a868e8;
+  --color-violet-500: #9040d8;
 }
 
 /* ════════════════════════════════════════════════════════════════════════════════
@@ -719,4 +785,40 @@ html.light ::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.28); }
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(0, 0, 0, 0.08);
+}
+html.light .glass {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Theme-aware overlay backdrop - used by Modal, Drawer, AppShell */
+.overlay-backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+html.light .overlay-backdrop {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.overlay-backdrop-blur {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+}
+html.light .overlay-backdrop-blur {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Theme-aware subtle section background */
+.section-subtle {
+  background: rgba(0, 0, 0, 0.15);
+}
+html.light .section-subtle {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+/* Theme-aware separator dot */
+.separator-dot {
+  color: rgba(255, 255, 255, 0.08);
+}
+html.light .separator-dot {
+  color: rgba(0, 0, 0, 0.12);
 }

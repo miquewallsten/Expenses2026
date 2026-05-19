@@ -43,8 +43,8 @@ function AuthVerifyInner() {
           isSuperAdmin: Boolean(data.is_super_admin),
         });
         // All roles use the single MyWork portal at /mywork.
-        // Admin also gets /admin as their landing so they see the setup dashboard.
-        const dest = data.role === "admin" ? "/admin" : "/mywork";
+        // The module registry determines which modules each role sees.
+        const dest = data.isSuperAdmin ? "/super-admin" : "/mywork";
         router.replace(dest);
       })
       .catch((err: Error) => {

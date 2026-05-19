@@ -22,6 +22,10 @@ class AccountingSetupBase(BaseModel):
     require_final_accounting_review_before_export: bool = True
     ai_accounting_assist_enabled: bool = True
     ai_accounting_notes: str | None = None
+    setup_mode: str = "setup"
+    configured_by: str | None = None
+    last_configured_by: str | None = None
+    last_configured_at: datetime | None = None
 
 
 class AccountingSetupCreate(AccountingSetupBase):
@@ -46,6 +50,10 @@ class AccountingSetupUpdate(BaseModel):
     require_final_accounting_review_before_export: bool | None = None
     ai_accounting_assist_enabled: bool | None = None
     ai_accounting_notes: str | None = None
+    setup_mode: str | None = None
+    configured_by: str | None = None
+    last_configured_by: str | None = None
+    last_configured_at: datetime | None = None
 
 
 class AccountingSetupRead(AccountingSetupBase):

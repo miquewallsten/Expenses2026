@@ -7,6 +7,7 @@ export interface LLMConfig {
   provider: "ollama" | "ollama-cloud" | "anthropic" | "openai";
   base_url: string | null;
   api_key_env_ref: string | null;
+  api_key: string | null;
   model_name: string;
   is_active: boolean;
 }
@@ -37,6 +38,7 @@ export interface ChatTestRequest {
   model_name: string;
   base_url?: string;
   api_key_env_ref?: string;
+  api_key?: string;
 }
 
 export interface ChatTestResponse {

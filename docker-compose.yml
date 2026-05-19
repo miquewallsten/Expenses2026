@@ -30,14 +30,12 @@ services:
     environment:
       DATABASE_URL: postgresql://app:${POSTGRES_PASSWORD:-changeme}@db:5432/financial_ops
       REDIS_URL: redis://redis:6379/0
-      # Ollama runs on the host Mac — host.docker.internal resolves on OrbStack
-      # & Docker Desktop. Hardcoded here (no ${} substitution) so a native-dev
-      # .env pointing at 127.0.0.1 can't leak into containers.
-      OLLAMA_BASE_URL: http://host.docker.internal:11434
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-deepseek-v3.1:671b-cloud}
-      OLLAMA_NUM_CTX: ${OLLAMA_NUM_CTX:-32768}
+      LLM_PROVIDER: "openai"
+      LLM_BASE_URL: "https://ollama.com/v1"
+      LLM_MODEL: "kimi-k2.6:cloud"
+      LLM_API_KEY: "${OLLAMA_API_KEY}"
       ENVIRONMENT: ${ENVIRONMENT:-development}
-      DEBUG: ${DEBUG:-false}
+      DEBUG: ${DEBUG:-true}
       AUTH_SECRET: ${AUTH_SECRET:-0a2d19310530b99811807426cdd45482da60d3ebe2b3e888a3a75542bd4f017c}
       CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:3000","http://127.0.0.1:3000","http://localhost:3001","http://127.0.0.1:3001"]}
       ARCHIVE_LOCAL_STORAGE_DIR: /app/storage
@@ -45,6 +43,14 @@ services:
       - "8000:8000"
     volumes:
       - archive_storage:/app/storage
+      - ./apps:/app/apps
+      - ./packages:/app/packages
+      - ./scripts:/app/scripts
+      - ./alembic:/app/alembic
+      - ./requirements.txt:/app/requirements.txt
+    command: >  
+      sh -c "python scripts/docker_entrypoint.py && 
+             python -m uvicorn apps.api.main:app --host 0.0.0.0 --port 8000 --reload --log-level info"
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
       interval: 10s
@@ -54,20 +60,25 @@ services:
 
   # ── Frontend (Next.js) ────────────────────────────────────────────────────
   frontend:
-    build:
-      context: ./web
-      dockerfile: ../infrastructure/docker/Dockerfile.frontend
-      args:
-        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
-        NEXT_PUBLIC_DEV_CHEAT: "true"
+    image: node:20-slim
+    working_dir: /app
+    
+    tmpfs:
+      - /app/.next
+    ports:
+      - "${FRONTEND_HOST_PORT:-3001}:3000"
+    volumes:
+      - ./web:/app
+      - next_node_modules:/app/node_modules
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+      NEXT_PUBLIC_DEV_CHEAT: "true"
+      NODE_ENV: development
+    command: sh -c "npm install && npm run dev"
     restart: unless-stopped
     depends_on:
       backend:
         condition: service_healthy
-    environment:
-      NODE_ENV: production
-    ports:
-      - "${FRONTEND_HOST_PORT:-3000}:3000"
 
   # ── Redis (for caching, sessions, Celery broker) ─────────────────────────────
   redis:
@@ -95,9 +106,16 @@ services:
     environment:
       DATABASE_URL: postgresql://app:${POSTGRES_PASSWORD:-changeme}@db:5432/financial_ops
       REDIS_URL: redis://redis:6379/0
-      OLLAMA_BASE_URL: http://host.docker.internal:11434
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-deepseek-v3.1:671b-cloud}
-      OLLAMA_NUM_CTX: ${OLLAMA_NUM_CTX:-32768}
+      LLM_PROVIDER: "openai"
+      LLM_BASE_URL: "https://ollama.com/v1"
+      LLM_MODEL: "kimi-k2.6:cloud"
+      LLM_API_KEY: "${OLLAMA_API_KEY}"
+    volumes:
+      - ./apps:/app/apps
+      - ./packages:/app/packages
+      - ./scripts:/app/scripts
+      - ./alembic:/app/alembic
+      - ./requirements.txt:/app/requirements.txt
     command: celery -A packages.core.jobs.celery_app worker -l info
 
   # ── Celery Beat (periodic task scheduler) ───────────────────────────────────
@@ -114,8 +132,19 @@ services:
     environment:
       DATABASE_URL: postgresql://app:${POSTGRES_PASSWORD:-changeme}@db:5432/financial_ops
       REDIS_URL: redis://redis:6379/0
+      LLM_PROVIDER: "openai"
+      LLM_BASE_URL: "https://ollama.com/v1"
+      LLM_MODEL: "kimi-k2.6:cloud"
+      LLM_API_KEY: "${OLLAMA_API_KEY}"
+    volumes:
+      - ./apps:/app/apps
+      - ./packages:/app/packages
+      - ./scripts:/app/scripts
+      - ./alembic:/app/alembic
+      - ./requirements.txt:/app/requirements.txt 
     command: celery -A packages.core.jobs.celery_app beat -l info
 
 volumes:
   postgres_data:
   archive_storage:
+  next_node_modules:

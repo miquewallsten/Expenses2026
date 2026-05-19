@@ -68,7 +68,7 @@ REGISTRY.register(ToolSpec(
     category="infra",
     input_schema=CreateTenantArgs,
     handler=_handle_create_tenant,
-    personas=frozenset({"super_admin"}),
+    personas=frozenset({"admin"}),
     required_permission="agent.tool.infra",
 ))
 
@@ -113,7 +113,7 @@ REGISTRY.register(ToolSpec(
     category="read",
     input_schema=ListTenantsArgs,
     handler=_handle_list_tenants,
-    personas=frozenset({"super_admin"}),
+    personas=frozenset({"admin"}),
     required_permission="agent.tool.infra",
 ))
 
@@ -170,7 +170,7 @@ REGISTRY.register(ToolSpec(
     category="infra",
     input_schema=UpdateTenantArgs,
     handler=_handle_update_tenant,
-    personas=frozenset({"super_admin"}),
+    personas=frozenset({"admin"}),
     required_permission="agent.tool.infra",
 ))
 
@@ -203,19 +203,47 @@ def _handle_suspend_tenant(ctx: AgentContext, args: SuspendTenantArgs) -> ToolRe
             error="already_suspended",
         )
 
-    tenant.is_active = False
-    # Note: We could store the reason in settings JSON if needed
-    ctx.db.commit()
-
-    summary = f"Suspended tenant '{args.slug}'"
+    from ...core.receipts import create_receipt
+    preview = {
+        "action": "suspend",
+        "slug": tenant.slug,
+        "name": tenant.name,
+        "plan": tenant.plan,
+        "reason": args.reason,
+    }
+    receipt = create_receipt(
+        db=ctx.db,
+        company_id=ctx.company_id,
+        session_id=ctx.session_id,
+        tool_name="suspend_tenant",
+        args={"slug": args.slug, "reason": args.reason},
+        preview=preview,
+    )
+    summary = f"Suspender tenant '{args.slug}'"
     if args.reason:
         summary += f" (reason: {args.reason})"
 
     return ToolResult(
         ok=True,
-        summary=summary,
-        data={"slug": tenant.slug, "is_active": False},
+        summary=f"{summary} — requiere confirmación",
+        data={"preview": preview},
+        receipt_id=receipt.receipt_id,
     )
+
+
+def _apply_suspend_tenant(ctx: AgentContext, args: dict) -> dict:
+    tenant = (
+        ctx.db.query(PlatformTenant)
+        .filter(PlatformTenant.slug == args["slug"])
+        .one_or_none()
+    )
+    if not tenant:
+        raise ValueError(f"Tenant {args['slug']} not found")
+    if not tenant.is_active:
+        raise ValueError(f"Tenant {args['slug']} is already suspended")
+    tenant.is_active = False
+    ctx.db.commit()
+    return {"slug": tenant.slug, "name": tenant.name, "is_active": False}
 
 
 REGISTRY.register(ToolSpec(
@@ -224,7 +252,8 @@ REGISTRY.register(ToolSpec(
     category="infra",
     input_schema=SuspendTenantArgs,
     handler=_handle_suspend_tenant,
-    personas=frozenset({"super_admin"}),
+    personas=frozenset({"admin"}),
     required_permission="agent.tool.infra",
     destructive=True,
+    requires_confirmation=True,
 ))

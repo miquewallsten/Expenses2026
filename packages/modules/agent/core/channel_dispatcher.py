@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import json
 import logging
 from typing import Any, Dict
@@ -25,8 +26,10 @@ class ChannelAgentDispatcher:
         db, 
         channel_type: str, 
         message: str, 
-        user_id: int, 
-        company_id: int
+        user_id: int | str, 
+        company_id: int,
+        *,
+        confidence: float = 1.0,
     ) -> Dict[str, Any]:
         """
         Processes an inbound message autonomously.
@@ -39,7 +42,55 @@ class ChannelAgentDispatcher:
                 "session_id": str | None
             }
         """
-        # 1. Load channel configuration
+        # 1. Resolve sender to a full User object so run_turn gets real capability flags
+        from packages.core.platform.models_user import User as UserModel
+
+        resolved_user: UserModel | None = None
+        sender_ref: str  # original phone/email for session-id derivation
+        if isinstance(user_id, int):
+            resolved_user = db.query(UserModel).get(user_id)
+            sender_ref = str(user_id)
+        else:
+            sender_ref = str(user_id)
+            resolved_user = (
+                db.query(UserModel)
+                .filter(
+                    UserModel.company_id == company_id,
+                    UserModel.email == user_id,
+                )
+                .first()
+            )
+            if resolved_user is None:
+                # Also try phone match for WhatsApp
+                resolved_user = (
+                    db.query(UserModel)
+                    .filter(
+                        UserModel.company_id == company_id,
+                        UserModel.phone == user_id,
+                    )
+                    .first()
+                )
+
+        if resolved_user is None:
+            _log.warning("No user found for sender_ref=%s in company=%s", sender_ref, company_id)
+            return {
+                "action": "escalate",
+                "content": "No se pudo identificar al usuario.",
+                "detail": "unknown_user",
+                "session_id": None,
+            }
+
+        # 2. Derive a stable session_id so the same sender gets conversation continuity.
+        #    Sanitize sender_ref (+, @, etc.) for use as a URL-safe token.
+        safe_ref = re.sub(r"[^A-Za-z0-9_-]", "_", sender_ref.replace("+", "00"))
+        derived_session_id = f"channel_{channel_type}_{company_id}_{safe_ref}"
+
+        # TODO: Add "employee" persona — channel users submit expenses, they don't
+        # configure the system. Currently Persona = Literal["admin", "accounting"],
+        # so "admin" is the closest safe default until we extend the type.
+        persona = "admin"
+
+        # 3. Load channel configuration
         config = db.query(ChannelAgentConfig).filter(
             ChannelAgentConfig.channel_type == channel_type,
             # In a real multi-tenant app, we'd filter by company_id if configs were per-company.
@@ -68,11 +119,12 @@ class ChannelAgentDispatcher:
 
         result = run_turn(
             db=db,
-            user=user_id,
+            user=resolved_user,
             company_id=company_id,
-            persona="employee",
+            persona=persona,
             user_message=message,
             agent_definition=agent_def,
+            session_id=derived_session_id,
         )
 
         confidence = result.get("confidence", 1.0)

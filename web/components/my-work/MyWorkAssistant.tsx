@@ -62,7 +62,7 @@ function buildPartialItem(
     account_code:      (extra.account_code      as string | null) ?? null,
     report_id:         null,
     created_at:        String(extra.created_at       ?? new Date().toISOString()),
-    // Document state — populated by MyExpensesModule via onDocStateChanged
+    // Document state - populated by MyExpensesModule via onDocStateChanged
     has_xml:    (extra.has_xml    as boolean                                    | undefined),
     has_pdf:    (extra.has_pdf    as boolean                                    | undefined),
     sat_status: (extra.sat_status as "valid" | "warning" | "error" | null | undefined),
@@ -111,7 +111,7 @@ function buildInsightPayload(
       amount:            ac.amount,
       detected_category: ac.detectedCategory,
       account_code:      ac.accountCode,
-      // Document state — enables model to give specific document guidance
+      // Document state - enables model to give specific document guidance
       has_xml:           ac.hasXml,
       has_pdf:           ac.hasPdf,
       sat_status:        ac.satStatus,
@@ -197,7 +197,7 @@ function deriveQuickPrompts(
   return [...new Set(candidates)].slice(0, 3);
 }
 
-// Deterministic primary action — overrides AI text for the three canonical states
+// Deterministic primary action - overrides AI text for the three canonical states
 
 function getDecisiveAction(ac: AssistantContext, s: AssistantStrings): string | null {
   if (!ac.expenseId) return null;
@@ -207,7 +207,7 @@ function getDecisiveAction(ac: AssistantContext, s: AssistantStrings): string | 
   return null; // fall through to AI recommendation
 }
 
-// State bullets — deterministic, based on doc/SAT state, not AI
+// State bullets - deterministic, based on doc/SAT state, not AI
 
 function StateBullets({ ac }: { ac: AssistantContext }) {
   const tb = useTranslations("myWork.assistant.bullets");
@@ -354,7 +354,7 @@ export default function MyWorkAssistant() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Decision context — drives quick prompts (display only, not the fetch)
+  // Decision context - drives quick prompts (display only, not the fetch)
   const decision = useMemo(() => {
     const expenseId = selectedItem.expenseId;
     if (!isStableItem(expenseId) || !moduleId) return null;
@@ -377,7 +377,7 @@ export default function MyWorkAssistant() {
     });
   }, [selectedItem.expenseId, selectedItem.extra, moduleId, effectiveConfig]);
 
-  // Insight fetch — debounced, keyed to selected item + module
+  // Insight fetch - debounced, keyed to selected item + module
   //
   // Rebuilds the decision context locally inside the effect to avoid adding
   // the memoized `decision` object to the deps array and causing extra runs.
@@ -522,7 +522,7 @@ export default function MyWorkAssistant() {
               });
             }
           } catch {
-            // malformed SSE frame — skip
+            // malformed SSE frame - skip
           }
         }
       }
@@ -540,7 +540,7 @@ export default function MyWorkAssistant() {
     }
   };
 
-  // Quick prompts derived from decision — recalculated only when selection changes
+  // Quick prompts derived from decision - recalculated only when selection changes
   const quickPrompts = useMemo(
     () => decision ? deriveQuickPrompts(decision.assistantContext, moduleId, assistantStrings) : [],
     [decision, moduleId, assistantStrings],
@@ -552,8 +552,8 @@ export default function MyWorkAssistant() {
   return (
     <div className="flex h-full flex-col overflow-hidden">
 
-      {/* Header — desktop only */}
-      <div className="hidden h-10 shrink-0 items-center gap-2 border-b border-white/5 bg-surface-1 px-3 lg:flex">
+      {/* Header - desktop only */}
+      <div className="hidden h-10 shrink-0 items-center gap-2 border-b border-subtle bg-surface-1 px-3 lg:flex">
         <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-accent/10 transition-colors">
           <Bot className="h-3.5 w-3.5 text-accent" />
         </div>
@@ -561,7 +561,7 @@ export default function MyWorkAssistant() {
           {ta("copilot")}
         </span>
         {aiStatus?.active_model && (
-          <span className="shrink-0 rounded-md border border-white/10 bg-surface-2 px-2 py-0.5 font-mono text-[9px] text-tertiary">
+          <span className="shrink-0 rounded-md border border-default bg-surface-2 px-2 py-0.5 font-mono text-[9px] text-tertiary">
             {aiStatus.active_model.split(":")[0]}
           </span>
         )}

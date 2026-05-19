@@ -109,7 +109,7 @@ export default function AnnouncementPanel() {
                 className={`flex items-center gap-2 rounded-xl border p-3 text-[11.5px] font-medium transition-all ${
                   target === opt.value
                     ? "border-accent/40 bg-accent/10 text-accent shadow-sm"
-                    : "border-white/5 bg-surface-1 text-secondary hover:bg-surface-2"
+                    : "border-subtle bg-surface-1 text-secondary hover:bg-surface-2"
                 }`}
               >
                 <CheckSquare
@@ -134,7 +134,7 @@ export default function AnnouncementPanel() {
                       type="checkbox"
                       checked={channels[opt.value]}
                       onChange={() => toggleChannel(opt.value)}
-                      className="h-4 w-4 rounded border-white/10 bg-white/5 text-accent focus:ring-accent/20"
+                      className="h-4 w-4 rounded border-default bg-surface-2 text-accent focus:ring-accent/20"
                     />
                     {opt.label}
                   </label>
@@ -145,7 +145,7 @@ export default function AnnouncementPanel() {
 
         <div className="space-y-3">
           <SectionLabel>{t("previewLabel")}</SectionLabel>
-          <div className="rounded-xl border border-dashed border-white/10 bg-black/10 p-5">
+          <div className="rounded-xl border border-dashed border-default section-subtle p-5">
             <div className="flex items-center gap-2.5 mb-3">
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-accent/20 text-accent">
                 <Megaphone className="h-3.5 w-3.5" />

@@ -24,7 +24,7 @@ from packages.modules.admin.service.accounting_setup_service import get_or_creat
 from ..core.context import AgentContext
 from ..core.notification_service import NOTIFICATION_SERVICE
 from ..core.registry import REGISTRY, ToolResult, ToolSpec
-from ._common import diff_row, non_null
+from ._common import diff_row, non_null, propose
 
 
 # ── create_user ──────────────────────────────────────────────────────────────
@@ -41,6 +41,7 @@ class CreateUserArgs(BaseModel):
     can_create_corporate_expenses: bool | None = None
     can_invoice_corporation: bool | None = None
     is_amex_reconciler: bool | None = None
+    is_subcontractor: bool | None = None
     requires_time_tracking: bool | None = None
     has_executive_reporting: bool | None = None
     can_access_accounting: bool | None = None
@@ -83,6 +84,7 @@ def _handle_create_user(ctx: AgentContext, args: CreateUserArgs) -> ToolResult:
         "can_create_corporate_expenses",
         "can_invoice_corporation",
         "is_amex_reconciler",
+        "is_subcontractor",
         "requires_time_tracking",
         "has_executive_reporting",
         "can_access_accounting",
@@ -154,7 +156,7 @@ REGISTRY.register(ToolSpec(
 class InviteUserArgs(BaseModel):
     model_config = ConfigDict(extra="forbid")
     email:      str = Field(..., min_length=3, max_length=255)
-    role:       str = Field(default="employee", pattern=r"^(employee|manager|accounting|admin)$")
+    role:       str = Field(default="employee", pattern=r"^(employee|manager|accounting|admin|executive|secretary)$")
     department: str | None = Field(default=None, max_length=100)
 
 
@@ -411,7 +413,7 @@ REGISTRY.register(ToolSpec(
 class UpdateUserArgs(BaseModel):
     model_config = ConfigDict(extra="forbid")
     user_id:    int
-    role:       str | None = Field(default=None, pattern=r"^(employee|manager|accounting|admin)$")
+    role:       str | None = Field(default=None, pattern=r"^(employee|manager|accounting|admin|executive|secretary)$")
     department: str | None = Field(default=None, max_length=100)
     full_name:  str | None = Field(default=None, max_length=255)
 
@@ -429,9 +431,11 @@ def _handle_update_user(ctx: AgentContext, args: UpdateUserArgs) -> ToolResult:
         return ToolResult(ok=False, summary=f"User {args.user_id} not found", error="not_found")
 
     changes: dict[str, Any] = {}
-    if args.role is not None:
+    role_changed = False
+    if args.role is not None and args.role != user.role:
         user.role = args.role
         changes["role"] = args.role
+        role_changed = True
     if args.department is not None:
         user.department = args.department
         changes["department"] = args.department
@@ -443,9 +447,18 @@ def _handle_update_user(ctx: AgentContext, args: UpdateUserArgs) -> ToolResult:
         return ToolResult(ok=False, summary="No changes provided", error="empty_patch")
 
     ctx.db.commit()
+
+    # Auto-sync capabilities with new role defaults
+    synced = []
+    if role_changed:
+        from packages.core.platform.service_access import sync_role_capabilities
+        synced = sync_role_capabilities(ctx.db, user)
+        if synced:
+            changes["auto_synced_capabilities"] = synced
+
     return ToolResult(
         ok=True,
-        summary=f"Updated user {user.email}: {', '.join(changes.keys())}",
+        summary=f"Updated user {user.email}: {', '.join(changes.keys())}" + (f" (auto-synced: {', '.join(synced)})" if synced else ""),
         data={"user_id": user.id, "changes": changes},
     )
 
@@ -484,13 +497,33 @@ def _handle_deactivate_user(ctx: AgentContext, args: DeactivateUserArgs) -> Tool
     if user.id == ctx.user_id:
         return ToolResult(ok=False, summary="Cannot deactivate yourself", error="self_deactivation")
 
+    return propose(
+        ctx,
+        tool_name="deactivate_user",
+        args={"user_id": args.user_id},
+        preview={
+            "action": "deactivate",
+            "user_id": user.id,
+            "email": user.email,
+            "full_name": getattr(user, "full_name", None),
+        },
+        summary=f"Desactivar usuario {user.email}",
+    )
+
+
+def _apply_deactivate_user(ctx: AgentContext, args: dict) -> dict:
+    user = (
+        ctx.db.query(User)
+        .filter(User.id == args["user_id"], User.company_id == ctx.company_id)
+        .one_or_none()
+    )
+    if not user:
+        raise ValueError(f"User {args['user_id']} not found")
+    if user.id == ctx.user_id:
+        raise ValueError("Cannot deactivate yourself")
     user.is_active = False
     ctx.db.commit()
-    return ToolResult(
-        ok=True,
-        summary=f"Deactivated user {user.email}",
-        data={"user_id": user.id, "email": user.email},
-    )
+    return {"user_id": user.id, "email": user.email, "is_active": False}
 
 
 REGISTRY.register(ToolSpec(
@@ -502,6 +535,7 @@ REGISTRY.register(ToolSpec(
     personas=frozenset({"admin"}),
     required_permission="agent.tool.admin",
     destructive=True,
+    requires_confirmation=True,
 ))
 
 
@@ -527,13 +561,33 @@ def _handle_reactivate_user(ctx: AgentContext, args: ReactivateUserArgs) -> Tool
     if user.is_active:
         return ToolResult(ok=False, summary=f"User {user.email} is already active", error="already_active")
 
+    return propose(
+        ctx,
+        tool_name="reactivate_user",
+        args={"user_id": args.user_id},
+        preview={
+            "action": "reactivate",
+            "user_id": user.id,
+            "email": user.email,
+            "full_name": getattr(user, "full_name", None),
+        },
+        summary=f"Reactivar usuario {user.email}",
+    )
+
+
+def _apply_reactivate_user(ctx: AgentContext, args: dict) -> dict:
+    user = (
+        ctx.db.query(User)
+        .filter(User.id == args["user_id"], User.company_id == ctx.company_id)
+        .one_or_none()
+    )
+    if not user:
+        raise ValueError(f"User {args['user_id']} not found")
+    if user.is_active:
+        raise ValueError(f"User {user.email} is already active")
     user.is_active = True
     ctx.db.commit()
-    return ToolResult(
-        ok=True,
-        summary=f"Reactivated user {user.email}",
-        data={"user_id": user.id, "email": user.email},
-    )
+    return {"user_id": user.id, "email": user.email, "is_active": True}
 
 
 REGISTRY.register(ToolSpec(
@@ -545,6 +599,7 @@ REGISTRY.register(ToolSpec(
     personas=frozenset({"admin"}),
     required_permission="agent.tool.admin",
     destructive=True,
+    requires_confirmation=True,
 ))
 
 
@@ -557,6 +612,7 @@ VALID_CAPABILITIES = (
     "can_create_corporate_expenses",
     "can_invoice_corporation",
     "is_amex_reconciler",
+    "is_subcontractor",
     "requires_time_tracking",
     "has_executive_reporting",
     "can_access_accounting",
@@ -656,6 +712,7 @@ def _handle_list_users(ctx: AgentContext, args: ListUsersArgs) -> ToolResult:
                 "can_create_corporate_expenses": u.can_create_corporate_expenses,
                 "can_invoice_corporation": u.can_invoice_corporation,
                 "is_amex_reconciler": u.is_amex_reconciler,
+                "is_subcontractor": u.is_subcontractor,
                 "requires_time_tracking": u.requires_time_tracking,
                 "has_executive_reporting": u.has_executive_reporting,
                 "can_access_accounting": u.can_access_accounting,
@@ -694,15 +751,6 @@ def _handle_list_users(ctx: AgentContext, args: ListUsersArgs) -> ToolResult:
     )
 
 
-REGISTRY.register(ToolSpec(
-    name="list_users",
-    description="Lista usuarios con filtros, agrupación y métricas opcionales.",
-    category="read",
-    input_schema=ListUsersArgs,
-    handler=_handle_list_users,
-    personas=frozenset({"admin"}),
-    required_permission="agent.tool.admin",
-))
 
 
 # ── get_user_permissions ──────────────────────────────────────────────────────
@@ -712,6 +760,7 @@ CAPABILITY_EXPLANATIONS = {
     "can_create_corporate_expenses": "Can create corporate card expenses",
     "can_invoice_corporation": "Can invoice on behalf of the corporation",
     "is_amex_reconciler": "Can reconcile AMEX statements",
+    "is_subcontractor": "Is a subcontractor user",
     "requires_time_tracking": "Must track time on projects",
     "has_executive_reporting": "Can access executive analytics dashboard",
     "can_access_accounting": "Can access accounting review queue",
@@ -724,6 +773,7 @@ ROLE_PRESETS = {
         "can_create_corporate_expenses": False,
         "can_invoice_corporation": False,
         "is_amex_reconciler": False,
+        "is_subcontractor": False,
         "requires_time_tracking": False,
         "has_executive_reporting": False,
         "can_access_accounting": False,
@@ -734,6 +784,7 @@ ROLE_PRESETS = {
         "can_create_corporate_expenses": False,
         "can_invoice_corporation": False,
         "is_amex_reconciler": False,
+        "is_subcontractor": False,
         "requires_time_tracking": False,
         "has_executive_reporting": False,
         "can_access_accounting": False,
@@ -744,6 +795,7 @@ ROLE_PRESETS = {
         "can_create_corporate_expenses": False,
         "can_invoice_corporation": False,
         "is_amex_reconciler": False,
+        "is_subcontractor": False,
         "requires_time_tracking": False,
         "has_executive_reporting": False,
         "can_access_accounting": True,
@@ -754,6 +806,7 @@ ROLE_PRESETS = {
         "can_create_corporate_expenses": False,
         "can_invoice_corporation": False,
         "is_amex_reconciler": False,
+        "is_subcontractor": False,
         "requires_time_tracking": False,
         "has_executive_reporting": False,
         "can_access_accounting": False,
@@ -764,6 +817,7 @@ ROLE_PRESETS = {
         "can_create_corporate_expenses": False,
         "can_invoice_corporation": False,
         "is_amex_reconciler": False,
+        "is_subcontractor": False,
         "requires_time_tracking": False,
         "has_executive_reporting": True,
         "can_access_accounting": False,
@@ -774,6 +828,7 @@ ROLE_PRESETS = {
         "can_create_corporate_expenses": False,
         "can_invoice_corporation": False,
         "is_amex_reconciler": False,
+        "is_subcontractor": False,
         "requires_time_tracking": False,
         "has_executive_reporting": False,
         "can_access_accounting": False,
@@ -844,6 +899,7 @@ def _handle_get_user_permissions(ctx: AgentContext, args: GetUserPermissionsArgs
         "can_create_corporate_expenses": user.can_create_corporate_expenses,
         "can_invoice_corporation": user.can_invoice_corporation,
         "is_amex_reconciler": user.is_amex_reconciler,
+        "is_subcontractor": user.is_subcontractor,
         "requires_time_tracking": user.requires_time_tracking,
         "has_executive_reporting": user.has_executive_reporting,
         "can_access_accounting": user.can_access_accounting,
@@ -894,13 +950,12 @@ def _handle_get_user_permissions(ctx: AgentContext, args: GetUserPermissionsArgs
 
 
 REGISTRY.register(ToolSpec(
-    name="get_user_permissions",
-    description="Devuelve el desglose detallado de permisos de un usuario.",
+    name="list_users",
+    description="Lista usuarios con filtros, agrupación y métricas opcionales.",
     category="read",
-    input_schema=GetUserPermissionsArgs,
-    handler=_handle_get_user_permissions,
+    input_schema=ListUsersArgs,
+    handler=_handle_list_users,
     personas=frozenset({"admin"}),
-    required_permission="agent.tool.admin",
 ))
 
 
@@ -914,6 +969,7 @@ class UpdateUserPermissionsArgs(BaseModel):
     can_create_corporate_expenses: bool | None = None
     can_invoice_corporation: bool | None = None
     is_amex_reconciler: bool | None = None
+    is_subcontractor: bool | None = None
     requires_time_tracking: bool | None = None
     has_executive_reporting: bool | None = None
     can_access_accounting: bool | None = None
@@ -955,6 +1011,7 @@ def _handle_update_user_permissions(ctx: AgentContext, args: UpdateUserPermissio
         "can_create_corporate_expenses",
         "can_invoice_corporation",
         "is_amex_reconciler",
+        "is_subcontractor",
         "requires_time_tracking",
         "has_executive_reporting",
         "can_access_accounting",
@@ -1146,6 +1203,15 @@ def _handle_audit_permissions(ctx: AgentContext, args: AuditPermissionsArgs) -> 
                     "module": "amex_reconciliation",
                     "suggestion": f"Disable is_amex_reconciler for {u.email} or enable the module",
                 })
+            if u.is_subcontractor and not company_modules.get("subcontractor_module_enabled"):
+                findings.append({
+                    "type": "capability_for_disabled_module",
+                    "user_id": u.id,
+                    "email": u.email,
+                    "capability": "is_subcontractor",
+                    "module": "subcontractor",
+                    "suggestion": f"Disable is_subcontractor for {u.email} or enable the module",
+                })
 
             if u.requires_time_tracking and not company_modules.get("time_allocation_module_enabled"):
                 findings.append({
@@ -1176,4 +1242,422 @@ REGISTRY.register(ToolSpec(
     handler=_handle_audit_permissions,
     personas=frozenset({"admin"}),
     required_permission="agent.tool.admin",
+))
+
+
+# ── RBAC Management Tools ────────────────────────────────────────────────────
+# Tools for managing roles, permissions, and role-permission assignments.
+# These let the admin copilot manage access control end-to-end.
+
+class ListRolesArgs(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    company_id: int | None = None
+
+
+def _handle_list_roles(ctx: AgentContext, args: ListRolesArgs) -> ToolResult:
+    """List all roles and their permission keys for the company."""
+    from packages.core.platform.models_role import Role
+    from packages.core.platform.models_permission import Permission
+    from packages.core.platform.models_role_permission import RolePermission
+
+    company_id = args.company_id or ctx.company_id
+    if company_id != ctx.company_id and ctx.user_role != "admin":
+        return ToolResult(ok=False, summary="Cannot query other companies", error="forbidden")
+
+    roles = ctx.db.query(Role).filter(Role.company_id == company_id).all()
+
+    # Also include built-in role defaults from service_permissions
+    from packages.core.platform.service_permissions import _BUILTIN_ROLE_DEFAULTS, PERMISSION_CATALOG
+
+    result = []
+    for role in roles:
+        perm_keys = [
+            p.key for p in
+            ctx.db.query(Permission.key)
+            .join(RolePermission, RolePermission.permission_id == Permission.id)
+            .filter(RolePermission.role_id == role.id)
+            .all()
+        ]
+        result.append({
+            "id": role.id,
+            "key": role.key,
+            "name": role.name,
+            "description": role.description,
+            "permission_keys": perm_keys,
+        })
+
+    return ToolResult(
+        ok=True,
+        summary=f"{len(result)} roles configurados",
+        data={
+            "roles": result,
+            "builtin_defaults": {k: sorted(v) for k, v in _BUILTIN_ROLE_DEFAULTS.items()},
+            "available_permissions": sorted(PERMISSION_CATALOG.keys()),
+        },
+    )
+
+
+REGISTRY.register(ToolSpec(
+    name="list_roles",
+    description="Lista los roles y permisos de la compañía (incluye defaults del sistema).",
+    category="read",
+    input_schema=ListRolesArgs,
+    handler=_handle_list_roles,
+    personas=frozenset({"admin"}),
+    required_permission="agent.tool.admin",
+))
+
+
+class CreateRoleArgs(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    key: str = Field(..., min_length=1, max_length=100)
+    name: str = Field(..., min_length=1, max_length=255)
+    description: str | None = None
+    permission_keys: list[str] = Field(default_factory=list)
+
+
+def _handle_create_role(ctx: AgentContext, args: CreateRoleArgs) -> ToolResult:
+    """Create a new custom role with optional permissions."""
+    from packages.core.platform.models_role import Role
+    from packages.core.platform.models_permission import Permission
+    from packages.core.platform.models_role_permission import RolePermission
+    from packages.core.platform.service_permissions import invalidate_cache, PERMISSION_CATALOG
+
+    # Validate permission keys
+    invalid = [k for k in args.permission_keys if k not in PERMISSION_CATALOG]
+    if invalid:
+        return ToolResult(
+            ok=False,
+            summary=f"Claves de permiso inválidas: {', '.join(invalid)}",
+            error="invalid_permission_keys",
+        )
+
+    existing = ctx.db.query(Role).filter(
+        Role.company_id == ctx.company_id, Role.key == args.key
+    ).first()
+    if existing:
+        return ToolResult(
+            ok=False,
+            summary=f"Rol '{args.key}' ya existe",
+            error="duplicate_role",
+        )
+
+    return propose(
+        ctx,
+        tool_name="create_role",
+        args={"key": args.key, "name": args.name, "description": args.description, "permission_keys": args.permission_keys},
+        preview={"action": "create_role", "key": args.key, "name": args.name, "permission_count": len(args.permission_keys)},
+        summary=f"Crear rol '{args.name}' ({args.key}) con {len(args.permission_keys)} permisos",
+    )
+
+
+def _apply_create_role(ctx: AgentContext, args: dict) -> dict:
+    from packages.core.platform.models_role import Role
+    from packages.core.platform.models_permission import Permission
+    from packages.core.platform.models_role_permission import RolePermission
+    from packages.core.platform.service_permissions import invalidate_cache
+
+    role = Role(
+        company_id=ctx.company_id,
+        key=args["key"],
+        name=args["name"],
+        description=args.get("description"),
+    )
+    ctx.db.add(role)
+    ctx.db.flush()
+
+    # Ensure Permission rows exist and assign them
+    for perm_key in args.get("permission_keys", []):
+        perm = ctx.db.query(Permission).filter(Permission.key == perm_key).first()
+        if not perm:
+            perm = Permission(key=perm_key, name=perm_key)
+            ctx.db.add(perm)
+            ctx.db.flush()
+        rp = RolePermission(role_id=role.id, permission_id=perm.id)
+        ctx.db.add(rp)
+
+    ctx.db.commit()
+    invalidate_cache(ctx.company_id, args["key"])
+    return {"role_id": role.id, "key": args["key"], "permission_count": len(args.get("permission_keys", []))}
+
+
+REGISTRY.register(ToolSpec(
+    name="create_role",
+    description="Crea un rol personalizado con permisos específicos.",
+    category="config",
+    input_schema=CreateRoleArgs,
+    handler=_handle_create_role,
+    personas=frozenset({"admin"}),
+    required_permission="agent.tool.admin",
+    destructive=True,
+    requires_confirmation=True,
+))
+
+
+class AssignPermissionToRoleArgs(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    role_key: str = Field(..., min_length=1, max_length=100)
+    permission_keys: list[str] = Field(default_factory=list)
+
+
+def _handle_assign_permission_to_role(ctx: AgentContext, args: AssignPermissionToRoleArgs) -> ToolResult:
+    """Add permissions to an existing role (built-in or custom)."""
+    from packages.core.platform.models_role import Role
+    from packages.core.platform.models_permission import Permission
+    from packages.core.platform.models_role_permission import RolePermission
+    from packages.core.platform.service_permissions import PERMISSION_CATALOG
+
+    invalid = [k for k in args.permission_keys if k not in PERMISSION_CATALOG]
+    if invalid:
+        return ToolResult(
+            ok=False,
+            summary=f"Claves de permiso inválidas: {', '.join(invalid)}",
+            error="invalid_permission_keys",
+        )
+
+    role = ctx.db.query(Role).filter(
+        Role.company_id == ctx.company_id, Role.key == args.role_key
+    ).first()
+    if not role:
+        # Auto-create the role row for built-in roles that don't have a DB entry yet
+        from packages.core.platform.service_permissions import _BUILTIN_ROLE_DEFAULTS
+        if args.role_key in _BUILTIN_ROLE_DEFAULTS:
+            role = Role(company_id=ctx.company_id, key=args.role_key, name=args.role_key)
+            ctx.db.add(role)
+            ctx.db.flush()
+        else:
+            return ToolResult(
+                ok=False,
+                summary=f"Rol '{args.role_key}' no existe",
+                error="role_not_found",
+            )
+
+    # Check which permissions are already assigned
+    existing = {
+        p.key for p in
+        ctx.db.query(Permission.key)
+        .join(RolePermission, RolePermission.permission_id == Permission.id)
+        .filter(RolePermission.role_id == role.id)
+        .all()
+    }
+    new_keys = [k for k in args.permission_keys if k not in existing]
+    if not new_keys:
+        return ToolResult(ok=True, summary=f"Todos los permisos ya están asignados al rol '{args.role_key}'")
+
+    return propose(
+        ctx,
+        tool_name="assign_permission_to_role",
+        args={"role_key": args.role_key, "permission_keys": args.permission_keys},
+        preview={"action": "assign_permissions", "role_key": args.role_key, "new_keys": new_keys, "already_assigned": sorted(existing)},
+        summary=f"Agregar {len(new_keys)} permisos al rol '{args.role_key}'",
+    )
+
+
+def _apply_assign_permission_to_role(ctx: AgentContext, args: dict) -> dict:
+    from packages.core.platform.models_role import Role
+    from packages.core.platform.models_permission import Permission
+    from packages.core.platform.models_role_permission import RolePermission
+    from packages.core.platform.service_permissions import invalidate_cache
+
+    role = ctx.db.query(Role).filter(
+        Role.company_id == ctx.company_id, Role.key == args["role_key"]
+    ).first()
+    if not role:
+        return {"error": "role not found"}
+
+    existing = {
+        p.Permission_key for p in
+        ctx.db.query(RolePermission, Permission.key)
+        .join(Permission, Permission.id == RolePermission.permission_id)
+        .filter(RolePermission.role_id == role.id)
+        .all()
+    } if False else set()  # Simpler approach: just add, rely on unique constraint
+
+    added = []
+    for perm_key in args.get("permission_keys", []):
+        perm = ctx.db.query(Permission).filter(Permission.key == perm_key).first()
+        if not perm:
+            perm = Permission(key=perm_key, name=perm_key)
+            ctx.db.add(perm)
+            ctx.db.flush()
+        # Check if already assigned
+        exists = ctx.db.query(RolePermission).filter(
+            RolePermission.role_id == role.id,
+            RolePermission.permission_id == perm.id,
+        ).first()
+        if not exists:
+            rp = RolePermission(role_id=role.id, permission_id=perm.id)
+            ctx.db.add(rp)
+            added.append(perm_key)
+
+    ctx.db.commit()
+    invalidate_cache(ctx.company_id, args["role_key"])
+    return {"role_key": args["role_key"], "added": added}
+
+
+REGISTRY.register(ToolSpec(
+    name="assign_permission_to_role",
+    description="Agrega permisos a un rol existente (incluye roles built-in como admin, accounting).",
+    category="config",
+    input_schema=AssignPermissionToRoleArgs,
+    handler=_handle_assign_permission_to_role,
+    personas=frozenset({"admin"}),
+    required_permission="agent.tool.admin",
+    destructive=True,
+    requires_confirmation=True,
+))
+
+
+class AssignRoleToUserArgs(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    user_id: int
+    role_key: str = Field(..., min_length=1, max_length=100)
+
+
+def _handle_assign_role_to_user(ctx: AgentContext, args: AssignRoleToUserArgs) -> ToolResult:
+    """Assign an additional role to a user (multi-role support)."""
+    from packages.core.platform.models_role import Role
+    from packages.core.platform.models_user_role import UserRole
+    from packages.core.platform.models_user import User
+
+    user = ctx.db.query(User).filter(
+        User.id == args.user_id, User.company_id == ctx.company_id
+    ).first()
+    if not user:
+        return ToolResult(ok=False, summary=f"Usuario {args.user_id} no encontrado", error="not_found")
+
+    role = ctx.db.query(Role).filter(
+        Role.company_id == ctx.company_id, Role.key == args.role_key
+    ).first()
+    if not role:
+        return ToolResult(ok=False, summary=f"Rol '{args.role_key}' no encontrado", error="role_not_found")
+
+    # Check if already assigned
+    existing = ctx.db.query(UserRole).filter(
+        UserRole.user_id == user.id, UserRole.role_id == role.id
+    ).first()
+    if existing:
+        return ToolResult(ok=True, summary=f"Usuario ya tiene el rol '{args.role_key}'")
+
+    return propose(
+        ctx,
+        tool_name="assign_role_to_user",
+        args={"user_id": args.user_id, "role_key": args.role_key},
+        preview={"action": "assign_role", "user_id": user.id, "email": user.email, "role_key": args.role_key},
+        summary=f"Asignar rol '{args.role_key}' a {user.email}",
+    )
+
+
+def _apply_assign_role_to_user(ctx: AgentContext, args: dict) -> dict:
+    from packages.core.platform.models_role import Role
+    from packages.core.platform.models_user_role import UserRole
+    from packages.core.platform.service_permissions import invalidate_cache
+
+    role = ctx.db.query(Role).filter(
+        Role.company_id == ctx.company_id, Role.key == args["role_key"]
+    ).first()
+    if not role:
+        return {"error": "role not found"}
+
+    ur = UserRole(user_id=args["user_id"], role_id=role.id)
+    ctx.db.add(ur)
+    ctx.db.commit()
+    invalidate_cache(ctx.company_id, args["role_key"])
+    return {"user_id": args["user_id"], "role_key": args["role_key"], "assigned": True}
+
+
+REGISTRY.register(ToolSpec(
+    name="assign_role_to_user",
+    description="Asigna un rol adicional a un usuario (soporte multi-rol).",
+    category="config",
+    input_schema=AssignRoleToUserArgs,
+    handler=_handle_assign_role_to_user,
+    personas=frozenset({"admin"}),
+    required_permission="agent.tool.admin",
+    destructive=True,
+    requires_confirmation=True,
+))
+
+
+class RemovePermissionFromRoleArgs(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    role_key: str = Field(..., min_length=1, max_length=100)
+    permission_keys: list[str] = Field(default_factory=list)
+
+
+def _handle_remove_permission_from_role(ctx: AgentContext, args: RemovePermissionFromRoleArgs) -> ToolResult:
+    """Remove permissions from a role."""
+    from packages.core.platform.models_role import Role
+    from packages.core.platform.models_permission import Permission
+    from packages.core.platform.models_role_permission import RolePermission
+
+    role = ctx.db.query(Role).filter(
+        Role.company_id == ctx.company_id, Role.key == args.role_key
+    ).first()
+    if not role:
+        return ToolResult(ok=False, summary=f"Rol '{args.role_key}' no encontrado", error="role_not_found")
+
+    # Find existing assignments
+    to_remove = []
+    for perm_key in args.permission_keys:
+        perm = ctx.db.query(Permission).filter(Permission.key == perm_key).first()
+        if perm:
+            rp = ctx.db.query(RolePermission).filter(
+                RolePermission.role_id == role.id,
+                RolePermission.permission_id == perm.id,
+            ).first()
+            if rp:
+                to_remove.append(perm_key)
+
+    if not to_remove:
+        return ToolResult(ok=True, summary=f"Ninguno de esos permisos están asignados al rol '{args.role_key}'")
+
+    return propose(
+        ctx,
+        tool_name="remove_permission_from_role",
+        args={"role_key": args.role_key, "permission_keys": to_remove},
+        preview={"action": "remove_permissions", "role_key": args.role_key, "removing": to_remove},
+        summary=f"Remover {len(to_remove)} permisos del rol '{args.role_key}'",
+    )
+
+
+def _apply_remove_permission_from_role(ctx: AgentContext, args: dict) -> dict:
+    from packages.core.platform.models_role import Role
+    from packages.core.platform.models_permission import Permission
+    from packages.core.platform.models_role_permission import RolePermission
+    from packages.core.platform.service_permissions import invalidate_cache
+
+    role = ctx.db.query(Role).filter(
+        Role.company_id == ctx.company_id, Role.key == args["role_key"]
+    ).first()
+    if not role:
+        return {"error": "role not found"}
+
+    removed = []
+    for perm_key in args.get("permission_keys", []):
+        perm = ctx.db.query(Permission).filter(Permission.key == perm_key).first()
+        if perm:
+            ctx.db.query(RolePermission).filter(
+                RolePermission.role_id == role.id,
+                RolePermission.permission_id == perm.id,
+            ).delete()
+            removed.append(perm_key)
+
+    ctx.db.commit()
+    invalidate_cache(ctx.company_id, args["role_key"])
+    return {"role_key": args["role_key"], "removed": removed}
+
+
+
+
+REGISTRY.register(ToolSpec(
+    name="remove_permission_from_role",
+    description="Remueve permisos de un rol existente.",
+    category="config",
+    input_schema=RemovePermissionFromRoleArgs,
+    handler=_handle_remove_permission_from_role,
+    personas=frozenset({"admin"}),
+    required_permission="agent.tool.admin",
+    destructive=True,
+    requires_confirmation=True,
 ))

@@ -127,7 +127,7 @@ REGISTRY.register(ToolSpec(
     category="entity",
     input_schema=BulkUpdateArgs,
     handler=_handle_bulk_update_expenses,
-    personas=frozenset({"admin", "finance_manager"}),
+    personas=frozenset({"admin"}),
     destructive=True,
     requires_confirmation=True,
 ))

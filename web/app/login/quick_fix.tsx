@@ -24,22 +24,22 @@ export default function QuickLogin() {
       justifyContent: 'center', 
       alignItems: 'center', 
       height: '100vh', 
-      background: '#0f1117',
+      background: 'var(--color-surface-0)',
       color: 'white'
     }}>
       <div style={{ 
         textAlign: 'center', 
         padding: '40px', 
-        background: '#1a1d28', 
+        background: 'var(--color-surface-1)', 
         borderRadius: '12px',
-        border: '1px solid #2a2f3e'
+        border: '1px solid var(--color-subtle)'
       }}>
         <h1>🚀 Quick Super Admin Access</h1>
         <button 
           onClick={handleQuickAccess}
           style={{
-            background: '#64ffda',
-            color: '#0f1117',
+            background: 'var(--color-ai)',
+            color: 'var(--color-surface-0)',
             padding: '16px 32px',
             border: 'none',
             borderRadius: '8px',

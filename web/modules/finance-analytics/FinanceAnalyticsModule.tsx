@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * FinanceAnalyticsModule — Phase 4.7 + 5.7.
+ * FinanceAnalyticsModule - Phase 4.7 + 5.7.
  *
  * Read-only finance dashboard. Pulls from /analytics/finance/* endpoints.
  * Layout: tile row (totals + SLA) + two charts (spend by month bar,
@@ -146,25 +146,25 @@ export default function FinanceAnalyticsModule() {
         <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
           <Tile
             label={t("tiles.approvedTotal")}
-            value={loading ? "—" : fmtMoney(totals.approvedTotal)}
+            value={loading ? " - " : fmtMoney(totals.approvedTotal)}
             sub={loading ? "" : t("tiles.approvedCount", { count: totals.approvedCount })}
             tone="emerald"
           />
           <Tile
             label={t("tiles.pending")}
-            value={loading ? "—" : String(totals.pendingCount)}
+            value={loading ? " - " : String(totals.pendingCount)}
             sub={loading ? "" : t("tiles.pendingSub")}
             tone="sky"
           />
           <Tile
             label={t("tiles.rejected")}
-            value={loading ? "—" : String(totals.rejectedCount)}
+            value={loading ? " - " : String(totals.rejectedCount)}
             sub={loading ? "" : t("tiles.rejectedSub")}
             tone="red"
           />
           <Tile
             label={t("tiles.slaP95")}
-            value={loading || !sla ? "—" : fmtHours(sla.p95_hours)}
+            value={loading || !sla ? " - " : fmtHours(sla.p95_hours)}
             sub={
               loading || !sla
                 ? ""

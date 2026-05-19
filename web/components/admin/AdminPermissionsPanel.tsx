@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { Plus, Key, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { getAuthHeaders } from "@/lib/session";
+import { apiCall, apiPost } from "@/lib/api/client";
 
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 interface Permission {
   id: number;
@@ -33,17 +34,8 @@ export default function AdminPermissionsPanel({ permissions, onPermissionsChange
     if (!key.trim() || !name.trim()) { setError(tp("errorRequired")); return; }
     setSaving(true); setError(null);
     try {
-      const res = await fetch(`${API}/roles/permissions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: key.trim(), name: name.trim(), description: desc.trim() || null }),
-      });
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        throw new Error(d.detail ?? `${res.status}`);
-      }
-      const created = await res.json();
-      onPermissionsChanged?.([...permissions, created]);
+      const created = await apiPost("/roles/permissions", { key: key.trim(), name: name.trim(), description: desc.trim() || null });
+      onPermissionsChanged?.([...permissions, created as any]);
       setKey(""); setName(""); setDesc("");
       setShowForm(false);
     } catch (e: any) {
@@ -56,8 +48,8 @@ export default function AdminPermissionsPanel({ permissions, onPermissionsChange
   return (
     <div className="max-w-2xl space-y-4">
       {/* Premium header */}
-      <div className="relative overflow-hidden rounded-lg border border-default bg-gradient-to-r from-surface-1 via-surface-1 to-amber-500/[0.02] px-4 py-3">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--color-amber-500)/5%,_transparent_50%)]" />
+      <div className="rounded-lg border border-default bg-surface-1 px-4 py-3">
+        <div className="" />
         <div className="relative flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10">
@@ -94,7 +86,7 @@ export default function AdminPermissionsPanel({ permissions, onPermissionsChange
       ) : (
         <div className="overflow-hidden rounded-lg border border-default">
           {permissions.length > 0 && (
-            <div className="grid grid-cols-[1fr_1fr_2fr] gap-x-4 border-b border-subtle bg-black/20 px-4 py-2">
+            <div className="grid grid-cols-[1fr_1fr_2fr] gap-x-4 border-b border-subtle section-subtle px-4 py-2">
               {[tp("colKey"), tp("colName"), tp("colDescription")].map((h) => (
                 <span key={h} className="text-[9px] font-bold uppercase tracking-widest text-muted">{h}</span>
               ))}
@@ -108,7 +100,7 @@ export default function AdminPermissionsPanel({ permissions, onPermissionsChange
               <span className="font-mono text-[11px] text-accent/80">{p.key}</span>
               <span className="text-[11px] text-secondary">{p.name}</span>
               <span className="truncate text-[11px] text-muted">
-                {p.description ?? <span className="italic text-muted">—</span>}
+                {p.description ?? <span className="italic text-muted"> - </span>}
               </span>
             </div>
           ))}
