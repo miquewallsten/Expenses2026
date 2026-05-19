@@ -9,7 +9,7 @@
  *
  * Hidden on /super-admin routes.
  *
- * Design: bottom-right corner, collapsed to a minimal amber pill by default.
+ * Design: bottom-left corner, collapsed to a minimal amber pill by default.
  * Click or Ctrl+Shift+D to expand. Auto-collapses after login.
  */
 
@@ -175,7 +175,7 @@ function DevLoginPanel() {
     }
   }, []);
 
-  // Collapsed: minimal amber pill at bottom-right
+  // Collapsed: minimal amber pill at bottom-left
   if (!open) {
     return (
       <button
@@ -183,7 +183,7 @@ function DevLoginPanel() {
         onClick={() => setOpen(true)}
         style={{
           bottom: 48 - dragOffset.y,
-          right: 12 - dragOffset.x,
+          left: 12 + dragOffset.x,
           zIndex: 9999,
         }}
         className="group fixed flex items-center gap-1.5 rounded-md border border-amber-500/20 bg-surface-0/95 px-2 py-1.5 shadow-lg shadow-black/40 backdrop-blur-sm transition-all hover:border-amber-500/40 hover:shadow-amber-500/10"
@@ -204,7 +204,7 @@ function DevLoginPanel() {
     );
   }
 
-  // Expanded: panel at bottom-right
+  // Expanded: panel at bottom-left
   return (
     <>
       {/* Backdrop to close on outside click */}
@@ -217,7 +217,7 @@ function DevLoginPanel() {
         ref={panelRef}
         style={{
           bottom: 48 - dragOffset.y,
-          right: 12 - dragOffset.x,
+          left: 12 + dragOffset.x,
           zIndex: 9999,
         }}
         className="fixed w-56 select-none overflow-hidden rounded-lg border border-amber-500/20 bg-surface-0/98 shadow-xl shadow-black/60 backdrop-blur-sm"

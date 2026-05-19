@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  devIndicators: false,
+
   // Prevent browsers from caching HTML so users always pick up the latest
   // chunk URLs after a new deploy. The JS chunks themselves are content-
   // hashed and stay cacheable.
