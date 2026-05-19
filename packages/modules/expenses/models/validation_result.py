@@ -1,7 +1,7 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, String, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import DateTime, ForeignKey, String, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from apps.api.db import Base
 
@@ -10,11 +10,21 @@ class ValidationResult(Base):
     __tablename__ = "validation_results"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    document_id: Mapped[int] = mapped_column(index=True)
+    document_id: Mapped[int] = mapped_column(
+        ForeignKey("expense_documents.id", ondelete="CASCADE"),
+        index=True,
+    )
     source: Mapped[str] = mapped_column(String(50))
     rule_code: Mapped[str] = mapped_column(String(100))
     status: Mapped[str] = mapped_column(String(50))
     message: Mapped[str] = mapped_column(String(5000))
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now()
+    )
+
+    # ── Relationships ───────────────────────────────────────────────────────────
+    # Back-reference from ExpenseDocument.validations
+    document: Mapped["ExpenseDocument"] = relationship(
+        "ExpenseDocument",
+        back_populates="validations",
     )

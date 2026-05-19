@@ -3,7 +3,7 @@
 Assembles a read-only export bundle for a company.
 
 The bundle groups accounting events and archive file metadata for all
-expenses that are eligible for export (status = "submitted").
+expenses that are eligible for export (status = "approved").
 Nothing is persisted here -- callers decide what to do with the returned
 dict (write to disk, push to a downstream system, etc.).
 """
@@ -40,9 +40,10 @@ def _render_bundle_name(pattern: str, context: dict) -> str:
     return re.sub(r"\{(\w+)\}", _replace, pattern)
 
 # Expenses in this status are candidates for bundle inclusion.
-# Excludes: draft (incomplete), manager_approved/approved (handled
-# downstream), rejected (terminal failure).
-_ELIGIBLE_STATUSES = ("submitted",)
+# Only approved expenses are ready for accounting export.
+# Excludes: draft (incomplete), submitted (pending approval),
+# manager_approved (pending accounting review), rejected (terminal failure).
+_ELIGIBLE_STATUSES = ("approved",)
 
 
 def _empty_bundle(company_id: int, generated_at: str) -> dict:
@@ -79,15 +80,15 @@ def build_export_bundle(db: Session, company_id: int) -> dict:
     # -- 1. Eligible expenses ------------------------------------------------
     try:
         all_company_expenses = db.query(Expense).filter(Expense.company_id == company_id).all()
-        submitted_company_expenses = db.query(Expense).filter(
+        approved_company_expenses = db.query(Expense).filter(
             Expense.company_id == company_id,
-            Expense.status == "submitted",
+            Expense.status == "approved",
         ).all()
 
-        _log.debug("[export_bundle] company_id=%s total=%s submitted=%s",
-                   company_id, len(all_company_expenses), len(submitted_company_expenses))
+        _log.debug("[export_bundle] company_id=%s total=%s approved=%s",
+                   company_id, len(all_company_expenses), len(approved_company_expenses))
 
-        expenses = submitted_company_expenses
+        expenses = approved_company_expenses
         _log.debug("[export_bundle] final_candidate_expenses=%s", len(expenses))
 
     except Exception as exc:  # noqa: BLE001

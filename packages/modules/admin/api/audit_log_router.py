@@ -23,7 +23,7 @@ from pydantic import BaseModel
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
-from apps.api.auth import get_current_user, require_admin, require_same_company
+from apps.api.auth import get_current_user, require_permission, require_same_company
 from apps.api.deps import get_db
 from packages.core.platform.models_audit import AuditLog
 from packages.core.platform.models_user import User
@@ -32,7 +32,7 @@ from packages.core.platform.models_user import User
 router = APIRouter(
     prefix="/admin/audit-log",
     tags=["admin", "audit-log"],
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_permission("admin:audit:read"))],
 )
 
 

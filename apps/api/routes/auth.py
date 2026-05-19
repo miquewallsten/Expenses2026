@@ -13,6 +13,7 @@ In production set:
   AUTH_SECRET   (random 32-char secret for signing JWTs)
 """
 
+import hashlib
 import logging
 import os
 import secrets
@@ -54,13 +55,17 @@ _SMTP_FROM = os.environ.get("SMTP_FROM", "noreply@financial-ops.local")
 def _issue_session_jwt(user: User) -> str:
     now = datetime.now(tz=timezone.utc)
     payload = {
-        "sub":        str(user.id),
-        "email":      user.email,
-        "role":       user.role,
-        "company_id": user.company_id,
-        "iat":        int(now.timestamp()),
-        "exp":        int((now + timedelta(hours=_SESSION_TTL)).timestamp()),
+        "sub": str(user.id),
+        "email": user.email,
+        "role": user.role,
+        "iat": int(now.timestamp()),
+        "exp": int((now + timedelta(hours=_SESSION_TTL)).timestamp()),
+        "is_super_admin": bool(getattr(user, "is_super_admin", False)),
     }
+    # Only include company_id for tenant users (super-admins have no company)
+    if user.company_id is not None:
+        payload["company_id"] = user.company_id
+    payload["aud"] = "financial-ops-platform"
     return jwt.encode(payload, _SECRET, algorithm="HS256")
 
 
@@ -105,9 +110,115 @@ class VerifyResponse(BaseModel):
     user_id: int
     email: str
     role: str
-    company_id: int
+    company_id: int | None = None
     full_name: str
     is_super_admin: bool = False
+
+
+# --- Direct Super Admin Login (Bypass) ---
+
+class SuperAdminDirectResponse(BaseModel):
+    token: str
+    user_id: int
+    email: str
+    role: str
+    company_id: int | None = None
+    full_name: str | None = None
+    isSuperAdmin: bool = True
+
+
+# --- Super Admin Password Login ---
+
+class SuperAdminLoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class SuperAdminLoginResponse(BaseModel):
+    token: str
+    user_id: int
+    email: str
+    full_name: str
+    is_super_admin: bool = True
+
+
+@router.post("/super-admin/login", response_model=SuperAdminLoginResponse)
+@limiter.limit(RATE_LIMIT_AUTH, key_func=lambda request: request.client.host if request.client else "anon")
+def super_admin_login(request: Request, body: SuperAdminLoginRequest, db: Session = Depends(get_db)):
+    """Authenticate super-admin with email/password.
+
+    Only users with is_super_admin=True AND a password_hash set can log in.
+    """
+    from packages.core.platform.password_utils import verify_password
+
+    user = db.query(User).filter(User.email == body.email).first()
+
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    if not user.is_super_admin:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    if not user.password_hash:
+        raise HTTPException(status_code=403, detail="Super-admin account not configured for password login")
+
+    if not verify_password(body.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Account is disabled")
+
+    # Update last_login_at
+    user.last_login_at = datetime.now(tz=timezone.utc)
+    db.commit()
+
+    session_token = _issue_session_jwt(user)
+
+    return SuperAdminLoginResponse(
+        token=session_token,
+        user_id=user.id,
+        email=user.email,
+        full_name=user.full_name,
+        is_super_admin=True,
+    )
+
+@router.get("/superadmin-direct", response_model=SuperAdminDirectResponse)
+def superadmin_direct_login(request: Request, token: str, db: Session = Depends(get_db)):
+    """Direct login for super admin users — validates a pre-issued token against the DB.
+    
+    SECURITY: This endpoint verifies the token using the canonical AUTH_SECRET from
+    settings (not os.getenv), validates the user exists in the database, and confirms
+    they hold the is_super_admin flag. No MockUser bypass.
+    """
+    
+    # Use the canonical secret from settings (not os.getenv with fallback)
+    try:
+        payload = jwt.decode(token, _SECRET, algorithms=["HS256"], audience="financial-ops-platform")
+        user_id = int(payload["sub"])
+        email = payload["email"]
+    except (jwt.InvalidTokenError, KeyError, ValueError):
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    # Look up the real user — no mock bypass
+    user = db.query(User).filter(User.id == user_id, User.email == email).first()
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found")
+    
+    if not getattr(user, "is_super_admin", False):
+        raise HTTPException(status_code=403, detail="Super admin access required")
+    
+    # Issue a proper session token via the canonical helper
+    session_token = _issue_session_jwt(user)
+    
+    return SuperAdminDirectResponse(
+        token=session_token,
+        user_id=user.id,
+        email=user.email,
+        role=user.role,
+        company_id=user.company_id,
+        full_name=getattr(user, "full_name", "Super Administrator"),
+        isSuperAdmin=True,
+    )
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -131,9 +242,12 @@ def request_magic_link(request: Request, body: MagicLinkRequest, db: Session = D
     ).delete()
 
     raw_token = secrets.token_urlsafe(48)
+    # Hash the token before storing — the DB never sees the raw token.
+    # This means a DB compromise does not expose valid magic links.
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
     link_token = MagicLinkToken(
         user_id=user.id,
-        token=raw_token,
+        token=token_hash,
         expires_at=now + timedelta(minutes=_TOKEN_TTL),
     )
     db.add(link_token)
@@ -145,6 +259,7 @@ def request_magic_link(request: Request, body: MagicLinkRequest, db: Session = D
     # writes a NotificationDispatch row, and uses per-company SMTP). The
     # router falls back to suppression when SMTP is unconfigured, so dev
     # behaviour (return link in response) is unchanged below.
+    notifier_succeeded = False
     try:
         from packages.modules.channels.service.event_router import (
             notify_magic_link,
@@ -157,10 +272,11 @@ def request_magic_link(request: Request, body: MagicLinkRequest, db: Session = D
             ttl_minutes=_TOKEN_TTL,
             token_id=link_token.id,
         )
+        notifier_succeeded = True
     except Exception:
         _log.exception("Notifier dispatch failed for magic-link to %s", user.email)
 
-    if _SMTP_HOST:
+    if _SMTP_HOST or notifier_succeeded:
         # Legacy direct SMTP path retained as a redundant safety net while we
         # migrate. If Notifier sent the email successfully the recipient
         # receives one copy thanks to per-(event, recipient, channel)
@@ -182,9 +298,11 @@ def request_magic_link(request: Request, body: MagicLinkRequest, db: Session = D
 def verify_magic_link(request: Request, token: str, db: Session = Depends(get_db)):
     now = datetime.now(tz=timezone.utc)
 
+    # Hash the provided token to compare against the stored hash
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
     link_token = (
         db.query(MagicLinkToken)
-        .filter(MagicLinkToken.token == token)
+        .filter(MagicLinkToken.token == token_hash)
         .first()
     )
 

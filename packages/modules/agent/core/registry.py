@@ -52,6 +52,8 @@ class ToolSpec:
     # Phase 8.4 — fine-grained permission gate evaluated AFTER persona check.
     # When set, dispatch consults ``_role_has_permission`` and audits denials.
     required_permission: str | None = None
+    # Phase 9 — module gate: if set, the company must have this module enabled.
+    required_module: str | None = None
 
     def to_ollama_tool(self) -> dict[str, Any]:
         """Emit an OpenAI-compatible tool dict for ``chat_with_tools``."""
@@ -93,16 +95,29 @@ class _Registry:
         if spec is None:
             return ToolResult(ok=False, summary=f"unknown tool: {name}", error="unknown_tool")
 
-        if ctx.persona not in spec.personas:
-            return ToolResult(
-                ok=False,
-                summary=f"tool {name} is not available for persona {ctx.persona}",
-                error="forbidden",
-            )
+        # Permission check: if allowed_tools is set, enforce it strictly.
+        # When None, fall back to persona-based check (legacy behavior).
+        allowed_tools = getattr(ctx, 'allowed_tools', None)
+        if allowed_tools is not None:
+            if name not in allowed_tools:
+                return ToolResult(
+                    ok=False,
+                    summary=f"Tool '{name}' is not available to this agent",
+                    error="permission_denied",
+                )
+        else:
+            # Legacy: use persona-based tool filtering
+            if ctx.persona not in spec.personas:
+                return ToolResult(
+                    ok=False,
+                    summary=f"tool {name} is not available for persona {ctx.persona}",
+                    error="forbidden",
+                )
 
         # Phase 8.4 — fine-grained permission gate (post-persona).
         if spec.required_permission and not _role_has_permission(
-            ctx.user_role, spec.required_permission
+            ctx.user_role, spec.required_permission,
+            db=ctx.db, company_id=ctx.company_id,
         ):
             try:
                 from packages.core.platform.service_audit import log_event
@@ -123,6 +138,25 @@ class _Registry:
                 summary=f"tool {name} requires permission {spec.required_permission}",
                 error="forbidden",
             )
+
+        # Phase 9 — module gate: verify the company has the required add-on enabled.
+        if spec.required_module:
+            from packages.core.platform.models_company_setup import CompanySetup
+            setup = ctx.db.query(CompanySetup).filter(CompanySetup.company_id == ctx.company_id).first()
+            flag_map = {
+                "archive": "archive_module_enabled",
+                "time_allocation": "time_allocation_module_enabled",
+                "purchase_requests": "purchase_requests_module_enabled",
+                "amex_reconciliation": "amex_reconciliation_module_enabled",
+                "subcontractor": "subcontractor_module_enabled",
+            }
+            flag = flag_map.get(spec.required_module)
+            if flag and (not setup or not getattr(setup, flag, False)):
+                return ToolResult(
+                    ok=False,
+                    summary=f"Module '{spec.required_module}' is not enabled for this company",
+                    error="module_not_installed",
+                )
 
         # Strip any LLM-supplied company_id; the engine controls tenancy.
         safe_args = {k: v for k, v in raw_args.items() if k != "company_id"}
@@ -161,8 +195,9 @@ _ROLE_PERMISSIONS: dict[str, set[str]] = {
         "agent.tool.ai_policy",
         "agent.tool.infra",
         "agent.tool.finance_copilot",
+        "agent.tool.admin",
     },
-    "finance_manager": {
+    "accounting": {
         "agent.tool.finance_copilot",
     },
 }
@@ -174,5 +209,26 @@ def register_role_permissions(role: str, perms: set[str]) -> None:
     _ROLE_PERMISSIONS.setdefault(role, set()).update(perms)
 
 
-def _role_has_permission(role: str, permission: str) -> bool:
+def _role_has_permission(role: str, permission: str, db=None, company_id: int | None = None) -> bool:
+    """Check if a role has a specific permission.
+
+    When db and company_id are provided, uses the DB-backed service_permissions
+    which resolves built-in role defaults + custom Role/RolePermission rows.
+    Falls back to the hardcoded _ROLE_PERMISSIONS dict otherwise.
+    """
+    if db is not None and company_id is not None:
+        try:
+            from packages.core.platform.service_permissions import has_permission as svc_has_permission
+            class _FakeUser:
+                def __init__(self, role, company_id, is_super_admin=False):
+                    self.role = role
+                    self.company_id = company_id
+                    self.is_super_admin = is_super_admin
+            fake = _FakeUser(role=role, company_id=company_id, is_super_admin=(role == "super_admin"))
+            try:
+                return svc_has_permission(db, fake, permission)
+            except ValueError:
+                pass  # Unknown key in catalog, fall through to hardcoded
+        except ImportError:
+            pass
     return permission in _ROLE_PERMISSIONS.get(role or "", set())

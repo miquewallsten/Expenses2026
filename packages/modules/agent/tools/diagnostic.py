@@ -30,48 +30,56 @@ class Empty(BaseModel):
 # ── diagnose_config ─────────────────────────────────────────────────────────
 
 def _diagnose_config(ctx: AgentContext, _: Empty) -> ToolResult:
+    from packages.core.platform.service.tenant_validator import VALIDATOR
+    
+    report = VALIDATOR.validate_company(ctx.db, ctx.company_id)
+    
     issues: list[dict[str, Any]] = []
+    
+    # Map validator blockers to diagnostic issues
+    for g in report.blockers:
+        issues.append({
+            "severity": "high" if g.severity == "blocker" else "medium",
+            "code": f"validator_{g.kind}_{g.target.replace('.', '_').lower()}",
+            "message": g.message,
+            "wizard_step": g.wizard_step,
+            "module": g.module
+        })
 
+    # Also include warnings
+    for g in report.warnings:
+        issues.append({
+            "severity": "low",
+            "code": f"validator_{g.kind}_{g.target.replace('.', '_').lower()}",
+            "message": g.message,
+            "wizard_step": g.wizard_step,
+            "module": g.module
+        })
+
+    # Legacy manual checks as fallback/supplement
     cs = ctx.db.query(CompanySetup).filter(CompanySetup.company_id == ctx.company_id).one_or_none()
-    if cs is None:
-        issues.append({"severity": "high", "code": "missing_company_setup",
-                       "message": "La empresa no tiene fila en company_setup."})
-    else:
+    if cs and not report.blockers:
         if not cs.base_currency:
             issues.append({"severity": "medium", "code": "missing_base_currency",
                            "message": "Falta moneda base."})
-        if not cs.country_code:
-            issues.append({"severity": "low", "code": "missing_country_code",
-                           "message": "Falta código de país."})
 
-    ep = ctx.db.query(CompanyExpensePolicy).filter(
-        CompanyExpensePolicy.company_id == ctx.company_id
-    ).one_or_none()
-    if ep is None:
-        issues.append({"severity": "high", "code": "missing_expense_policy",
-                       "message": "La empresa no tiene política de gastos configurada."})
-
-    acc = ctx.db.query(AccountingSetup).filter(
-        AccountingSetup.company_id == ctx.company_id
-    ).one_or_none()
-    if acc is None:
-        issues.append({"severity": "high", "code": "missing_accounting_setup",
-                       "message": "La empresa no tiene configuración contable."})
-
-    cat_count = (
-        ctx.db.query(func.count(AccountingCategory.id))
-        .filter(AccountingCategory.company_id == ctx.company_id, AccountingCategory.is_active.is_(True))
-        .scalar() or 0
-    )
-    if cat_count == 0:
-        issues.append({"severity": "high", "code": "no_accounting_categories",
-                       "message": "No hay categorías contables activas."})
-
-    status = "ok" if not issues else "issues_found"
+    status = "ok" if not report.blockers else "issues_found"
+    
+    summary = report.ok and "La configuración de la empresa es correcta y completa." or \
+              f"Se encontraron {len(report.blockers)} problemas de configuración que bloquean la operación."
+              
     return ToolResult(
         ok=True,
-        summary=f"diagnose_config: {status} ({len(issues)} hallazgos)",
-        data={"status": status, "issues": issues, "categories_active": cat_count},
+        summary=summary,
+        data={
+            "status": status, 
+            "ok": report.ok,
+            "issues": issues, 
+            "modules_status": [
+                {"module": m.module, "enabled": m.enabled, "ok": m.ok} 
+                for m in report.modules
+            ]
+        },
     )
 
 
@@ -81,7 +89,7 @@ REGISTRY.register(ToolSpec(
     category="diagnostic",
     input_schema=Empty,
     handler=_diagnose_config,
-    personas=frozenset({"admin"}),
+    personas=frozenset({"accounting", "admin"}),
 ))
 
 
@@ -133,7 +141,7 @@ REGISTRY.register(ToolSpec(
     category="diagnostic",
     input_schema=DiagnoseExpenseArgs,
     handler=_diagnose_expense,
-    personas=frozenset({"admin", "employee"}),
+    personas=frozenset({"accounting", "admin"}),
 ))
 
 
@@ -188,5 +196,5 @@ REGISTRY.register(ToolSpec(
     category="diagnostic",
     input_schema=Empty,
     handler=_trace_workflow,
-    personas=frozenset({"admin"}),
+    personas=frozenset({"accounting", "admin"}),
 ))

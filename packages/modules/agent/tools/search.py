@@ -78,7 +78,7 @@ REGISTRY.register(ToolSpec(
     category="read",
     input_schema=SearchExpensesInput,
     handler=_handle_search_expenses,
-    personas=_ADMIN_ONLY,
+    personas=frozenset({"accounting", "admin"}),
 ))
 
 

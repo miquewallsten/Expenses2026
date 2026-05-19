@@ -13,8 +13,9 @@ from ..core.context import AgentContext
 from ..core.registry import REGISTRY, ToolResult, ToolSpec
 
 
-_ALL_PERSONAS = frozenset(("admin", "employee", "procurement"))
+_ALL_PERSONAS = frozenset(("admin", "accounting"))
 _ADMIN_ONLY = frozenset(("admin",))
+_ADMIN_ACCT = frozenset(("admin", "accounting"))
 
 
 class RememberInput(BaseModel):
@@ -55,7 +56,7 @@ REGISTRY.register(ToolSpec(
     category="memory",
     input_schema=RememberInput,
     handler=_handle_remember,
-    personas=_ADMIN_ONLY,
+    personas=_ADMIN_ACCT,
 ))
 
 
@@ -100,7 +101,7 @@ REGISTRY.register(ToolSpec(
     category="memory",
     input_schema=ListMemoriesInput,
     handler=_handle_list_memories,
-    personas=_ADMIN_ONLY,
+    personas=_ADMIN_ACCT,
 ))
 
 

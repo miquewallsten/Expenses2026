@@ -141,6 +141,8 @@ Return shape
 """
 
 from sqlalchemy.orm import Session
+from datetime import datetime, timezone
+from decimal import Decimal
 
 from packages.modules.expenses.models.document import ExpenseDocument
 from packages.modules.expenses.models.expense import Expense
@@ -592,6 +594,59 @@ def _check_poliza_blockers(
     return blockers
 
 
+# ── Budget enforcement ─────────────────────────────────────────────────────────
+
+def _check_budget_blockers(db: Session, expense: Expense) -> list[str]:
+    """Check if the employee's monthly spending exceeds their budget.
+
+    Only runs when budget_enforcement is not 'none'.  The check considers
+    all non-rejected expenses for the current month.
+    """
+    blockers: list[str] = []
+
+    policy = get_or_create_company_expense_policy(db, expense.company_id)
+
+    # No budget configured
+    if not policy.monthly_budget_per_employee or policy.budget_enforcement == "none":
+        return blockers
+
+    budget = Decimal(str(policy.monthly_budget_per_employee))
+
+    # Sum month-to-date spending for this employee (non-rejected)
+    from sqlalchemy import func as sa_func
+    from packages.modules.expenses.models.expense import Expense as ExpenseModel
+
+    now = datetime.now(timezone.utc)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    total_spent = (
+        db.query(sa_func.coalesce(sa_func.sum(ExpenseModel.amount_mxn), 0))
+        .filter(
+            ExpenseModel.company_id == expense.company_id,
+            ExpenseModel.user_id == expense.user_id,
+            ExpenseModel.status != "rejected",
+            ExpenseModel.is_deleted == False,
+            ExpenseModel.created_at >= month_start,
+        )
+    ).scalar() or Decimal("0")
+
+    # Add the current expense amount
+    current_amount = expense.amount_mxn or expense.amount
+    projected_total = total_spent + current_amount
+
+    if projected_total > budget:
+        over_by = projected_total - budget
+        msg = (
+            f"Monthly budget exceeded: ${projected_total:.2f} / ${budget:.2f} "
+            f"(over by ${over_by:.2f})."
+        )
+        if policy.budget_enforcement == "block":
+            blockers.append(msg)
+        # For "warn", it's added as a warning not a blocker (handled by caller)
+
+    return blockers
+
+
 # ── Public entry point ────────────────────────────────────────────────────────
 
 def get_expense_blockers(db: Session, expense: Expense) -> dict:
@@ -621,6 +676,33 @@ def get_expense_blockers(db: Session, expense: Expense) -> dict:
     ai_warnings = _ai_blockers_and_warnings(db, expense)["warnings"]
     if ai_warnings:
         warning_messages = warning_messages + ai_warnings
+
+    # Budget enforcement warnings (warn mode — not blocked, but flagged)
+    from packages.modules.expenses.service.policy_service import get_or_create_company_expense_policy
+    from decimal import Decimal
+    policy = get_or_create_company_expense_policy(db, expense.company_id)
+    if policy.monthly_budget_per_employee and policy.budget_enforcement == "warn":
+        budget = Decimal(str(policy.monthly_budget_per_employee))
+        from sqlalchemy import func as sa_func
+        now = datetime.now(timezone.utc)
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        total_spent = (
+            db.query(sa_func.coalesce(sa_func.sum(Expense.amount_mxn), 0))
+            .filter(
+                Expense.company_id == expense.company_id,
+                Expense.user_id == expense.user_id,
+                Expense.status != "rejected",
+                Expense.is_deleted == False,
+                Expense.created_at >= month_start,
+            )
+        ).scalar() or Decimal("0")
+        current_amount = expense.amount_mxn or expense.amount
+        projected = total_spent + current_amount
+        if projected > budget:
+            warning_messages.append(
+                f"Monthly budget warning: ${projected:.2f} / ${budget:.2f} "
+                f"(over by ${projected - budget:.2f})."
+            )
 
     return {
         "submit_blockers": _check_submit_blockers(

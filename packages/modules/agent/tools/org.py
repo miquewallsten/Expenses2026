@@ -49,13 +49,13 @@ def _list_projects(ctx: AgentContext, _: Empty)     -> ToolResult: return _list_
 
 REGISTRY.register(ToolSpec(name="list_cost_centers", description="Lista los centros de costo.", category="read",
                           input_schema=Empty, handler=_list_cost_centers,
-                          personas=frozenset({"admin", "employee"})))
+                          personas=frozenset({"accounting", "admin"})))
 REGISTRY.register(ToolSpec(name="list_clients", description="Lista los clientes.", category="read",
                           input_schema=Empty, handler=_list_clients,
-                          personas=frozenset({"admin", "employee"})))
+                          personas=frozenset({"accounting", "admin"})))
 REGISTRY.register(ToolSpec(name="list_projects", description="Lista los proyectos.", category="read",
                           input_schema=Empty, handler=_list_projects,
-                          personas=frozenset({"admin", "employee"})))
+                          personas=frozenset({"accounting", "admin"})))
 
 
 # ── Destructive: upsert simple org entity ───────────────────────────────────
@@ -179,7 +179,7 @@ REGISTRY.register(ToolSpec(
     category="read",
     input_schema=Empty,
     handler=_list_legal_entities,
-    personas=frozenset({"admin"}),
+    personas=frozenset({"accounting", "admin"}),
 ))
 
 

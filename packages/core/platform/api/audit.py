@@ -16,8 +16,12 @@ def list_audit_logs(
     entity_type: str | None = None,
     entity_id: int | None = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     query = db.query(AuditLog)
+    # Tenant isolation: non-super-admins only see their own company's audit logs
+    if not getattr(current_user, "is_super_admin", False):
+        query = query.filter(AuditLog.company_id == current_user.company_id)
     if entity_type is not None:
         query = query.filter(AuditLog.entity_type == entity_type)
     if entity_id is not None:

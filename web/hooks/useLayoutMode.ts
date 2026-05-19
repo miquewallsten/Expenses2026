@@ -10,10 +10,6 @@ export type Breakpoint = "mobile" | "tablet" | "desktop";
 /**
  * Semantic layout mode — describes the overall shell structure rather than
  * raw pixel widths.  Use this for all structural rendering decisions.
- *
- * - `desktop_three_pane`  NavRail + draggable left pane + workspace + AI rail
- * - `tablet_two_pane`     Icon-only NavRail + fixed left pane + workspace; AI as overlay
- * - `mobile_single_pane`  One pane visible at a time; nav and AI in overlays
  */
 export type LayoutMode =
   | "desktop_three_pane"
@@ -45,86 +41,28 @@ export type ListDetailLayout = "split" | "stacked";
 // ── Options ───────────────────────────────────────────────────────────────────
 
 export interface UseLayoutModeOptions {
-  /**
-   * Id of the currently active module.  Reserved for future per-module layout
-   * overrides (e.g. a wide-workspace module that always wants a wider pane).
-   * Has no effect on current layout decisions.
-   */
   activeModuleId?: string | null;
-
-  /**
-   * Whether the workspace currently has a detail item selected.
-   *
-   * On `mobile_single_pane` this controls which pane fills the screen:
-   * `"detail"` when true (an item is selected), `"list"` when false.
-   * On tablet / desktop both panes are always visible so this is ignored.
-   */
   hasDetail?: boolean;
 }
 
 // ── Return value ──────────────────────────────────────────────────────────────
 
 export interface LayoutModeResult {
-  // ── Core ──────────────────────────────────────────────────────────────────
-
-  /** High-level layout mode — use this for structural rendering decisions. */
   mode: LayoutMode;
-
-  /** Raw breakpoint — prefer `mode` for structure; use this for fine-tuning. */
   breakpoint: Breakpoint;
-
-  // ── Shell-level decisions ─────────────────────────────────────────────────
-
-  /**
-   * Whether the left nav / worklist sidebar is always visible (`"pinned"`) or
-   * opens as a slide-in overlay (`"drawer"`).
-   */
   sidebarStyle: SidebarStyle;
-
-  /**
-   * How the AI assistant is surfaced: persistent column, side panel, or
-   * bottom sheet.
-   */
   assistantStyle: AssistantStyle;
-
-  // ── Workspace-level decisions ─────────────────────────────────────────────
-
-  /**
-   * Whether the list and detail areas sit side-by-side (`"split"`) or only
-   * one is shown at a time (`"stacked"`).
-   */
   listDetailLayout: ListDetailLayout;
-
-  /**
-   * On `mobile_single_pane`: which pane should fill the viewport.
-   * - `"list"`   — no item selected; show the list
-   * - `"detail"` — an item is selected; show the detail view
-   *
-   * On tablet / desktop both panes are always visible so this is always
-   * `"detail"` (the value is safe to use in conditional rendering on any
-   * breakpoint because non-mobile never hides the detail pane).
-   */
   activeMobilePane: "list" | "detail";
-
-  // ── Convenience booleans ──────────────────────────────────────────────────
-
   isMobile: boolean;
   isTablet: boolean;
   isDesktop: boolean;
-
-  /**
-   * True when the module's own internal list + detail split should collapse
-   * to a single-pane view.  Modules use this to toggle between their split
-   * and stacked rendering.  Currently equivalent to `isMobile`.
-   */
   moduleIsNarrow: boolean;
 }
 
 // ── Breakpoint thresholds ─────────────────────────────────────────────────────
 
-/** Below this width: mobile */
 const BP_TABLET  = 768;
-/** Below this width: tablet; at or above: desktop */
 const BP_DESKTOP = 1024;
 
 function detectBreakpoint(width: number): Breakpoint {
@@ -162,34 +100,19 @@ const LIST_DETAIL_LAYOUT: Record<Breakpoint, ListDetailLayout> = {
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
 /**
- * `useLayoutMode` — centralised layout decision hub for the My Work portal.
+ * `useLayoutMode` — centralised layout decision hub.
  *
- * Derives a `LayoutMode` and a set of layout decisions from the current
- * viewport width, optionally refined by the active module and whether a
- * detail item is selected.
- *
- * All breakpoint listeners are set up once per mount; multiple consumers on
- * the same page each own their own listener (React state batches the updates).
- *
- * ### Shell-level usage (no module context needed)
- * ```ts
- * const { isMobile, sidebarStyle, assistantStyle } = useLayoutMode();
- * ```
- *
- * ### Module-level usage (with detail selection context)
- * ```ts
- * const { moduleIsNarrow, activeMobilePane } = useLayoutMode({
- *   activeModuleId: activeModule?.id,
- *   hasDetail: selected !== null,
- * });
- * // Show list when activeMobilePane === "list", detail otherwise.
- * ```
+ * IMPORTANT: Initializes to "desktop" to match the SSR render, avoiding
+ * hydration mismatches. On mount, detects the actual viewport width and
+ * updates. The first client paint will briefly show desktop layout before
+ * correcting, but since HydrationGuard in layout.tsx shows a spinner until
+ * mounted, the user never sees this transition.
  */
 export function useLayoutMode(options: UseLayoutModeOptions = {}): LayoutModeResult {
   const { activeModuleId: _activeModuleId, hasDetail = false } = options;
 
-  // Initialise to "desktop" so server-rendered HTML matches the most likely
-  // first-load state and avoids a layout shift on hydration.
+  // Start with "desktop" to match SSR output. HydrationGuard ensures
+  // the user sees a spinner, not a layout shift.
   const [breakpoint, setBreakpoint] = useState<Breakpoint>("desktop");
 
   useEffect(() => {
@@ -203,8 +126,6 @@ export function useLayoutMode(options: UseLayoutModeOptions = {}): LayoutModeRes
   const isTablet  = breakpoint === "tablet";
   const isDesktop = breakpoint === "desktop";
 
-  // On mobile: show list unless a detail item is selected.
-  // On tablet / desktop both panes are always visible.
   const activeMobilePane: "list" | "detail" =
     isMobile && !hasDetail ? "list" : "detail";
 

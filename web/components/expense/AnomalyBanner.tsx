@@ -1,19 +1,15 @@
 "use client";
 
 /**
- * AnomalyBanner — Phase 5.4 inline anomaly flags for an expense.
- *
+ * AnomalyBanner - Phase 5.4 inline anomaly flags for an expense.
  * Fetches POST /expenses/anomalies/check on mount; renders a compact
- * banner listing each flag (alert / warn). Self-contained: drop into
- * any expense detail page.
+ * banner listing each flag (alert / warn). Self-contained.
  */
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { AlertTriangle, Info } from "lucide-react";
-import { getAuthHeaders } from "@/lib/session";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { apiPost } from "@/lib/api/client";
 
 interface AnomalyFlag {
   kind: string;
@@ -43,57 +39,48 @@ export default function AnomalyBanner({
   useEffect(() => {
     if (!expenseId || !amount || amount <= 0) return;
     let cancelled = false;
-    fetch(`${API}/expenses/anomalies/check`, {
-      method: "POST",
-      headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        expense_id: expenseId,
-        amount,
-        category_code: categoryCode,
-        expense_date: expenseDate,
-      }),
+    apiPost<{ flags: AnomalyFlag[]; has_alert: boolean }>("/expenses/anomalies/check", {
+      expense_id: expenseId,
+      amount,
+      category_code: categoryCode,
+      expense_date: expenseDate,
     })
-      .then((r) => (r.ok ? r.json() : { flags: [], has_alert: false }))
-      .then((d: { flags: AnomalyFlag[]; has_alert: boolean }) => {
+      .then((d) => {
         if (cancelled) return;
         setFlags(d.flags ?? []);
         setHasAlert(Boolean(d.has_alert));
       })
-      .catch(() => {
-        // non-critical; skip silently
-      });
-    return () => {
-      cancelled = true;
-    };
+      .catch(() => {});
+    return () => { cancelled = true; };
   }, [expenseId, amount, categoryCode, expenseDate]);
 
   if (dismissed || flags.length === 0) return null;
 
   const Icon = hasAlert ? AlertTriangle : Info;
   const tone = hasAlert
-    ? "border-red-500/25 bg-red-500/[0.07] text-red-200/85"
-    : "border-amber-500/25 bg-amber-500/[0.07] text-amber-200/85";
+    ? "border-red-500/20 bg-red-500/[0.06] text-red-200/85"
+    : "border-amber-500/20 bg-amber-500/[0.06] text-amber-200/85";
 
   return (
-    <div className={`rounded-md border px-2.5 py-1.5 text-[10.5px] ${tone}`}>
-      <div className="flex items-start gap-1.5">
+    <div className={`rounded-lg border px-3 py-2 ${tone}`}>
+      <div className="flex items-start gap-2">
         <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between">
-            <span className="font-semibold uppercase tracking-wider">
+            <span className="text-[10px] font-semibold uppercase tracking-wider">
               {hasAlert ? t("alertTitle") : t("warnTitle")}
             </span>
             <button
               type="button"
               onClick={() => setDismissed(true)}
-              className="text-[9px] text-white/35 hover:text-white/65"
+              className="text-[9px] text-muted hover:text-secondary"
             >
               {t("dismiss")}
             </button>
           </div>
           <ul className="mt-0.5 space-y-0.5">
             {flags.map((f, i) => (
-              <li key={`${f.kind}-${i}`} className="leading-snug">
+              <li key={`${f.kind}-${i}`} className="text-[10px] leading-snug">
                 <span className="font-mono text-[9px] opacity-60">{f.kind}</span>{" "}
                 {f.message}
               </li>

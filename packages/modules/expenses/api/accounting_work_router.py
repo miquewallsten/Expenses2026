@@ -1,3 +1,5 @@
+from fastapi import APIRouter, Depends
+from packages.core.platform.module_gate import require_module
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -17,7 +19,7 @@ from packages.modules.expenses.service.accounting_work_service import (
 )
 from packages.modules.expenses.service.accounting_learning_service import store_learning
 
-router = APIRouter(prefix="/accounting/work", tags=["accounting"])
+router = APIRouter(prefix="/accounting/work", tags=["accounting"], dependencies=[Depends(require_module("accounting"))])
 
 
 # ── Developer smoke tests ──────────────────────────────────────────────────────
@@ -47,8 +49,8 @@ router = APIRouter(prefix="/accounting/work", tags=["accounting"])
 #
 # 3. Generate accounting event
 # -----------------------------
-# Precondition: expense.status == "submitted"; account_code or active category
-#               with expense_account_code is set.
+# Precondition: expense.status in ("submitted", "manager_approved"); account_code
+#               or active category with expense_account_code is set.
 # Expect: 200 with {header: {...}, lines: [...], metadata: {...}}
 #
 #   # Assign a code first if needed:

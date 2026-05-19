@@ -28,40 +28,21 @@ export function buildGlobalNav(context: NavigationContext): GlobalNavItem[] {
   if (role !== null) {
     items.push({
       key: "employee",
-      label: "My Work",
+      label: "myWork",
       href: "/mywork",
-      group: "Workspaces",
+      group: "Workspaces",  // i18n key for nav.groups.Workspaces
       active: currentPortal === "employee",
     });
   }
 
-  // ── Admin ──────────────────────────────────────────────────────────────────
-  if (
-    role === "admin" ||
-    hasPermission("configure_rules") ||
-    hasPermission("activate_modules")
-  ) {
+  // ── Super Admin — system-wide administration ──────────────────────────────
+  if (role === "super_admin") {
     items.push({
-      key: "admin",
-      label: "Admin",
-      href: "/admin",
-      group: "Administration",
-      active: currentPortal === "admin",
-    });
-  }
-
-  // ── Time Setup — project & activity catalog (admin tool) ───────────────────
-  if (
-    role === "admin" ||
-    hasPermission("configure_rules") ||
-    hasPermission("manage_projects")
-  ) {
-    items.push({
-      key: "time-admin",
-      label: "Time Setup",
-      href: "/time-admin",
-      group: "Administration",
-      active: currentPortal === ("time-admin" as never),
+      key: "super-admin",
+      label: "superAdmin",
+      href: "/super-admin",
+      group: "Administration",  // i18n key for nav.groups.Administration
+      active: currentPortal === ("super-admin" as never),
     });
   }
 

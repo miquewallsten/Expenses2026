@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 from ..models import AgentPendingAction
 
 
-RECEIPT_TTL_MINUTES = 30
+RECEIPT_TTL_MINUTES = 60
 
 
 def _now() -> datetime:

@@ -23,7 +23,7 @@ export default function SlashCommandPalette({
 
   if (commands.length === 0) {
     return (
-      <div className="mb-1.5 rounded-md border border-white/[0.08] bg-zinc-900/95 px-2.5 py-1.5 text-[10px] text-white/35 shadow-lg shadow-black/40">
+      <div className="mb-1.5 rounded-md border border-default bg-surface-1/95 px-2.5 py-1.5 text-[10px] text-muted shadow-lg shadow-black/40">
         {t("empty")}
       </div>
     );
@@ -33,7 +33,7 @@ export default function SlashCommandPalette({
     <div
       role="listbox"
       aria-label={t("ariaLabel")}
-      className="mb-1.5 max-h-56 overflow-y-auto rounded-md border border-white/[0.08] bg-zinc-900/95 py-1 shadow-lg shadow-black/40"
+      className="mb-1.5 max-h-56 overflow-y-auto rounded-md border border-default bg-surface-1/95 py-1 shadow-lg shadow-black/40"
     >
       {commands.map((cmd, i) => {
         const active = i === activeIndex;
@@ -48,26 +48,26 @@ export default function SlashCommandPalette({
             className={[
               "flex w-full items-start gap-2 px-2.5 py-1.5 text-left transition-colors",
               active
-                ? "bg-indigo-500/[0.12] text-white/85"
-                : "text-white/55 hover:bg-white/[0.04]",
+                ? "bg-blue-500/[0.12] text-primary"
+                : "text-tertiary hover:bg-surface-2",
             ].join(" ")}
           >
             <Zap
               className={[
                 "mt-0.5 h-3 w-3 shrink-0",
-                active ? "text-indigo-300" : "text-white/30",
+                active ? "text-accent" : "text-muted",
               ].join(" ")}
             />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
-                <span className="font-mono text-[10px] tracking-tight text-indigo-300/80">
+                <span className="font-mono text-[10px] tracking-tight text-accent">
                   /{cmd.id}
                 </span>
                 <span className="truncate text-[11px] font-medium">
                   {t(`${cmd.labelKey}` as never)}
                 </span>
               </div>
-              <p className="mt-0.5 truncate text-[10px] text-white/35">
+              <p className="mt-0.5 truncate text-[10px] text-muted">
                 {t(`${cmd.descKey}` as never)}
               </p>
             </div>

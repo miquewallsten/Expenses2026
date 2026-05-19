@@ -42,6 +42,12 @@ SUPPORTED_FIELDS: tuple[str, ...] = (
     "description",
     "notes",
     "has_notes",
+    # "Now" context fields — evaluated against the current date, not the
+    # expense.  Useful for grace-period / time-window rules.
+    "today_year",
+    "today_month",
+    "today_day",
+    "today_day_of_year",
 )
 
 SUPPORTED_OPS: tuple[str, ...] = (
@@ -55,15 +61,18 @@ _SYSTEM_PROMPT = (
     "You convert a Spanish or English admin instruction into a single JSON "
     "policy that an expense validator can execute deterministically.\n\n"
     "Output ONLY a single JSON object — no markdown fences, no prose.\n\n"
-    "Schema:\n"
+    "Schema (use ONE of `when` OR `any_of`):\n"
     "{\n"
     '  "rule_json": {\n'
-    '    "when": [ { "field": <field>, "op": <op>, "value": <scalar|list> } ],\n'
-    '    "then": { "action": "block"|"warn", "field": <string|null>, "message": <string> }\n'
+    '    "when":   [ { "field": <field>, "op": <op>, "value": <scalar|list> } ],\n'
+    '    "any_of": [ { "all": [ { "field": ..., "op": ..., "value": ... } ] } ],\n'
+    '    "then":   { "action": "block"|"warn", "field": <string|null>, "message": <string> }\n'
     "  },\n"
     '  "summary":  <short Spanish phrase, <= 120 chars, describing the rule>,\n'
     '  "severity": "block"|"warn"\n'
     "}\n\n"
+    "`when` is an AND of clauses. `any_of` is an OR of AND-groups (use it when the rule has "
+    "exceptions or alternatives that AND alone cannot express). Provide exactly one of the two.\n\n"
     f"Allowed fields:  {', '.join(SUPPORTED_FIELDS)}\n"
     f"Allowed ops:     {', '.join(SUPPORTED_OPS)}\n"
     f"Allowed actions: {', '.join(SUPPORTED_ACTIONS)}\n\n"
@@ -98,7 +107,8 @@ _SYSTEM_PROMPT = (
     "- receiver_regimen: CFDI Receptor@RegimenFiscalReceptor — SAT régimen fiscal code of the receiver.\n"
     "- description: short expense description entered by the employee\n"
     "- notes: free-text clarifying note / 'nota aclaratoria' entered by the employee\n"
-    "- has_notes: boolean — true when the employee filled in a note\n\n"
+    "- has_notes: boolean — true when the employee filled in a note\n"
+    "- today_year / today_month / today_day / today_day_of_year: integers describing TODAY — use these for grace-period or time-window exceptions (NOT properties of the expense).\n\n"
     "Conditional-requirement pattern: \"for X, require Y\" is expressed as a SINGLE policy "
     "whose `when` contains the trigger clauses AND the negation of the requirement, and "
     "whose `then.message` names the missing requirement. Example: \"expenses over $5000 "
@@ -112,7 +122,8 @@ _SYSTEM_PROMPT = (
     "Common SAT UsoCFDI codes you may map from Spanish phrasing:\n"
     "  G01=Adquisición de mercancías, G02=Devoluciones/descuentos, G03=Gastos en general,\n"
     "  I01-I08=Inversiones, D01-D10=Deducciones personales, P01=Por definir, S01=Sin efectos fiscales.\n\n"
-    "Dynamic values: use '$current_year' (integer), '$current_year_start' / "
+    "Dynamic values: use '$current_year' (integer), '$current_year_minus_1' / "
+    "'$current_year_plus_1' (integer prior/next year), '$current_year_start' / "
     "'$current_year_end' / '$current_month_start' / '$current_date' (ISO date strings) "
     "when the admin refers to \"this year / current year / el año presente\" etc. Use "
     "'$legal_entity_rfcs' (list of RFC strings) when the admin refers to \"our registered "
@@ -137,9 +148,19 @@ _SYSTEM_PROMPT = (
     "    then: action=block, message='La factura debe emitirse a una de nuestras entidades legales registradas.'\n"
     "- \"Validar que el código postal del CFDI coincida con alguna de las entidades fiscales guardadas\" →\n"
     "    when: [ { field: receiver_zip, op: 'not_in', value: '$legal_entity_zips' } ]\n"
-    "    then: action=block, message='El código postal del receptor no coincide con ninguna entidad fiscal registrada.'\n\n"
+    "    then: action=block, message='El código postal del receptor no coincide con ninguna entidad fiscal registrada.'\n"
+    "- \"Sólo facturas del año vigente; en los primeros 30 días del año también se acepta el año anterior\" → use any_of:\n"
+    "    any_of: [\n"
+    "      { all: [ { field: expense_year, op: '<', value: '$current_year_minus_1' } ] },\n"
+    "      { all: [ { field: expense_year, op: '>', value: '$current_year' } ] },\n"
+    "      { all: [ { field: expense_year, op: '=', value: '$current_year_minus_1' },\n"
+    "               { field: today_day_of_year, op: '>', value: 30 } ] }\n"
+    "    ]\n"
+    "    then: action=block, message='La factura debe ser del año en curso. Solo se aceptan facturas del año anterior durante los primeros 30 días del año.'\n\n"
     "Conventions:\n"
     "- Multiple `when` clauses are AND-combined.\n"
+    "- `any_of` is a list of groups; each group's `all` clauses are AND-combined; the rule fires when ANY group matches.\n"
+    "- Prefer `when` for simple AND rules. Use `any_of` ONLY when the rule has true OR / exception logic.\n"
     "- For ops `in`/`not_in`, value MUST be a list.\n"
     "- For ops `contains`, value MUST be a string and field MUST be a string field.\n"
     "- severity MUST equal then.action.\n"
@@ -230,11 +251,32 @@ def _validate_then(then: Any) -> dict[str, Any]:
 def _validate_rule(rule_json: Any) -> dict[str, Any]:
     if not isinstance(rule_json, dict):
         raise PolicyExtractionError("rule_json debe ser un objeto.")
+    then = _validate_then(rule_json.get("then"))
+
+    any_of_raw = rule_json.get("any_of")
+    if any_of_raw is not None:
+        if not isinstance(any_of_raw, list) or not any_of_raw:
+            raise PolicyExtractionError(
+                "rule_json.any_of debe ser una lista no vacía de grupos."
+            )
+        groups: list[dict[str, Any]] = []
+        for g in any_of_raw:
+            if not isinstance(g, dict):
+                raise PolicyExtractionError("Cada grupo de any_of debe ser un objeto.")
+            all_raw = g.get("all")
+            if not isinstance(all_raw, list) or not all_raw:
+                raise PolicyExtractionError(
+                    "Cada grupo de any_of debe tener una lista 'all' no vacía."
+                )
+            groups.append({"all": [_validate_clause(c) for c in all_raw]})
+        return {"any_of": groups, "then": then}
+
     when_raw = rule_json.get("when")
     if not isinstance(when_raw, list) or not when_raw:
-        raise PolicyExtractionError("rule_json.when debe ser una lista no vacía.")
+        raise PolicyExtractionError(
+            "rule_json.when debe ser una lista no vacía (o use any_of)."
+        )
     when = [_validate_clause(c) for c in when_raw]
-    then = _validate_then(rule_json.get("then"))
     return {"when": when, "then": then}
 
 
@@ -293,8 +335,11 @@ def extract_policy_from_text(
     summary = str(parsed.get("summary", "")).strip()[:500]
     if not summary:
         # Fall back to a deterministic phrasing built from the rule itself.
-        first = rule_json["when"][0]
-        summary = f"{first['field']} {first['op']} {first['value']} → {severity}"
+        if "when" in rule_json and rule_json["when"]:
+            first = rule_json["when"][0]
+            summary = f"{first['field']} {first['op']} {first['value']} → {severity}"
+        else:
+            summary = f"any_of {len(rule_json.get('any_of', []))} grupos → {severity}"
 
     return {
         "rule_json": rule_json,

@@ -2,14 +2,22 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
-import { Save, Loader2, CheckCircle2, Sparkles, AlertTriangle, AlertCircle } from "lucide-react";
-import { getAuthHeaders } from "@/lib/session";
+import { Save, Loader2, CheckCircle2, Sparkles, AlertTriangle, AlertCircle, GitBranch } from "lucide-react";
+import { apiCall, apiPost, HttpError } from "@/lib/api/client";
 import {
   getPortalConfigConflicts,
   type PortalConfigConflict,
 } from "@/lib/portal-config-conflicts";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+import {
+  PremiumHeader,
+  SectionPanel,
+  Row,
+  RowStack,
+  Toggle,
+  SectionLabel as PatternSectionLabel,
+  inputClasses,
+  SECTION_ACCENTS,
+} from "@/components/admin/shared/AdminPatterns";
 
 interface Props {
   companyId: number;
@@ -34,123 +42,6 @@ const WORKFLOW_CODES = new Set([
   "ACCOUNTING_DISABLED_REVIEW_ACTIVE",
   "ROUTE_TO_ACCOUNTING_MODULE_DISABLED",
 ]);
-
-// ── Shared sub-components ─────────────────────────────────────────────────────
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="mb-1 px-1 text-[9px] font-bold uppercase tracking-widest text-white/22">
-      {children}
-    </p>
-  );
-}
-
-function Panel({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="overflow-hidden rounded-lg border border-white/[0.07] bg-white/[0.02] divide-y divide-white/[0.05]">
-      {children}
-    </div>
-  );
-}
-
-function SelectRow({
-  label,
-  description,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  description?: string;
-  value: string;
-  options: { value: string; label: string }[];
-  onChange: (v: string) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4 px-4 py-2.5">
-      <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium text-white/68">{label}</p>
-        {description && <p className="text-[10px] text-white/28">{description}</p>}
-      </div>
-      <select
-        value={value ?? ""}
-        onChange={(e) => onChange(e.target.value)}
-        className="shrink-0 rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 text-[10px] text-white/55 outline-none focus:border-indigo-500/40"
-      >
-        <option value="">—</option>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
-function ToggleRow({
-  label,
-  description,
-  checked,
-  onChange,
-}: {
-  label: string;
-  description?: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4 px-4 py-2.5">
-      <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium text-white/68">{label}</p>
-        {description && <p className="text-[10px] text-white/28">{description}</p>}
-      </div>
-      <button
-        type="button"
-        onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border transition-colors ${
-          checked
-            ? "border-indigo-500/40 bg-indigo-600/30"
-            : "border-white/[0.1] bg-white/[0.04]"
-        }`}
-      >
-        <span
-          className={`absolute top-0.5 h-3 w-3 rounded-full transition-transform ${
-            checked ? "translate-x-3 bg-indigo-400" : "translate-x-0.5 bg-white/20"
-          }`}
-        />
-      </button>
-    </div>
-  );
-}
-
-function TextareaRow({
-  label,
-  description,
-  value,
-  placeholder,
-  onChange,
-}: {
-  label: string;
-  description?: string;
-  value: string;
-  placeholder?: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5 px-4 py-2.5">
-      <div>
-        <p className="text-[11px] font-medium text-white/68">{label}</p>
-        {description && <p className="text-[10px] text-white/28">{description}</p>}
-      </div>
-      <textarea
-        rows={2}
-        value={value ?? ""}
-        placeholder={placeholder ?? "—"}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full resize-none rounded border border-white/[0.08] bg-zinc-900 px-2 py-1.5 text-[10px] text-white/55 placeholder:text-white/20 outline-none focus:border-indigo-500/40"
-      />
-    </div>
-  );
-}
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
@@ -264,19 +155,16 @@ export default function AdminWorkflowSetupStudio({
     setError(null);
     setSaved(false);
     try {
-      const res = await fetch(`${API}/admin/workflow-setup/${companyId}`, {
+      const updated = await apiCall(`/admin/workflow-setup/${companyId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify(form),
+        json: form,
       });
-      if (!res.ok) throw new Error(`${res.status}`);
-      const updated = await res.json();
       setDirty(false);
       setSaved(true);
       setAiDrafted(false);
       onSaved?.(updated);
     } catch (e: any) {
-      setError(e?.message ?? tc("save"));
+      setError(e instanceof HttpError ? e.message : tc("save"));
     } finally {
       setSaving(false);
     }
@@ -284,7 +172,7 @@ export default function AdminWorkflowSetupStudio({
 
   const localWarnings = buildLocalWarnings(form, expensePolicy, accountingSetup, approvalSetup);
 
-  // Cross-domain conflicts — use live form as workflow_setup
+  // Cross-domain conflicts - use live form as workflow_setup
   const configConflicts: PortalConfigConflict[] = getPortalConfigConflicts({
     company_setup:    companySetup    ?? {},
     expense_policy:   expensePolicy   ?? {},
@@ -295,18 +183,37 @@ export default function AdminWorkflowSetupStudio({
 
   return (
     <div className="max-w-2xl space-y-5">
-
-      {/* Summary banner */}
-      <div className="rounded-lg border border-white/[0.07] bg-white/[0.02] px-4 py-2.5">
-        <div className="flex items-start justify-between gap-3">
-          <p className="text-[10px] leading-relaxed text-white/35">{buildSummary(form)}</p>
-          {aiDrafted && (
-            <span className="flex shrink-0 items-center gap-1 rounded border border-indigo-500/20 bg-indigo-500/[0.06] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-indigo-300/50">
-              <Sparkles className="h-2.5 w-2.5" /> {tc("draft")}
+      <PremiumHeader
+        section="approval-workflow"
+        icon={<GitBranch className="h-4 w-4" />}
+        title={t("title")}
+        subtitle="Approval Flow Configuration"
+        badge={
+          aiDrafted ? (
+            <span className="flex items-center gap-1.5 rounded-full border border-ai/30 bg-ai-muted px-2 py-0.5 text-[9px] font-semibold text-ai">
+              <Sparkles className="h-3 w-3" /> {tc("draft")}
             </span>
-          )}
-        </div>
-      </div>
+          ) : null
+        }
+        action={
+          <button
+            type="button"
+            onClick={save}
+            disabled={saving || !dirty}
+            className="flex items-center gap-2 rounded-lg bg-accent px-4 py-1.5 text-[11px] font-semibold text-white shadow-sm transition-all hover:bg-accent-hover disabled:opacity-40"
+          >
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            {tc("save")}
+          </button>
+        }
+        metrics={[
+          {
+            label: t("unsavedChanges"),
+            value: dirty ? "!" : "0",
+            tone: dirty ? "warning" : "neutral",
+          },
+        ]}
+      />
 
       {/* Cross-domain config conflicts */}
       {configConflicts.length > 0 && (
@@ -316,17 +223,18 @@ export default function AdminWorkflowSetupStudio({
               key={i}
               className={`flex items-start gap-2 rounded border px-3 py-2 ${
                 c.severity === "critical"
-                  ? "border-red-500/15 bg-red-500/[0.04]"
-                  : "border-amber-500/15 bg-amber-500/[0.04]"
+                  ? "border-error/15 bg-error/[0.04]"
+                  : "border-warning/15 bg-warning/[0.04]"
               }`}
             >
-              {c.severity === "critical"
-                ? <AlertCircle   className="mt-0.5 h-3 w-3 shrink-0 text-red-400/55" />
-                : <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-amber-400/55" />
-              }
-              <p className={`text-[10px] leading-relaxed ${
-                c.severity === "critical" ? "text-red-300/60" : "text-amber-300/55"
-              }`}>{c.message}</p>
+              {c.severity === "critical" ? (
+                <AlertCircle className="mt-0.5 h-3 w-3 shrink-0 text-error/55" />
+              ) : (
+                <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-warning/55" />
+              )}
+              <p className={`text-[10px] leading-relaxed ${c.severity === "critical" ? "text-error/60" : "text-warning/55"}`}>
+                {c.message}
+              </p>
             </div>
           ))}
         </div>
@@ -336,153 +244,148 @@ export default function AdminWorkflowSetupStudio({
       {localWarnings.length > 0 && (
         <div className="space-y-1.5">
           {localWarnings.map((w, i) => (
-            <div key={i} className="flex items-start gap-2 rounded border border-amber-500/15 bg-amber-500/[0.04] px-3 py-2">
-              <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-amber-400/55" />
-              <p className="text-[10px] leading-relaxed text-amber-300/55">{w}</p>
+            <div key={i} className="flex items-start gap-2 rounded border border-warning/15 bg-warning/[0.04] px-3 py-2">
+              <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-warning/55" />
+              <p className="text-[10px] leading-relaxed text-warning/55">{w}</p>
             </div>
           ))}
         </div>
       )}
 
-      {/* A — Workflow Mode */}
+      {/* A - Workflow Mode */}
       <div>
-        <SectionLabel>{t("sectionA")}</SectionLabel>
-        <Panel>
-          <SelectRow
-            label={t("defaultWorkflowMode")}
-            description={t("defaultWorkflowModeDesc")}
-            value={form.default_expense_workflow_mode ?? "standard"}
-            options={WORKFLOW_MODE_OPTIONS}
-            onChange={(v) => set("default_expense_workflow_mode", v)}
-          />
-          <ToggleRow
-            label={t("autoSubmitOnUpload")}
-            description={t("autoSubmitOnUploadDesc")}
-            checked={!!form.auto_submit_on_complete_upload}
-            onChange={(v) => set("auto_submit_on_complete_upload", v)}
-          />
-          <ToggleRow
-            label={t("autoAssignReviewStage")}
-            description={t("autoAssignReviewStageDesc")}
-            checked={!!form.auto_assign_review_stage}
-            onChange={(v) => set("auto_assign_review_stage", v)}
-          />
-        </Panel>
+        <PatternSectionLabel>{t("sectionA")}</PatternSectionLabel>
+        <SectionPanel>
+          <Row label={t("defaultWorkflowMode")} description={t("defaultWorkflowModeDesc")}>
+            <select
+              value={form.default_expense_workflow_mode ?? "standard"}
+              onChange={(e) => set("default_expense_workflow_mode", e.target.value)}
+              className={`${inputClasses.select} w-44`}
+            >
+              <option value=""> - </option>
+              {WORKFLOW_MODE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </Row>
+          <Row label={t("autoSubmitOnUpload")} description={t("autoSubmitOnUploadDesc")}>
+            <Toggle
+              value={!!form.auto_submit_on_complete_upload}
+              onChange={(v) => set("auto_submit_on_complete_upload", v)}
+            />
+          </Row>
+          <Row label={t("autoAssignReviewStage")} description={t("autoAssignReviewStageDesc")}>
+            <Toggle value={!!form.auto_assign_review_stage} onChange={(v) => set("auto_assign_review_stage", v)} />
+          </Row>
+        </SectionPanel>
       </div>
 
-      {/* B — Submission Controls */}
+      {/* B - Submission Controls */}
       <div>
-        <SectionLabel>{t("sectionB")}</SectionLabel>
-        <Panel>
-          <ToggleRow
-            label={t("blockOnFailedValidation")}
-            description={t("blockOnFailedValidationDesc")}
-            checked={!!form.block_submit_on_failed_validation}
-            onChange={(v) => set("block_submit_on_failed_validation", v)}
-          />
-          <ToggleRow
-            label={t("allowSubmitWithWarnings")}
-            description={t("allowSubmitWithWarningsDesc")}
-            checked={!!form.allow_submit_with_warnings}
-            onChange={(v) => set("allow_submit_with_warnings", v)}
-          />
-          <ToggleRow
-            label={t("allowDraftSave")}
-            description={t("allowDraftSaveDesc")}
-            checked={!!form.allow_draft_save}
-            onChange={(v) => set("allow_draft_save", v)}
-          />
-          <ToggleRow
-            label={t("allowResubmitAfterReturn")}
-            description={t("allowResubmitAfterReturnDesc")}
-            checked={!!form.allow_resubmit_after_return}
-            onChange={(v) => set("allow_resubmit_after_return", v)}
-          />
-        </Panel>
+        <PatternSectionLabel>{t("sectionB")}</PatternSectionLabel>
+        <SectionPanel>
+          <Row label={t("blockOnFailedValidation")} description={t("blockOnFailedValidationDesc")}>
+            <Toggle
+              value={!!form.block_submit_on_failed_validation}
+              onChange={(v) => set("block_submit_on_failed_validation", v)}
+            />
+          </Row>
+          <Row label={t("allowSubmitWithWarnings")} description={t("allowSubmitWithWarningsDesc")}>
+            <Toggle value={!!form.allow_submit_with_warnings} onChange={(v) => set("allow_submit_with_warnings", v)} />
+          </Row>
+          <Row label={t("allowDraftSave")} description={t("allowDraftSaveDesc")}>
+            <Toggle value={!!form.allow_draft_save} onChange={(v) => set("allow_draft_save", v)} />
+          </Row>
+          <Row label={t("allowResubmitAfterReturn")} description={t("allowResubmitAfterReturnDesc")}>
+            <Toggle value={!!form.allow_resubmit_after_return} onChange={(v) => set("allow_resubmit_after_return", v)} />
+          </Row>
+        </SectionPanel>
       </div>
 
-      {/* C — Routing Rules */}
+      {/* C - Routing Rules */}
       <div>
-        <SectionLabel>{t("sectionC")}</SectionLabel>
-        <Panel>
-          <SelectRow
-            label={t("routePolicyFailures")}
-            description={t("routePolicyFailuresDesc")}
-            value={form.route_policy_failures_to ?? "accounting"}
-            options={ROUTE_TO_OPTIONS}
-            onChange={(v) => set("route_policy_failures_to", v)}
-          />
-          <SelectRow
-            label={t("routeMissingDocs")}
-            description={t("routeMissingDocsDesc")}
-            value={form.route_missing_documents_to ?? "employee"}
-            options={ROUTE_TO_OPTIONS}
-            onChange={(v) => set("route_missing_documents_to", v)}
-          />
-          <SelectRow
-            label={t("routeInternational")}
-            description={t("routeInternationalDesc")}
-            value={form.route_international_expenses_to ?? "accounting"}
-            options={ROUTE_TO_OPTIONS}
-            onChange={(v) => set("route_international_expenses_to", v)}
-          />
-        </Panel>
+        <PatternSectionLabel>{t("sectionC")}</PatternSectionLabel>
+        <SectionPanel>
+          <Row label={t("routePolicyFailures")} description={t("routePolicyFailuresDesc")}>
+            <select
+              value={form.route_policy_failures_to ?? "accounting"}
+              onChange={(e) => set("route_policy_failures_to", e.target.value)}
+              className={`${inputClasses.select} w-44`}
+            >
+              {ROUTE_TO_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </Row>
+          <Row label={t("routeMissingDocs")} description={t("routeMissingDocsDesc")}>
+            <select
+              value={form.route_missing_documents_to ?? "employee"}
+              onChange={(e) => set("route_missing_documents_to", e.target.value)}
+              className={`${inputClasses.select} w-44`}
+            >
+              {ROUTE_TO_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </Row>
+          <Row label={t("routeInternational")} description={t("routeInternationalDesc")}>
+            <select
+              value={form.route_international_expenses_to ?? "accounting"}
+              onChange={(e) => set("route_international_expenses_to", e.target.value)}
+              className={`${inputClasses.select} w-44`}
+            >
+              {ROUTE_TO_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </Row>
+        </SectionPanel>
       </div>
 
-      {/* D — Employee Guidance */}
+      {/* D - Employee Guidance */}
       <div>
-        <SectionLabel>{t("sectionD")}</SectionLabel>
-        <Panel>
-          <ToggleRow
-            label={t("showNextAction")}
-            description={t("showNextActionDesc")}
-            checked={!!form.show_next_action_guidance}
-            onChange={(v) => set("show_next_action_guidance", v)}
-          />
-        </Panel>
+        <PatternSectionLabel>{t("sectionD")}</PatternSectionLabel>
+        <SectionPanel>
+          <Row label={t("showNextAction")} description={t("showNextActionDesc")}>
+            <Toggle value={!!form.show_next_action_guidance} onChange={(v) => set("show_next_action_guidance", v)} />
+          </Row>
+        </SectionPanel>
       </div>
 
-      {/* E — AI Assistance */}
+      {/* E - AI Assistance */}
       <div>
-        <SectionLabel>{t("sectionE")}</SectionLabel>
-        <Panel>
-          <ToggleRow
-            label={t("aiWorkflowAssist")}
-            description={t("aiWorkflowAssistDesc")}
-            checked={!!form.ai_workflow_assist_enabled}
-            onChange={(v) => set("ai_workflow_assist_enabled", v)}
-          />
-          <TextareaRow
-            label={t("aiWorkflowNotes")}
-            description={t("aiWorkflowNotesDesc")}
-            value={form.ai_workflow_notes ?? ""}
-            placeholder={t("aiWorkflowNotesPlaceholder")}
-            onChange={(v) => set("ai_workflow_notes", v || null)}
-          />
-        </Panel>
+        <PatternSectionLabel>{t("sectionE")}</PatternSectionLabel>
+        <SectionPanel>
+          <Row label={t("aiWorkflowAssist")} description={t("aiWorkflowAssistDesc")}>
+            <Toggle value={!!form.ai_workflow_assist_enabled} onChange={(v) => set("ai_workflow_assist_enabled", v)} />
+          </Row>
+          <RowStack label={t("aiWorkflowNotes")} description={t("aiWorkflowNotesDesc")}>
+            <textarea
+              rows={2}
+              value={form.ai_workflow_notes ?? ""}
+              placeholder={t("aiWorkflowNotesPlaceholder")}
+              onChange={(e) => set("ai_workflow_notes", e.target.value || null)}
+              className={`${inputClasses.textarea} w-full`}
+            />
+          </RowStack>
+        </SectionPanel>
       </div>
 
-      {/* Save bar */}
+      {/* Save bar - minimal since save is in header */}
       {error && (
-        <p className="text-[10px] text-red-400/70">{error}</p>
+        <div className="flex items-center gap-2 rounded-lg border border-error/30 bg-error-muted/20 px-3 py-2">
+          <AlertCircle className="h-3.5 w-3.5 text-error" />
+          <p className="text-[10px] text-error">{error}</p>
+        </div>
       )}
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={save}
-          disabled={saving || !dirty}
-          className="flex items-center gap-1.5 rounded border border-indigo-500/30 bg-indigo-600/20 px-4 py-1.5 text-[10px] font-semibold text-indigo-300 transition-colors hover:bg-indigo-600/30 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-          {t("saveWorkflowSetup")}
-        </button>
-        {saved && !dirty && (
-          <span className="flex items-center gap-1 text-[10px] text-emerald-400/60">
-            <CheckCircle2 className="h-3 w-3" /> {tc("saved")}
-          </span>
-        )}
-      </div>
-
     </div>
   );
 }

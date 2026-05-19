@@ -49,15 +49,17 @@ def _parse_sse(body: bytes) -> list[tuple[str, dict]]:
 def test_stream_emits_text_deltas_and_final(client, db_session, test_company):
     admin = _admin(db_session, test_company)
 
-    fake_result = {
-        "ok": True, "error": None, "session_id": "sess-1",
-        "content": "Hola, soy tu copiloto financiero. " * 4,
-        "tool_calls": [], "pending": [],
-    }
+    content = "Hola, soy tu copiloto financiero. " * 4
+
+    def _fake_stream(**kwargs):
+        yield {"type": "start", "session_id": "sess-1"}
+        yield {"type": "text_delta", "delta": content[:len(content)//2]}
+        yield {"type": "text_delta", "delta": content[len(content)//2:]}
+        yield {"type": "final", "ok": True, "error": None, "session_id": "sess-1", "content": content, "tool_calls": [], "pending": []}
 
     with patch(
-        "packages.modules.agent.api.agent_router.run_turn",
-        return_value=fake_result,
+        "packages.modules.agent.core.engine.run_turn_stream",
+        side_effect=_fake_stream,
     ):
         res = client.get(
             f"/agent/stream/{test_company.id}",
@@ -74,7 +76,7 @@ def test_stream_emits_text_deltas_and_final(client, db_session, test_company):
     finals = [data for e, data in events if e == "final"]
 
     assert len(deltas) >= 2, f"expected ≥2 deltas, got {names}"
-    assert "".join(deltas) == fake_result["content"]
+    assert "".join(deltas) == content
     assert len(finals) == 1
     assert finals[0]["ok"] is True
     assert finals[0]["session_id"] == "sess-1"
@@ -84,19 +86,21 @@ def test_stream_emits_text_deltas_and_final(client, db_session, test_company):
 def test_stream_emits_tool_call_events_in_order(client, db_session, test_company):
     admin = _admin(db_session, test_company)
 
-    fake_result = {
-        "ok": True, "error": None, "session_id": "sess-2",
-        "content": "ok",
-        "tool_calls": [
+    def _fake_stream(**kwargs):
+        yield {"type": "start", "session_id": "sess-2"}
+        yield {"type": "tool_call_start", "tool": "read_company_setup", "args_summary": "checking setup"}
+        yield {"type": "tool_call_done", "tool": "read_company_setup", "status": "ok", "summary": "loaded", "duration_ms": 12}
+        yield {"type": "tool_call_start", "tool": "list_users", "args_summary": "listing users"}
+        yield {"type": "tool_call_done", "tool": "list_users", "status": "ok", "summary": "5 users", "duration_ms": 9}
+        yield {"type": "text_delta", "delta": "ok"}
+        yield {"type": "final", "ok": True, "error": None, "session_id": "sess-2", "content": "ok", "tool_calls": [
             {"tool": "read_company_setup", "status": "ok", "summary": "loaded", "duration_ms": 12},
             {"tool": "list_users",         "status": "ok", "summary": "5 users", "duration_ms": 9},
-        ],
-        "pending": [],
-    }
+        ], "pending": []}
 
     with patch(
-        "packages.modules.agent.api.agent_router.run_turn",
-        return_value=fake_result,
+        "packages.modules.agent.core.engine.run_turn_stream",
+        side_effect=_fake_stream,
     ):
         res = client.get(
             f"/agent/stream/{test_company.id}",

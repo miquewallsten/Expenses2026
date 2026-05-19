@@ -147,6 +147,16 @@ def _expense_field(expense: Expense, field: str, *, cfdi: _CfdiContext) -> Any:
         if not isinstance(ed, date):
             return None
         return ed.isoformat() if field == "expense_date" else ed.year
+    # ── "Now" context fields — independent of the expense, useful for
+    # time-windowed rules like grace periods.
+    if field == "today_year":
+        return date.today().year
+    if field == "today_month":
+        return date.today().month
+    if field == "today_day":
+        return date.today().day
+    if field == "today_day_of_year":
+        return date.today().timetuple().tm_yday
     return None
 
 
@@ -173,6 +183,8 @@ def _resolve_dynamic(
     tokens: dict[str, Any] = {
         "$current_date":                 today.isoformat(),
         "$current_year":                 today.year,
+        "$current_year_minus_1":         today.year - 1,
+        "$current_year_plus_1":          today.year + 1,
         "$current_year_start":           date(today.year, 1, 1).isoformat(),
         "$current_year_end":             date(today.year, 12, 31).isoformat(),
         "$current_month_start":          date(today.year, today.month, 1).isoformat(),
@@ -325,40 +337,52 @@ def evaluate_policies(
     blockers: list[str] = []
     warnings: list[str] = []
 
+    def _clause_matches(clause: Any) -> bool:
+        if not isinstance(clause, dict):
+            return False
+        field = str(clause.get("field", ""))
+        op    = str(clause.get("op", ""))
+        raw_value = clause.get("value")
+        # Resolve list-tokens lazily — only query the DB when the rule needs them.
+        def _has_token(tok: str) -> bool:
+            return raw_value == tok or (
+                isinstance(raw_value, list) and tok in raw_value
+            )
+        value = _resolve_dynamic(
+            raw_value,
+            company_rfcs=_invoice_rfcs() if _has_token("$legal_entity_rfcs") else None,
+            reimbursement_rfcs=_reimb_rfcs() if _has_token("$reimbursement_entity_rfcs") else None,
+            invoice_zips=_invoice_zips() if _has_token("$legal_entity_zips") else None,
+            reimbursement_zips=_reimb_zips() if _has_token("$reimbursement_entity_zips") else None,
+            invoice_regimes=_invoice_regimes() if _has_token("$legal_entity_regimes") else None,
+        )
+        field_value = _expense_field(expense, field, cfdi=cfdi)
+        return _eval_op(op, field_value, value)
+
+    def _all_match(clauses: list[Any]) -> bool:
+        if not isinstance(clauses, list) or not clauses:
+            return False
+        return all(_clause_matches(c) for c in clauses)
+
     for policy in policies:
         rule = policy.rule_json or {}
-        when = rule.get("when") or []
         then = rule.get("then") or {}
-        if not isinstance(when, list) or not when or not isinstance(then, dict):
+        if not isinstance(then, dict):
             continue
 
-        # All `when` clauses must match (AND).
-        all_match = True
-        for clause in when:
-            if not isinstance(clause, dict):
-                all_match = False
-                break
-            field = str(clause.get("field", ""))
-            op    = str(clause.get("op", ""))
-            raw_value = clause.get("value")
-            # Resolve list-tokens lazily — only query the DB when the rule needs them.
-            def _has_token(tok: str) -> bool:
-                return raw_value == tok or (
-                    isinstance(raw_value, list) and tok in raw_value
-                )
-            value = _resolve_dynamic(
-                raw_value,
-                company_rfcs=_invoice_rfcs() if _has_token("$legal_entity_rfcs") else None,
-                reimbursement_rfcs=_reimb_rfcs() if _has_token("$reimbursement_entity_rfcs") else None,
-                invoice_zips=_invoice_zips() if _has_token("$legal_entity_zips") else None,
-                reimbursement_zips=_reimb_zips() if _has_token("$reimbursement_entity_zips") else None,
-                invoice_regimes=_invoice_regimes() if _has_token("$legal_entity_regimes") else None,
+        # Two top-level forms supported:
+        #   1) { "when":   [clause, clause, ...] }  — AND of clauses (legacy)
+        #   2) { "any_of": [{"all": [clause, ...]}, ...] }  — OR of AND-groups
+        any_of = rule.get("any_of")
+        if isinstance(any_of, list) and any_of:
+            fired = any(
+                _all_match((g or {}).get("all") or [])
+                for g in any_of if isinstance(g, dict)
             )
-            field_value = _expense_field(expense, field, cfdi=cfdi)
-            if not _eval_op(op, field_value, value):
-                all_match = False
-                break
-        if not all_match:
+        else:
+            fired = _all_match(rule.get("when") or [])
+
+        if not fired:
             continue
 
         message = str(then.get("message", "")).strip() or policy.summary

@@ -29,21 +29,21 @@ export function ErrorState({
         className,
       )}
     >
-      <div className="text-[11px] font-medium text-red-300/85 uppercase tracking-widest">
+      <div className="text-[11px] font-medium text-error/85 uppercase tracking-widest">
         {title}
       </div>
       {message && (
-        <div className="mt-1 text-[11px] text-white/55 max-w-sm">{message}</div>
+        <div className="mt-1 text-[11px] text-tertiary max-w-sm">{message}</div>
       )}
       {requestId && (
-        <div className="mt-2 text-[10px] text-white/30 font-mono">
+        <div className="mt-2 text-[10px] text-muted font-mono">
           ref: {requestId}
         </div>
       )}
       {onRetry && (
         <button
           onClick={onRetry}
-          className="mt-3 h-7 px-3 text-[11px] rounded-md border border-white/15 bg-white/[0.04] hover:bg-white/[0.07] text-white/75"
+          className="mt-3 h-7 px-3 text-[11px] rounded-md border border-default bg-surface-2 hover:bg-surface-3 text-secondary"
         >
           {retryLabel}
         </button>

@@ -67,6 +67,14 @@ _SETTLEMENT_LIABILITY_MAP: dict[str, str] = {
 # Fallback when settlement_type is unrecognised or missing.
 _DEFAULT_LIABILITY_ACCOUNT = "employee_payable"
 
+# Statuses eligible for accounting event preview.  These are the same statuses
+# used by the accounting review queue — expenses that are in review or have
+# passed manager approval.  Terminal statuses (approved, rejected) are excluded
+# because preview is no longer meaningful once the workflow is complete.
+_ACCOUNTING_REVIEWABLE_STATUSES: frozenset[str] = frozenset(
+    {"submitted", "manager_approved"}
+)
+
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
@@ -132,11 +140,18 @@ def _validate(
     expense: Expense,
     category: AccountingCategory | None,
 ) -> None:
-    """Raise ValueError for any condition that must block event generation."""
-    if expense.status != "submitted":
+    """Raise ValueError for any condition that must block event generation.
+
+    Accounting events can be previewed for any expense that is currently in
+    the accounting review queue (submitted or manager_approved).  This allows
+    accounting staff to see what the journal lines will look like before they
+    make their approval decision.
+    """
+    if expense.status not in _ACCOUNTING_REVIEWABLE_STATUSES:
         raise ValueError(
-            f"Accounting event can only be generated for a submitted expense "
-            f"(current status: '{expense.status}')."
+            f"Accounting event preview is only available for expenses in "
+            f"accounting review (status must be one of {sorted(_ACCOUNTING_REVIEWABLE_STATUSES)}, "
+            f"current: '{expense.status}')."
         )
 
     has_account_code = bool((expense.account_code or "").strip())
@@ -174,7 +189,7 @@ def generate_accounting_event(db: Session, expense_id: int) -> dict:
     -----
     1. Load expense, allocations, accounting setup, and category config.
     2. Validate minimal requirements:
-       - expense.status == "submitted"
+       - expense.status == "approved"
        - account_code present on expense OR active category has expense_account_code
     3. Resolve accounts:
        - expense (debit) account: explicit account_code > category.expense_account_code

@@ -2,7 +2,7 @@
  * Phase 5.6 — Finance copilot slash commands.
  *
  * Pre-formed prompts keyed to backend tools registered for the
- * ``admin`` and ``finance_manager`` personas. The agent decides
+ * ``admin`` and ``accounting`` personas. The agent decides
  * which tool to call based on the prompt text; we just wire a
  * convenient palette so finance users don't have to remember
  * Spanish phrasing for each operation.
@@ -27,18 +27,39 @@ export interface SlashCommand {
 
 export const SLASH_COMMANDS: ReadonlyArray<SlashCommand> = [
   {
+    id:       "nuevo-gasto",
+    labelKey: "newExpense.label",
+    descKey:  "newExpense.description",
+    prompt:   "Quiero registrar un nuevo gasto. ¿Cuánto fue y en qué lo gastaste?",
+    personas: ["admin", "employee"],
+  },
+  {
+    id:       "mis-gastos",
+    labelKey: "myExpenses.label",
+    descKey:  "myExpenses.description",
+    prompt:   "Muestra el estado de mis gastos y reembolsos pendientes.",
+    personas: ["admin", "employee"],
+  },
+  {
+    id:       "aprobar-gastos",
+    labelKey: "approveExpenses.label",
+    descKey:  "approveExpenses.description",
+    prompt:   "Lista los gastos pendientes de mi aprobación.",
+    personas: ["admin", "manager", "accounting"],
+  },
+  {
     id:       "recibos-faltantes",
     labelKey: "missingReceipts.label",
     descKey:  "missingReceipts.description",
     prompt:   "Lista los gastos aprobados sin recibo adjunto, máximo 50.",
-    personas: ["admin", "finance_manager"],
+    personas: ["admin", "accounting"],
   },
   {
     id:       "conciliar-cfdis",
     labelKey: "matchCfdis.label",
     descKey:  "matchCfdis.description",
     prompt:   "Concilia los CFDIs huérfanos contra gastos sin emparejar (máximo 100).",
-    personas: ["admin", "finance_manager"],
+    personas: ["admin", "accounting"],
   },
   {
     id:       "poliza-preview",
@@ -46,14 +67,21 @@ export const SLASH_COMMANDS: ReadonlyArray<SlashCommand> = [
     descKey:  "polizaPreview.description",
     prompt:   "Genera una vista previa de póliza para el gasto ID: ",
     needsArg: true,
-    personas: ["admin", "finance_manager"],
+    personas: ["admin", "accounting"],
   },
   {
     id:       "cierre-mensual",
     labelKey: "monthEnd.label",
     descKey:  "monthEnd.description",
     prompt:   "Ejecuta el cierre mensual y dame un resumen ejecutivo.",
-    personas: ["admin", "finance_manager"],
+    personas: ["admin", "accounting"],
+  },
+  {
+    id:       "configurar-cuentas",
+    labelKey: "setupAccounts.label",
+    descKey:  "setupAccounts.description",
+    prompt:   "Ayúdame a configurar las categorías contables y el catálogo de cuentas.",
+    personas: ["admin"],
   },
 ];
 

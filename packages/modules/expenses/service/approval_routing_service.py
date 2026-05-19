@@ -203,7 +203,7 @@ def find_overdue(
 # ── Expense context + decision ────────────────────────────────────────────
 
 
-def build_context_for_expense(expense: Any) -> dict[str, Any]:
+def build_context_for_expense(db: Session, expense: Any) -> dict[str, Any]:
     """Project an ``Expense`` into the flat context dict the rule engine
     matches against. Centralised so submit_expense and the admin preview
     probe stay in sync.
@@ -213,6 +213,15 @@ def build_context_for_expense(expense: Any) -> dict[str, Any]:
         amount = float(amount) if amount is not None else None
     except (TypeError, ValueError):
         amount = None
+        
+    # Load allocations for IF THIS THEN THAT logic over dimensions
+    from packages.modules.expenses.models.expense_allocation import ExpenseAllocation
+    allocations = db.query(ExpenseAllocation).filter(ExpenseAllocation.expense_id == expense.id).all()
+    
+    project_ids = list(set(a.project_id for a in allocations if a.project_id))
+    client_ids = list(set(a.client_id for a in allocations if a.client_id))
+    cost_center_ids = list(set(a.cost_center_id for a in allocations if a.cost_center_id))
+
     return {
         "amount": amount,
         "category_code": getattr(expense, "category_code", None),
@@ -220,6 +229,10 @@ def build_context_for_expense(expense: Any) -> dict[str, Any]:
         "settlement_type": getattr(expense, "settlement_type", None),
         "user_id": getattr(expense, "user_id", None),
         "company_id": getattr(expense, "company_id", None),
+        # New context for 5.5+ advanced routing
+        "project_ids": project_ids,
+        "client_ids": client_ids,
+        "cost_center_ids": cost_center_ids,
     }
 
 
@@ -231,7 +244,7 @@ def evaluate_for_expense(
     rules = list_rules_for_company(
         db, company_id=int(expense.company_id), enabled_only=True
     )
-    ctx = build_context_for_expense(expense)
+    ctx = build_context_for_expense(db, expense)
     return resolve_approvers(db, context=ctx, rules=rules)
 
 

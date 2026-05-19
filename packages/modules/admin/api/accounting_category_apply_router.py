@@ -1,16 +1,22 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends
+from packages.core.platform.module_gate import require_module
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from apps.api.auth import require_admin
+from apps.api.auth import get_current_user, require_permission, require_same_company
+from packages.core.platform.models_user import User
 from apps.api.deps import get_db
 from packages.modules.admin.service.accounting_category_seed_service import (
     seed_accounting_categories,
 )
 
-router = APIRouter(prefix="/admin/accounting-categories", tags=["admin"], dependencies=[Depends(require_admin)])
+router = APIRouter(
+    prefix="//admin/accounting-categories",
+    tags=["admin"],
+    dependencies=[Depends(require_permission("accounting:configure")), Depends(require_module("accounting"))],
+)
 
 
 class ApplyRequest(BaseModel):

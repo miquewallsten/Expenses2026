@@ -199,7 +199,7 @@ REGISTRY.register(ToolSpec(
     category="entity",
     input_schema=CreateCategoryArgs,
     handler=_handle_create_category,
-    personas=frozenset({"admin"}),
+    personas=frozenset({"accounting", "admin"}),
     destructive=True,
     requires_confirmation=True,
 ))
@@ -216,7 +216,7 @@ REGISTRY.register(ToolSpec(
     category="entity",
     input_schema=BulkCreateCategoriesArgs,
     handler=_handle_bulk_create_categories,
-    personas=frozenset({"admin"}),
+    personas=frozenset({"accounting", "admin"}),
     destructive=True,
     requires_confirmation=True,
 ))

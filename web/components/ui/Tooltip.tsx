@@ -38,8 +38,8 @@ export function Tooltip({
         <span
           role="tooltip"
           className={cn(
-            "absolute z-50 whitespace-nowrap rounded-md border border-white/10",
-            "bg-zinc-950 px-2 py-1 text-[10px] text-white/80 shadow-lg",
+            "absolute z-50 whitespace-nowrap rounded-md border border-subtle",
+            "bg-surface-0 px-2 py-1 text-[10px] text-secondary shadow-lg",
             "pointer-events-none",
             SIDE[side],
           )}

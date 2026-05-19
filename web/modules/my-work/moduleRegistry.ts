@@ -13,77 +13,11 @@
  */
 
 import React from "react";
+import { isAdminSectionVisible } from "@/types";
+import type { ModuleVisibilityContext, MyWorkModule, AdminSectionVisibility } from "@/types";
 
-// ── Visibility context ─────────────────────────────────────────────────────────
-//
-// Passed by the host shell into isVisible().  Keep this type in sync with
-// what the portal config API returns (apps/api/routes/ derived block) and
-// the session helpers in lib/session.ts.
-
-export interface ModuleVisibilityContext {
-  /** Role string from session storage ("employee" | "manager" | "accounting" | "admin" | "executive" | "secretary" | null) — "secretary" displays as "Executive Assistant" */
-  role: string | null;
-  /** Flat list of permission_keys from /roles/user-permissions/:id */
-  permissionKeys: string[];
-  /** Derived block from /admin/portal-config/:company_id — null while loading */
-  derived: {
-    enabled_modules: string[];
-    manager_flow_enabled: boolean;
-    accounting_flow_enabled: boolean;
-    allocation_dimensions: string[];
-    allow_split_allocations: boolean;
-    tickets_allowed: boolean;
-    international_expenses_allowed: boolean;
-    xml_required_mode: string;
-    pdf_pair_required_for_cfdi: boolean;
-    workflow_mode: string;
-  } | null;
-  /**
-   * Per-user capability flags set by admin in the Users panel.
-   * Null while user profile is loading.
-   */
-  capabilities: {
-    can_create_expenses: boolean;
-    can_create_corporate_expenses: boolean;
-    can_invoice_corporation: boolean;
-    is_amex_reconciler: boolean;
-    requires_time_tracking: boolean;
-    has_executive_reporting: boolean;
-    delegates_for_user_id: number | null;
-    delegates_for_user_name: string | null;
-  } | null;
-}
-
-// ── Module type ────────────────────────────────────────────────────────────────
-
-export interface MyWorkModule {
-  /** Stable identifier used as a key and for URL-fragment routing */
-  id: string;
-  /** Human-readable label shown in the module nav */
-  label: string;
-  /**
-   * Lucide icon name (string reference so this file stays free of React
-   * icon imports).  The host nav component resolves the icon by name.
-   */
-  icon?: string;
-  /**
-   * Pure function — must return true when this module should appear for a
-   * given user/company context.  Called on every context change; keep it
-   * cheap (no side-effects, no async).
-   */
-  isVisible: (ctx: ModuleVisibilityContext) => boolean;
-  /**
-   * The workspace component rendered in the detail area when this module is
-   * active.  Use React.lazy() for large modules so their code is only
-   * fetched when the user navigates to them.
-   *
-   * The shell passes `Record<string, unknown>` props at minimum; each module
-   * component should define its own prop interface and cast or default-handle
-   * any extras.
-   */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  component: React.ComponentType<any>;
-}
+// Re-export types for backward compatibility
+export type { ModuleVisibilityContext, MyWorkModule } from "@/types";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -92,6 +26,8 @@ function hasRole(ctx: ModuleVisibilityContext, ...roles: string[]): boolean {
 }
 
 function hasPermission(ctx: ModuleVisibilityContext, key: string): boolean {
+  // Admin/super_admin implicitly hold all permissions
+  if (ctx.role === "admin" || ctx.role === "super_admin") return true;
   return ctx.permissionKeys.includes(key);
 }
 
@@ -99,53 +35,197 @@ function hasModule(ctx: ModuleVisibilityContext, key: string): boolean {
   return ctx.derived?.enabled_modules.includes(key) ?? false;
 }
 
+// ── Admin section visibility ─────────────────────────────────────────────────
+//
+// Each entry maps an AdminSection id to the minimum role/permission/capability
+// required to see it in the sidebar.  Uses the same ModuleVisibilityContext
+// so checks are consistent with module-level visibility.
+//
+// Logic: if ALL three arrays are empty → visible to anyone who can see admin.
+//        Otherwise, the user must satisfy ANY non-empty gate (OR logic across
+//        gates, OR within each gate array).
+
+export const ADMIN_SETTINGS_VISIBILITY: readonly AdminSectionVisibility[] = [
+  { id: "overview",             roles: ["admin", "super_admin"],   permissions: [], capabilities: [] },
+  { id: "operations",           roles: ["admin", "super_admin"],   permissions: [], capabilities: [] },
+  { id: "company-setup",        roles: ["admin", "super_admin"],   permissions: [], capabilities: [] },
+  { id: "expense-policy",       roles: ["admin", "super_admin", "accounting"],   permissions: [], capabilities: [] },
+  { id: "addons",               roles: ["admin", "super_admin"],   permissions: [], capabilities: [] },
+  { id: "approval-workflow",    roles: ["admin", "super_admin"],   permissions: [], capabilities: [] },
+  { id: "users-roles",          roles: ["admin", "super_admin"],   permissions: [], capabilities: [] },
+  { id: "integrations",         roles: ["admin", "super_admin"],   permissions: [], capabilities: [] },
+];
+
+export const ADMIN_OPS_VISIBILITY: readonly AdminSectionVisibility[] = [
+  { id: "notifications",       roles: ["admin", "super_admin"],   permissions: [], capabilities: [] },
+];
+
+/**
+ * Returns the subset of admin settings sections visible for the given context.
+ */
+export function getVisibleAdminSettingsSections(
+  ctx: ModuleVisibilityContext,
+): AdminSectionVisibility[] {
+  return ADMIN_SETTINGS_VISIBILITY.filter((s) => isAdminSectionVisible(s, ctx));
+}
+
+/**
+ * Returns the subset of admin ops sections visible for the given context.
+ */
+export function getVisibleAdminOpsSections(
+  ctx: ModuleVisibilityContext,
+): AdminSectionVisibility[] {
+  return ADMIN_OPS_VISIBILITY.filter((s) => isAdminSectionVisible(s, ctx));
+}
+
 // ── Module registry ────────────────────────────────────────────────────────────
 
 export const MY_WORK_MODULES: readonly MyWorkModule[] = [
-  // ── My Expenses ─────────────────────────────────────────────────────────────
+  // ── Admin sections (content-based, permission-driven) ──────────────────────
+  // Each admin section is a first-class sidebar item. Visibility follows the
+  // same ModuleVisibilityContext rules as all other modules.
+  // Admin sees everything; accounting sees accounting-relevant sections.
+  {
+    id: "admin-config-overview",
+    label: "admin.sectionSettings",
+    icon: "Settings",
+    adminSection: "overview",
+    isVisible: (ctx) =>
+      hasRole(ctx, "admin", "super_admin"),
+    component: React.lazy(() => import("@/components/modules/AdminModule")),
+  },
+  {
+    id: "admin-operations",
+    label: "admin.sectionOperations",
+    icon: "BarChart2",
+    adminSection: "operations",
+    isVisible: (ctx) =>
+      hasRole(ctx, "admin", "super_admin"),
+    component: React.lazy(() => import("@/components/modules/AdminModule")),
+  },
+  {
+    id: "admin-company-setup",
+    label: "admin.companySetup.title",
+    icon: "Building2",
+    adminSection: "company-setup",
+    isVisible: (ctx) =>
+      hasRole(ctx, "admin", "super_admin"),
+    component: React.lazy(() => import("@/components/modules/AdminModule")),
+  },
+  {
+    id: "admin-users-roles",
+    label: "admin.usersRoles",
+    icon: "Users",
+    adminSection: "users-roles",
+    isVisible: (ctx) =>
+      hasRole(ctx, "admin", "super_admin"),
+    component: React.lazy(() => import("@/components/modules/AdminModule")),
+  },
+  {
+    id: "admin-expense-policy",
+    label: "admin.expensePolicy",
+    icon: "FileText",
+    adminSection: "expense-policy",
+    isVisible: (ctx) =>
+      hasRole(ctx, "admin", "super_admin", "accounting"),
+    component: React.lazy(() => import("@/components/modules/AdminModule")),
+  },
+  {
+    id: "admin-approval-workflow",
+    label: "admin.workflow",
+    icon: "GitBranch",
+    adminSection: "approval-workflow",
+    isVisible: (ctx) =>
+      hasRole(ctx, "admin", "super_admin"),
+    component: React.lazy(() => import("@/components/modules/AdminModule")),
+  },
+  {
+    id: "admin-addons",
+    label: "admin.companySetup.addOns",
+    icon: "Puzzle",
+    adminSection: "addons",
+    isVisible: (ctx) =>
+      hasRole(ctx, "admin", "super_admin"),
+    component: React.lazy(() => import("@/components/modules/AdminModule")),
+  },
+  {
+    id: "admin-integrations",
+    label: "admin.integrationsLabel",
+    icon: "Plug",
+    adminSection: "integrations",
+    isVisible: (ctx) =>
+      hasRole(ctx, "admin", "super_admin"),
+    component: React.lazy(() => import("@/components/modules/AdminModule")),
+  },
+  {
+    id: "admin-notifications",
+    label: "admin.notifications",
+    icon: "Bell",
+    adminSection: "notifications",
+    isVisible: (ctx) =>
+      hasRole(ctx, "admin", "super_admin"),
+    component: React.lazy(() => import("@/components/modules/AdminModule")),
+  },
+
+// ── My Expenses ─────────────────────────────────────────────────────────────
   // Gated on the per-user can_create_expenses flag (default true) AND the
   // expenses module being enabled.  Secretaries see this too — the workspace
   // fetches their boss's expenses when delegates_for_user_id is set.
   {
     id: "my_expenses",
-    label: "My Expenses",
+    label: "modules.myExpenses",
     icon: "Receipt",
     isVisible: (ctx) =>
       hasModule(ctx, "expenses") &&
       (ctx.capabilities?.can_create_expenses ?? true) &&
-      (hasRole(ctx, "employee", "manager", "admin", "executive", "secretary") ||
-        hasPermission(ctx, "submit_expense")),
+      (hasRole(ctx, "employee", "manager", "accounting", "admin", "executive", "secretary") ||
+        hasPermission(ctx, "expense:submit") ||
+        ctx.capabilities?.delegates_for_user_id !== null),
     component: React.lazy(() => import("@/modules/my-expenses/MyExpensesModule")),
   },
 
   // ── My Approvals ────────────────────────────────────────────────────────────
-  // Visible to managers, executives, admins, and anyone with approve_expense,
-  // but only when the approvals module is enabled AND the manager flow is active.
+  // Managers approve expense submissions. Admins do NOT see this by default —
+  // they must have the manager role or approve_expense permission. This keeps
+  // configuration-only admins focused on setup, not approval workflows.
+  // ── My Approvals (Unified) ────────────────────────────────────────────────
+  // Unified approval queue: expenses, time, purchase requests, subcontractor invoices.
+  // Visible to managers, executives, and accounting users who can approve.
+  // Admins see it by default; employees/secretaries do NOT unless they have approval permissions.
   {
     id: "my_approvals",
-    label: "My Approvals",
+    label: "modules.myApprovals",
     icon: "CheckSquare",
     isVisible: (ctx) =>
-      hasModule(ctx, "approvals") &&
-      (ctx.derived?.manager_flow_enabled ?? false) &&
-      (hasRole(ctx, "manager", "admin", "executive") ||
-        hasPermission(ctx, "approve_expense")),
+      (hasModule(ctx, "expenses") ||
+        hasModule(ctx, "time_allocation") ||
+        hasModule(ctx, "purchase_requests") ||
+        hasModule(ctx, "subcontractor")) &&
+      (hasRole(ctx, "manager", "accounting", "admin", "executive") ||
+        hasPermission(ctx, "expense:approve:manager") ||
+        hasPermission(ctx, "expense:approve:accounting")),
     component: React.lazy(() => import("@/modules/my-approvals/MyApprovalsModule")),
   },
 
-  // ── Accounting Review ────────────────────────────────────────────────────────
-  // Visible to accountants, admins, and anyone with assign_account permission
-  // when the accounting module is enabled AND the accounting review flow is active.
+  // ── Accounting Hub (Unified) ──────────────────────────────────────────────────
+  // Full accounting module: setup (chart of accounts, mappings, tax rules)
+  // + operations (review queue, closing, vendors). Accountants own setup;
+  // admin can lock/unlock. Review-only users still get the review queue.
   {
-    id: "accounting_review",
-    label: "Accounting Review",
+    id: "accounting_hub",
+    label: "modules.accounting",
     icon: "Calculator",
     isVisible: (ctx) =>
-      hasModule(ctx, "accounting") &&
-      (ctx.derived?.accounting_flow_enabled ?? false) &&
+      (hasModule(ctx, "accounting") ||
+        hasModule(ctx, "expenses") ||
+        hasModule(ctx, "time_allocation") ||
+        hasModule(ctx, "subcontractor") ||
+        hasModule(ctx, "purchase_requests")) &&
       (hasRole(ctx, "accounting", "admin") ||
-        hasPermission(ctx, "assign_account")),
-    component: React.lazy(() => import("@/modules/accounting-review/AccountingReviewModule")),
+        (ctx.capabilities?.can_access_accounting ?? false) ||
+        hasPermission(ctx, "accounting:work") ||
+        hasPermission(ctx, "accounting:configure")),
+    component: React.lazy(() => import("@/components/modules/AccountingModule")),
   },
 
   // ── Time Allocation ──────────────────────────────────────────────────────────
@@ -154,31 +234,35 @@ export const MY_WORK_MODULES: readonly MyWorkModule[] = [
   // OR for users the admin has explicitly marked as ``requires_time_tracking``.
   // A per-user flag must NEVER bypass the company-level install — an
   // uninstalled add-on must remain invisible for everyone.
+  // Only users with requires_time_tracking or admin role see this.
   {
     id: "time_allocation",
-    label: "Time Allocation",
+    label: "modules.timeAllocation",
     icon: "Clock",
     isVisible: (ctx) =>
       hasModule(ctx, "time_allocation") &&
       ((ctx.capabilities?.requires_time_tracking ?? false) ||
-        hasRole(ctx, "employee", "admin") ||
-        hasPermission(ctx, "submit_timesheet")),
+        hasRole(ctx, "admin") ||
+        hasPermission(ctx, "time_tracking:submit")),
     component: React.lazy(() => import("@/modules/my-time/MyTimeModule")),
   },
 
+
   // ── My Reports ───────────────────────────────────────────────────────────────
-  // Executives with has_executive_reporting always see this.  Others follow
-  // the standard role/permission rules.
+  // Executives with has_executive_reporting always see this. Others follow
+  // the standard role/permission rules. Admins do NOT see this by default —
+  // they must have a functional role (employee, manager, accounting) or
+  // appropriate permissions. Configuration-only admins focus on setup.
   {
     id: "my_reports",
-    label: "My Reports",
+    label: "modules.myReports",
     icon: "BarChart2",
     isVisible: (ctx) =>
       hasModule(ctx, "expenses") &&
-      ((ctx.capabilities?.has_executive_reporting ?? false) ||
-        hasRole(ctx, "employee", "manager", "accounting", "admin", "executive") ||
-        hasPermission(ctx, "submit_expense") ||
-        hasPermission(ctx, "approve_expense")),
+      (hasRole(ctx, "manager", "accounting", "admin", "executive") ||
+        (ctx.capabilities?.has_executive_reporting ?? false) ||
+        hasPermission(ctx, "expense:submit") ||
+        hasPermission(ctx, "expense:approve:manager")),
     component: React.lazy(() => import("@/modules/my-reports/MyReportsModule")),
   },
 
@@ -187,40 +271,17 @@ export const MY_WORK_MODULES: readonly MyWorkModule[] = [
   // add-on is enabled for the company.
   {
     id: "my_requests",
-    label: "My Requests",
+    label: "modules.myRequests",
     icon: "ShoppingCart",
     isVisible: (ctx) =>
       hasModule(ctx, "purchase_requests") &&
-      (hasRole(ctx, "employee", "manager", "accounting", "admin", "executive", "secretary") ||
-        hasPermission(ctx, "submit_expense")),
+      ((ctx.capabilities?.can_create_expenses ?? true) ||
+        hasRole(ctx, "manager", "accounting", "admin", "executive", "secretary") ||
+        hasPermission(ctx, "request:submit")),
     component: React.lazy(() => import("@/modules/my-requests/MyRequestsModule")),
   },
 
-  // ── Requerimientos de Compra (Accounting) ───────────────────────────────────
-  // Accounting team receives all submitted PRs for review and fulfillment
-  // tracking.  Gated on purchase_requests add-on.
-  {
-    id: "pr_accounting",
-    label: "Requerimientos de Compra",
-    icon: "ClipboardList",
-    isVisible: (ctx) =>
-      hasModule(ctx, "purchase_requests") &&
-      (hasRole(ctx, "accounting", "admin") || hasPermission(ctx, "assign_account")),
-    component: React.lazy(() => import("@/modules/pr-accounting/PRAccountingModule")),
-  },
 
-  // ── Approve PO (Managers) ────────────────────────────────────────────────────
-  // Managers see all submitted PRs pending their approval decision.
-  // Gated on purchase_requests add-on.
-  {
-    id: "pr_approvals",
-    label: "Approve PO",
-    icon: "BadgeCheck",
-    isVisible: (ctx) =>
-      hasModule(ctx, "purchase_requests") &&
-      (hasRole(ctx, "manager", "admin", "executive") || hasPermission(ctx, "approve_expense")),
-    component: React.lazy(() => import("@/modules/pr-approvals/PRApprovalsModule")),
-  },
 
   // ── Amex Reconciliation ──────────────────────────────────────────────────────
   // Add-on module for a dedicated Amex reconciler. The company must install
@@ -228,7 +289,7 @@ export const MY_WORK_MODULES: readonly MyWorkModule[] = [
   // see it whenever the add-on is installed so they can configure/inspect.
   {
     id: "amex_reconciliation",
-    label: "Conciliación Amex",
+    label: "modules.amexReconciliation",
     icon: "CreditCard",
     isVisible: (ctx) =>
       hasModule(ctx, "amex_reconciliation") &&
@@ -237,17 +298,49 @@ export const MY_WORK_MODULES: readonly MyWorkModule[] = [
   },
 
   // ── Finance Analytics ────────────────────────────────────────────────────────
-  // Read-only finance dashboard (Phase 4.7 + 5.7). Visible to admins,
-  // accounting, and executives. Server-aggregated — never returns raw expenses.
+  // Read-only finance dashboard (Phase 4.7 + 5.7). Visible to accounting,
+  // executives, and anyone with can_view_analytics flag or analytics permission.
+  // Finance analytics dashboard. Visible to accounting, executives, and
+  // anyone with the can_view_analytics capability or analytics permission.
   {
     id: "finance_analytics",
-    label: "Finance Analytics",
+    label: "modules.financeAnalytics",
     icon: "BarChart2",
     isVisible: (ctx) =>
       hasModule(ctx, "expenses") &&
-      (hasRole(ctx, "admin", "accounting", "executive") ||
+      (hasRole(ctx, "accounting", "executive", "admin") ||
+        (ctx.capabilities?.can_view_analytics ?? false) ||
         hasPermission(ctx, "analytics:view")),
     component: React.lazy(() => import("@/modules/finance-analytics/FinanceAnalyticsModule")),
+  },
+
+  // ── Subcontractors ──────────────────────────────────────────────────────────
+  // Visible only when the subcontractor add-on is enabled AND the user is
+  // a subcontractor or admin. Regular employees should NOT see this.
+  {
+    id: "subcontractors",
+    label: "modules.subcontractors",
+    icon: "Users",
+    isVisible: (ctx) =>
+      hasModule(ctx, "subcontractor") &&
+      ((ctx.capabilities?.is_subcontractor ?? false) ||
+        hasRole(ctx, "admin") ||
+        hasPermission(ctx, "subcontractor:submit")),
+    component: React.lazy(() => import("@/modules/subcontractor/SubcontractorModule")),
+  },
+
+  // ── Archive ──────────────────────────────────────────────────────────────────
+  // Document vault / file viewer. Gated on the archive add-on being enabled.
+  // Provides search, filter, and detail view for all archived company documents.
+  {
+    id: "archive",
+    label: "modules.archive",
+    icon: "Archive",
+    isVisible: (ctx) =>
+      hasModule(ctx, "archive") &&
+      (hasRole(ctx, "admin", "accounting", "executive") ||
+        hasPermission(ctx, "document:read:any")),
+    component: React.lazy(() => import("@/modules/archive/ArchiveModule")),
   },
 ] as const;
 

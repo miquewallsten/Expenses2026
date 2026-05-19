@@ -19,13 +19,17 @@ import jwt
 from fastapi import Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 
+from apps.api.config import settings
 from apps.api.deps import get_db
 from packages.core.platform.models_user import User
+from packages.core.platform.service_permissions import has_permission
 
 _log = logging.getLogger(__name__)
 
-_ENV    = os.environ.get("ENVIRONMENT", "development").lower().strip()
-_SECRET = os.environ.get("AUTH_SECRET", "dev-secret-change-in-production-32ch")
+# Use settings.environment (loads .env via pydantic-settings) instead of os.environ
+# This ensures dotenv is loaded before checking the environment variable
+_ENV = settings.environment.lower().strip()
+_SECRET = settings.auth_secret
 
 _ALLOW_HEADER_AUTH = _ENV in ("development", "dev", "test", "testing")
 
@@ -39,11 +43,17 @@ if not _ALLOW_HEADER_AUTH:
 
 def _user_from_jwt(token: str, db: Session) -> User | None:
     try:
-        payload = jwt.decode(token, _SECRET, algorithms=["HS256"])
+        payload = jwt.decode(token, _SECRET, algorithms=["HS256"], audience="financial-ops-platform")
         user_id = int(payload["sub"])
     except (jwt.PyJWTError, KeyError, ValueError):
         return None
-    return db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.id == user_id).first()
+    if user:
+        # Verify is_super_admin matches JWT claim (prevents privilege escalation)
+        jwt_is_super_admin = payload.get("is_super_admin", False)
+        if jwt_is_super_admin and not user.is_super_admin:
+            return None  # JWT claims super-admin but user lost the privilege
+    return user
 
 
 def get_current_user(
@@ -73,13 +83,14 @@ def get_current_user(
 
 
 def require_manager_or_accountant(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role not in ["manager", "accountant", "admin"]:
+    if current_user.role not in ["manager", "accounting", "admin"]:
         raise HTTPException(status_code=403, detail="Insufficient permissions")
     return current_user
 
 
 def require_admin(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role != "admin":
+    """Gate for tenant admin actions. Also allows super_admin (platform operator)."""
+    if current_user.role != "admin" and not getattr(current_user, "is_super_admin", False):
         raise HTTPException(status_code=403, detail="Admin access required")
     return current_user
 
@@ -93,6 +104,59 @@ def require_super_admin(current_user: User = Depends(get_current_user)) -> User:
     return current_user
 
 
+
+
+def require_permission(action_key: str):
+    """Create a FastAPI dependency that checks a fine-grained permission.
+
+    Usage:
+        @router.get("/admin/audit-log/{company_id}")
+        def get_audit_log(
+            company_id: int,
+            db: Session = Depends(get_db),
+            current_user: User = Depends(require_permission("admin:audit:read")),
+        ):
+            ...
+
+    Admins implicitly pass all permission checks (has_permission returns True
+    for admin role).  If the action_key is not in the catalog, a 500 is raised
+    — this is intentional to catch typos at deployment time.
+    """
+    def _checker(
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db),
+    ) -> User:
+        try:
+            if has_permission(db, current_user, action_key):
+                return current_user
+        except ValueError:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Unknown permission key: {action_key!r}",
+            )
+        raise HTTPException(
+            status_code=403,
+            detail=f"Permission denied: {action_key}",
+        )
+    return _checker
+
+
 def require_same_company(target_company_id: int, current_user: User) -> None:
+    """Verify that current_user belongs to target_company_id.
+    
+    Super admins have company_id=None and should be exempt from this check.
+    The explicit None check prevents two users with company_id=None from
+    bypassing tenant isolation.
+    """
+    if current_user.company_id is None and target_company_id is None:
+        # Two super-admins — both have None company_id — allow only if is_super_admin
+        if not getattr(current_user, "is_super_admin", False):
+            raise HTTPException(status_code=403, detail="Cross-company access is not allowed")
+        return
+    if current_user.company_id is None:
+        # Super admin accessing a tenant — allowed
+        if not getattr(current_user, "is_super_admin", False):
+            raise HTTPException(status_code=403, detail="Cross-company access is not allowed")
+        return
     if current_user.company_id != target_company_id:
         raise HTTPException(status_code=403, detail="Cross-company access is not allowed")

@@ -21,6 +21,7 @@ from packages.modules.expenses.service.sat_validation_service import (
     check_cfdi_with_sat,
 )
 from packages.modules.integrations.service.webhooks import emit_event
+from packages.modules.agent.models import AgentInsight
 
 _log = logging.getLogger(__name__)
 
@@ -69,6 +70,22 @@ def recheck_expense_cfdi(
                 "checked_at": expense.cfdi_last_checked_at.isoformat() + "Z",
             },
         )
+        # Create Agent Insight for Lola background task feedback
+        insight = AgentInsight(
+            company_id=expense.company_id,
+            kind="cfdi_cancelled",
+            severity="critical",
+            title=f"CFDI Cancelado: {expense.description}",
+            body=f"El SAT reporta que la factura {uuid} del gasto #{expense.id} por ${expense.amount} ha sido cancelada.",
+            data_json=json.dumps({
+                "expense_id": expense.id,
+                "cfdi_uuid": uuid,
+                "amount": float(expense.amount),
+            }),
+            suggested_prompt=f"¿Qué debo hacer con el gasto #{expense.id} que tiene factura cancelada?",
+        )
+        db.add(insight)
+        db.commit()
     return {"status": new_status, "changed": changed, "cancelled": cancelled_flip}
 
 

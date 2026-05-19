@@ -14,7 +14,7 @@ import {
 import { cn } from "@/lib/cn";
 
 export interface DropdownProps {
-  trigger: ReactElement<{ onClick?: (e: MouseEvent) => void }>;
+  trigger: ReactElement<{ onClick?: (e: MouseEvent) => void; "aria-haspopup"?: string; "aria-expanded"?: boolean }>;
   children: ReactNode;
   align?: "start" | "end";
   className?: string;
@@ -49,6 +49,8 @@ export function Dropdown({
           trigger.props.onClick?.(e);
           setOpen((v) => !v);
         },
+        "aria-haspopup": "true",
+        "aria-expanded": open,
       })
     : trigger;
 
@@ -59,8 +61,8 @@ export function Dropdown({
         <div
           role="menu"
           className={cn(
-            "absolute mt-1 z-40 min-w-[160px] rounded-md border border-white/10",
-            "bg-zinc-900 shadow-xl py-1",
+            "absolute mt-1 z-40 min-w-[160px] rounded-md border border-subtle",
+            "bg-surface-1 shadow-xl py-1",
             align === "end" ? "right-0" : "left-0",
           )}
           onClick={() => setOpen(false)}
@@ -91,8 +93,8 @@ export function DropdownItem({
       className={cn(
         "block w-full text-left px-3 h-7 text-[11px] disabled:opacity-50",
         destructive
-          ? "text-red-300/85 hover:bg-red-500/10"
-          : "text-white/70 hover:bg-white/[0.05]",
+          ? "text-error/85 hover:bg-red-500/10"
+          : "text-secondary hover:bg-surface-2",
       )}
     >
       {children}

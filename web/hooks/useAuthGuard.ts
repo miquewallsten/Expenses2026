@@ -3,32 +3,30 @@
 /**
  * useAuthGuard
  *
- * Redirects unauthenticated users to /login as soon as UserContext finishes
- * loading and no session is present.  Protects all authenticated pages.
+ * Returns { loading, authenticated } so the consuming component can
+ * render a spinner while the session is being resolved, instead of
+ * flashing the authenticated UI before redirecting to /login.
  *
- * Usage: call inside any page component that is wrapped in <UserProvider>.
- * The hook reads from UserContext so UserProvider must be an ancestor.
- *
- * Security note: session tokens live in localStorage and are sent as
- * Authorization headers on every API call.  URLs remain predictable
- * (enterprise standard — Salesforce, SAP, Workday all use readable URLs).
- * Security is enforced by authentication on every request, not URL obscurity.
+ * Redirects unauthenticated users to /login after the session check completes.
  */
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUserContext } from "@/context/UserContext";
 
-export function useAuthGuard(): void {
+export function useAuthGuard(): { loading: boolean; authenticated: boolean } {
   const { userId, loading } = useUserContext();
   const router = useRouter();
 
   useEffect(() => {
-    // Wait until UserContext has read localStorage and resolved
     if (loading) return;
-    // No userId = no valid session → redirect to login
     if (!userId) {
       router.replace("/login");
     }
   }, [loading, userId, router]);
+
+  return {
+    loading,
+    authenticated: !loading && !!userId,
+  };
 }

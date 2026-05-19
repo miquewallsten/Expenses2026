@@ -1,3 +1,16 @@
+# Git
+.git/
+.worktrees/
+.claude/
+
+# Node
+node_modules/
+.next/
+out/
+.turbo/
+*.log
+npm-debug.log*
+
 # Python
 __pycache__/
 *.pyc
@@ -11,38 +24,27 @@ build/
 venv/
 env/
 
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
-# Environment
+# Environment and secrets
 .env
-.env.local
-.env.*.local
+.env.*
 
-# Node
-node_modules/
-.next/
-out/
-.turbo/
-*.log
-npm-debug.log*
-
-# macOS
+# OS files
 .DS_Store
-.AppleDouble
 
-# IDE
-.vscode/
-.idea/
+# Celery
+celerybeat-schedule
+celerybeat-schedule.*
+.worktrees/
 
-# Uploads / storage (local dev artifacts)
+# Runtime / local
 uploads/
-storage/
-.gstack/
-
-# Claude local config (contains secrets — never commit)
-.claude/settings.json
-.claude/settings.local.json
+storage/agent_uploads/
+test-results/
+.agents/
 .superpowers/
+.gstack/
+.claude/
+.vscode/
+*.bak
+*.new
+*.orig

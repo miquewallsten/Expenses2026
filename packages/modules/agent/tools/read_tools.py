@@ -79,7 +79,7 @@ REGISTRY.register(ToolSpec(
     category="read",
     input_schema=Empty,
     handler=_read_expense_policy,
-    personas=frozenset({"admin", "employee"}),
+    personas=frozenset({"admin"}),
 ))
 
 
@@ -152,7 +152,7 @@ REGISTRY.register(ToolSpec(
     category="read",
     input_schema=ListCategoriesArgs,
     handler=_list_accounting_categories,
-    personas=frozenset({"admin", "employee"}),
+    personas=frozenset({"admin"}),
 ))
 
 
@@ -179,35 +179,8 @@ REGISTRY.register(ToolSpec(
     category="read",
     input_schema=Empty,
     handler=_expense_counts,
-    personas=frozenset({"admin", "employee"}),
-))
-
-
-# ── read: user roster ───────────────────────────────────────────────────────
-
-class ListUsersArgs(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    role: str | None = None
-    limit: int = Field(default=200, ge=1, le=500)
-
-
-def _list_users(ctx: AgentContext, args: ListUsersArgs) -> ToolResult:
-    q = ctx.db.query(User).filter(User.company_id == ctx.company_id)
-    if args.role:
-        q = q.filter(User.role == args.role)
-    rows = q.order_by(User.email.asc()).limit(args.limit).all()
-    items = [
-        {"id": u.id, "email": u.email, "role": u.role, "full_name": getattr(u, "full_name", None)}
-        for u in rows
-    ]
-    return ToolResult(ok=True, summary=f"{len(items)} usuarios", data={"count": len(items), "items": items})
-
-
-REGISTRY.register(ToolSpec(
-    name="list_users",
-    description="Lista los usuarios de la empresa; opcionalmente filtra por rol.",
-    category="read",
-    input_schema=ListUsersArgs,
-    handler=_list_users,
     personas=frozenset({"admin"}),
 ))
+
+
+# Note: list_users moved to admin_tools.py with enhanced filtering and grouping

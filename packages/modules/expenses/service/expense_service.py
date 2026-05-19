@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from packages.core.platform.models import Company
 from packages.core.platform.models_accounting_category import AccountingCategory
@@ -155,6 +155,7 @@ def create_expense(db: Session, payload: ExpenseCreate) -> Expense:
 
     expense = Expense(
         company_id=payload.company_id,
+        user_id=payload.user_id,
         amount=payload.amount,
         description=payload.description,
         mapping_snapshot=mapping,
@@ -169,12 +170,70 @@ def create_expense(db: Session, payload: ExpenseCreate) -> Expense:
 
 
 def list_expenses(db: Session, company_id: int | None = None, status: str | None = None) -> list[Expense]:
-    query = db.query(Expense)
+    query = db.query(Expense).filter(Expense.is_deleted == False)
     if company_id is not None:
         query = query.filter(Expense.company_id == company_id)
     if status is not None:
         query = query.filter(Expense.status == status)
     return query.all()
+
+
+def list_expenses_paginated(
+    db: Session,
+    company_id: int | None = None,
+    user_id: int | None = None,
+    status: str | None = None,
+    page: int = 1,
+    limit: int = 50,
+    order_by: str = "created_at",
+    order_dir: str = "desc",
+) -> dict:
+    """Return paginated expenses with total count.
+
+    Args:
+        db: Database session
+        company_id: Filter by company (required for tenant isolation)
+        user_id: Filter by user
+        status: Filter by status
+        page: Page number (1-indexed)
+        limit: Items per page (max 100)
+        order_by: Sort column (created_at, amount)
+        order_dir: Sort direction (asc, desc)
+
+    Returns:
+        dict with items, total, page, pages
+    """
+    limit = min(limit, 100)
+    offset = (page - 1) * limit
+
+    query = db.query(Expense).filter(Expense.is_deleted == False).options(
+        joinedload(Expense.documents),
+        joinedload(Expense.category),
+    )
+
+    if company_id is not None:
+        query = query.filter(Expense.company_id == company_id)
+    if user_id is not None:
+        query = query.filter(Expense.user_id == user_id)
+    if status is not None:
+        query = query.filter(Expense.status == status)
+
+    # Ordering
+    order_column = getattr(Expense, order_by, Expense.created_at)
+    if order_dir == "desc":
+        query = query.order_by(order_column.desc())
+    else:
+        query = query.order_by(order_column.asc())
+
+    total = query.count()
+    items = query.offset(offset).limit(limit).all()
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "pages": (total + limit - 1) // limit if limit > 0 else 0,
+    }
 
 
 def submit_expense(db: Session, expense_id: int) -> Expense | None:
@@ -269,7 +328,9 @@ def update_expense(db: Session, expense_id: int, payload: ExpenseUpdate) -> Expe
 
 
 def delete_expense(db: Session, expense_id: int) -> bool:
-    expense = db.query(Expense).filter(Expense.id == expense_id).first()
+    """Soft-delete an expense. Only draft expenses can be deleted."""
+    from datetime import datetime, timezone
+    expense = db.query(Expense).filter(Expense.id == expense_id, Expense.is_deleted == False).first()
 
     if not expense:
         return False
@@ -277,18 +338,33 @@ def delete_expense(db: Session, expense_id: int) -> bool:
     if expense.status != "draft":
         raise ValueError("Only draft expenses can be deleted")
 
-    db.delete(expense)
+    expense.is_deleted = True
+    expense.deleted_at = datetime.now(tz=timezone.utc)
     db.commit()
     return True
 
 
+def restore_expense(db: Session, expense_id: int) -> Expense | None:
+    """Restore a soft-deleted expense back to draft."""
+    expense = db.query(Expense).filter(Expense.id == expense_id, Expense.is_deleted == True).first()
+
+    if not expense:
+        return None
+
+    expense.is_deleted = False
+    expense.deleted_at = None
+    db.commit()
+    db.refresh(expense)
+    return expense
+
+
 def get_expense_summary(db: Session, company_id: int | None = None) -> dict:
-    query = db.query(Expense)
+    query = db.query(Expense).filter(Expense.is_deleted == False)
 
     if company_id is not None:
         query = query.filter(Expense.company_id == company_id)
 
-    expenses = query.all()
+    expenses = query.filter(Expense.is_deleted == False).all()
 
     return {
         "total": len(expenses),

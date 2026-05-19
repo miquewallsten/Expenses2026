@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, String, Text, func
+from sqlalchemy import BigInteger, DateTime, Index, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from apps.api.db import Base
@@ -25,6 +25,10 @@ class ArchiveFile(Base):
     """
 
     __tablename__ = "archive_files"
+    __table_args__ = (
+        # Composite index for document lookup queries
+        Index('idx_archive_company_expense', 'company_id', 'expense_id', 'file_name'),
+    )
 
     id:         Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     company_id: Mapped[int] = mapped_column(index=True, nullable=False)
@@ -35,6 +39,7 @@ class ArchiveFile(Base):
     # file_type : lowercased extension without dot (e.g. "pdf", "xml", "jpg")
     file_name: Mapped[str] = mapped_column(String(255), nullable=False)
     file_type: Mapped[str] = mapped_column(String(20),  nullable=False)
+    size_bytes: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
 
     # ── Origin ────────────────────────────────────────────────────────────────
     # source_type : how the file entered the archive

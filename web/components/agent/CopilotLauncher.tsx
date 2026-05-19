@@ -1,138 +1,181 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Bot, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { GripVertical, MessageSquare, PanelRightClose, Plus, Sparkles, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import AgentChat from "./AgentChat";
-import { getCurrentCompanyId, getCurrentRole } from "@/lib/session";
-
-const HIDDEN_PATH_PREFIXES = ["/auth/", "/login"];
+import { useCopilotSidebar, MIN_WIDTH, MAX_WIDTH } from "@/context/CopilotSidebarContext";
+import { useUserContext } from "@/context/UserContext";
+import type { AgentPersona } from "@/lib/agent/client";
 
 /**
- * Global floating Copilot launcher (admin/finance_manager personas).
+ * Copilot sidebar — renders as a flex column in the page flow.
+ * Uses CopilotSidebarContext for open/width state.
  *
- * - Renders a fixed bottom-right button on every page where the user is
- *   authenticated as admin.
- * - Click (or Cmd/Ctrl+K) opens a slide-in drawer hosting the streaming
- *   admin AgentChat.
- * - Hidden on auth pages and for non-admin sessions to avoid leaking the
- *   admin persona to roles that aren't allowed to use it.
+ * Props:
+ *   mode: "column" (desktop/tablet — flex child) | "sheet" (mobile — fixed overlay)
  */
-export default function CopilotLauncher() {
+export default function CopilotLauncher({ mode = "column" }: { mode?: "column" | "sheet" }) {
   const t = useTranslations("copilot.launcher");
-  const [mounted, setMounted] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [companyId, setCompanyId] = useState<number | null>(null);
-  const [role, setRole] = useState<string | null>(null);
+  const { open, width, setOpen, setWidth } = useCopilotSidebar();
+  const user = useUserContext();
+  const [isDragging, setIsDragging] = useState(false);
 
-  // Avoid hydration mismatch — only render after mount so we can read
-  // localStorage-backed session state.
-  useEffect(() => {
-    setMounted(true);
-    const cid = getCurrentCompanyId();
-    setCompanyId(cid ? Number(cid) : null);
-    setRole(getCurrentRole());
-  }, []);
+  const companyId = user.companyId;
+  const role = user.role;
 
-  // Re-check session whenever the route changes so post-login the launcher
-  // appears without a full reload. Cheap polling on focus is enough.
-  useEffect(() => {
-    const refresh = () => {
-      const cid = getCurrentCompanyId();
-      setCompanyId(cid ? Number(cid) : null);
-      setRole(getCurrentRole());
-    };
-    window.addEventListener("focus", refresh);
-    window.addEventListener("storage", refresh);
-    return () => {
-      window.removeEventListener("focus", refresh);
-      window.removeEventListener("storage", refresh);
-    };
-  }, []);
-
-  // Cmd/Ctrl+K toggle.
-  const toggle = useCallback(() => setOpen((v) => !v), []);
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        toggle();
-      } else if (e.key === "Escape" && open) {
-        setOpen(false);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, toggle]);
-
-  if (!mounted) return null;
-
-  // Hide on auth pages.
+  const HIDDEN_PATH_PREFIXES = ["/auth/", "/login"];
   const path = typeof window !== "undefined" ? window.location.pathname : "";
   if (HIDDEN_PATH_PREFIXES.some((p) => path.startsWith(p))) return null;
 
-  // Admin persona is admin-only on the backend; only show launcher for admins.
-  const isAdmin = role === "admin";
-  if (!isAdmin || companyId == null) return null;
+  const canUseCopilot = role === "admin" || role === "super_admin" || role === "accounting" || user.hasPermission("agent:chat:admin") || user.hasPermission("agent:chat:accounting");
 
-  return (
-    <>
-      <button
-        type="button"
-        onClick={toggle}
-        title={t("openTitle")}
-        aria-label={t("openTitle")}
-        className="fixed bottom-4 right-4 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-indigo-500/30 bg-indigo-600/30 text-indigo-200 shadow-lg shadow-black/40 transition-all hover:scale-105 hover:bg-indigo-600/50 hover:text-white"
-      >
-        <Bot className="h-4 w-4" />
-      </button>
+  const persona: AgentPersona =
+    path.includes("accounting") || role === "accounting" ? "accounting" : "admin";
 
-      {open && (
-        <>
-          {/* backdrop */}
-          <div
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
-            onClick={() => setOpen(false)}
-            aria-hidden
-          />
-          {/* drawer */}
-          <aside
-            role="dialog"
-            aria-label={t("title")}
-            className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[440px] flex-col border-l border-white/[0.07] bg-zinc-950 shadow-2xl"
+  // ── Drag-to-resize ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const newWidth = window.innerWidth - e.clientX;
+      setWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDragging, setWidth]);
+
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  // ── Collapsed rail ──────────────────────────────────────────────────────────
+  if (!open) {
+    return (
+      <div className="flex h-full w-10 shrink-0 flex-col items-center border-l border-default bg-surface-0 py-3 gap-3">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/10 text-accent transition-all hover:bg-accent/20 hover:shadow-sm"
+          aria-label={t("openTitle")}
+        >
+          <Sparkles className="h-4 w-4" />
+        </button>
+        <div className="flex flex-col items-center gap-1.5 mt-1">
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="writing-mode-vertical text-[9px] font-medium text-muted transition-colors hover:text-secondary"
+            style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}
           >
-            <header className="flex h-11 shrink-0 items-center gap-2 border-b border-white/[0.07] px-3">
-              <div className="flex h-5 w-5 items-center justify-center rounded bg-indigo-600/20 ring-1 ring-indigo-500/20">
-                <Bot className="h-3 w-3 text-indigo-300/80" />
-              </div>
-              <div className="flex flex-col leading-tight">
-                <span className="text-[11px] font-semibold text-white/60">{t("title")}</span>
-                <span className="text-[9px] uppercase tracking-widest text-white/28">
-                  {t("subtitle")}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="ml-auto flex h-6 w-6 items-center justify-center rounded text-white/35 transition-colors hover:bg-white/[0.04] hover:text-white/65"
-                aria-label={t("close")}
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </header>
-            <div className="min-h-0 flex-1">
-              <AgentChat
-                companyId={companyId}
-                persona="admin"
-                greeting={t("greeting")}
-                allowUpload
-                streaming
-                variant="page"
-              />
+            {t("collapsedLabel")}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Chat panel ──────────────────────────────────────────────────────────────
+  const panelContent = (
+    <div className="flex h-full min-w-0 flex-col">
+      {/* Header */}
+      <header className="flex h-11 shrink-0 items-center gap-2.5 border-b border-default px-3">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-accent/20 to-accent/5 ring-1 ring-accent/20">
+          <Sparkles className="h-3.5 w-3.5 text-accent" />
+        </div>
+        <div className="flex flex-col leading-tight min-w-0">
+          <span className="text-[13px] font-semibold text-primary tracking-tight">{t("title")}</span>
+          <span className="text-[10px] text-muted truncate">{t("subtitle")}</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="ml-auto flex h-6 w-6 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-2 hover:text-secondary"
+          aria-label={t("close")}
+        >
+          {mode === "sheet" ? <X className="h-3.5 w-3.5" /> : <PanelRightClose className="h-3.5 w-3.5" />}
+        </button>
+      </header>
+
+      {/* Chat area */}
+      <div className="min-h-0 flex-1">
+        {canUseCopilot ? (
+          <AgentChat
+            companyId={companyId ?? 1}
+            persona={persona}
+            greeting={t("greeting")}
+            allowUpload
+            streaming
+            variant="page"
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-3 p-6 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/10">
+              <MessageSquare className="h-5 w-5 text-accent/60" />
             </div>
-          </aside>
-        </>
-      )}
-    </>
+            <div>
+              <p className="text-sm font-medium text-secondary">{t("upgradeRequired")}</p>
+              <p className="mt-1 text-xs text-muted">{t("upgradeRequiredHint")}</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const resizeHandle = (
+    <div
+      onMouseDown={handleDragStart}
+      className={`absolute left-0 top-0 z-10 h-full w-4 cursor-col-resize group ${isDragging ? "bg-accent/20" : ""}`}
+    >
+      <div className={`h-full w-px transition-colors ${isDragging ? "bg-accent/60" : "bg-transparent group-hover:bg-accent/30"}`} />
+      <div className="absolute left-0 top-1/2 -translate-y-1/2 flex h-10 w-4 items-center justify-center rounded-r opacity-0 group-hover:opacity-100 transition-opacity">
+        <GripVertical className="h-4 w-3 text-muted/50" />
+      </div>
+      <div className="absolute inset-y-0 -left-2 right-0" />
+    </div>
+  );
+
+  // ── Sheet mode (mobile overlay) ─────────────────────────────────────────────
+  if (mode === "sheet") {
+    return (
+      <>
+        <div className="fixed inset-0 z-40 overlay-backdrop" onClick={() => setOpen(false)} />
+        <aside
+          className="fixed inset-y-0 right-0 z-50 flex flex-col bg-surface-0 shadow-2xl"
+          style={{ width: Math.min(width, window.innerWidth - 16) }}
+        >
+          {resizeHandle}
+          {panelContent}
+        </aside>
+      </>
+    );
+  }
+
+  // ── Column mode (desktop/tablet flex child) ─────────────────────────────────
+  return (
+    <aside
+      className="relative flex h-full shrink-0 flex-col border-l border-default bg-surface-0"
+      style={{ width }}
+    >
+      {resizeHandle}
+      {panelContent}
+    </aside>
   );
 }

@@ -14,7 +14,7 @@ Security:
   every request; in dev a missing secret logs a warning and accepts.
 - Unresolvable phone_number_id → log + 200 (never fall back to a hardcoded
   tenant; we refuse to accept messages we can't attribute).
-- Deduplication on wa_message_id is handled downstream in agent.process_message.
+- Deduplication on wa_message_id is handled in the webhook handler before processing.
 """
 
 from __future__ import annotations
@@ -32,8 +32,9 @@ from apps.api.config import settings as app_settings
 from apps.api.deps import get_db
 from packages.modules.channels.models import ChannelSettings
 from packages.modules.channels.schemas import NormalizedMessage, InboundAttachment
-from packages.modules.channels.service import agent
-from packages.modules.channels.service.whatsapp_client import parse_inbound_webhook, mark_as_read
+# from packages.modules.channels.service import agent  # Module does not exist
+from packages.modules.channels.service.whatsapp_client import parse_inbound_webhook, mark_as_read, get_media_url, download_media
+from packages.modules.agent.core.channel_dispatcher import CHANNEL_DISPATCHER
 
 log = logging.getLogger(__name__)
 
@@ -221,7 +222,120 @@ def _process_whatsapp_payload(payload: dict[str, Any], db: Session) -> None:
                         raw_msg["wa_message_id"],
                     )
 
-            agent.process_message(db, norm)
+            # Download WhatsApp media if present
+            for i, att in enumerate(attachments):
+                if att.media_id and settings:
+                    try:
+                        media_url = get_media_url(settings.wa_access_token, att.media_id)
+                        if media_url:
+                            media_bytes = download_media(settings.wa_access_token, media_url)
+                            if media_bytes:
+                                import base64
+                                attachments[i] = InboundAttachment(
+                                    media_id=att.media_id,
+                                    filename=att.filename,
+                                    content_type=att.content_type,
+                                    url=att.url,
+                                    size_bytes=len(media_bytes),
+                                    content_b64=base64.b64encode(media_bytes).decode("ascii"),
+                                )
+                    except Exception:
+                        log.exception("Failed to download WhatsApp media %s", att.media_id)
+
+            # Deduplication: skip if we've already processed this wa_message_id
+            wa_msg_id = raw_msg.get("wa_message_id")
+            if wa_msg_id:
+                from packages.modules.channels.models import ChannelMessage
+                existing = (
+                    db.query(ChannelMessage)
+                    .filter(ChannelMessage.wa_message_id == wa_msg_id)
+                    .first()
+                )
+                if existing:
+                    log.warning("Duplicate WhatsApp message wa_message_id=%s — skipping", wa_msg_id)
+                    continue
+
+            # Log inbound message
+            try:
+                from packages.modules.channels.models import ChannelMessage
+                msg_log = ChannelMessage(
+                    company_id=company_id,
+                    channel="whatsapp",
+                    direction="inbound",
+                    sender_ref=raw_msg.get("from_phone", ""),
+                    thread_id=raw_msg.get("from_phone", ""),
+                    body=raw_msg.get("text_body") or "",
+                    wa_message_id=raw_msg.get("wa_message_id"),
+                    intent="expense_submission" if attachments else "general_chat",
+                    status="received",
+                )
+                db.add(msg_log)
+                db.commit()
+            except Exception:
+                log.exception("Failed to log inbound WhatsApp message")
+
+            # Check for active phone-linking conversation first
+            from packages.modules.channels.service.phone_linking import process_linking_response
+            from packages.modules.channels.models import ChannelConversation
+            from datetime import datetime, timezone
+
+            active_conv = (
+                db.query(ChannelConversation)
+                .filter(
+                    ChannelConversation.company_id == company_id,
+                    ChannelConversation.channel == "whatsapp",
+                    ChannelConversation.thread_id == norm.sender_ref,
+                    ChannelConversation.state == "awaiting_email",
+                    ChannelConversation.expires_at > datetime.now(tz=timezone.utc),
+                )
+                .first()
+            )
+
+            if active_conv:
+                # User is in the phone-linking flow — process their email response
+                link_result = process_linking_response(
+                    db, company_id, "whatsapp",
+                    norm.sender_ref, norm.sender_ref,
+                    norm.body or "",
+                )
+                if link_result["linked"]:
+                    log.info("WhatsApp phone linked: user=%s phone=%s", link_result.get("user_id"), norm.sender_ref)
+                # The reply is already sent inside process_linking_response via whatsapp_outbound
+                # No need to dispatch to the agent
+            else:
+                # Permission gate: check if user's role is allowed for this channel
+                from packages.core.platform.models_user import User as WaUser
+                wa_user = (
+                    db.query(WaUser)
+                    .filter(WaUser.company_id == company_id, WaUser.whatsapp_phone == norm.sender_ref)
+                    .first()
+                )
+                if wa_user is None:
+                    # Also try phone field
+                    wa_user = (
+                        db.query(WaUser)
+                        .filter(WaUser.company_id == company_id, WaUser.phone == norm.sender_ref)
+                        .first()
+                    )
+                if wa_user and settings and settings.wa_allowed_roles:
+                    allowed = [r.strip() for r in settings.wa_allowed_roles.split(",")]
+                    if wa_user.role not in allowed:
+                        from packages.modules.channels.service.whatsapp_outbound import send_whatsapp_reply
+                        send_whatsapp_reply(
+                            db, company_id, norm.sender_ref,
+                            "Tu cuenta no tiene acceso a este canal. Contacta al administrador.",
+                        )
+                        continue
+
+                # Dispatch to autonomous agent
+                CHANNEL_DISPATCHER.dispatch(
+                    db=db,
+                    channel_type="whatsapp",
+                    message=norm.body or "",
+                    user_id=norm.sender_ref,  # phone string — resolved to User inside dispatcher
+                    company_id=company_id,
+                    confidence=1.0,
+                )
 
         except Exception as exc:
             log.error("Error processing WhatsApp message: %s", exc, exc_info=True)

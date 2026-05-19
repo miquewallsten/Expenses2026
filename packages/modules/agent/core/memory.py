@@ -6,12 +6,13 @@ Stored in ``agent_memory`` table; injected into the system prompt each turn.
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.orm import Session
 
 from ..models import AgentMemory
+from ..models_tenant import TenantAgentMemory
 
 
 ALLOWED_KINDS = ("fact", "preference", "decision")
@@ -147,3 +148,101 @@ def list_memories_for_prompt(
             val_str = val_str[:140] + "…"
         lines.append(f"- [{r.kind}] {r.key}: {val_str}")
     return "\n".join(lines)
+
+
+class TenantMemoryService:
+    """Service for managing tenant-scoped agent memory.
+
+    All operations are company-scoped for tenant isolation.
+    Keys do NOT need company_id prefix — the unique constraint handles it.
+    """
+
+    def __init__(self, db: Session):
+        self.db = db
+
+    def save(
+        self,
+        company_id: int,
+        agent_key: str,
+        key: str,
+        value: str,
+        confidence: float = 1.0,
+    ) -> TenantAgentMemory:
+        """Save or update a memory entry. Upserts on (company_id, agent_key, key)."""
+        row = self.db.query(TenantAgentMemory).filter(
+            TenantAgentMemory.company_id == company_id,
+            TenantAgentMemory.agent_key == agent_key,
+            TenantAgentMemory.key == key,
+        ).one_or_none()
+
+        if row is None:
+            row = TenantAgentMemory(
+                company_id=company_id,
+                agent_key=agent_key,
+                key=key,
+                value=value,
+                confidence=confidence,
+            )
+            self.db.add(row)
+        else:
+            row.value = value
+            row.confidence = confidence
+
+        self.db.commit()
+        self.db.refresh(row)
+        return row
+
+    def get(self, company_id: int, agent_key: str, key: str) -> str | None:
+        """Get a memory value. Updates last_used_at when returning a value."""
+        row = self.db.query(TenantAgentMemory).filter(
+            TenantAgentMemory.company_id == company_id,
+            TenantAgentMemory.agent_key == agent_key,
+            TenantAgentMemory.key == key,
+        ).one_or_none()
+
+        if row is None:
+            return None
+
+        # Update last_used_at
+        row.last_used_at = datetime.now(UTC)
+        self.db.commit()
+
+        return row.value
+
+    def get_record(
+        self, company_id: int, agent_key: str, key: str
+    ) -> TenantAgentMemory | None:
+        """Get the full memory record without updating last_used_at."""
+        return self.db.query(TenantAgentMemory).filter(
+            TenantAgentMemory.company_id == company_id,
+            TenantAgentMemory.agent_key == agent_key,
+            TenantAgentMemory.key == key,
+        ).one_or_none()
+
+    def list_for_agent(
+        self,
+        company_id: int,
+        agent_key: str,
+        min_confidence: float | None = None,
+    ) -> list[TenantAgentMemory]:
+        """List all memories for an agent, optionally filtered by minimum confidence."""
+        q = self.db.query(TenantAgentMemory).filter(
+            TenantAgentMemory.company_id == company_id,
+            TenantAgentMemory.agent_key == agent_key,
+        )
+
+        if min_confidence is not None:
+            q = q.filter(TenantAgentMemory.confidence >= min_confidence)
+
+        return q.order_by(TenantAgentMemory.created_at.desc()).all()
+
+    def delete(self, company_id: int, agent_key: str, key: str) -> bool:
+        """Delete a memory entry. Returns True if deleted, False if not found."""
+        n = self.db.query(TenantAgentMemory).filter(
+            TenantAgentMemory.company_id == company_id,
+            TenantAgentMemory.agent_key == agent_key,
+            TenantAgentMemory.key == key,
+        ).delete(synchronize_session=False)
+
+        self.db.commit()
+        return n > 0

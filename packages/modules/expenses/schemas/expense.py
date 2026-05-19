@@ -8,6 +8,7 @@ class ExpenseCreate(BaseModel):
     company_id: int
     amount: Decimal
     description: str
+    user_id: int | None = None
     # Phase 2.4 — caller-supplied classification. Validated against active
     # AccountingCategory rows in expense_service.create_expense.
     category_code: str | None = None

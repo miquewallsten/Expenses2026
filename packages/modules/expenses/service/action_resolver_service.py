@@ -284,22 +284,26 @@ def resolve_accounting_actions(db: Session, expense: Expense) -> dict:
     # updated in-place and does not change the expense status.
 
     # ── Accounting event generation ──────────────────────────────────────────
-    # True when:
-    #   1. expense.status == "submitted"  (generate_accounting_event gate)
+    # Preview is available for any expense in the accounting queue:
+    #   1. expense.status in ("submitted", "manager_approved") — accounting review
     #   2. no accounting_blockers outstanding
     #   3. expense has an account_code OR a category_code is set
+    # The event is a preview dict (no persistence) — the actual export happens
+    # after accounting approval moves the expense to "approved" status.
     has_account = bool((expense.account_code or "").strip())
     has_category = bool((expense.category_code or "").strip())
     no_blockers = len(blockers["accounting_blockers"]) == 0
+    accounting_reviewable = expense.status in ("submitted", "manager_approved")
     can_generate_accounting_event = (
-        expense.status == "submitted"
+        accounting_reviewable
         and no_blockers
         and (has_account or has_category)
     )
     if not can_generate_accounting_event:
-        if expense.status != "submitted":
+        if not accounting_reviewable:
             reasons.append(
-                f"Accounting event requires status 'submitted' (current: '{expense.status}')."
+                f"Accounting event preview requires accounting-review status "
+                f"(submitted or manager_approved; current: '{expense.status}')."
             )
         if not (has_account or has_category):
             reasons.append(

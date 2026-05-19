@@ -14,13 +14,13 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const VARIANT: Record<Variant, string> = {
   primary:
-    "bg-indigo-600/85 hover:bg-indigo-500/85 text-white border-indigo-500/40 disabled:bg-indigo-900/40",
+    "bg-accent hover:bg-accent-hover text-primary bg-accent-muted disabled:bg-indigo-900/40",
   secondary:
-    "bg-white/[0.04] hover:bg-white/[0.07] text-white/75 border-white/10",
+    "bg-surface-2 hover:bg-surface-3 text-secondary border-subtle",
   ghost:
-    "bg-transparent hover:bg-white/[0.05] text-white/55 border-transparent",
+    "bg-transparent hover:bg-surface-2 text-tertiary border-transparent",
   danger:
-    "bg-red-600/80 hover:bg-red-500/85 text-white border-red-500/40 disabled:bg-red-900/40",
+    "bg-error hover:bg-error text-primary border-error disabled:bg-red-900/40",
 };
 
 const SIZE: Record<Size, string> = {
@@ -39,8 +39,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       disabled={disabled || loading}
       className={cn(
         "inline-flex items-center justify-center gap-1.5 rounded-md border font-medium",
-        "transition-colors disabled:cursor-not-allowed disabled:opacity-60",
-        "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-400/50",
+        "transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-60",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:ring-offset-1 focus-visible:ring-offset-zinc-950",
+        "active:scale-[0.97] active:brightness-95",
         VARIANT[variant],
         SIZE[size],
         className,
@@ -48,7 +49,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       {...rest}
     >
       {loading ? (
-        <span className="h-3 w-3 animate-spin rounded-full border border-white/40 border-t-transparent" />
+        <span className="h-3 w-3 animate-spin rounded-full border-2 border-strong border-t-white/80" />
       ) : null}
       {children}
     </button>

@@ -15,69 +15,38 @@ export type AppShellProps = {
   title: string;
   globalNavItems: GlobalNavItem[];
   workListTitle: string;
-  /**
-   * The content rendered in the left pane.
-   *
-   * Accepts either:
-   * - A plain `ReactNode` (all existing callers — no behaviour change).
-   * - A factory `(onClose: () => void) => ReactNode` — AppShell passes a
-   *   function that closes the mobile nav drawer so the list item can call it
-   *   after selection.  On tablet/desktop the callback is a no-op.
-   */
   workList: ReactNode | ((onClose: () => void) => ReactNode);
   detail: ReactNode;
   aiPanel?: ReactNode;
-  /**
-   * When true, the detail column renders with no padding and `overflow-hidden`
-   * instead of the default `overflow-y-auto px-5 py-4`.  Use this when a
-   * module manages its own internal layout and scrolling.
-   */
   detailFlush?: boolean;
-  /**
-   * Switch the left column to "module navigation" mode (My Work portal).
-   *
-   * Queue mode (default)  →  left 240–460 px (def 300),  center min 360 px
-   * Nav mode              →  left 150–240 px (def 180),  center min 560 px
-   */
   navSidebar?: boolean;
-  /**
-   * Admin portal 3-column mode: merges the NavRail and WorkList into one
-   * draggable left column (220–340 px, default 260 px).  Eliminates the
-   * separate worklist pane so only 3 columns remain: left nav, content, AI.
-   */
   mergedNav?: boolean;
-  /** Company logo URL — passed to the NavRail header. */
   logoUrl?: string | null;
 };
 
 // ── Layout constants ──────────────────────────────────────────────────────────
 
-// Queue mode
 const WL_MIN = 240;
-const WL_MAX = 460;
-const WL_DEFAULT = 300;
+const WL_MAX = 400;
+const WL_DEFAULT = 280;
 const DETAIL_MIN = 360;
 
-// Nav (My Work) mode
 const NL_MIN = 150;
-const NL_MAX = 240;
+const NL_MAX = 220;
 const NL_DEFAULT = 180;
-const WS_MIN = 560;
+const WS_MIN = 500;
 
-// AI rail (desktop only)
-const AI_MIN = 240;
-const AI_MAX = 440;
-const AI_DEFAULT = 280;
-const AI_COLLAPSED_W = 28;
+const AI_MIN = 260;
+const AI_MAX = 400;
+const AI_DEFAULT = 320;
+const AI_COLLAPSED_W = 32;
 
-// Merged nav mode (admin portal — NavRail + WorkList in one left column)
 const ML_MIN = 220;
-const ML_MAX = 340;
+const ML_MAX = 320;
 const ML_DEFAULT = 260;
 
-// Tablet fixed widths
-const TABLET_NAV_W = 160;  // navSidebar mode
-const TABLET_WL_W  = 220;  // queue mode
+const TABLET_NAV_W = 160;
+const TABLET_WL_W = 200;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -98,51 +67,34 @@ export default function AppShell({
   logoUrl,
 }: AppShellProps) {
 
-  // ── Breakpoint / layout mode ──────────────────────────────────────────────
-  //
-  // Centralised via useLayoutMode.  AppShell only needs the three booleans;
-  // module components call the hook independently with their own hasDetail
-  // context to derive activeMobilePane.
-
   const t = useTranslations("shell");
   const { isMobile, isTablet, isDesktop } = useLayoutMode();
 
-  // ── Desktop column sizing ─────────────────────────────────────────────────
-
-  const leftMin     = mergedNav ? ML_MIN     : navSidebar ? NL_MIN     : WL_MIN;
-  const leftMax     = mergedNav ? ML_MAX     : navSidebar ? NL_MAX     : WL_MAX;
+  // Column sizing
+  const leftMin = mergedNav ? ML_MIN : navSidebar ? NL_MIN : WL_MIN;
+  const leftMax = mergedNav ? ML_MAX : navSidebar ? NL_MAX : WL_MAX;
   const leftDefault = mergedNav ? ML_DEFAULT : navSidebar ? NL_DEFAULT : WL_DEFAULT;
-  const detailMinW  = navSidebar ? WS_MIN     : DETAIL_MIN;
+  const detailMinW = navSidebar ? WS_MIN : DETAIL_MIN;
 
-  // ── State ─────────────────────────────────────────────────────────────────
-
-  const [leftCollapsed,  setLeftCollapsed]  = useState(false); // desktop NavRail
-  const [rightCollapsed, setRightCollapsed] = useState(false); // desktop AI rail
-  const [workListWidth,  setWorkListWidth]  = useState(leftDefault);
-  const [aiWidth,        setAiWidth]        = useState(AI_DEFAULT);
-
-  // Overlay open states (mobile / tablet)
+  // State
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [rightCollapsed, setRightCollapsed] = useState(false);
+  const [workListWidth, setWorkListWidth] = useState(leftDefault);
+  const [aiWidth, setAiWidth] = useState(AI_DEFAULT);
   const [navDrawerOpen, setNavDrawerOpen] = useState(false);
-  const [aiSheetOpen,   setAiSheetOpen]   = useState(false);
+  const [aiSheetOpen, setAiSheetOpen] = useState(false);
 
   // Close overlays on breakpoint change
   useEffect(() => {
-    if (!isMobile)  setNavDrawerOpen(false);
-    if (isDesktop)  setAiSheetOpen(false);
+    if (!isMobile) setNavDrawerOpen(false);
+    if (isDesktop) setAiSheetOpen(false);
   }, [isMobile, isDesktop]);
 
-  // ── Drag resize (desktop only) ────────────────────────────────────────────
-
+  // Drag resize
   const limitsRef = useRef({ leftMin, leftMax });
   limitsRef.current = { leftMin, leftMax };
 
-  const dragRef = useRef<{
-    type: "wl" | "ai";
-    startX: number;
-    startWidth: number;
-    latestX: number;
-  } | null>(null);
-
+  const dragRef = useRef<{ type: "wl" | "ai"; startX: number; startWidth: number; latestX: number } | null>(null);
   const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -183,98 +135,69 @@ export default function AppShell({
     };
   }, []);
 
-  const startDrag = (
-    type: "wl" | "ai",
-    e: React.MouseEvent,
-    currentWidth: number,
-  ) => {
+  const startDrag = (type: "wl" | "ai", e: React.MouseEvent, currentWidth: number) => {
     e.preventDefault();
     dragRef.current = { type, startX: e.clientX, startWidth: currentWidth, latestX: e.clientX };
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
   };
 
-  // ── Work-list resolver ──────────────────────────────────────────────────
-  //
-  // Supports two shapes for `workList`:
-  //   1. ReactNode       — used by all non-nav-sidebar pages; render as-is.
-  //   2. (fn) => ReactNode — used by nav-sidebar (My Work) pages; called with
-  //      `closeDrawer` on mobile so selecting a module auto-closes the drawer.
-
   const resolveWL = (onClose: () => void): ReactNode =>
     typeof workList === "function" ? workList(onClose) : workList;
 
   const closeDrawer = () => setNavDrawerOpen(false);
-  const noop        = () => {};
-
-  // ── Shared detail content ─────────────────────────────────────────────────
+  const noop = () => {};
 
   const detailContent = (
-    <div className={detailFlush
-      ? "min-h-0 flex-1 overflow-hidden"
-      : "min-h-0 flex-1 overflow-y-auto px-5 py-4"
-    }>
+    <div className={detailFlush ? "min-h-0 flex-1 overflow-hidden" : "min-h-0 flex-1 overflow-y-auto px-4 py-3"}>
       {detail}
     </div>
   );
 
   // ── Mobile layout ─────────────────────────────────────────────────────────
-  //
-  // Single-column workspace.  Navigation and AI panel live in overlay layers.
 
   if (isMobile) {
     return (
-      /*
-       * pt / pb absorb env(safe-area-inset-*) so the shell never renders content
-       * behind the iOS status bar or home indicator.  bg-zinc-950 fills those
-       * dead zones so the UI looks intentional rather than clipped.
-       */
       <div
-        className="flex h-[100dvh] flex-col overflow-hidden bg-zinc-950 text-white"
+        className="flex h-[100dvh] flex-col overflow-hidden bg-surface-0 text-primary"
         style={{ paddingTop: "var(--sai-t)", paddingBottom: "var(--sai-b)" }}
       >
-
         <TopBar
           title={title}
           onMenuOpen={() => setNavDrawerOpen(true)}
           onAiOpen={aiPanel ? () => setAiSheetOpen((v) => !v) : undefined}
         />
 
-        {/* Full-width workspace */}
         <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {detailContent}
         </main>
 
-            {/* Nav drawer ─ worklist / module nav */}
+        {/* Nav drawer */}
         {navDrawerOpen && (
           <>
             <div
-              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[1px]"
+              className="fixed inset-0 z-40 overlay-backdrop-blur"
               onClick={() => setNavDrawerOpen(false)}
               aria-hidden="true"
             />
-            {/*
-             * pt-[var(--sai-t)] — drawer header clears the status bar on iOS.
-             * pb-[var(--sai-b)] — scrollable content clears the home indicator.
-             */}
             <div
-              className="animate-slide-in-left fixed inset-y-0 left-0 z-50 flex w-[min(280px,85vw)] flex-col overflow-hidden bg-zinc-950 shadow-2xl"
+              className="animate-slide-in-right fixed inset-y-0 left-0 z-50 flex w-[min(280px,85vw)] flex-col overflow-hidden bg-surface-1 shadow-xl"
               style={{ paddingTop: "var(--sai-t)", paddingBottom: "var(--sai-b)" }}
             >
-              <div className="flex h-11 shrink-0 items-center justify-between border-b border-white/[0.07] px-4">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-white/45">
+              <div className="flex h-9 shrink-0 items-center justify-between border-b border-subtle px-3">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-secondary">
                   {workListTitle}
                 </span>
                 <button
                   type="button"
                   onClick={() => setNavDrawerOpen(false)}
                   aria-label={t("closeNavigation")}
-                  className="flex h-8 w-8 items-center justify-center rounded text-white/30 transition-colors hover:bg-white/[0.06] hover:text-white/65"
+                  className="flex h-7 w-7 items-center justify-center rounded text-muted transition-colors hover:bg-surface-2 hover:text-secondary"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <div className={`min-h-0 flex-1 ${navSidebar ? "overflow-hidden" : "overflow-y-auto"}`}>
+              <div className="min-h-0 flex-1 overflow-y-auto">
                 {resolveWL(closeDrawer)}
               </div>
             </div>
@@ -285,26 +208,21 @@ export default function AppShell({
         {aiPanel && aiSheetOpen && (
           <>
             <div
-              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[1px]"
+              className="fixed inset-0 z-40 overlay-backdrop-blur"
               onClick={() => setAiSheetOpen(false)}
               aria-hidden="true"
             />
-            {/*
-             * pb-[var(--sai-b)] — ensures the sheet's bottom content (chat input)
-             * is never hidden under the iOS home indicator.
-             */}
             <div
-              className="animate-slide-up-sheet fixed inset-x-0 bottom-0 z-50 flex max-h-[75dvh] flex-col rounded-t-2xl bg-zinc-900 shadow-2xl ring-1 ring-white/[0.08]"
+              className="animate-slide-up fixed inset-x-0 bottom-0 z-50 flex max-h-[75dvh] flex-col rounded-t-xl bg-surface-2 shadow-xl ring-1 ring-subtle"
               style={{ paddingBottom: "var(--sai-b)" }}
             >
-              {/* Drag-handle pill */}
-              <div className="flex justify-center pb-1 pt-2.5">
-                <div className="h-1 w-10 rounded-full bg-white/[0.12]" />
+              <div className="flex justify-center pb-1 pt-3">
+                <div className="h-1 w-10 rounded-full bg-subtle" />
               </div>
-              <div className="flex h-9 shrink-0 items-center justify-between px-4">
+              <div className="flex h-9 shrink-0 items-center justify-between border-b border-subtle px-3">
                 <div className="flex items-center gap-2">
-                  <Bot className="h-3 w-3 text-indigo-300/60" />
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">
+                  <Bot className="h-3.5 w-3.5 text-accent" />
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">
                     {t("aiAssistant")}
                   </span>
                 </div>
@@ -312,116 +230,9 @@ export default function AppShell({
                   type="button"
                   onClick={() => setAiSheetOpen(false)}
                   aria-label={t("closeAI")}
-                  className="flex h-7 w-7 items-center justify-center rounded text-white/30 transition-colors hover:bg-white/[0.06] hover:text-white/60"
+                  className="flex h-7 w-7 items-center justify-center rounded text-muted transition-colors hover:bg-surface-2 hover:text-secondary"
                 >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-              <div className="min-h-0 flex-1 overflow-y-auto border-t border-white/[0.07]">
-                {aiPanel}
-              </div>
-            </div>
-          </>
-        )}
-
-      </div>
-    );
-  }
-
-  // ── Tablet layout ─────────────────────────────────────────────────────────
-  //
-  // NavRail pinned to icon-only (72 px).  Left pane fixed-width (no drag).
-  // AI panel collapses to a 28 px strip; the TopBar AI button opens a slide-in
-  // side panel overlay.
-
-  if (isTablet) {
-    const tabletLeftW = navSidebar ? TABLET_NAV_W : TABLET_WL_W;
-
-    return (
-      <div
-        className="flex h-[100dvh] flex-col overflow-hidden bg-zinc-950 text-white"
-        style={{ paddingTop: "var(--sai-t)", paddingBottom: "var(--sai-b)" }}
-      >
-
-        <TopBar
-          title={title}
-          onAiOpen={aiPanel ? () => setAiSheetOpen((v) => !v) : undefined}
-        />
-
-        <div className="flex min-h-0 flex-1 overflow-hidden">
-
-          {/* NavRail — icon-only, no toggle button on tablet */}
-          <NavRail
-            collapsed={true}
-            onToggle={() => {}}
-            items={globalNavItems}
-            hideToggle
-            logoUrl={logoUrl}
-          />
-
-          {/* Left pane — fixed width, no drag handle */}
-          <div
-            style={{ width: tabletLeftW }}
-            className="flex shrink-0 flex-col overflow-hidden border-r border-white/[0.07] bg-zinc-950"
-          >
-            <div className="flex h-9 shrink-0 items-center border-b border-white/[0.07] px-3">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
-                {workListTitle}
-              </span>
-            </div>
-            <div className={navSidebar ? "min-h-0 flex-1 overflow-y-auto" : "min-h-0 flex-1 overflow-y-auto"}>
-              {resolveWL(noop)}
-            </div>
-          </div>
-
-          {/* Detail / workspace */}
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-zinc-950">
-            {detailContent}
-          </div>
-
-          {/* AI toggle strip (collapsed icon; TopBar button also opens panel) */}
-          {aiPanel && (
-            <div
-              style={{ width: AI_COLLAPSED_W }}
-              className="flex shrink-0 flex-col items-center border-l border-white/[0.07] bg-zinc-950 pt-2"
-            >
-              <button
-                type="button"
-                title={t("openAIAssistant")}
-                aria-label={t("openAIAssistant")}
-                onClick={() => setAiSheetOpen((v) => !v)}
-                className="flex h-7 w-7 items-center justify-center rounded text-white/20 transition-colors hover:bg-white/[0.06] hover:text-indigo-300/70"
-              >
-                <Bot className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          )}
-
-        </div>
-
-        {/* AI side-panel overlay */}
-        {aiPanel && aiSheetOpen && (
-          <>
-            <div
-              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[1px]"
-              onClick={() => setAiSheetOpen(false)}
-              aria-hidden="true"
-            />
-            <div className="animate-slide-in-right fixed inset-y-0 right-0 z-50 flex w-80 flex-col overflow-hidden bg-zinc-900 shadow-2xl ring-1 ring-white/[0.08]">
-              <div className="flex h-9 shrink-0 items-center justify-between border-b border-white/[0.07] px-4">
-                <div className="flex items-center gap-2">
-                  <Bot className="h-3 w-3 text-indigo-300/60" />
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">
-                    {t("aiAssistant")}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setAiSheetOpen(false)}
-                  aria-label={t("closeAI")}
-                  className="flex h-7 w-7 items-center justify-center rounded text-white/30 transition-colors hover:bg-white/[0.06] hover:text-white/60"
-                >
-                  <X className="h-3.5 w-3.5" />
+                  <X className="h-4 w-4" />
                 </button>
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto">
@@ -430,29 +241,116 @@ export default function AppShell({
             </div>
           </>
         )}
+      </div>
+    );
+  }
 
+  // ── Tablet layout ─────────────────────────────────────────────────────────
+
+  if (isTablet) {
+    const tabletLeftW = navSidebar ? TABLET_NAV_W : TABLET_WL_W;
+
+    return (
+      <div
+        className="flex h-[100dvh] flex-col overflow-hidden bg-surface-0 text-primary"
+        style={{ paddingTop: "var(--sai-t)", paddingBottom: "var(--sai-b)" }}
+      >
+        <TopBar
+          title={title}
+          onAiOpen={aiPanel ? () => setAiSheetOpen((v) => !v) : undefined}
+        />
+
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          <NavRail
+            collapsed={true}
+            onToggle={() => {}}
+            items={globalNavItems}
+            hideToggle
+            logoUrl={logoUrl}
+          />
+
+          <div
+            style={{ width: tabletLeftW }}
+            className="flex shrink-0 flex-col overflow-hidden border-r border-subtle bg-surface-1"
+          >
+            <div className="flex h-9 shrink-0 items-center border-b border-subtle px-3">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted">
+                {workListTitle}
+              </span>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              {resolveWL(noop)}
+            </div>
+          </div>
+
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-surface-0">
+            {detailContent}
+          </div>
+
+          {aiPanel && (
+            <div
+              style={{ width: AI_COLLAPSED_W }}
+              className="flex shrink-0 flex-col items-center border-l border-subtle bg-surface-1 pt-2"
+            >
+              <button
+                type="button"
+                title={t("openAIAssistant")}
+                aria-label={t("openAIAssistant")}
+                onClick={() => setAiSheetOpen((v) => !v)}
+                className="flex h-7 w-7 items-center justify-center rounded text-muted transition-colors hover:bg-surface-2 hover:text-accent"
+              >
+                <Bot className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* AI side panel */}
+        {aiPanel && aiSheetOpen && (
+          <>
+            <div
+              className="fixed inset-0 z-40 overlay-backdrop-blur"
+              onClick={() => setAiSheetOpen(false)}
+              aria-hidden="true"
+            />
+            <div className="animate-slide-in-right fixed inset-y-0 right-0 z-50 flex w-80 flex-col overflow-hidden bg-surface-2 shadow-xl ring-1 ring-subtle">
+              <div className="flex h-9 shrink-0 items-center justify-between border-b border-subtle px-3">
+                <div className="flex items-center gap-2">
+                  <Bot className="h-3.5 w-3.5 text-accent" />
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+                    {t("aiAssistant")}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAiSheetOpen(false)}
+                  aria-label={t("closeAI")}
+                  className="flex h-7 w-7 items-center justify-center rounded text-muted transition-colors hover:bg-surface-2 hover:text-secondary"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                {aiPanel}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     );
   }
 
   // ── Desktop layout ────────────────────────────────────────────────────────
-  //
-  // Exact existing behaviour: NavRail + draggable left pane + workspace + AI rail.
-  // h-[100dvh] instead of h-screen for consistent behaviour across all breakpoints.
 
   return (
-    <div className="flex h-[100dvh] flex-col overflow-hidden bg-zinc-950 text-white">
-
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-surface-0 text-primary">
       <TopBar title={title} />
 
       <div className="flex flex-1 overflow-hidden">
-
-        {/* ── Global nav rail OR merged left column ─────────────────── */}
         {mergedNav ? (
-          /* Merged mode: NavRail + WorkList in one draggable column */
           <div
             style={{ width: workListWidth, minWidth: leftMin, maxWidth: leftMax, willChange: "width" }}
-            className="flex shrink-0 flex-col overflow-hidden border-r border-white/[0.07] bg-zinc-950"
+            className="flex shrink-0 flex-col overflow-hidden border-r border-subtle bg-surface-1"
           >
             <NavRail
               collapsed={false}
@@ -466,7 +364,6 @@ export default function AppShell({
           </div>
         ) : (
           <>
-            {/* ── Global nav rail ───────────────────────────────────── */}
             <NavRail
               collapsed={leftCollapsed}
               onToggle={() => setLeftCollapsed((v) => !v)}
@@ -474,85 +371,81 @@ export default function AppShell({
               logoUrl={logoUrl}
             />
 
-            {/* ── Left pane (worklist in queue mode; module nav in nav mode) ── */}
             <div
               style={{ width: workListWidth, minWidth: leftMin, maxWidth: leftMax, willChange: "width" }}
-              className="flex shrink-0 flex-col overflow-hidden border-r border-white/[0.07] bg-zinc-950"
+              className="flex shrink-0 flex-col overflow-hidden border-r border-subtle bg-surface-1"
             >
-              <div className="flex h-9 shrink-0 items-center border-b border-white/[0.07] px-3">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
+              <div className="flex h-9 shrink-0 items-center border-b border-subtle px-3">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted">
                   {workListTitle}
                 </span>
               </div>
-              <div className={navSidebar ? "min-h-0 flex-1 overflow-y-auto" : "min-h-0 flex-1 overflow-y-auto"}>
+              <div className="min-h-0 flex-1 overflow-y-auto">
                 {resolveWL(noop)}
               </div>
             </div>
           </>
         )}
 
-        {/* ── Resizer: worklist / detail ────────────────────────────── */}
+        {/* Resizer */}
         <div
           role="separator"
           aria-orientation="vertical"
-          className="group relative z-10 flex w-2 shrink-0 cursor-col-resize items-stretch"
+          className="group relative z-10 flex w-1.5 shrink-0 cursor-col-resize items-stretch"
           onMouseDown={(e) => startDrag("wl", e, workListWidth)}
         >
-          <div className="mx-auto w-px flex-1 bg-white/[0.07] transition-colors duration-100 group-hover:bg-indigo-500/60 group-active:bg-indigo-500/80" />
+          <div className="mx-auto w-px flex-1 bg-subtle transition-colors group-hover:bg-accent group-active:bg-accent-hover" />
         </div>
 
-        {/* ── Detail / workspace pane ───────────────────────────────── */}
+        {/* Detail */}
         <div
           style={{ minWidth: detailMinW }}
-          className="flex flex-1 flex-col overflow-hidden bg-zinc-950"
+          className="flex flex-1 flex-col overflow-hidden bg-surface-0"
         >
           {detailContent}
         </div>
 
-        {/* ── Resizer: detail / AI rail ─────────────────────────────── */}
+        {/* AI resizer */}
         {aiPanel && !rightCollapsed && (
           <div
             role="separator"
             aria-orientation="vertical"
-            className="group relative z-10 flex w-2 shrink-0 cursor-col-resize items-stretch"
+            className="group relative z-10 flex w-1.5 shrink-0 cursor-col-resize items-stretch"
             onMouseDown={(e) => startDrag("ai", e, aiWidth)}
           >
-            <div className="mx-auto w-px flex-1 bg-white/[0.07] transition-colors duration-100 group-hover:bg-indigo-500/60 group-active:bg-indigo-500/80" />
+            <div className="mx-auto w-px flex-1 bg-subtle transition-colors group-hover:bg-accent group-active:bg-accent-hover" />
           </div>
         )}
 
-        {/* ── AI copilot rail ───────────────────────────────────────── */}
+        {/* AI rail */}
         {aiPanel && (
           rightCollapsed ? (
-            /* Collapsed strip */
             <div
               style={{ width: AI_COLLAPSED_W }}
-              className="flex shrink-0 flex-col items-center border-l border-white/[0.07] bg-zinc-950 pt-2"
+              className="flex shrink-0 flex-col items-center border-l border-subtle bg-surface-1 pt-2"
             >
               <button
                 type="button"
                 title="Expand AI panel"
                 onClick={() => setRightCollapsed(false)}
-                className="flex h-6 w-6 items-center justify-center rounded text-white/25 transition-colors hover:bg-white/[0.06] hover:text-white/50"
+                className="flex h-7 w-7 items-center justify-center rounded text-muted transition-colors hover:bg-surface-2 hover:text-secondary"
               >
-                <ChevronLeft className="h-3.5 w-3.5" />
+                <ChevronLeft className="h-4 w-4" />
               </button>
             </div>
           ) : (
-            /* Expanded rail */
             <div
               style={{ width: aiWidth, minWidth: AI_MIN, maxWidth: AI_MAX, willChange: "width" }}
-              className="relative flex shrink-0 flex-col overflow-hidden border-l border-white/[0.07] bg-zinc-950"
+              className="relative flex shrink-0 flex-col overflow-hidden border-l border-subtle bg-surface-1"
             >
-              {/* Collapse toggle */}
               <div className="absolute right-1.5 top-1.5 z-20">
                 <button
                   type="button"
                   title="Collapse AI panel"
                   onClick={() => setRightCollapsed(true)}
-                  className="flex h-5 w-5 items-center justify-center rounded text-white/20 transition-colors hover:bg-white/[0.06] hover:text-white/40"
+                  className="flex h-6 w-6 items-center justify-center rounded text-muted transition-colors hover:bg-surface-2 hover:text-secondary"
                 >
-                  <ChevronRight className="h-3 w-3" />
+                  <ChevronRight className="h-3.5 w-3.5" />
                 </button>
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto">
@@ -561,9 +454,7 @@ export default function AppShell({
             </div>
           )
         )}
-
       </div>
     </div>
   );
 }
-

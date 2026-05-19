@@ -28,9 +28,11 @@ Response shape
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from packages.core.platform.module_gate import require_module
+from apps.api.auth import require_admin, require_same_company, get_current_user
 from apps.api.deps import get_db
 from packages.core.platform.models_export_config import ExportConfig
 from packages.modules.expenses.models.expense import Expense
@@ -40,7 +42,7 @@ from packages.modules.accounting.service.export_config_service import (
     render_folder,
 )
 
-router = APIRouter(prefix="/accounting/export", tags=["accounting-export"])
+router = APIRouter(prefix="/accounting/export", dependencies=[Depends(require_admin), Depends(require_module("accounting"))], tags=["accounting-export"])
 
 # Default config values used when no ExportConfig row exists for the company.
 _DEFAULT_FILE_PATTERN   = "{company}_{date}_{batch_id}.csv"
@@ -83,15 +85,15 @@ def export_accounting_events(
     company_id: int,
     db: Session = Depends(get_db),
 ):
-    """Generate accounting events for all submitted expenses of *company_id*
+    """Generate accounting events for all approved expenses of *company_id*
     and return the export payload with rendered filename/folder.
     """
-    # ── Load submitted expenses ───────────────────────────────────────────────
+    # ── Load approved expenses ───────────────────────────────────────────────
     expenses: list[Expense] = (
         db.query(Expense)
         .filter(
             Expense.company_id == company_id,
-            Expense.status == "submitted",
+            Expense.status == "approved",
         )
         .order_by(Expense.id)
         .all()
@@ -100,7 +102,7 @@ def export_accounting_events(
     if not expenses:
         raise HTTPException(
             status_code=404,
-            detail=f"No submitted expenses found for company {company_id}.",
+            detail=f"No approved expenses found for company {company_id}.",
         )
 
     # ── Generate events ───────────────────────────────────────────────────────

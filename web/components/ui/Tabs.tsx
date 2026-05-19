@@ -37,7 +37,7 @@ export function TabList({ children }: { children: ReactNode }) {
   return (
     <div
       role="tablist"
-      className="flex gap-1 border-b border-white/[0.06] px-1"
+      className="flex gap-1 border-b border-subtle px-1"
     >
       {children}
     </div>
@@ -52,13 +52,16 @@ export function Tab({ value, children }: { value: string; children: ReactNode })
     <button
       role="tab"
       aria-selected={active}
+      aria-controls={`panel-${value}`}
+      id={`tab-${value}`}
+      tabIndex={active ? 0 : -1}
       onClick={() => ctx.onChange(value)}
       className={cn(
         "px-3 h-8 text-[11px] font-medium uppercase tracking-widest",
         "border-b-2 -mb-px transition-colors",
         active
-          ? "border-indigo-400/70 text-white/85"
-          : "border-transparent text-white/45 hover:text-white/70",
+          ? "bg-accent-muted/70 text-primary"
+          : "border-transparent text-tertiary hover:text-secondary",
       )}
     >
       {children}
@@ -84,5 +87,5 @@ export function TabPanel({
   value: string;
   children: ReactNode;
 }) {
-  return <div role="tabpanel">{children}</div>;
+  return <div role="tabpanel" id={`panel-${_value}`} aria-labelledby={`tab-${_value}`}>{children}</div>;
 }

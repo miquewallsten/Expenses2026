@@ -1,3 +1,4 @@
+import json
 from sqlalchemy.orm import Session
 
 from packages.core.platform.models_accounting_setup import AccountingSetup
@@ -40,7 +41,7 @@ def get_or_create_accounting_setup(db: Session, company_id: int) -> AccountingSe
     return setup
 
 
-def upsert_accounting_setup(db: Session, company_id: int, payload) -> AccountingSetup:
+def upsert_accounting_setup(db: Session, company_id: int, payload, configured_by_role: str = "admin") -> AccountingSetup:
     setup = get_accounting_setup(db, company_id)
 
     if not setup:
@@ -48,8 +49,24 @@ def upsert_accounting_setup(db: Session, company_id: int, payload) -> Accounting
         db.add(setup)
 
     data = payload.model_dump(exclude_unset=True)
+    
+    # Track which fields were configured by whom
+    configured_by = {}
+    if setup.configured_by:
+        import json
+        try:
+            configured_by = json.loads(setup.configured_by) if isinstance(setup.configured_by, str) else setup.configured_by
+        except:
+            configured_by = {}
+    
     for field, value in data.items():
         setattr(setup, field, value)
+        configured_by[field] = configured_by_role
+    
+    setup.configured_by = json.dumps(configured_by)
+    setup.last_configured_by = configured_by_role
+    from datetime import datetime
+    setup.last_configured_at = datetime.utcnow()
 
     db.commit()
     db.refresh(setup)

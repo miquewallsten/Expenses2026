@@ -10,12 +10,16 @@ conftest anymore — import this module instead.
 
 # Core platform
 from packages.core.platform.models import Company  # noqa: F401
+from packages.core.platform.models_platform import (  # noqa: F401
+    PlatformTenant, PlatformLLMProvider, PlatformAgentDefinition, PlatformUsageLog,
+)
 from packages.core.platform.models_user import User, MagicLinkToken  # noqa: F401
 from packages.core.platform.models_user_notification_pref import (  # noqa: F401
     UserNotificationPreference,
 )
 from packages.core.platform.models_idempotency import IdempotencyRecord  # noqa: F401
 from packages.core.platform.models_audit import AuditLog  # noqa: F401
+from packages.core.platform.models_audit_event import AuditEvent  # noqa: F401
 from packages.core.platform.models_module import PlatformModule  # noqa: F401
 from packages.core.platform.models_company_module import CompanyModule  # noqa: F401
 from packages.core.platform.models_project import Project  # noqa: F401
@@ -48,10 +52,14 @@ from packages.core.platform.models_purchase_request import PurchaseRequest  # no
 from packages.core.platform.models_request_attachment import RequestAttachment  # noqa: F401
 from packages.core.platform.models_report_cycle import ReportCycleSettings  # noqa: F401
 from packages.core.platform.models_auth_settings import CompanyAuthSettings  # noqa: F401
+from packages.core.platform.models_channels import CompanyChannelConfig  # noqa: F401
 from packages.core.platform.models_storage_config import StorageConfig  # noqa: F401
+from packages.core.platform.models_storage_usage import StorageUsage  # noqa: F401
+from packages.core.platform.models_export_job import ExportJob  # noqa: F401
 from packages.core.platform.models_time_tracking import (  # noqa: F401
     TimeProject, TimeActivity, TimeAssignment, TimeEntry,
 )
+from packages.core.platform.models_platform_settings import PlatformSettings  # noqa: F401
 
 # Config engine
 from packages.core.config_engine.models import (  # noqa: F401
@@ -105,3 +113,28 @@ from packages.modules.integrations.models import (  # noqa: F401
 from packages.modules.integrations.models_public_api import (  # noqa: F401
     PlatformApiKey, WebhookSubscription, WebhookDelivery,
 )
+
+# Agent knowledge chunks (vector RAG)
+from packages.modules.agent.models_knowledge_chunk import KnowledgeChunk  # noqa: F401
+
+# Agent definitions and LLM config
+from packages.modules.agent.models_definitions import (  # noqa: F401
+    AgentDefinition, ChannelAgentConfig, LLMProviderConfig,
+)
+
+# Tenant-scoped agent models
+from packages.modules.agent.models_tenant import (  # noqa: F401
+    TenantAgentSession, TenantAgentMemory, TenantWorkflowProgress,
+)
+
+# User preferences (UI layout, nav customization, etc.)
+from packages.core.platform.models_user_preferences import UserPreferences  # noqa: F401
+
+
+# Subcontractor models — registered for table creation
+from packages.modules.subcontractor.models.subcontractor_invoice import (  # noqa: F401
+    SubcontractorInvoiceReport, SubcontractorInvoice,
+)
+# Time tracking salary config
+from packages.modules.time_tracking.models_salary import UserSalaryConfig  # noqa: F401
+

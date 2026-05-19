@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from apps.api.auth import get_current_user
 from apps.api.deps import get_db
+from packages.core.platform.models_user import User
 from packages.modules.expenses.models.document import ExpenseDocument
 from packages.modules.expenses.service.cfdi_pairing_service import (
     find_best_xml_match_for_pdf,
@@ -10,13 +12,14 @@ from packages.modules.expenses.service.document_matching_service import (
     find_best_pdf_match_for_xml,
 )
 
-router = APIRouter(prefix="/expenses/cfdi-pairing", tags=["cfdi-pairing"])
+router = APIRouter(prefix="/expenses/cfdi-pairing", tags=["cfdi-pairing"], dependencies=[Depends(get_current_user)])
 
 
 @router.get("/pdf/{document_id}")
 def get_best_xml_for_pdf(
     document_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
     """Find the best-matching CFDI XML document for a given PDF.
 
@@ -94,6 +97,7 @@ def get_best_xml_for_pdf(
 def get_best_pdf_for_xml(
     document_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
     """Find the best-matching PDF document for a given CFDI XML.
 

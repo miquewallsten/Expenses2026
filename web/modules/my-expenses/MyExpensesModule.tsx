@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * MyExpensesModule — workspace component for the "My Expenses" module.
+ * MyExpensesModule - workspace component for the "My Expenses" module.
  *
  * Renders a two-panel layout (list + upload  |  policy strip + detail)
  * that fills the full detail column provided by AppShell (detailFlush mode).
@@ -10,19 +10,20 @@
  * assumptions leak in.  The selection is kept in local state and broadcast
  * to context so MyWorkAssistant can react to it.
  *
- * Canonical expense draft state — including linked documents, parsed XML
- * data, and SAT validation status — is owned here.  EmployeeExpenseDetail
+ * Canonical expense draft state - including linked documents, parsed XML
+ * data, and SAT validation status - is owned here.  EmployeeExpenseDetail
  * receives it as props and fires onDocRefreshNeeded to trigger a reload.
  */
 
 import { useCallback, useMemo, useRef, useState, useEffect } from "react";
+import { Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useLayoutMode } from "@/hooks/useLayoutMode";
 import EmployeeExpenseList from "@/components/employee/EmployeeExpenseList";
 import EmployeeExpenseDetail from "@/components/employee/EmployeeExpenseDetail";
 import { useMyWorkContext } from "@/context/MyWorkContext";
 import { useUserContext } from "@/context/UserContext";
-import { getAuthHeaders } from "@/lib/session";
+import { apiCall, apiPost } from "@/lib/api/client";
 import { enqueueUpload } from "@/lib/offline/uploadQueue";
 import { compressImageFile } from "@/lib/imageCompress";
 import { MODULE_IDS, deriveExpenseDecision } from "@/lib/my-work/expenseDecision";
@@ -32,8 +33,6 @@ import {
   parseXmlExtracted,
   SUBMISSION_TYPES,
 } from "@/lib/expenses/xmlExtract";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -50,7 +49,7 @@ interface Expense {
 }
 
 /**
- * Canonical expense draft state — the single source of truth for the
+ * Canonical expense draft state - the single source of truth for the
  * selected expense, its linked documents, and all derived XML / SAT data.
  * Owned by MyExpensesModule; passed down to EmployeeExpenseDetail as props.
  */
@@ -72,7 +71,8 @@ interface ExpenseDraftState {
 
 export default function MyExpensesModule() {
   const { effectiveConfig, setSelectedItem, clearSelectedItem } = useMyWorkContext();
-  const { userIdStr, companyId } = useUserContext();
+  const user = useUserContext();
+  const { userIdStr, companyId } = user;
   const te = useTranslations("employee");
   const tc = useTranslations("common");
 
@@ -145,9 +145,7 @@ export default function MyExpensesModule() {
   // for doc completeness / parsed XML) and re-broadcasts to context so
   // the Copilot assistant and deriveExpenseDecision see the full picture.
   const loadDraftDocs = useCallback(async (expenseId: number) => {
-    const headers = { ...getAuthHeaders() };
-
-    // Mark loading — seed a stub if this is a new selection.
+    // Mark loading - seed a stub if this is a new selection.
     setDraftState((prev) =>
       prev?.expenseId === expenseId
         ? { ...prev, loadingDocs: true }
@@ -167,41 +165,31 @@ export default function MyExpensesModule() {
     );
 
     try {
-      const [docsRes, expRes] = await Promise.all([
-        fetch(`${API}/expenses/documents/by-expense/${expenseId}`, { headers }),
-        fetch(`${API}/expenses/${expenseId}`, { headers }),
+      const [docs, expense] = await Promise.all([
+        apiCall<ExpenseDocument[]>(`/expenses/documents/by-expense/${expenseId}`).catch(() => [] as ExpenseDocument[]),
+        apiCall<Expense | null>(`/expenses/${expenseId}`).catch(() => null),
       ]);
-
-      const docs: ExpenseDocument[] = docsRes.ok ? await docsRes.json() : [];
-      const expense: Expense | null  = expRes.ok  ? await expRes.json()  : null;
 
       let parsedXml: ExtractedData | null = null;
       let satStatus: "valid" | "warning" | "error" | null = null;
 
       const xmlDoc = docs.find((d) => d.document_type === "cfdi_xml");
       if (xmlDoc) {
-        const [docRes, valRes] = await Promise.all([
-          fetch(`${API}/expenses/documents/${xmlDoc.id}`, { headers }),
-          fetch(`${API}/expenses/documents/${xmlDoc.id}/validation-results`, { headers }),
+        const [docData, vals] = await Promise.all([
+          apiCall<{ content_text?: string } | null>(`/expenses/documents/${xmlDoc.id}`).catch(() => null),
+          apiCall<Array<{ rule_code: string; status: string }>>(`/expenses/documents/${xmlDoc.id}/validation-results`).catch(() => []),
         ]);
-        if (docRes.ok) {
-          const docData = await docRes.json();
-          if (typeof docData.content_text === "string") {
-            parsedXml = parseXmlExtracted(docData.content_text) ?? null;
-          }
+        if (docData && typeof docData.content_text === "string") {
+          parsedXml = parseXmlExtracted(docData.content_text) ?? null;
         }
         // Trigger re-validation so stored results reflect live SAT SOAP.
-        fetch(`${API}/expenses/documents/${xmlDoc.id}/validate`, { method: "POST", headers }).catch(() => {});
-        if (valRes.ok) {
-          const vals: Array<{ rule_code: string; status: string }> = await valRes.json();
-          // Only SAT_VALIDATION drives satStatus — other rules (e.g. MISSING_PDF) are separate concerns.
-          const satRule = vals.find((v) => v.rule_code === "SAT_VALIDATION");
-          if (satRule) {
-            satStatus = satRule.status === "failed" ? "error" : satRule.status === "warning" ? "warning" : "valid";
-          } else {
-            // No stored SAT result yet — default to valid if XML parsed OK.
-            satStatus = parsedXml ? "valid" : null;
-          }
+        apiPost(`/expenses/documents/${xmlDoc.id}/validate`).catch(() => {});
+        const satRule = vals.find((v) => v.rule_code === "SAT_VALIDATION");
+        if (satRule) {
+          satStatus = satRule.status === "failed" ? "error" : satRule.status === "warning" ? "warning" : "valid";
+        } else {
+          // No stored SAT result yet - default to valid if XML parsed OK.
+          satStatus = parsedXml ? "valid" : null;
         }
       }
 
@@ -286,10 +274,9 @@ export default function MyExpensesModule() {
 
   const loadExpenses = useCallback((selectNewest = false, preferExpenseId?: number) => {
     setLoading(true);
-    fetch(`${API}/expenses/`, { headers: { ...getAuthHeaders() } })
-      .then((r) => r.json())
-      .then((data: Expense[]) => {
-        setExpenses(data);
+    apiCall<Expense[]>("/expenses/")
+      .then((data) => {
+        setExpenses(Array.isArray(data) ? data : []);
         if (preferExpenseId != null) {
           const target = data.find((e) => e.id === preferExpenseId);
           if (target) { selectExpense(target); return; }
@@ -306,7 +293,7 @@ export default function MyExpensesModule() {
           selectExpense(null);
         }
       })
-      .catch(() => {})
+      .catch(() => { setExpenses([]); })
       .finally(() => setLoading(false));
   }, [userIdStr, selectExpense]);
 
@@ -342,17 +329,10 @@ export default function MyExpensesModule() {
         const form = new FormData();
         form.append("company_id", String(cid));
         form.append("file", file, file.name);
-        const res = await fetch(`${API}/expenses/documents/upload`, {
-          method:  "POST",
-          headers: { ...getAuthHeaders() }, // NOTE: no Content-Type — fetch sets the boundary
-          body:    form,
+        const j = await apiCall<{ expense_id: number; document_type: string | null }>("/expenses/documents/upload", {
+          method: "POST",
+          body: form,
         });
-        if (!res.ok) {
-          const msg = await res.text().catch(() => res.statusText);
-          failures.push(`${file.name}: ${msg || res.status}`);
-          continue;
-        }
-        const j = await res.json();
         if (j) docs.push(j);
       } catch (e) {
         // Network failure (offline / DNS / CORS preflight refused). Stash
@@ -369,7 +349,8 @@ export default function MyExpensesModule() {
             // fall through to failure list below
           }
         }
-        failures.push(`${file.name}: ${e instanceof Error ? e.message : String(e)}`);
+        const err = e as { message?: string };
+        failures.push(`${file.name}: ${err?.message || String(e)}`);
       }
     }
     if (queued > 0) {
@@ -427,27 +408,19 @@ export default function MyExpensesModule() {
     setSimpleSubmitting(true);
     setSimpleError(null);
     try {
-      const res = await fetch(`${API}/expenses/`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body:    JSON.stringify({
-          company_id:   cid,
-          amount:       parseFloat(simpleAmount),
-          description:  simpleDesc.trim(),
-        }),
+      const created = await apiPost<Expense>("/expenses/", {
+        company_id:   cid,
+        amount:       parseFloat(simpleAmount),
+        description:  simpleDesc.trim(),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error((err as { detail?: string }).detail ?? "Failed to create expense");
-      }
-      const created: Expense = await res.json();
       setShowSimpleForm(false);
       setSimpleDesc("");
       setSimpleAmount("");
       setSimpleDate(new Date().toISOString().substring(0, 10));
       loadExpenses(false, created.id);
     } catch (e) {
-      setSimpleError(e instanceof Error ? e.message : "Unknown error");
+      const err = e as { body?: { detail?: string }; message?: string };
+      setSimpleError(err?.body?.detail ?? err?.message ?? "Unknown error");
     } finally {
       setSimpleSubmitting(false);
     }
@@ -455,22 +428,40 @@ export default function MyExpensesModule() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
-  return (
-    <div className="flex h-full overflow-hidden">
+  const isDelegate = user.capabilities.delegates_for_user_id !== null;
+  const delegateName = user.capabilities.delegates_for_user_name;
 
-      {/* ── List pane — hidden on mobile when detail is showing ──────────── */}
+  return (
+    <div className="flex h-full flex-col overflow-hidden">
+      {isDelegate && (
+        <div className="flex items-center justify-between border-b border-warning/10 bg-warning/5 px-4 py-2">
+          <div className="flex items-center gap-2">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-warning/20 text-warning">
+              <Users className="h-3 w-3" />
+            </span>
+            <p className="text-[11px] font-medium text-secondary">
+              Actuando como <span className="font-bold text-primary">{delegateName}</span>
+            </p>
+          </div>
+          <span className="text-[10px] uppercase tracking-widest text-muted">Secretaría Ejecutiva</span>
+        </div>
+      )}
+
+      <div className="flex flex-1 overflow-hidden">
+
+      {/* ── List pane - hidden on mobile when detail is showing ──────────── */}
       <div
         className={[
           moduleIsNarrow && activeMobilePane === "detail" ? "hidden" : "flex",
-          isMobile ? "w-full border-b" : "w-72 border-r",
-          "shrink-0 flex-col overflow-hidden border-white/[0.07]",
+          isMobile ? "w-full border-b" : "w-80 border-r",
+          "shrink-0 flex-col overflow-hidden border-default",
         ].join(" ")}
       >
-        {/* Upload zone — tap-friendly on mobile */}
+        {/* Upload zone - tap-friendly on mobile */}
         {showSimpleForm ? (
           /* ── Simple-expense inline form ────────────────────────────────── */
-          <div className="mx-3 mt-2 mb-1 shrink-0 rounded border border-white/[0.09] bg-white/[0.02] px-3 py-2.5">
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-white/40">{te("quickExpenseTitle")}</p>
+          <div className="mx-3 mt-2 mb-1 shrink-0 rounded border border-default bg-surface-1 px-3 py-2.5">
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-tertiary">{te("quickExpenseTitle")}</p>
             <div className="flex flex-col gap-2">
               <input
                 autoFocus
@@ -478,7 +469,7 @@ export default function MyExpensesModule() {
                 placeholder={te("descriptionPlaceholder")}
                 value={simpleDesc}
                 onChange={(e) => setSimpleDesc(e.target.value)}
-                className="w-full rounded border border-white/[0.08] bg-transparent px-2.5 py-1.5 text-xs text-white/80 placeholder-white/20 outline-none focus:border-white/[0.18]"
+                className="w-full rounded border border-default bg-transparent px-2.5 py-1.5 text-xs text-secondary placeholder-white/20 outline-none focus:border-strong"
               />
               <div className="flex gap-2">
                 <input
@@ -488,27 +479,27 @@ export default function MyExpensesModule() {
                   onChange={(e) => setSimpleAmount(e.target.value)}
                   min="0"
                   step="0.01"
-                  className="w-28 rounded border border-white/[0.08] bg-transparent px-2.5 py-1.5 text-xs text-white/80 placeholder-white/20 outline-none focus:border-white/[0.18]"
+                  className="w-28 rounded border border-default bg-transparent px-2.5 py-1.5 text-xs text-secondary placeholder-white/20 outline-none focus:border-strong"
                 />
                 <input
                   type="date"
                   value={simpleDate}
                   onChange={(e) => setSimpleDate(e.target.value)}
-                  className="flex-1 rounded border border-white/[0.08] bg-transparent px-2.5 py-1.5 text-xs text-white/80 outline-none focus:border-white/[0.18]"
+                  className="flex-1 rounded border border-default bg-transparent px-2.5 py-1.5 text-xs text-secondary outline-none focus:border-strong"
                 />
               </div>
-              {simpleError && <p className="text-[10px] text-red-400">{simpleError}</p>}
+              {simpleError && <p className="text-[10px] text-error">{simpleError}</p>}
               <div className="flex gap-2">
                 <button
                   onClick={handleCreateSimple}
                   disabled={simpleSubmitting || !simpleDesc.trim() || !simpleAmount}
-                  className="flex-1 rounded bg-indigo-600 py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex-1 rounded bg-indigo-600 py-1.5 text-[11px] font-semibold text-primary transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {simpleSubmitting ? te("creating") : te("create")}
                 </button>
                 <button
                   onClick={() => { setShowSimpleForm(false); setSimpleError(null); }}
-                  className="rounded border border-white/[0.1] px-3 py-1.5 text-[11px] text-white/50 transition-colors hover:text-white/70"
+                  className="rounded border border-default px-3 py-1.5 text-[11px] text-secondary transition-colors hover:text-secondary"
                 >
                   {tc("cancel")}
                 </button>
@@ -529,13 +520,13 @@ export default function MyExpensesModule() {
               "mx-3 mt-2 mb-1 shrink-0 rounded border-2 border-dashed px-4 text-center transition-colors",
               isMobile ? "py-4" : "py-2.5",
               uploading
-                ? "cursor-not-allowed border-indigo-500/30 bg-indigo-500/[0.04]"
+                ? "cursor-not-allowed bg-accent-muted bg-accent-muted"
                 : dragOver
                 ? "cursor-copy border-indigo-500/50 bg-indigo-500/[0.07]"
-                : "cursor-pointer border-white/[0.09] bg-white/[0.02] hover:border-white/[0.15]",
+                : "cursor-pointer border-default bg-surface-1 hover:border-default",
             ].join(" ")}
           >
-            <p className={isMobile ? "text-xs text-white/30" : "text-[10px] text-white/30"}>
+            <p className={isMobile ? "text-xs text-muted" : "text-[10px] text-muted"}>
               {uploading
                 ? (uploadProgress
                     ? tc("uploadingProgress", { current: uploadProgress.current, total: uploadProgress.total, name: uploadProgress.name })
@@ -545,7 +536,7 @@ export default function MyExpensesModule() {
                 : te("dragDropUpload")}
             </p>
             {uploading && uploadProgress && (
-              <div className="mt-1.5 h-0.5 w-full overflow-hidden rounded bg-white/[0.06]">
+              <div className="mt-1.5 h-0.5 w-full overflow-hidden rounded bg-surface-2">
                 <div
                   className="h-full bg-indigo-500/70 transition-all duration-200"
                   style={{ width: `${Math.round((uploadProgress.current / Math.max(1, uploadProgress.total)) * 100)}%` }}
@@ -556,11 +547,11 @@ export default function MyExpensesModule() {
         )}
 
         {policyHint && (
-          <p className="mx-3 mb-1.5 text-[9px] leading-snug text-white/22">{policyHint}</p>
+          <p className="mx-3 mb-1.5 text-[9px] leading-snug text-muted">{policyHint}</p>
         )}
 
         {uploadError && (
-          <p className="mx-3 mb-1.5 shrink-0 rounded border border-red-500/25 bg-red-500/[0.06] px-2 py-1 text-[10px] leading-snug text-red-300/80">
+          <p className="mx-3 mb-1.5 shrink-0 rounded border border-red-500/25 bg-red-500/[0.06] px-2 py-1 text-[10px] leading-snug text-error/80">
             {uploadError}
           </p>
         )}
@@ -598,7 +589,7 @@ export default function MyExpensesModule() {
         />
       </div>
 
-      {/* ── Detail pane — hidden on mobile when list is showing ──────────── */}
+      {/* ── Detail pane - hidden on mobile when list is showing ──────────── */}
       <div className={`${activeMobilePane === "list" ? "hidden" : "flex"} min-w-0 flex-1 flex-col overflow-hidden`}>
 
         <EmployeeExpenseDetail
@@ -640,6 +631,7 @@ export default function MyExpensesModule() {
         />
       </div>
 
+      </div>
     </div>
   );
 }

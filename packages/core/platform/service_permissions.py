@@ -13,7 +13,7 @@ and process-local; admins editing roles in the future can reset it via
 Role keys for the implicit, code-defined "built-in" roles match the values
 already written to ``users.role``:
 
-    admin, manager, accountant, employee, disabled
+    admin, manager, accounting, employee, executive, secretary
 
 Custom roles can still be created via the existing /admin/roles/* endpoints
 and will resolve through the same path as long as they have at least one
@@ -37,6 +37,8 @@ from packages.core.platform.models_user import User
 # Action keys used across the codebase. Stable identifiers — never rename
 # without a migration that updates Permission.key in place.
 PERMISSION_CATALOG: dict[str, str] = {
+    # portal
+    "admin": "Access Administration module (partial admin access)",
     # expenses
     "expense:create": "Create expenses",
     "expense:read:own": "Read own expenses",
@@ -52,6 +54,10 @@ PERMISSION_CATALOG: dict[str, str] = {
     "expense:bulk_transition": "Approve/reject in bulk",
     "expense:export": "Export expenses to CSV/poliza/CFDI",
     "expense:override_policy": "Override blocking policy violations",
+    # expense — additional scoped actions (used by has_permission in routers)
+    "expense:create:any": "Create expenses on behalf of any user (delegation)",
+    "expense:read:company": "Read all expenses in the company (broad read access)",
+    "reports:build": "Build and manage expense reports",
     # documents
     "document:upload": "Upload receipt/CFDI documents",
     "document:read:own": "Read own documents",
@@ -90,13 +96,18 @@ PERMISSION_CATALOG: dict[str, str] = {
     "admin:audit:read": "Read audit log",
     "admin:onboarding:write": "Edit onboarding step / company setup",
     "admin:setup:write": "Run admin setup workflows",
+    # purchase requests
+    "purchase_request:read:any": "Read any purchase request in company",
+    "purchase_request:create:any": "Create purchase requests on behalf of any user",
     # analytics
     "analytics:view": "View finance analytics dashboard",
     "analytics:export": "Export analytics data",
+    # time tracking
+    "time_tracking:submit": "Submit time tracking entries",
     # agent / copilot
     "agent:chat:employee": "Use employee copilot persona",
     "agent:chat:admin": "Use admin copilot persona",
-    "agent:chat:finance_manager": "Use finance_manager copilot persona",
+    "agent:chat:accounting": "Use accounting copilot persona",
     "agent:tools:rbac": "Run agent rbac tools",
     "agent:tools:config": "Run agent config tools",
     "agent:tools:settings": "Run agent settings tools",
@@ -132,8 +143,10 @@ _BUILTIN_ROLE_DEFAULTS: dict[str, set[str]] = {
         "document:read:any",
         "agent:chat:employee",
         "analytics:view",
+        "reports:build",
+        "purchase_request:read:any",
     },
-    "accountant": {
+    "accounting": {
         "expense:read:any",
         "expense:approve:accounting",
         "expense:reject",
@@ -147,12 +160,15 @@ _BUILTIN_ROLE_DEFAULTS: dict[str, set[str]] = {
         "accounting:configure",
         "amex:reconcile",
         "amex:upload_statement",
-        "agent:chat:employee",
-        "agent:chat:finance_manager",
+        "agent:chat:accounting",
         "agent:tools:finance_copilot",
         "analytics:view",
         "analytics:export",
         "admin:audit:read",
+        "admin:company:read",
+        "admin:users:read",
+        "reports:build",
+        "purchase_request:read:any",
     },
     "employee": {
         "expense:create",
@@ -162,8 +178,41 @@ _BUILTIN_ROLE_DEFAULTS: dict[str, set[str]] = {
         "expense:submit",
         "document:upload",
         "document:read:own",
+        "time_tracking:submit",
         "agent:chat:employee",
     },
+    "executive": {
+        # Executive inherits all employee permissions plus approval and analytics
+        "expense:create",
+        "expense:read:own",
+        "expense:read:any",
+        "expense:update:own",
+        "expense:delete:own",
+        "expense:submit",
+        "expense:approve:manager",
+        "expense:reject",
+        "expense:bulk_transition",
+        "document:upload",
+        "document:read:own",
+        "document:read:any",
+        "agent:chat:employee",
+        "analytics:view",
+        "analytics:export",
+    },
+    "secretary": {
+        # Secretary acts on behalf of another user (delegates_for_user_id)
+        # Base permissions for creating/managing delegated expenses
+        "expense:create",
+        "expense:read:own",
+        "expense:update:own",
+        "expense:delete:own",
+        "expense:submit",
+        "document:upload",
+        "document:read:own",
+        "agent:chat:employee",
+        "purchase_request:create:any",
+    },
+    "super_admin": set(PERMISSION_CATALOG.keys()),  # implicitly holds all permissions
     "disabled": set(),  # explicitly empty
 }
 
@@ -237,6 +286,7 @@ def has_permission(
 
     Anonymous (None) users have no permissions. Disabled users have no
     permissions even if their built-in role would normally grant them.
+    Super admins implicitly pass all permission checks.
     Unknown action keys raise — this is a programmer-error guard so a typo'd
     key can never accidentally allow access by silently returning False or
     True somewhere downstream.
@@ -245,14 +295,19 @@ def has_permission(
         raise ValueError(f"Unknown permission key: {action_key!r}")
     if user is None or not user.role or user.role == "disabled":
         return False
+    if getattr(user, "is_super_admin", False):
+        return True
     perms = _resolve_role_permissions(db, user.company_id, user.role)
     return action_key in perms
 
 
 def list_permissions(db: Session, user: User | None) -> list[str]:
-    """Return the sorted list of permission keys ``user`` holds."""
+    """Return the sorted list of permission keys ``user`` holds.
+    Super admins receive the full catalog."""
     if user is None or not user.role or user.role == "disabled":
         return []
+    if getattr(user, "is_super_admin", False):
+        return sorted(PERMISSION_CATALOG.keys())
     perms = _resolve_role_permissions(db, user.company_id, user.role)
     return sorted(perms)
 

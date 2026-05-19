@@ -18,6 +18,9 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
+import { apiCall, apiPost, apiDelete } from "@/lib/api/client";
+import { STATUS_TONE_STYLES } from "@/lib/status-styles";
+import { useTranslations } from "next-intl";
 import { useUserContext } from "@/context/UserContext";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -62,16 +65,13 @@ interface WeekView {
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+// DAY_LABELS replaced by t("dayMon") etc.
 
-const STATUS_CONFIG: Record<string, { cls: string; label: string }> = {
-  draft:     { cls: "text-white/30",          label: "Draft" },
-  submitted: { cls: "text-blue-300/70",        label: "Submitted" },
-  approved:  { cls: "text-emerald-300/70",     label: "Approved" },
-  rejected:  { cls: "text-red-300/70",         label: "Rejected" },
-  partial:   { cls: "text-amber-300/70",       label: "Partial" },
-  empty:     { cls: "text-white/20",           label: "Empty" },
-};
+// Status labels are now i18n-driven via useTranslations("timeTracking")
+function statusToneCls(s: string): string {
+  const tone = STATUS_TONE_STYLES[s === "draft" || s === "empty" ? "muted" : s === "submitted" ? "info" : s === "partial" ? "warning" : s];
+  return tone ? `${tone.bg} ${tone.text}` : "bg-surface-2 text-muted";
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -139,7 +139,7 @@ function HoursCell({
     setEditing(false);
   }
 
-  const statusCls = STATUS_CONFIG[status]?.cls ?? "";
+  const statusCls = statusToneCls(status);
 
   if (editing) {
     return (
@@ -152,7 +152,7 @@ function HoursCell({
           if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); commit(); }
           if (e.key === "Escape") setEditing(false);
         }}
-        className="h-7 w-full rounded border border-indigo-500/40 bg-indigo-500/[0.08] px-1 text-center text-[11px] font-medium text-white outline-none"
+        className="h-7 w-full rounded border bg-accent-muted bg-indigo-500/[0.08] px-1 text-center text-[11px] font-medium text-primary outline-none"
         autoFocus
       />
     );
@@ -161,7 +161,7 @@ function HoursCell({
   if (saving) {
     return (
       <div className="flex h-7 items-center justify-center">
-        <Loader2 className="h-3 w-3 animate-spin text-white/25" />
+        <Loader2 className="h-3 w-3 animate-spin text-muted" />
       </div>
     );
   }
@@ -174,17 +174,17 @@ function HoursCell({
       className={`group relative h-7 w-full rounded transition-colors ${
         value > 0
           ? editable
-            ? "bg-white/[0.05] hover:bg-white/[0.09]"
-            : "bg-white/[0.04]"
+            ? "bg-surface-2 hover:bg-surface-2"
+            : "bg-surface-2"
           : editable
-            ? "hover:bg-white/[0.04]"
+            ? "hover:bg-surface-2"
             : ""
       }`}
     >
       {value > 0 ? (
         <span className={`text-[11px] font-medium ${statusCls}`}>{value}</span>
       ) : editable ? (
-        <span className="text-[10px] text-white/12 opacity-0 group-hover:opacity-100">+</span>
+        <span className="text-[10px] text-muted opacity-0 group-hover:opacity-100">+</span>
       ) : null}
     </button>
   );
@@ -207,26 +207,27 @@ function AddRowDialog({
 }) {
   const [projectId, setProjectId] = useState<number | "">("");
   const [activityId, setActivityId] = useState<number | "">("");
+  const t = useTranslations("timeTracking");
 
   const key = `${projectId}-${activityId}`;
   const alreadyAdded = projectId !== "" && existingPairs.has(key);
 
   return (
     <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
-      <div className="w-72 overflow-hidden rounded-lg border border-white/[0.10] bg-zinc-900 shadow-xl">
-        <div className="flex h-9 items-center justify-between border-b border-white/[0.07] px-3">
-          <span className="text-[11px] font-semibold text-white/60">Add Project Row</span>
-          <button onClick={onClose} className="text-white/28 hover:text-white/50">
+      <div className="w-72 overflow-hidden rounded-lg border border-strong bg-surface-1 shadow-xl">
+        <div className="flex h-9 items-center justify-between border-b border-default px-3">
+          <span className="text-[11px] font-semibold text-secondary">{t("addProjectRow")}</span>
+          <button onClick={onClose} className="text-muted hover:text-secondary">
             <XCircle className="h-3.5 w-3.5" />
           </button>
         </div>
         <div className="space-y-3 p-3">
           <div>
-            <label className="mb-1 block text-[9px] font-bold uppercase tracking-widest text-white/28">Project</label>
+            <label className="mb-1 block text-[9px] font-bold uppercase tracking-widest text-muted">{t("project")}</label>
             <select
               value={projectId}
               onChange={(e) => setProjectId(e.target.value === "" ? "" : Number(e.target.value))}
-              className="w-full rounded border border-white/[0.07] bg-white/[0.04] px-2 py-1.5 text-[10px] text-white/70 outline-none focus:border-white/[0.14]"
+              className="w-full rounded border border-default bg-surface-2 px-2 py-1.5 text-[10px] text-secondary outline-none focus:border-default"
             >
               <option value="">Select project…</option>
               {projects.map((p) => (
@@ -235,20 +236,20 @@ function AddRowDialog({
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-[9px] font-bold uppercase tracking-widest text-white/28">Activity (optional)</label>
+            <label className="mb-1 block text-[9px] font-bold uppercase tracking-widest text-muted">{t("activityOptional")}</label>
             <select
               value={activityId}
               onChange={(e) => setActivityId(e.target.value === "" ? "" : Number(e.target.value))}
-              className="w-full rounded border border-white/[0.07] bg-white/[0.04] px-2 py-1.5 text-[10px] text-white/70 outline-none focus:border-white/[0.14]"
+              className="w-full rounded border border-default bg-surface-2 px-2 py-1.5 text-[10px] text-secondary outline-none focus:border-default"
             >
-              <option value="">— None —</option>
+              <option value=""> -  None  - </option>
               {activities.map((a) => (
                 <option key={a.id} value={a.id}>{a.discipline ? `[${a.discipline}] ` : ""}{a.name}</option>
               ))}
             </select>
           </div>
           {alreadyAdded && (
-            <p className="text-[9px] text-amber-300/60">This combination is already in your timesheet.</p>
+            <p className="text-[9px] text-warning/60">This combination is already in your timesheet.</p>
           )}
           <button
             type="button"
@@ -259,7 +260,7 @@ function AddRowDialog({
                 onClose();
               }
             }}
-            className="w-full rounded bg-indigo-600/70 py-1.5 text-[10px] font-semibold text-white/90 transition-colors hover:bg-indigo-600/90 disabled:opacity-40"
+            className="w-full rounded bg-accent py-1.5 text-[10px] font-semibold text-primary transition-colors hover:bg-accent-hover disabled:opacity-40"
           >
             Add Row
           </button>
@@ -273,6 +274,7 @@ function AddRowDialog({
 
 export default function MyTimeModule() {
   const { userId, companyId, displayName } = useUserContext();
+  const t = useTranslations("timeTracking");
 
   const [weekStart, setWeekStart] = useState(() => isoMonday(new Date()));
   const [weekView, setWeekView] = useState<WeekView | null>(null);
@@ -283,23 +285,20 @@ export default function MyTimeModule() {
   const [savingCells, setSavingCells] = useState<Set<string>>(new Set());
   const [showAddRow, setShowAddRow] = useState(false);
 
-  // Extra rows the user added locally (not yet in the DB — no entries yet)
+  // Extra rows the user added locally (not yet in the DB - no entries yet)
   const [extraRows, setExtraRows] = useState<{ project_id: number; activity_id: number | null }[]>([]);
 
   const loadWeek = useCallback(async () => {
     if (!companyId || !userId) return;
     setLoading(true);
     try {
-      const res = await fetch(
-        `${API}/time/${companyId}/entries/week?user_id=${userId}&week_start=${weekStart}`
-      );
-      if (res.ok) {
-        const data: WeekView = await res.json();
+      const data: any = await apiCall(`/time/${companyId}/entries/week?user_id=${userId}&week_start=${weekStart}`);
         setWeekView(data);
         // Drop extra rows that now appear in DB data
-        const dbPairs = new Set(data.rows.map((r) => `${r.project_id}-${r.activity_id}`));
-        setExtraRows((prev) => prev.filter((r) => !dbPairs.has(`${r.project_id}-${r.activity_id}`)));
-      }
+        if (data?.rows) {
+          const dbPairs = new Set(data.rows.map((r: any) => `${r.project_id}-${r.activity_id}`));
+          setExtraRows((prev: any) => prev.filter((r: any) => !dbPairs.has(`${r.project_id}-${r.activity_id}`)));
+        }
     } finally {
       setLoading(false);
     }
@@ -312,8 +311,8 @@ export default function MyTimeModule() {
   useEffect(() => {
     if (!companyId) return;
     Promise.all([
-      fetch(`${API}/time/${companyId}/projects`).then((r) => r.json()),
-      fetch(`${API}/time/${companyId}/activities`).then((r) => r.json()),
+      apiCall<any>(`/time/${companyId}/projects`),
+      apiCall<any>(`/time/${companyId}/activities`),
     ]).then(([p, a]) => {
       setProjects(p ?? []);
       setActivities(a ?? []);
@@ -361,19 +360,12 @@ export default function MyTimeModule() {
     const key = `${projectId}-${activityId}-${entryDate}`;
     setSavingCells((prev) => new Set(prev).add(key));
     try {
-      await fetch(
-        `${API}/time/${companyId}/entries?user_id=${userId}&user_name=${encodeURIComponent(displayName ?? "")}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+      await apiPost(`/time/${companyId}/entries`, {
             project_id: projectId,
             activity_id: activityId,
             entry_date: entryDate,
             hours,
-          }),
-        }
-      );
+          });
       await loadWeek();
     } finally {
       setSavingCells((prev) => { const s = new Set(prev); s.delete(key); return s; });
@@ -386,7 +378,7 @@ export default function MyTimeModule() {
     const key = `${projectId}-${activityId}-${entryDate}`;
     setSavingCells((prev) => new Set(prev).add(key));
     try {
-      await fetch(`${API}/time/${companyId}/entries/${entryId}?user_id=${userId}`, { method: "DELETE" });
+      await apiDelete(`/time/${companyId}/entries/${entryId}`);
       await loadWeek();
     } finally {
       setSavingCells((prev) => { const s = new Set(prev); s.delete(key); return s; });
@@ -397,10 +389,7 @@ export default function MyTimeModule() {
     if (!companyId || !userId || submitting) return;
     setSubmitting(true);
     try {
-      await fetch(
-        `${API}/time/${companyId}/entries/submit-week?user_id=${userId}&week_start=${weekStart}`,
-        { method: "POST" }
-      );
+      await apiPost(`/time/${companyId}/entries/submit-week`, { user_id: userId });
       await loadWeek();
     } finally {
       setSubmitting(false);
@@ -413,30 +402,30 @@ export default function MyTimeModule() {
   const days = weekView?.days ?? [];
 
   return (
-    <div className="relative flex h-full flex-col overflow-hidden bg-zinc-950 text-white">
+    <div className="relative flex h-full flex-col overflow-hidden bg-surface-0 text-primary">
       {/* Header */}
-      <div className="flex h-9 shrink-0 items-center gap-3 border-b border-white/[0.06] px-4">
+      <div className="flex h-9 shrink-0 items-center gap-3 border-b border-subtle px-4">
         <button
           type="button"
           onClick={() => setWeekStart((w) => addWeeks(w, -1))}
-          className="flex h-6 w-6 items-center justify-center rounded hover:bg-white/[0.05] text-white/30 hover:text-white/60"
+          className="flex h-6 w-6 items-center justify-center rounded hover:bg-surface-2 text-muted hover:text-secondary"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
         </button>
-        <span className="text-[11px] font-semibold text-white/55">
-          {weekView ? fmtWeekRange(weekView.week_start, weekView.week_end) : "Loading…"}
+        <span className="text-[11px] font-semibold text-tertiary">
+          {weekView ? fmtWeekRange(weekView.week_start, weekView.week_end) : t("loading")}
         </span>
         <button
           type="button"
           onClick={() => setWeekStart((w) => addWeeks(w, 1))}
-          className="flex h-6 w-6 items-center justify-center rounded hover:bg-white/[0.05] text-white/30 hover:text-white/60"
+          className="flex h-6 w-6 items-center justify-center rounded hover:bg-surface-2 text-muted hover:text-secondary"
         >
           <ChevronRight className="h-3.5 w-3.5" />
         </button>
         <button
           type="button"
           onClick={() => setWeekStart(isoMonday(new Date()))}
-          className="ml-1 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-white/22 hover:text-white/45 transition-colors"
+          className="ml-1 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-muted hover:text-tertiary transition-colors"
         >
           Today
         </button>
@@ -444,13 +433,13 @@ export default function MyTimeModule() {
         <div className="ml-auto flex items-center gap-2">
           {/* Week status pill */}
           {weekStatus !== "empty" && (
-            <span className={`text-[9px] font-bold uppercase tracking-wider ${STATUS_CONFIG[weekStatus]?.cls ?? "text-white/30"}`}>
-              {STATUS_CONFIG[weekStatus]?.label}
+            <span className={`text-[9px] font-bold uppercase tracking-wider ${statusToneCls(weekStatus)}`}>
+              {t(weekStatus)}
             </span>
           )}
           {/* Total hours */}
           {totalHours > 0 && (
-            <span className="rounded border border-white/[0.07] px-2 py-0.5 text-[10px] font-semibold text-white/50">
+            <span className="rounded border border-default px-2 py-0.5 text-[10px] font-semibold text-secondary">
               {Number(totalHours).toFixed(1)} h
             </span>
           )}
@@ -460,7 +449,7 @@ export default function MyTimeModule() {
               type="button"
               disabled={submitting}
               onClick={submitWeek}
-              className="flex items-center gap-1.5 rounded bg-indigo-600/70 px-3 py-1 text-[10px] font-semibold text-white/90 transition-colors hover:bg-indigo-600/90 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded bg-accent px-3 py-1 text-[10px] font-semibold text-primary transition-colors hover:bg-accent-hover disabled:opacity-50"
             >
               {submitting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
               Submit Week
@@ -477,8 +466,8 @@ export default function MyTimeModule() {
             </span>
           )}
           {weekStatus === "rejected" && (
-            <span className="flex items-center gap-1 text-[10px] text-red-300/60">
-              <XCircle className="h-3 w-3" /> Rejected — fix &amp; resubmit
+            <span className="flex items-center gap-1 text-[10px] text-error/60">
+              <XCircle className="h-3 w-3" /> Rejected - fix &amp; resubmit
             </span>
           )}
         </div>
@@ -488,13 +477,13 @@ export default function MyTimeModule() {
       <div className="min-h-0 flex-1 overflow-auto">
         {loading ? (
           <div className="flex h-full items-center justify-center">
-            <Loader2 className="h-5 w-5 animate-spin text-white/20" />
+            <Loader2 className="h-5 w-5 animate-spin text-muted" />
           </div>
         ) : (
           <table className="w-full border-collapse text-[11px]" style={{ minWidth: 640 }}>
             <thead>
-              <tr className="border-b border-white/[0.06]">
-                <th className="sticky left-0 z-10 w-[220px] bg-zinc-950 px-3 py-2 text-left text-[9px] font-bold uppercase tracking-widest text-white/22">
+              <tr className="border-b border-subtle">
+                <th className="sticky left-0 z-10 w-[220px] bg-surface-0 px-3 py-2 text-left text-[9px] font-bold uppercase tracking-widest text-muted">
                   Project / Activity
                 </th>
                 {days.map((d, i) => {
@@ -503,24 +492,24 @@ export default function MyTimeModule() {
                     <th
                       key={d}
                       className={`w-16 px-1 py-2 text-center text-[9px] font-bold uppercase tracking-widest ${
-                        isToday ? "text-indigo-400/70" : "text-white/22"
+                        isToday ? "text-accent" : "text-muted"
                       }`}
                     >
-                      <div>{DAY_LABELS[i]}</div>
-                      <div className={`font-normal normal-case tracking-normal ${isToday ? "text-indigo-300/50" : "text-white/18"}`}>
+                      <div>{t(`day${["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][i]}`)}</div>
+                      <div className={`font-normal normal-case tracking-normal ${isToday ? "text-accent/50" : "text-muted"}`}>
                         {fmtShortDate(d)}
                       </div>
                     </th>
                   );
                 })}
-                <th className="w-14 px-2 py-2 text-center text-[9px] font-bold uppercase tracking-widest text-white/22">Total</th>
+                <th className="w-14 px-2 py-2 text-center text-[9px] font-bold uppercase tracking-widest text-muted">{t("total")}</th>
                 <th className="w-8" />
               </tr>
             </thead>
             <tbody>
               {allRows.length === 0 && (
                 <tr>
-                  <td colSpan={days.length + 3} className="py-12 text-center text-[11px] text-white/22">
+                  <td colSpan={days.length + 3} className="py-12 text-center text-[11px] text-muted">
                     No projects assigned. Add a row to start logging time.
                   </td>
                 </tr>
@@ -530,16 +519,16 @@ export default function MyTimeModule() {
                 return (
                   <tr
                     key={`${row.project_id}-${row.activity_id}`}
-                    className="border-b border-white/[0.04] hover:bg-white/[0.015]"
+                    className="border-b border-subtle hover:bg-surface-1"
                   >
                     {/* Project/activity label */}
-                    <td className="sticky left-0 z-10 bg-zinc-950 px-3 py-1">
-                      <div className="text-[10px] font-medium text-white/60 truncate max-w-[200px]">
-                        {row.project_code ? <span className="text-white/28 mr-1">[{row.project_code}]</span> : null}
+                    <td className="sticky left-0 z-10 bg-surface-0 px-3 py-1">
+                      <div className="text-[10px] font-medium text-secondary truncate max-w-[200px]">
+                        {row.project_code ? <span className="text-muted mr-1">[{row.project_code}]</span> : null}
                         {row.project_name}
                       </div>
                       {row.activity_name && (
-                        <div className="text-[9px] text-white/28 truncate max-w-[200px]">{row.activity_name}</div>
+                        <div className="text-[9px] text-muted truncate max-w-[200px]">{row.activity_name}</div>
                       )}
                     </td>
 
@@ -560,7 +549,7 @@ export default function MyTimeModule() {
                     })}
 
                     {/* Row total */}
-                    <td className="px-2 py-0.5 text-center text-[10px] font-semibold text-white/40">
+                    <td className="px-2 py-0.5 text-center text-[10px] font-semibold text-tertiary">
                       {rowTotal > 0 ? rowTotal.toFixed(1) : ""}
                     </td>
 
@@ -574,7 +563,7 @@ export default function MyTimeModule() {
                               prev.filter((r) => !(r.project_id === row.project_id && r.activity_id === row.activity_id))
                             )
                           }
-                          className="flex h-5 w-5 items-center justify-center rounded text-white/18 hover:text-red-300/50"
+                          className="flex h-5 w-5 items-center justify-center rounded text-muted hover:text-error/50"
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>
@@ -587,8 +576,8 @@ export default function MyTimeModule() {
             {/* Daily totals footer */}
             {allRows.length > 0 && (
               <tfoot>
-                <tr className="border-t border-white/[0.07]">
-                  <td className="sticky left-0 z-10 bg-zinc-950 px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-white/25">
+                <tr className="border-t border-default">
+                  <td className="sticky left-0 z-10 bg-surface-0 px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-muted">
                     Daily Total
                   </td>
                   {days.map((d) => {
@@ -596,13 +585,13 @@ export default function MyTimeModule() {
                     const over = Number(t) > 8;
                     return (
                       <td key={d} className="px-1 py-1.5 text-center">
-                        <span className={`text-[10px] font-bold ${t > 0 ? (over ? "text-amber-300/70" : "text-white/50") : "text-white/15"}`}>
-                          {t > 0 ? Number(t).toFixed(1) : "—"}
+                        <span className={`text-[10px] font-bold ${t > 0 ? (over ? "text-warning/70" : "text-secondary") : "text-muted"}`}>
+                          {t > 0 ? Number(t).toFixed(1) : " - "}
                         </span>
                       </td>
                     );
                   })}
-                  <td className="px-2 py-1.5 text-center text-[11px] font-bold text-white/60">
+                  <td className="px-2 py-1.5 text-center text-[11px] font-bold text-secondary">
                     {Number(totalHours).toFixed(1)}
                   </td>
                   <td />
@@ -615,11 +604,11 @@ export default function MyTimeModule() {
 
       {/* Add row button */}
       {!loading && (
-        <div className="flex shrink-0 items-center border-t border-white/[0.05] px-3 py-2">
+        <div className="flex shrink-0 items-center border-t border-subtle px-3 py-2">
           <button
             type="button"
             onClick={() => setShowAddRow(true)}
-            className="flex items-center gap-1.5 rounded px-2 py-1 text-[10px] font-medium text-white/28 transition-colors hover:bg-white/[0.04] hover:text-white/55"
+            className="flex items-center gap-1.5 rounded px-2 py-1 text-[10px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-tertiary"
           >
             <Plus className="h-3 w-3" />
             Add project row

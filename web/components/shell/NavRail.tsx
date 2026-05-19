@@ -22,11 +22,11 @@ interface NavRailProps {
   onToggle: () => void;
   items: NavRailItem[];
   hideToggle?: boolean;
-  /** Content rendered below nav items with a divider — used in merged-nav mode. */
+  /** Content rendered below nav items with a divider - used in merged-nav mode. */
   footerSlot?: ReactNode;
   /** When true, fills parent width instead of using fixed 72/260px. Used in merged-nav mode. */
   fullWidth?: boolean;
-  /** Company logo URL — displayed in the header bar when expanded. */
+  /** Company logo URL - displayed in the header bar when expanded. */
   logoUrl?: string | null;
 }
 
@@ -73,15 +73,16 @@ export default function NavRail({ collapsed, onToggle, items, hideToggle = false
 
   return (
     <nav
-      className={`flex shrink-0 flex-col overflow-hidden bg-zinc-950 ${
+      aria-label="Main navigation"
+      className={`flex shrink-0 flex-col overflow-hidden bg-surface-1 ${
         fullWidth
           ? "w-full"
-          : `border-r border-white/[0.06] transition-[width] duration-200 ${collapsed ? "w-[72px]" : "w-[260px]"}`
+          : `border-r border-subtle transition-[width] duration-200 ${collapsed ? "w-14" : "w-52"}`
       }`}
     >
-      {/* Header bar — hidden when fullWidth and no portal items */}
+      {/* Header bar - hidden when fullWidth and no portal items */}
       {!(fullWidth && groups.length === 0) && (
-      <div className="flex h-10 shrink-0 items-center gap-1.5 border-b border-white/[0.06] px-2">
+      <div className="flex h-9 shrink-0 items-center gap-2 border-b border-subtle px-2">
         {!collapsed && (
           logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -91,8 +92,8 @@ export default function NavRail({ collapsed, onToggle, items, hideToggle = false
               className="h-5 w-5 shrink-0 rounded object-contain"
             />
           ) : (
-            <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-indigo-600/30">
-              <LayoutGrid className="h-3 w-3 text-indigo-300/80" />
+            <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-accent-muted">
+              <LayoutGrid className="h-3 w-3 text-accent" />
             </div>
           )
         )}
@@ -102,19 +103,19 @@ export default function NavRail({ collapsed, onToggle, items, hideToggle = false
             type="button"
             onClick={onToggle}
             title={collapsed ? t("expandNav") : t("collapseNav")}
-            className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-white/22 transition-colors hover:bg-white/[0.05] hover:text-white/50 [html.light_&]:text-black/27 [html.light_&]:hover:bg-black/[0.05] [html.light_&]:hover:text-black/55"
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-tertiary transition-colors hover:bg-surface-2 hover:text-secondary"
           >
             {collapsed
-              ? <ChevronRight className="h-3 w-3" />
-              : <ChevronLeft className="h-3 w-3" />
+              ? <ChevronRight className="h-3.5 w-3.5" />
+              : <ChevronLeft className="h-3.5 w-3.5" />
             }
           </button>
         )}
       </div>
       )}
 
-      <div className={footerSlot ? "flex min-h-0 flex-1 flex-col overflow-hidden" : "min-h-0 flex-1 overflow-y-auto py-2"}>
-        <div className={footerSlot ? "shrink-0 py-2" : undefined}>
+      <div className={footerSlot ? "flex min-h-0 flex-1 flex-col overflow-hidden" : "min-h-0 flex-1 overflow-y-auto py-1.5"}>
+        <div className={footerSlot ? "shrink-0 py-1.5" : undefined}>
           {groups.map(({ group, items: groupList }) => {
             const isOpen = openGroups[group] ?? true;
             return (
@@ -123,42 +124,43 @@ export default function NavRail({ collapsed, onToggle, items, hideToggle = false
                   <button
                     type="button"
                     onClick={() => toggleGroup(group)}
-                    className="flex w-full items-center gap-1.5 px-4 py-1.5 text-left"
+                    className="flex w-full items-center gap-1.5 px-3 py-1.5 text-left"
                   >
                     <ChevronDown
-                      className={`h-2.5 w-2.5 shrink-0 text-white/30 [html.light_&]:text-black/35 transition-transform ${
+                      className={`h-2.5 w-2.5 shrink-0 text-muted transition-transform ${
                         isOpen ? "" : "-rotate-90"
                       }`}
                     />
-                    <span className="truncate text-[9px] font-bold uppercase tracking-widest text-white/30 [html.light_&]:text-black/35">
+                    <span className="truncate text-[9px] font-bold uppercase tracking-widest text-muted">
                       {groupLabel(group)}
                     </span>
                   </button>
                 )}
 
                 {(collapsed || isOpen) && (
-                  <ul className={`space-y-px ${collapsed ? "px-2" : "px-2.5"}`}>
+                  <ul className={`space-y-0.5 ${collapsed ? "px-2" : "px-2.5"}`}>
                     {groupList.map((item) => (
                       <li key={item.key}>
                         <Link
                           href={item.href}
                           title={collapsed ? itemLabel(item) : undefined}
-                          className={`group relative flex items-center gap-2.5 rounded py-1.5 text-[11px] font-medium leading-none transition-colors ${
-                            collapsed ? "justify-center px-2" : "pl-3 pr-3"
+                          aria-current={item.active ? "page" : undefined}
+                          className={`group relative flex items-center gap-2.5 rounded py-1.5 text-xs font-medium leading-none transition-colors ${
+                            collapsed ? "justify-center px-2" : "px-2.5"
                           } ${
                             item.active
-                              ? "bg-indigo-600/[0.18] text-white"
-                              : "text-white/45 hover:bg-white/[0.04] hover:text-white/70 [html.light_&]:text-black/50 [html.light_&]:hover:bg-black/[0.05] [html.light_&]:hover:text-black/70"
+                              ? "bg-accent-muted text-primary"
+                              : "text-secondary hover:bg-surface-2 hover:text-primary"
                           }`}
                         >
                           {item.active && (
-                            <span className="absolute left-0 top-1/2 h-3.5 w-0.5 -translate-y-1/2 rounded-r-full bg-indigo-400/70" />
+                            <span className="absolute left-0 top-1/2 h-3.5 w-0.5 -translate-y-1/2 rounded-r bg-accent" />
                           )}
                           <span
                             className={`flex h-5 w-5 shrink-0 items-center justify-center rounded text-[9px] font-bold uppercase tracking-wider transition-colors ${
                               item.active
-                                ? "bg-indigo-500/25 text-indigo-200"
-                                : "bg-white/[0.04] text-white/30 group-hover:bg-white/[0.07] group-hover:text-white/50 [html.light_&]:bg-black/[0.06] [html.light_&]:text-black/35 [html.light_&]:group-hover:bg-black/[0.09] [html.light_&]:group-hover:text-black/55"
+                                ? "bg-accent-muted text-accent"
+                                : "bg-surface-2 text-muted group-hover:bg-surface-3 group-hover:text-secondary"
                             }`}
                           >
                             {initials(itemLabel(item))}
@@ -177,23 +179,23 @@ export default function NavRail({ collapsed, onToggle, items, hideToggle = false
         </div>
         {footerSlot && (
           <>
-            {groups.length > 0 && <div className="mx-2 shrink-0 border-t border-white/[0.06]" />}
+            {groups.length > 0 && <div className="mx-2 shrink-0 border-t border-subtle" />}
             <div className="min-h-0 flex-1 overflow-y-auto">{footerSlot}</div>
           </>
         )}
       </div>
 
-      {/* Settings/help footer — hidden when fullWidth and no portal items */}
+      {/* Help footer - hidden when fullWidth and no portal items */}
       {!(fullWidth && groups.length === 0) && (
-      <div className={`shrink-0 space-y-px border-t border-white/[0.05] py-3 ${collapsed ? "px-2" : "px-2.5"}`}>
+      <div className={`shrink-0 border-t border-subtle py-2 ${collapsed ? "px-2" : "px-2.5"}`}>
         <Link
           href="/help"
           title={collapsed ? t("help") : undefined}
-          className={`flex items-center gap-2.5 rounded text-[11px] font-medium text-white/35 [html.light_&]:text-black/40 transition-colors hover:bg-white/[0.04] hover:text-white/60 [html.light_&]:hover:bg-black/[0.05] [html.light_&]:hover:text-black/65 ${
-            collapsed ? "justify-center px-2 py-1.5" : "px-3 py-1.5"
+          className={`flex items-center gap-2.5 rounded text-xs font-medium text-muted transition-colors hover:bg-surface-2 hover:text-secondary ${
+            collapsed ? "justify-center px-2 py-1.5" : "px-2.5 py-1.5"
           }`}
         >
-          <HelpCircle className="h-3.5 w-3.5 shrink-0 text-white/30 [html.light_&]:text-black/35" />
+          <HelpCircle className="h-3.5 w-3.5 shrink-0" />
           {!collapsed && <span className="truncate">{t("help")}</span>}
         </Link>
       </div>

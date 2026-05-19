@@ -2,7 +2,7 @@
 
 Iterates every company, runs the agent insight scanners, and emails a
 top-N digest of open insights to each finance role recipient (admin,
-finance_manager). Channel preference gating uses
+accounting). Channel preference gating uses
 ``UserNotificationPreference`` with the wildcard fallback.
 
 Idempotent per calendar day via ``event_type`` postfix; safe to re-run.
@@ -31,7 +31,7 @@ from packages.modules.channels.service.preferences import is_channel_enabled
 log = logging.getLogger(__name__)
 
 DIGEST_EVENT_TYPE = "agent.daily_insight_digest"
-_FINANCE_ROLES = ("admin", "finance_manager")
+_FINANCE_ROLES = ("admin", "accounting")
 _TOP_N = 10
 _SEVERITY_RANK = {"critical": 0, "warn": 1, "info": 2}
 

@@ -24,6 +24,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
 from apps.api.auth import require_admin
+from packages.core.platform.module_gate import require_module
 from apps.api.deps import get_db
 from packages.modules.accounting.service.bulk_simulator_service import bulk_simulate
 from packages.modules.accounting.service.poliza_export_service import (
@@ -50,7 +51,11 @@ from packages.modules.accounting.service.coa_import_service import (
 )
 from packages.modules.accounting.service.poliza_simulator_service import simulate_poliza
 
-router = APIRouter(prefix="/admin/coa", tags=["admin"], dependencies=[Depends(require_admin)])
+router = APIRouter(
+    prefix="/admin/coa",
+    tags=["admin"],
+    dependencies=[Depends(require_admin), Depends(require_module("accounting"))],
+)
 
 
 # ── Schemas ───────────────────────────────────────────────────────────────────

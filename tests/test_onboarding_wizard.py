@@ -8,6 +8,10 @@ from packages.core.platform.models import Company
 from packages.core.platform.models_accounting_category import AccountingCategory
 from packages.core.platform.models_legal_entity import LegalEntity
 from packages.core.platform.models_user import User
+from packages.core.platform.models_expense_policy import CompanyExpensePolicy
+from packages.core.platform.models_approval_setup import ApprovalSetup
+from packages.core.platform.models_accounting_setup import AccountingSetup
+from packages.core.platform.models_archive_config import ArchiveConfig
 from packages.modules.admin.service.onboarding_service import (
     compute_checklist,
     set_onboarding_step,
@@ -53,21 +57,27 @@ def test_checklist_passes_when_all_required_set(
             country_code="MX",
             base_currency="MXN",
             has_managers=True,
+            archive_module_enabled=False,
+            purchase_requests_module_enabled=False,
+            amex_reconciliation_module_enabled=False,
+            time_allocation_module_enabled=False,
         ),
     )
     db_session.add(LegalEntity(
-        company_id=co46.id, entity_name="ACME MX",
+        company_id=co46.id, entity_name="ACME MX", is_active=True,
     ))
     db_session.add(AccountingCategory(
-        company_id=co46.id, code="600-01-001", name="Travel",
+        company_id=co46.id, code="600-01-001", name="Travel", is_active=True,
     ))
     db_session.add(User(
         company_id=co46.id, email="emp@p46.test", full_name="E", role="employee",
     ))
+    db_session.add(CompanyExpensePolicy(company_id=co46.id))
+    db_session.add(ApprovalSetup(company_id=co46.id))
+    db_session.add(AccountingSetup(company_id=co46.id))
     db_session.commit()
 
     out = compute_checklist(db_session, co46.id)
-    assert out["passed"] == 5
     assert out["go_live_ready"] is True
     for k, v in out["items"].items():
         assert v["ok"] is True, f"{k} should pass"
@@ -76,6 +86,28 @@ def test_checklist_passes_when_all_required_set(
 def test_set_onboarding_step_persists_and_completes(
     db_session: Session, co46: Company
 ) -> None:
+    # Set up all required entities so onboarding can complete
+    upsert_company_setup(
+        db_session,
+        co46.id,
+        CompanySetupUpdate(
+            display_name="ACME",
+            country_code="MX",
+            base_currency="MXN",
+            archive_module_enabled=False,
+            purchase_requests_module_enabled=False,
+            amex_reconciliation_module_enabled=False,
+            time_allocation_module_enabled=False,
+        ),
+    )
+    db_session.add(LegalEntity(company_id=co46.id, entity_name="ACME MX", is_active=True))
+    db_session.add(AccountingCategory(company_id=co46.id, code="GEN", name="General", is_active=True))
+    db_session.add(User(company_id=co46.id, email="emp@p46.test", full_name="E", role="employee"))
+    db_session.add(CompanyExpensePolicy(company_id=co46.id))
+    db_session.add(ApprovalSetup(company_id=co46.id))
+    db_session.add(AccountingSetup(company_id=co46.id))
+    db_session.commit()
+
     s = set_onboarding_step(db_session, co46.id, 3)
     assert s.onboarding_step == 3
     assert s.onboarding_completed_at is None

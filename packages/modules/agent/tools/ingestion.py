@@ -117,6 +117,79 @@ def _read_pdf_rows(path: str) -> list[dict[str, Any]]:
         return [{"line": ln.strip()} for ln in text.splitlines() if ln.strip()]
 
 
+def _read_xml(path: str) -> list[dict[str, Any]]:
+    """Parse an XML file (e.g., CFDI) into structured rows."""
+    import xml.etree.ElementTree as ET
+    try:
+        tree = ET.parse(path)
+        root = tree.getroot()
+        # Remove namespace prefixes for easier access
+        ns = {"cfdi": "http://www.sat.gob.mx/cfd/4", "tfd": "http://www.sat.gob.mx/TimbreFiscalDigital"}
+        # Try CFDI structure first
+        cfdi = root.find(".//cfdi:Comprobante", ns) or root if "Comprobante" in root.tag else root
+        rows = []
+        # Extract key attributes from the root element
+        for key, value in root.attrib.items():
+            tag = key.split("}")[-1] if "}" in key else key
+            rows.append({"campo": tag, "valor": value})
+        # Extract child elements
+        for child in root:
+            tag = child.tag.split("}")[-1] if "}" in child.tag else child.tag
+            if child.attrib:
+                for k, v in child.attrib.items():
+                    ktag = k.split("}")[-1] if "}" in k else k
+                    rows.append({"campo": f"{tag}.{ktag}", "valor": v})
+            elif child.text and child.text.strip():
+                rows.append({"campo": tag, "valor": child.text.strip()})
+        return rows if rows else [{"line": line.strip()} for line in ET.tostring(root, encoding="unicode").splitlines() if line.strip()]
+    except ET.ParseError as e:
+        raise ValueError(f"XML parse error: {e}")
+
+
+def _read_docx(path: str) -> list[dict[str, Any]]:
+    """Extract text from a DOCX file."""
+    try:
+        from docx import Document
+        doc = Document(path)
+        rows = []
+        for i, para in enumerate(doc.paragraphs):
+            if para.text.strip():
+                rows.append({"line": para.text.strip(), "paragraph": i + 1})
+        # Also extract tables
+        for ti, table in enumerate(doc.tables):
+            for ri, row in enumerate(table.rows):
+                cells = [cell.text.strip() for cell in row.cells]
+                rows.append({"table": ti + 1, "row": ri + 1, "cells": " | ".join(cells)})
+        return rows
+    except ImportError:
+        raise ValueError("python-docx not installed — cannot parse DOCX files")
+
+
+def _read_image_metadata(upload: AgentUpload) -> list[dict[str, Any]]:
+    """Extract metadata from an image file for agent analysis.
+    The agent can then ask the user what they want to do with the image
+    (e.g., use as receipt, reference, or extract data from it)."""
+    import os
+    size_kb = os.path.getsize(upload.storage_path) / 1024
+    return [{
+        "type": "image",
+        "filename": upload.filename,
+        "content_type": upload.content_type,
+        "size_kb": round(size_kb, 1),
+        "description": f"Imagen cargada: {upload.filename} ({round(size_kb, 1)} KB, {upload.content_type}). El agente debe preguntar al usuario qué quiere hacer con esta imagen.",
+    }]
+
+
+def _read_zip(path: str) -> list[dict[str, Any]]:
+    """List contents of a ZIP archive. Individual files can then be uploaded separately."""
+    import zipfile
+    try:
+        with zipfile.ZipFile(path, "r") as zf:
+            return [{"name": info.filename, "size_bytes": info.file_size, "compressed_bytes": info.compress_size} for info in zf.infolist() if not info.is_dir()]
+    except zipfile.BadZipFile as e:
+        raise ValueError(f"Invalid ZIP file: {e}")
+
+
 # ── Column inference ──────────────────────────────────────────────────────
 
 def _normalize(h: str) -> str:
@@ -287,7 +360,7 @@ REGISTRY.register(ToolSpec(
     category="ingestion",
     input_schema=FileIdArg,
     handler=_handle_ingest_accounting_catalog,
-    personas=frozenset({"admin"}),
+    personas=frozenset({"accounting", "admin"}),
     destructive=True,
     requires_confirmation=True,
 ))
@@ -542,7 +615,7 @@ REGISTRY.register(ToolSpec(
     category="ingestion",
     input_schema=IngestOrgArgs,
     handler=_handle_ingest_org_entities,
-    personas=frozenset({"admin"}),
+    personas=frozenset({"accounting", "admin"}),
     destructive=True,
     requires_confirmation=True,
 ))
@@ -551,3 +624,215 @@ register_applier("ingest_org_entities", _apply_ingest_org_entities)
 
 # Silence unused-import warnings on io/json (kept for future PDF table flows).
 _ = (io, json)
+
+
+
+# ── Generic file analysis ───────────────────────────────────────────────────
+
+class _AnalyzeFileArgs(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    file_id: str = Field(..., min_length=1, max_length=64, description="ID del archivo subido")
+    analysis_type: str = Field(
+        default="auto",
+        description="Tipo de análisis: auto, text, data, image, cfdi_xml, template, reference"
+    )
+
+
+def _handle_analyze_file(ctx: AgentContext, args: _AnalyzeFileArgs) -> ToolResult:
+    """Analyze any uploaded file and return structured content for the agent.
+
+    The agent can then decide what to do with the content:
+    - If it's a chart of accounts → suggest using ingest_accounting_catalog
+    - If it's a póliza template → memorize the format
+    - If it's an image → describe what it contains and ask the user what they want
+    - If it's XML → extract CFDI data
+    - If it's a vendor list → offer to create vendors
+    - If it's a reference document → save preferences
+    """
+    up = _resolve_upload(ctx, args.file_id)
+    if isinstance(up, ToolResult):
+        return up
+
+    ext = os.path.splitext(up.filename.lower())[1]
+    result: dict[str, Any] = {
+        "file_id": up.file_id,
+        "filename": up.filename,
+        "content_type": up.content_type,
+        "size_bytes": up.size_bytes,
+        "analysis_type": args.analysis_type,
+    }
+
+    # 1. Image files — return metadata + ask agent to analyze
+    if ext in (".jpeg", ".jpg", ".png", ".gif", ".webp", ".bmp", ".tiff", ".tif"):
+        result["type"] = "image"
+        result["description"] = (
+            f"Imagen cargada: {up.filename} ({up.size_bytes / 1024:.0f} KB). "
+            "Analiza la imagen y determina qué contiene (recibo, factura, template, etc.). "
+            "Pregunta al usuario qué quiere hacer con ella."
+        )
+        # Try to extract EXIF data if available
+        try:
+            from PIL import Image
+            img = Image.open(up.storage_path)
+            result["image_width"] = img.width
+            result["image_height"] = img.height
+            result["image_format"] = img.format
+            result["image_mode"] = img.mode
+        except Exception:
+            pass
+        return ToolResult(
+            ok=True,
+            summary=f"Imagen {up.filename} cargada ({up.size_bytes / 1024:.0f} KB)",
+            data=result,
+        )
+
+    # 2. CFDI XML files — extract fiscal data
+    if ext == ".xml":
+        try:
+            rows = _read_xml(up.storage_path)
+            result["type"] = "cfdi_xml"
+            result["rows"] = rows[:100]
+            result["row_count"] = len(rows)
+            result["description"] = (
+                f"Archivo CFDI/XML con {len(rows)} campos. "
+                "Revisa los datos fiscales (RFC, monto, fecha, UUID) y pregunta si quieres "
+                "vincularlo a un gasto existente o crear uno nuevo."
+            )
+            return ToolResult(
+                ok=True,
+                summary=f"XML con {len(rows)} campos extraídos",
+                data=result,
+            )
+        except Exception as e:
+            return ToolResult(ok=False, summary=f"Error leyendo XML: {e}", error="xml_parse_error")
+
+    # 3. PDF files — extract text and tables
+    if ext == ".pdf":
+        try:
+            rows = _read_pdf_rows(up.storage_path)
+            result["type"] = "pdf"
+            result["rows"] = rows[:200]
+            result["row_count"] = len(rows)
+            result["description"] = (
+                f"PDF con {len(rows)} filas extraídas. "
+                "Analiza el contenido: puede ser un recibo, una póliza contable, "
+                "un catálogo de cuentas, una plantilla, etc. "
+                "Pregunta al usuario qué quiere hacer con esta información."
+            )
+            return ToolResult(
+                ok=True,
+                summary=f"PDF con {len(rows)} filas extraídas",
+                data=result,
+            )
+        except Exception as e:
+            return ToolResult(ok=False, summary=f"Error leyendo PDF: {e}", error="pdf_parse_error")
+
+    # 4. Spreadsheet files — extract data
+    if ext in (".csv", ".tsv", ".xlsx", ".xls", ".ods"):
+        try:
+            rows = _read_table(up)
+            result["type"] = "spreadsheet"
+            result["rows"] = rows[:200]
+            result["row_count"] = len(rows)
+            headers = list(rows[0].keys()) if rows else []
+            result["headers"] = headers
+            # Detect content type based on headers
+            header_str = " ".join(headers).lower()
+            if any(h in header_str for h in ["cuenta", "account", "codigo", "code", "código"]):
+                result["detected_type"] = "chart_of_accounts"
+                result["suggestion"] = "Parece ser un catálogo de cuentas. ¿Quieres importarlo con ingest_accounting_catalog?"
+            elif any(h in header_str for h in ["rfc", "proveedor", "vendor", "nombre"]):
+                result["detected_type"] = "vendor_list"
+                result["suggestion"] = "Parece ser una lista de proveedores. ¿Quieres crear cada uno como vendor?"
+            elif any(h in header_str for h in ["empleado", "email", "usuario", "employee"]):
+                result["detected_type"] = "user_roster"
+                result["suggestion"] = "Parece ser una lista de usuarios. ¿Quieres importarla con ingest_user_roster?"
+            elif any(h in header_str for h in ["centro", "costo", "cliente", "proyecto"]):
+                result["detected_type"] = "org_entities"
+                result["suggestion"] = "Parece ser una lista de entidades organizacionales. ¿Quieres importarla con ingest_org_entities?"
+            else:
+                result["detected_type"] = "unknown"
+                result["suggestion"] = "Archivo de datos detectado. ¿Qué contiene? ¿Quieres que lo importemos o lo usemos como referencia?"
+            return ToolResult(
+                ok=True,
+                summary=f"{up.filename}: {len(rows)} filas, {len(headers)} columnas",
+                data=result,
+            )
+        except Exception as e:
+            return ToolResult(ok=False, summary=f"Error leyendo archivo: {e}", error="parse_error")
+
+    # 5. DOCX files
+    if ext in (".docx", ".doc"):
+        try:
+            rows = _read_docx(up.storage_path)
+            result["type"] = "document"
+            result["rows"] = rows[:200]
+            result["row_count"] = len(rows)
+            result["description"] = (
+                f"Documento de Word con {len(rows)} párrafos/tablas. "
+                "Analiza el contenido y pregunta al usuario qué quiere hacer con esta información."
+            )
+            return ToolResult(
+                ok=True,
+                summary=f"DOCX con {len(rows)} elementos extraídos",
+                data=result,
+            )
+        except Exception as e:
+            return ToolResult(ok=False, summary=f"Error leyendo DOCX: {e}", error="docx_parse_error")
+
+    # 6. ZIP files
+    if ext == ".zip":
+        try:
+            rows = _read_zip(up.storage_path)
+            result["type"] = "zip_archive"
+            result["entries"] = rows
+            result["entry_count"] = len(rows)
+            result["description"] = (
+                f"Archivo ZIP con {len(rows)} archivos. Lista los contenidos y pregunta "
+                "cuál quieres analizar o si quieres descomprimir todo."
+            )
+            return ToolResult(
+                ok=True,
+                summary=f"ZIP con {len(rows)} archivos",
+                data=result,
+            )
+        except Exception as e:
+            return ToolResult(ok=False, summary=f"Error leyendo ZIP: {e}", error="zip_parse_error")
+
+    # 7. Plain text
+    if ext in (".txt", ".text"):
+        try:
+            with open(up.storage_path, "r", encoding="utf-8", errors="replace") as fh:
+                text = fh.read(50000)  # Max 50KB
+            result["type"] = "text"
+            result["content"] = text[:10000]  # First 10KB to agent
+            result["total_bytes"] = len(text)
+            result["description"] = "Archivo de texto. Analiza el contenido y determina qué es."
+            return ToolResult(
+                ok=True,
+                summary=f"Texto: {len(text)} caracteres",
+                data=result,
+            )
+        except Exception as e:
+            return ToolResult(ok=False, summary=f"Error leyendo texto: {e}", error="text_parse_error")
+
+    # 8. Unknown file type
+    return ToolResult(
+        ok=True,
+        summary=f"Archivo {up.filename} ({up.content_type}, {up.size_bytes / 1024:.0f} KB). Tipo no reconocido automáticamente.",
+        data=result,
+    )
+
+
+REGISTRY.register(ToolSpec(
+    name="analyze_file",
+    description=(
+        "Analiza cualquier archivo subido (imagen, PDF, Excel, XML/CFDI, Word, ZIP, texto). "
+        "Detecta el tipo de contenido y extrae datos estructurados. "
+        "Para el agente: revisa el resultado y decide qué hacer (importar, memorizar, crear registros, etc.)."
+    ),
+    category="ingestion",
+    input_schema=_AnalyzeFileArgs,
+    handler=_handle_analyze_file,
+    personas=frozenset({"accounting", "admin"}),
+))

@@ -7,7 +7,7 @@ deliberately conservative: it only uses status values and config flags that
 already exist in the database.
 """
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from packages.modules.expenses.models.document import ExpenseDocument
 from packages.modules.expenses.models.expense import Expense
@@ -541,6 +541,177 @@ def list_accounting_queue(db: Session, company_id: int) -> list[Expense]:
     # accounting_review_mode == "none" or unknown — flow gate above should have
     # caught this, but be safe.
     return []
+
+
+def list_manager_queue_paginated(
+    db: Session,
+    company_id: int,
+    page: int = 1,
+    limit: int = 50,
+    filters: dict | None = None,
+) -> dict:
+    """Return paginated manager queue with total count - database-level pagination.
+
+    Args:
+        db: Database session
+        company_id: Company ID for tenant isolation
+        page: Page number (1-indexed)
+        limit: Items per page (max 100)
+        filters: Optional filters dict
+
+    Returns:
+        dict with items, total, page, pages
+    """
+    # Cap limit at 100 to prevent memory exhaustion
+    limit = min(limit, 100)
+    offset = (page - 1) * limit
+
+    company_setup = get_or_create_company_setup(db, company_id)
+    approval = get_or_create_approval_setup(db, company_id)
+
+    # Early exit if manager flow is not enabled
+    if not _manager_flow_enabled(company_setup, approval):
+        return {"items": [], "total": 0, "page": page, "pages": 0}
+
+    # Check for threshold_based mode with no threshold and no require_manager_for_all
+    if (
+        approval.approval_mode == "threshold_based"
+        and not approval.require_manager_for_all_employees
+        and (approval.manager_threshold_amount is None or approval.manager_threshold_amount <= 0)
+    ):
+        return {"items": [], "total": 0, "page": page, "pages": 0}
+
+    eligible_statuses = _safe_statuses(_manager_queue_eligible_statuses(approval))
+    if not eligible_statuses:
+        return {"items": [], "total": 0, "page": page, "pages": 0}
+
+    query = db.query(Expense).options(
+        joinedload(Expense.documents),
+        joinedload(Expense.category),
+    ).filter(
+        Expense.company_id == company_id,
+        Expense.status.in_(eligible_statuses),
+    )
+
+    # Apply threshold filter for threshold_based mode
+    if approval.approval_mode == "threshold_based":
+        threshold = approval.manager_threshold_amount
+        if threshold is not None and threshold > 0:
+            query = query.filter(Expense.amount >= threshold)
+
+    # Apply optional filters at database level
+    if filters:
+        if filters.get("min_amount") is not None:
+            query = query.filter(Expense.amount >= filters["min_amount"])
+        if filters.get("max_amount") is not None:
+            query = query.filter(Expense.amount <= filters["max_amount"])
+
+    # Use count() for total - database-level
+    total = query.count()
+
+    # Calculate total pages
+    pages = (total + limit - 1) // limit if limit > 0 else 0
+
+    # Apply pagination at database level
+    items = query.order_by(Expense.created_at).offset(offset).limit(limit).all()
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "pages": pages,
+    }
+
+
+def list_accounting_queue_paginated(
+    db: Session,
+    company_id: int,
+    page: int = 1,
+    limit: int = 50,
+    filters: dict | None = None,
+) -> dict:
+    """Return paginated accounting queue with total count - database-level pagination.
+
+    Args:
+        db: Database session
+        company_id: Company ID for tenant isolation
+        page: Page number (1-indexed)
+        limit: Items per page (max 100)
+        filters: Optional filters dict
+
+    Returns:
+        dict with items, total, page, pages
+    """
+    # Cap limit at 100 to prevent memory exhaustion
+    limit = min(limit, 100)
+    offset = (page - 1) * limit
+
+    company_setup = get_or_create_company_setup(db, company_id)
+    accounting = get_or_create_accounting_setup(db, company_id)
+    approval = get_or_create_approval_setup(db, company_id)
+
+    # Early exit if accounting flow is not enabled
+    if not _accounting_flow_enabled(company_setup, accounting):
+        return {"items": [], "total": 0, "page": page, "pages": 0}
+
+    review_mode = accounting.accounting_review_mode or "all"
+    eligible_statuses = _safe_statuses(
+        _accounting_queue_eligible_statuses(approval, company_setup)
+    )
+    if not eligible_statuses:
+        return {"items": [], "total": 0, "page": page, "pages": 0}
+
+    query = db.query(Expense).options(
+        joinedload(Expense.documents),
+        joinedload(Expense.category),
+    ).filter(
+        Expense.company_id == company_id,
+        Expense.status.in_(eligible_statuses),
+    )
+
+    # For exceptions_only mode, filter to expenses with validation flags
+    if review_mode == "exceptions_only":
+        flag_statuses: list[str] = ["failed"]
+        if accounting.allow_submit_with_warnings:
+            flag_statuses.append("warning")
+
+        flagged_ids = _expense_ids_with_flagged_validations(
+            db, company_id, tuple(flag_statuses)
+        )
+
+        # Also include IDs escalated to accounting by approval config
+        escalation_ids: set[int] = set()
+        # Note: escalate_policy_failures_to_accounting is captured by "failed" flag
+        # escalate_international_to_accounting requires data not on Expense model
+
+        candidate_ids = flagged_ids | escalation_ids
+        if not candidate_ids:
+            return {"items": [], "total": 0, "page": page, "pages": 0}
+
+        query = query.filter(Expense.id.in_(candidate_ids))
+
+    # Apply optional filters at database level
+    if filters:
+        if filters.get("min_amount") is not None:
+            query = query.filter(Expense.amount >= filters["min_amount"])
+        if filters.get("max_amount") is not None:
+            query = query.filter(Expense.amount <= filters["max_amount"])
+
+    # Use count() for total - database-level
+    total = query.count()
+
+    # Calculate total pages
+    pages = (total + limit - 1) // limit if limit > 0 else 0
+
+    # Apply pagination at database level
+    items = query.order_by(Expense.created_at).offset(offset).limit(limit).all()
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "pages": pages,
+    }
 
 
 def build_queue_summary(expenses: list[Expense]) -> dict:

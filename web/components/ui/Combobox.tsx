@@ -86,18 +86,19 @@ export function Combobox({
   }
 
   return (
-    <div ref={wrapRef} className={cn("relative", className)}>
+    <div ref={wrapRef} role="combobox" aria-expanded={open} className={cn("relative", className)}>
       <div
         className={cn(
-          "flex items-center h-8 rounded-md border bg-white/[0.03]",
-          "border-white/10",
+          "flex items-center h-8 rounded-md border bg-surface-1",
+          "border-subtle",
           invalid && "border-red-500/50",
           disabled && "opacity-60 cursor-not-allowed",
         )}
       >
         <input
-          aria-expanded={open}
           aria-autocomplete="list"
+          aria-controls="combobox-listbox"
+          aria-activedescendant={open && filtered[activeIndex] ? `combobox-option-${activeIndex}` : undefined}
           disabled={disabled}
           value={open ? query : selected?.label ?? ""}
           placeholder={placeholder}
@@ -108,14 +109,14 @@ export function Combobox({
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKey}
-          className="flex-1 h-full px-2.5 bg-transparent text-xs text-white/85 placeholder:text-white/30 focus:outline-none"
+          className="flex-1 h-full px-2.5 bg-transparent text-xs text-primary placeholder:text-muted focus:outline-none"
         />
         {clearable && selected && !disabled && (
           <button
             type="button"
             aria-label="Clear"
             onClick={() => commit(null)}
-            className="px-2 text-white/30 hover:text-white/70 text-xs"
+            className="px-2 text-muted hover:text-secondary text-xs"
           >
             ×
           </button>
@@ -123,19 +124,21 @@ export function Combobox({
       </div>
       {open && filtered.length > 0 && (
         <div
+          id="combobox-listbox"
           role="listbox"
-          className="absolute mt-1 z-40 w-full max-h-60 overflow-auto rounded-md border border-white/10 bg-zinc-900 shadow-xl py-1"
+          className="absolute mt-1 z-40 w-full max-h-60 overflow-auto rounded-md border border-subtle bg-surface-1 shadow-xl py-1"
         >
           {filtered.map((opt, i) => (
             <button
               key={opt.value}
+              id={`combobox-option-${i}`}
               role="option"
               aria-selected={i === activeIndex}
               onMouseEnter={() => setActiveIndex(i)}
               onClick={() => commit(opt)}
               className={cn(
-                "block w-full text-left px-3 h-7 text-[11px] text-white/70",
-                i === activeIndex && "bg-white/[0.05]",
+                "block w-full text-left px-3 h-7 text-[11px] text-secondary",
+                i === activeIndex && "bg-surface-2",
               )}
             >
               {opt.label}

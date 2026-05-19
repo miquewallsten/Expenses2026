@@ -74,11 +74,17 @@ def test_registry_has_expected_tools():
     }.issubset(names)
 
 
-def test_registry_excludes_admin_tools_from_employee_persona():
-    emp_names = {t.name for t in REGISTRY.list_for_persona("employee")}
-    assert "update_company_setup" not in emp_names
-    assert "list_users" not in emp_names
-    assert "read_expense_policy" in emp_names  # allowed
+def test_registry_only_admin_and_accounting_personas():
+    """Employee/manager/super_admin personas removed — only admin & accounting."""
+    admin_names = {t.name for t in REGISTRY.list_for_persona("admin")}
+    acct_names = {t.name for t in REGISTRY.list_for_persona("accounting")}
+    assert "update_company_setup" in admin_names
+    assert "list_users" in admin_names
+    assert "read_expense_policy" in admin_names
+    assert "accounting_health_check" in acct_names
+    # Removed personas should return empty
+    assert len(list(REGISTRY.list_for_persona("employee"))) == 0
+    assert len(list(REGISTRY.list_for_persona("super_admin"))) == 0
 
 
 def test_run_turn_creates_session_and_persists_turns(db_session, admin_user, test_company):

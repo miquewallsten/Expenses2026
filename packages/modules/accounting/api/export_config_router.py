@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Depends
 from sqlalchemy.orm import Session
 
+from packages.core.platform.module_gate import require_module
+from apps.api.auth import require_admin, require_same_company, get_current_user
 from apps.api.deps import get_db
 from packages.modules.accounting.schemas.export_config import (
     ExportConfigRead,
@@ -11,7 +13,7 @@ from packages.modules.accounting.service.export_bundle_config_service import (
     upsert_export_bundle_config,
 )
 
-router = APIRouter(prefix="/admin/export-config", tags=["admin"])
+router = APIRouter(prefix="/admin/export-config", dependencies=[Depends(require_admin), Depends(require_module("accounting"))], tags=["admin"])
 
 
 @router.get("/{company_id}", response_model=ExportConfigRead)

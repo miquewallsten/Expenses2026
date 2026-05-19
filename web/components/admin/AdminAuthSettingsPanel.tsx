@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { getAuthHeaders } from "@/lib/session";
+import { apiCall, apiPost } from "@/lib/api/client";
 import { Lock, Globe, Shield, Plus, Trash2, Save, Loader2, Check, AlertCircle } from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -64,37 +66,37 @@ function DomainListEditor({
           value={input}
           onChange={(e) => { setInput(e.target.value); setError(null); }}
           onKeyDown={handleKeyDown}
-          className="flex-1 rounded border border-white/[0.08] bg-zinc-900 px-2.5 py-1.5 font-mono text-[11px] text-white/70 placeholder:text-white/20 outline-none focus:border-indigo-500/40"
+          className="flex-1 rounded border border-default bg-surface-1 px-3 py-1.5 font-mono text-[11px] text-secondary placeholder:text-muted outline-none focus:bg-accent-muted"
         />
         <button
           type="button"
           onClick={handleAdd}
-          className="inline-flex items-center gap-1 rounded border border-white/[0.09] bg-white/[0.04] px-2.5 py-1 text-[10px] text-white/45 transition-colors hover:border-white/20 hover:text-white/70"
+          className="inline-flex items-center gap-1 rounded border border-default bg-surface-2 px-2.5 py-1 text-[10px] text-tertiary transition-colors hover:border-strong hover:text-secondary"
         >
           <Plus className="h-3 w-3" />
           {t("add")}
         </button>
       </div>
       {error && (
-        <p className="mb-2 flex items-center gap-1 text-[10px] text-red-400/60">
+        <p className="mb-2 flex items-center gap-1 text-[10px] text-error/60">
           <AlertCircle className="h-3 w-3" />
           {error}
         </p>
       )}
       {domains.length === 0 ? (
-        <p className="text-[10px] text-white/20 italic">{t("noRestrictions")}</p>
+        <p className="text-[10px] text-muted italic">{t("noRestrictions")}</p>
       ) : (
         <div className="flex flex-wrap gap-1.5">
           {domains.map((d) => (
             <span
               key={d}
-              className="inline-flex items-center gap-1 rounded border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 font-mono text-[10px] text-white/55"
+              className="inline-flex items-center gap-1 rounded border border-default bg-surface-1 px-2 py-0.5 font-mono text-[10px] text-tertiary"
             >
               {d}
               <button
                 type="button"
                 onClick={() => onChange(domains.filter((x) => x !== d))}
-                className="text-white/25 transition-colors hover:text-red-400/70"
+                className="text-muted transition-colors hover:text-error/70"
               >
                 <Trash2 className="h-2.5 w-2.5" />
               </button>
@@ -124,14 +126,14 @@ function ToggleRow({
   disabledLabel?: string;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-white/[0.04] py-3 last:border-0">
+    <div className="flex items-start justify-between gap-4 border-b border-subtle py-3 last:border-0">
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium text-white/70">{label}</p>
-        {description && <p className="mt-0.5 text-[10px] text-white/30">{description}</p>}
+        <p className="text-[11px] font-medium text-secondary">{label}</p>
+        {description && <p className="mt-0.5 text-[10px] text-muted">{description}</p>}
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {disabled && disabledLabel && (
-          <span className="rounded border border-white/[0.07] bg-white/[0.03] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white/25">
+          <span className="rounded border border-default bg-surface-1 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-muted">
             {disabledLabel}
           </span>
         )}
@@ -143,13 +145,13 @@ function ToggleRow({
           onClick={() => !disabled && onChange(!value)}
           className={`relative inline-flex h-4 w-7 shrink-0 items-center rounded-full border transition-colors disabled:opacity-30 ${
             value
-              ? "border-indigo-500/40 bg-indigo-600/30"
-              : "border-white/[0.1] bg-white/[0.05]"
+              ? "bg-accent-muted bg-accent-muted"
+              : "border-default bg-surface-2"
           }`}
         >
           <span
             className={`inline-block h-2.5 w-2.5 rounded-full transition-transform ${
-              value ? "translate-x-3 bg-indigo-300/80" : "translate-x-0.5 bg-white/25"
+              value ? "translate-x-3 bg-accent" : "translate-x-0.5 bg-surface-3"
             }`}
           />
         </button>
@@ -173,7 +175,7 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
   const [allowedDomains,      setAllowedDomains]      = useState<string[]>([]);
   const [sessionTimeout,      setSessionTimeout]      = useState(24);
 
-  // Demo mode — localStorage only, not persisted to API
+  // Demo mode - localStorage only, not persisted to API
   const [demoMode, setDemoMode] = useState(false);
   useEffect(() => {
     setDemoMode(localStorage.getItem("demo_mode_enabled") === "true");
@@ -187,10 +189,9 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`${API}/admin/auth-settings/${companyId}`)
-      .then((r) => r.ok ? r.json() : null)
+    apiCall<AuthSettings | null>(`/admin/auth-settings/${companyId}`)
       .catch(() => null)
-      .then((d: AuthSettings | null) => {
+      .then((d) => {
         if (d) {
           setSettings(d);
           setMagicLinkEnabled(d.magic_link_enabled);
@@ -204,16 +205,11 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
   const handleSave = async () => {
     setSaving(true); setError(null); setSaved(false);
     try {
-      const res = await fetch(`${API}/admin/auth-settings/${companyId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      await apiPost(`/admin/auth-settings/${companyId}`, {
           magic_link_enabled: magicLinkEnabled,
           allowed_email_domains: allowedDomains,
           session_timeout_hours: sessionTimeout,
-        }),
-      });
-      if (!res.ok) throw new Error(`${res.status}`);
+        });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (e: any) {
@@ -225,7 +221,7 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 py-8 text-white/20">
+      <div className="flex items-center gap-2 py-8 text-muted">
         <Loader2 className="h-4 w-4 animate-spin" />
         <span className="text-xs">{t("loading")}</span>
       </div>
@@ -233,18 +229,30 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
   }
 
   return (
-    <div className="max-w-2xl space-y-5">
-      <div className="flex items-center gap-2">
-        <Lock className="h-4 w-4 text-white/25" />
-        <h2 className="text-sm font-semibold text-white">{t("title")}</h2>
+    <div className="max-w-2xl space-y-4">
+      {/* Premium header */}
+      <div className="rounded-lg border border-default bg-surface-1 px-4 py-3">
+        <div className="" />
+        <div className="relative flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10">
+            <Lock className="h-4 w-4 text-violet-400" />
+          </div>
+          <div className="flex flex-col">
+            <h2 className="text-sm font-semibold text-primary">{t("title")}</h2>
+            <span className="text-[9px] text-muted">Authentication & Security</span>
+          </div>
+        </div>
       </div>
 
       {/* ── Magic Link ─────────────────────────────────────────────────────── */}
-      <div className="overflow-hidden rounded-lg border border-white/[0.07]">
-        <div className="flex items-center gap-2 border-b border-white/[0.06] bg-white/[0.025] px-4 py-2.5">
-          <Globe className="h-3.5 w-3.5 text-indigo-400/50" />
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/35">{t("magicLink")}</p>
-          <span className="ml-auto rounded border border-emerald-500/20 bg-emerald-500/[0.07] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-emerald-300/60">
+      <div className="relative overflow-hidden rounded-lg border border-default">
+        <div className="" />
+        <div className="flex items-center gap-2.5 border-b border-subtle bg-surface-1 px-4 py-3">
+          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-accent/10">
+            <Globe className="h-3.5 w-3.5 text-accent" />
+          </div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-secondary">{t("magicLink")}</p>
+          <span className="ml-auto rounded-full border border-success/20 bg-success/5 px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest text-success/70">
             {t("active")}
           </span>
         </div>
@@ -259,21 +267,21 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
 
           <div className="py-3">
             <div className="mb-2 flex items-baseline justify-between">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted">
                 {t("allowedDomains")}
               </p>
-              <p className="text-[9px] text-white/18">{t("allowedDomainsHelp")}</p>
+              <p className="text-[9px] text-muted">{t("allowedDomainsHelp")}</p>
             </div>
             <DomainListEditor domains={allowedDomains} onChange={setAllowedDomains} />
           </div>
 
-          <div className="border-t border-white/[0.04] py-3">
+          <div className="border-t border-subtle py-3">
             <div className="flex items-center gap-4">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted">
                   {t("sessionDuration")}
                 </p>
-                <p className="text-[10px] text-white/25">{t("sessionDurationDesc")}</p>
+                <p className="text-[10px] text-muted">{t("sessionDurationDesc")}</p>
               </div>
               <div className="ml-auto flex items-center gap-2">
                 <input
@@ -282,9 +290,9 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
                   max={168}
                   value={sessionTimeout}
                   onChange={(e) => setSessionTimeout(Math.max(1, Math.min(168, Number(e.target.value))))}
-                  className="w-16 rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 text-center font-mono text-[11px] text-white/70 outline-none focus:border-indigo-500/40"
+                  className="w-16 rounded border border-default bg-surface-1 px-2 py-1 text-center font-mono text-[11px] text-secondary outline-none focus:bg-accent-muted"
                 />
-                <span className="text-[10px] text-white/30">{t("hoursUnit")}</span>
+                <span className="text-[10px] text-muted">{t("hoursUnit")}</span>
               </div>
             </div>
           </div>
@@ -292,15 +300,18 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
       </div>
 
       {/* ── SSO ────────────────────────────────────────────────────────────── */}
-      <div className="overflow-hidden rounded-lg border border-white/[0.07] opacity-60">
-        <div className="flex items-center gap-2 border-b border-white/[0.06] bg-white/[0.025] px-4 py-2.5">
-          <Shield className="h-3.5 w-3.5 text-white/25" />
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/35">{t("sso")}</p>
-          <span className="ml-auto rounded border border-white/[0.07] bg-white/[0.03] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white/20">
+      <div className="relative overflow-hidden rounded-lg border border-subtle opacity-70">
+        <div className="" />
+        <div className="relative flex items-center gap-2.5 border-b border-subtle bg-surface-1 px-4 py-3">
+          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-violet-500/10">
+            <Shield className="h-3.5 w-3.5 text-violet-400" />
+          </div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted">{t("sso")}</p>
+          <span className="ml-auto rounded-full border border-warning/15 bg-warning/5 px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest text-warning/60">
             {t("enterprise")}
           </span>
         </div>
-        <div className="px-4">
+        <div className="relative px-4">
           <ToggleRow
             label={t("enableSso")}
             description={t("enableSsoDesc")}
@@ -310,28 +321,30 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
             disabledLabel={t("comingSoon")}
           />
           <div className="py-3 space-y-2">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30">{t("idpMetadataUrl")}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted">{t("idpMetadataUrl")}</p>
             <input
               type="text"
               disabled
               placeholder={t("idpMetadataPlaceholder")}
-              className="w-full rounded border border-white/[0.06] bg-zinc-900/50 px-2.5 py-1.5 font-mono text-[11px] text-white/25 outline-none"
+              className="w-full rounded-lg border border-subtle bg-surface-1/50 px-3 py-2 font-mono text-[11px] text-muted outline-none"
             />
           </div>
         </div>
       </div>
 
       {/* ── User Import ─────────────────────────────────────────────────────── */}
-      <div className="overflow-hidden rounded-lg border border-white/[0.07] opacity-60">
-        <div className="flex items-center gap-2 border-b border-white/[0.06] bg-white/[0.025] px-4 py-2.5">
-          <Globe className="h-3.5 w-3.5 text-white/25" />
-          <p className="text-[10px] font-bold uppercase tracking-widest text-white/35">{t("bulkImport")}</p>
-          <span className="ml-auto rounded border border-white/[0.07] bg-white/[0.03] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white/20">
+      <div className="relative overflow-hidden rounded-lg border border-subtle opacity-70">
+        <div className="relative flex items-center gap-2.5 border-b border-subtle bg-surface-1 px-4 py-3">
+          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-ai/10">
+            <Globe className="h-3.5 w-3.5 text-ai/70" />
+          </div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted">{t("bulkImport")}</p>
+          <span className="ml-auto rounded-full border border-subtle bg-surface-2 px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest text-muted">
             {t("comingSoon")}
           </span>
         </div>
-        <div className="px-4 py-3">
-          <p className="text-[11px] text-white/30 leading-relaxed">
+        <div className="relative px-4 py-4">
+          <p className="text-[11px] text-muted leading-relaxed">
             {t("bulkImportDesc")}
           </p>
         </div>
@@ -340,8 +353,8 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
       {/* ── Demo Mode ───────────────────────────────────────────────────────── */}
       <div className="overflow-hidden rounded-lg border border-amber-500/20">
         <div className="flex items-center gap-2 border-b border-amber-500/15 bg-amber-500/[0.04] px-4 py-2.5">
-          <Shield className="h-3.5 w-3.5 text-amber-400/50" />
-          <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400/50">{t("demoMode")}</p>
+          <Shield className="h-3.5 w-3.5 text-warning/50" />
+          <p className="text-[10px] font-bold uppercase tracking-widest text-warning/50">{t("demoMode")}</p>
         </div>
         <div className="px-4">
           <ToggleRow
@@ -359,12 +372,12 @@ export default function AdminAuthSettingsPanel({ companyId }: Props) {
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="inline-flex items-center gap-1.5 rounded border border-white/10 bg-white/[0.05] px-3 py-1.5 text-[10px] font-semibold text-white/60 transition-colors hover:bg-white/[0.09] disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded border border-subtle bg-surface-2 px-3 py-1.5 text-[10px] font-semibold text-secondary transition-colors hover:bg-surface-2 disabled:opacity-50"
         >
           {saving ? <><Loader2 className="h-3 w-3 animate-spin" /> {t("saving")}</> : <><Save className="h-3 w-3" /> {t("save")}</>}
         </button>
-        {saved  && <span className="flex items-center gap-1 text-[10px] text-emerald-400/60"><Check className="h-3 w-3" /> {t("saved")}</span>}
-        {error  && <span className="text-[10px] text-red-400/60">{error}</span>}
+        {saved  && <span className="flex items-center gap-1 text-[10px] text-success/60"><Check className="h-3 w-3" /> {t("saved")}</span>}
+        {error  && <span className="text-[10px] text-error/60">{error}</span>}
       </div>
     </div>
   );

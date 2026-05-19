@@ -6,23 +6,12 @@ company that has not installed the add-on cannot reach any of its endpoints —
 every add-on router declares its company-setup flag and uses ``require_module``
 as a router-level dependency.
 
-Usage::
-
-    from packages.core.platform.module_gate import require_module
-
-    router = APIRouter(
-        prefix="/time",
-        dependencies=[Depends(require_module("time_allocation"))],
-    )
-
-The dependency expects a path param named ``company_id``. If the module flag
-is off for that company it raises HTTP 404 (we hide the fact that the route
-exists rather than 403, so uninstalled add-ons are indistinguishable from
-non-existent endpoints).
-
-The mapping of module_key → CompanySetup column lives here so there is a single
-source of truth; ``web/modules/my-work/moduleRegistry.ts`` uses the same keys.
+The dependency resolves ``company_id`` from:
+  1. Path parameter (e.g. /time/{company_id}/entries)
+  2. Query parameter (e.g. ?company_id=1)
+  3. Auth user's company_id (fallback for admin-only routes)
 """
+
 from fastapi import Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
@@ -45,30 +34,67 @@ MODULE_FLAG_COLUMNS: dict[str, str] = {
 def require_module(module_key: str):
     """Factory: returns a FastAPI dependency that gates on the given module.
 
-    The dependency inspects the request's ``company_id`` path param and
-    checks the corresponding column on ``company_setup``. If the company has
-    not installed the module, raises 404.
+    Resolves company_id from path params, query params, or the current user.
+    For admin-only routes without company_id in the path, uses the X-User-Id
+    header to look up the user's company.
     """
     if module_key not in MODULE_FLAG_COLUMNS:
         raise ValueError(f"Unknown module_key: {module_key}")
     column = MODULE_FLAG_COLUMNS[module_key]
 
     def _dep(request: Request, db: Session = Depends(get_db)) -> None:
+        company_id: int | None = None
+
+        # 1. Path param
         raw = request.path_params.get("company_id")
-        if raw is None:
-            # Router misuse — better to fail loudly than silently allow.
-            raise HTTPException(status_code=500, detail="module gate needs company_id path param")
-        try:
-            company_id = int(raw)
-        except (TypeError, ValueError):
-            raise HTTPException(status_code=400, detail="invalid company_id")
+        if raw is not None:
+            try:
+                company_id = int(raw)
+            except (TypeError, ValueError):
+                pass
+
+        # 2. Query param
+        if company_id is None:
+            raw = request.query_params.get("company_id")
+            if raw is not None:
+                try:
+                    company_id = int(raw)
+                except (TypeError, ValueError):
+                    pass
+
+        # 3. X-User-Id header (dev bypass) or Bearer token subject
+        if company_id is None:
+            from packages.core.platform.models_user import User as UserModel
+            user_id = None
+            uid = request.headers.get("x-user-id")
+            if uid:
+                try:
+                    user_id = int(uid)
+                except (TypeError, ValueError):
+                    pass
+            if user_id is None:
+                auth = request.headers.get("authorization", "")
+                if auth.startswith("Bearer "):
+                    try:
+                        import jwt
+                        from apps.api.auth import _SECRET
+                        payload = jwt.decode(auth[7:], _SECRET, algorithms=["HS256"], audience="financial-ops-platform")
+                        user_id = int(payload.get("sub", 0))
+                    except Exception:
+                        pass
+            if user_id is not None:
+                user = db.query(UserModel).filter(UserModel.id == user_id).first()
+                if user and user.company_id:
+                    company_id = user.company_id
+
+        if company_id is None:
+            raise HTTPException(status_code=500, detail="module gate needs company_id")
 
         setup = (
             db.query(CompanySetup)
             .filter(CompanySetup.company_id == company_id)
             .first()
         )
-        # Treat missing setup as "nothing enabled" — safer default.
         enabled = bool(getattr(setup, column, False)) if setup else False
         if not enabled:
             raise HTTPException(status_code=404, detail=f"module '{module_key}' not installed")

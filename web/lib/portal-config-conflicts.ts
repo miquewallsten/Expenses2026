@@ -9,13 +9,10 @@
  * Safe to call in render, in the setup-orchestrator fallback, and in tests.
  */
 
-export interface PortalConfigConflict {
-  code: string;
-  message: string;
-  severity: "warning" | "critical";
-  /** Admin section to navigate to for remediation. */
-  section: string;
-}
+import type { PortalConfigConflict } from "@/types";
+
+// Re-export for backward compatibility
+export type { PortalConfigConflict } from "@/types";
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 

@@ -43,8 +43,8 @@ function AuthVerifyInner() {
           isSuperAdmin: Boolean(data.is_super_admin),
         });
         // All roles use the single MyWork portal at /mywork.
-        // Admin also gets /admin as their landing so they see the setup dashboard.
-        const dest = data.role === "admin" ? "/admin" : "/mywork";
+        // The module registry determines which modules each role sees.
+        const dest = data.isSuperAdmin ? "/super-admin" : "/mywork";
         router.replace(dest);
       })
       .catch((err: Error) => {
@@ -54,7 +54,7 @@ function AuthVerifyInner() {
   }, [searchParams, router]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-surface-0 px-4">
       <div className="w-full max-w-sm text-center">
         {status === "verifying" ? (
           <>
@@ -63,21 +63,21 @@ function AuthVerifyInner() {
                 {[0, 1, 2].map((d) => (
                   <span
                     key={d}
-                    className="h-1.5 w-1.5 animate-bounce rounded-full bg-indigo-400/60"
+                    className="h-1.5 w-1.5 animate-bounce rounded-full bg-accent/60"
                     style={{ animationDelay: `${d * 150}ms` }}
                   />
                 ))}
               </span>
             </div>
-            <p className="text-sm text-white/40">{t("signingIn")}</p>
+            <p className="text-sm text-tertiary">{t("signingIn")}</p>
           </>
         ) : (
           <>
-            <p className="text-sm font-medium text-red-400">{t("signInFailed")}</p>
-            <p className="mt-1 text-xs text-white/40">{message}</p>
+            <p className="text-sm font-medium text-error">{t("signInFailed")}</p>
+            <p className="mt-1 text-xs text-tertiary">{message}</p>
             <a
               href="/login"
-              className="mt-4 inline-block text-xs text-indigo-400 hover:underline"
+              className="mt-4 inline-block text-xs text-accent hover:underline"
             >
               {t("requestNewLink")}
             </a>

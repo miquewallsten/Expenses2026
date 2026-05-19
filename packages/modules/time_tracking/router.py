@@ -6,10 +6,11 @@ URL prefix: /time
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
 from apps.api.deps import get_db
@@ -205,3 +206,134 @@ def user_report(
     db: Session = Depends(get_db),
 ):
     return svc.user_report(db, company_id, user_id, date_from, date_to)
+
+
+# ── Salary configuration ───────────────────────────────────────────────────────
+from packages.core.platform.models_user import User  # noqa: E402
+from apps.api.auth import get_current_user, require_same_company  # noqa: E402
+from decimal import Decimal  # noqa: E402
+from pydantic import BaseModel, ConfigDict  # noqa: E402
+
+from packages.modules.time_tracking.models_salary import UserSalaryConfig  # noqa: E402
+from packages.modules.time_tracking.salary_service import (  # noqa: E402
+    set_salary as svc_set_salary,
+    list_salary_configs as svc_list_salary,
+    get_active_salary as svc_get_salary,
+    calculate_time_cost,
+    batch_time_costs,
+)
+
+
+class SalaryCreate(BaseModel):
+    user_id: int
+    hourly_rate: Decimal
+    monthly_salary: Decimal | None = None
+    currency: str = "MXN"
+    effective_date: date | None = None
+    role_title: str | None = None
+    default_cost_center_id: int | None = None
+    default_project_id: int | None = None
+    notes: str | None = None
+
+
+class SalaryRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    company_id: int
+    user_id: int
+    hourly_rate: Decimal
+    monthly_salary: Decimal | None
+    currency: str
+    effective_date: date
+    is_active: bool
+    role_title: str | None
+    default_cost_center_id: int | None
+    default_project_id: int | None
+    notes: str | None
+    created_by: int | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class TimeCostRequest(BaseModel):
+    """Request body for calculating time costs."""
+    entries: list[dict]  # [{user_id: int, hours: Decimal}]
+
+
+class TimeCostResponse(BaseModel):
+    costs: dict[str, Decimal]  # {"user_id": total_cost}
+
+
+@router.get("/{company_id}/salaries", response_model=list[SalaryRead])
+def list_salaries(
+    company_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List all active salary configs for a company. Accounting/admin only."""
+    require_same_company(company_id, current_user)
+    configs = svc_list_salary(db, company_id)
+    return [SalaryRead.model_validate(c) for c in configs]
+
+
+@router.get("/{company_id}/salaries/{user_id}", response_model=SalaryRead | None)
+def get_salary(
+    company_id: int,
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get the active salary config for a specific user."""
+    require_same_company(company_id, current_user)
+    config = svc_get_salary(db, company_id, user_id)
+    return SalaryRead.model_validate(config) if config else None
+
+
+@router.post("/{company_id}/salaries", response_model=SalaryRead, status_code=201)
+def create_salary(
+    company_id: int,
+    data: SalaryCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Set or update the hourly rate for a user. Accounting/admin only."""
+    require_same_company(company_id, current_user)
+    config = svc_set_salary(
+        db,
+        company_id=company_id,
+        user_id=data.user_id,
+        hourly_rate=data.hourly_rate,
+        monthly_salary=data.monthly_salary,
+        currency=data.currency,
+        effective_date=data.effective_date,
+        role_title=data.role_title,
+        default_cost_center_id=data.default_cost_center_id,
+        default_project_id=data.default_project_id,
+        notes=data.notes,
+        created_by=current_user.id,
+    )
+    return SalaryRead.model_validate(config)
+
+
+@router.post("/{company_id}/salaries/calculate-costs", response_model=TimeCostResponse)
+def calculate_costs(
+    company_id: int,
+    data: TimeCostRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Calculate time costs for multiple users based on their hourly rates.
+
+    Accepts a list of {user_id, hours} entries and returns
+    a mapping of user_id -> total_cost.
+    """
+    require_same_company(company_id, current_user)
+    user_hours = [
+        (int(e["user_id"]), Decimal(str(e["hours"])))
+        for e in data.entries
+    ]
+    costs = batch_time_costs(db, company_id, user_hours)
+    return TimeCostResponse(
+        costs={str(uid): cost for uid, cost in costs.items()}
+    )

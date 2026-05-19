@@ -28,8 +28,8 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useMemo,
   useRef,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
@@ -37,75 +37,18 @@ import { useUserContext } from "@/context/UserContext";
 import {
   MY_WORK_MODULES,
   getVisibleModules,
-  type MyWorkModule,
-  type ModuleVisibilityContext,
 } from "@/modules/my-work/moduleRegistry";
+import type {
+  PortalConfig,
+  ExpensePolicy,
+  MyWorkModule,
+  ModuleVisibilityContext,
+  SelectedWorkItem,
+} from "@/types";
+import { EMPTY_SELECTED_WORK_ITEM } from "@/types";
+import { usePortalConfigContext } from "@/context/PortalConfigContext";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-// ── Portal config type ────────────────────────────────────────────────────────
-//
-// Matches the /admin/portal-config/:company_id response shape.
-
-export interface ExpensePolicy {
-  id: number;
-  company_id: number;
-  xml_required_mode: string;
-  pdf_pair_required_for_cfdi: boolean;
-  international_expenses_allowed: boolean;
-  tickets_allowed: boolean;
-  require_justification: boolean;
-  require_proof: boolean;
-  allow_split_allocations: boolean;
-  allocation_dimensions: string;
-  manager_approval_required: boolean;
-  accounting_review_required: boolean;
-  ai_policy_assist_enabled: boolean;
-  allow_document_free_expenses: boolean;
-}
-
-export interface PortalDerived {
-  enabled_modules: string[];
-  allocation_dimensions: string[];
-  allow_split_allocations: boolean;
-  tickets_allowed: boolean;
-  international_expenses_allowed: boolean;
-  xml_required_mode: string;
-  pdf_pair_required_for_cfdi: boolean;
-  allow_document_free_expenses: boolean;
-  manager_flow_enabled: boolean;
-  accounting_flow_enabled: boolean;
-  workflow_mode: string;
-}
-
-export interface PortalConfig {
-  company_setup: Record<string, unknown>;
-  expense_policy: ExpensePolicy;
-  accounting_setup: Record<string, unknown>;
-  approval_setup: Record<string, unknown>;
-  workflow_setup: Record<string, unknown>;
-  derived: PortalDerived;
-}
-
-// ── Selected work item ────────────────────────────────────────────────────────
-//
-// Generic envelope for whatever the active module considers "selected".
-// Each module uses a subset of these fields; unrelated fields remain null.
-
-export interface SelectedWorkItem {
-  /** Expense id when the expenses module is active */
-  expenseId: number | null;
-  /** Report/batch id when the accounting or approvals module is active */
-  reportId: number | null;
-  /** Any extra module-specific payload */
-  extra: Record<string, unknown>;
-}
-
-const EMPTY_SELECTION: SelectedWorkItem = {
-  expenseId: null,
-  reportId: null,
-  extra: {},
-};
 
 // ── Context value ─────────────────────────────────────────────────────────────
 
@@ -189,59 +132,43 @@ const MyWorkContext = createContext<MyWorkContextValue | null>(null);
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 
-export function MyWorkProvider({ children }: { children: ReactNode }) {
+export function MyWorkProvider({ children, initialModuleId }: { children: ReactNode; initialModuleId?: string | null }) {
   const user = useUserContext();
 
-  const [portalConfig, setPortalConfig] = useState<PortalConfig | null>(null);
-  const [configLoading, setConfigLoading] = useState(true);
+  // Config comes from PortalConfigContext (parent provider)
+  const portalCfg = usePortalConfigContext();
+  const portalConfig = portalCfg.effectiveConfig;
+  const configLoading = portalCfg.configLoading;
   const [activeModuleId, setActiveModuleId] = useState<string | null>(null);
-  const [selectedItem, setSelectedItemState] = useState<SelectedWorkItem>(EMPTY_SELECTION);
+  const [selectedItem, setSelectedItemState] = useState<SelectedWorkItem>(EMPTY_SELECTED_WORK_ITEM);
 
   const abortRef = useRef<AbortController | null>(null);
 
-  // ── Fetch portal config ─────────────────────────────────────────────────
-  //
-  // Re-fetches whenever the resolved companyId changes (e.g. after login or
-  // impersonation switch).  While user.loading is still true, companyId is
-  // null and we skip the fetch to avoid a redundant /1 call.
-
-  useEffect(() => {
-    if (user.loading) return;
-
-    const cid = user.companyId ?? 1;
-
-    abortRef.current?.abort();
-    const ac = new AbortController();
-    abortRef.current = ac;
-
-    setConfigLoading(true);
-
-    fetch(`${API}/admin/portal-config/${cid}`, {
-      signal: ac.signal,
-      headers: user.userIdStr ? { "X-User-Id": user.userIdStr } : {},
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .catch((err) => {
-        if ((err as { name?: string }).name === "AbortError") return "aborted";
-        return null;
-      })
-      .then((cfg) => {
-        if (cfg === "aborted") return;
-        setPortalConfig(cfg ?? null);
-        setConfigLoading(false);
-      });
-
-    return () => { ac.abort(); };
-  }, [user.loading, user.companyId, user.userIdStr]);
 
   // ── Build ModuleVisibilityContext from live data ─────────────────────────
+  // Merge portal-derived data with the access profile's enabled_modules.
+  // The access profile is the freshest source (refreshes every 60s/on focus),
+  // while portalConfig is loaded once on mount.
+
+  const accessDerived = useMemo(() => {
+    const base = portalConfig?.derived ?? null;
+    // If UserContext provides enabledModules from /access profile, prefer those
+    // (they're auto-corrected against module enablement)
+    if (user.enabledModules && user.enabledModules.length > 0) {
+      return {
+        ...(base ?? { allocation_dimensions: [], allow_split_allocations: false, tickets_allowed: false, international_expenses_allowed: false, xml_required_mode: "optional", pdf_pair_required_for_cfdi: false, allow_document_free_expenses: false, manager_flow_enabled: false, accounting_flow_enabled: false, workflow_mode: "manual" }),
+        enabled_modules: user.enabledModules,
+      };
+    }
+    return base;
+  }, [portalConfig, user.enabledModules]);
 
   const visibilityCtx = useMemo<ModuleVisibilityContext>(() => ({
     role: user.role,
     permissionKeys: user.permissionKeys,
-    derived: portalConfig?.derived ?? null,
+    derived: accessDerived,
     capabilities: user.capabilities,
-  }), [user.role, user.permissionKeys, user.capabilities, portalConfig]);
+  }), [user.role, user.permissionKeys, user.capabilities, accessDerived]);
 
   // ── Compute visible modules ──────────────────────────────────────────────
 
@@ -250,16 +177,23 @@ export function MyWorkProvider({ children }: { children: ReactNode }) {
     [configLoading, user.loading, visibilityCtx],
   );
 
-  // ── Auto-select first module when list resolves ──────────────────────────
+  // ── Auto-select module when list resolves ───────────────────────────────
+  //
+  // If an initial module was requested via ?module=, prefer it when visible.
+  // Otherwise fall back to the first visible module.
 
   useEffect(() => {
     if (!visibleModules.length) return;
     setActiveModuleId((prev) => {
       // Keep current selection if it's still visible
       if (prev && visibleModules.some((m) => m.id === prev)) return prev;
+      // Prefer initialModuleId (e.g. from ?module=) if it resolves to a visible module
+      if (initialModuleId && visibleModules.some((m) => m.id === initialModuleId)) {
+        return initialModuleId;
+      }
       return visibleModules[0].id;
     });
-  }, [visibleModules]);
+  }, [visibleModules, initialModuleId]);
 
   // ── Derived module ───────────────────────────────────────────────────────
 
@@ -274,7 +208,7 @@ export function MyWorkProvider({ children }: { children: ReactNode }) {
     if (visibleModules.some((m) => m.id === id)) {
       setActiveModuleId(id);
       // Clear selection when switching modules so the detail area resets.
-      setSelectedItemState(EMPTY_SELECTION);
+      setSelectedItemState(EMPTY_SELECTED_WORK_ITEM);
     }
   }, [visibleModules]);
 
@@ -291,7 +225,7 @@ export function MyWorkProvider({ children }: { children: ReactNode }) {
   );
 
   const clearSelectedItem = useCallback(() => {
-    setSelectedItemState(EMPTY_SELECTION);
+    setSelectedItemState(EMPTY_SELECTED_WORK_ITEM);
   }, []);
 
   // ── Derived config scalars ───────────────────────────────────────────────
@@ -321,14 +255,14 @@ export function MyWorkProvider({ children }: { children: ReactNode }) {
   const showApprovalActions = useMemo(
     () =>
       managerFlowEnabled &&
-      (user.hasRole("manager", "admin") || user.hasPermission("approve_expense")),
+      (user.hasRole("manager", "admin") || user.hasPermission("expense:approve:manager")),
     [managerFlowEnabled, user],
   );
 
   const showAccountingActions = useMemo(
     () =>
       accountingFlowEnabled &&
-      (user.hasRole("accounting", "admin") || user.hasPermission("assign_account")),
+      (user.hasRole("accounting", "admin") || user.hasPermission("accounting:work")),
     [accountingFlowEnabled, user],
   );
 

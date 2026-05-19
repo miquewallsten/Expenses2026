@@ -208,14 +208,14 @@ register_applier("create_cost_center_hierarchy", _apply_create_cost_centers)
 
 _ROLE_TEMPLATES: dict[str, dict[str, Any]] = {
     "approver":  {"description": "Aprueba gastos asignados a su equipo."},
-    "accountant": {"description": "Revisa contabilidad, exporta pólizas, mapea categorías."},
+    "accounting": {"description": "Revisa contabilidad, exporta pólizas, mapea categorías."},
     "viewer":    {"description": "Acceso de solo lectura a reportes."},
 }
 
 
 class CreateRoleFromTemplateInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    template: str = Field(..., pattern=r"^(approver|accountant|viewer)$")
+    template: str = Field(..., pattern=r"^(approver|accounting|viewer)$")
     name:     str = Field(..., min_length=1, max_length=255)
     key:      str | None = Field(default=None, max_length=100)
 

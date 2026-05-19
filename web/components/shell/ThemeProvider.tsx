@@ -26,13 +26,15 @@ function applyThemeClass(cls: "dark" | "light") {
   const root = document.documentElement;
   root.classList.remove("dark", "light");
   root.classList.add(cls);
+  root.setAttribute("data-theme", cls);
   const metaTag = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
-  if (metaTag) metaTag.content = cls === "dark" ? "#09090b" : "#fafafa";
+  if (metaTag) metaTag.content = cls === "dark" ? "#000000" : "#F2F2F7";
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("dark");
   const [systemDark, setSystemDark] = useState(false);
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
     const raw = localStorage.getItem("pref_theme");
@@ -40,6 +42,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     setSystemDark(mq.matches);
     setThemeState(stored);
+    setInitialized(true);
 
     const handler = (e: MediaQueryListEvent) => setSystemDark(e.matches);
     mq.addEventListener("change", handler);
@@ -47,8 +50,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!initialized) return;
     applyThemeClass(resolveClass(theme, systemDark));
-  }, [theme, systemDark]);
+  }, [theme, systemDark, initialized]);
 
   const setTheme = (next: Theme) => {
     localStorage.setItem("pref_theme", next);

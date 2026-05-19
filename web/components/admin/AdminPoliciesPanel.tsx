@@ -1,14 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   AlertTriangle, CheckCircle2, Loader2, Plus, Power, RefreshCw,
-  Save, Sparkles, Trash2, X, AlertCircle,
+  Save, Sparkles, Trash2, X, AlertCircle, FileText,
+  Shield, Zap, ChevronDown, ChevronRight, Send,
 } from "lucide-react";
-import { getAuthHeaders } from "@/lib/session";
+import {
+  PremiumHeader,
+  SectionPanel,
+  Row,
+  Toggle,
+  SectionLabel as PatternSectionLabel,
+  inputClasses,
+  SECTION_ACCENTS,
+} from "@/components/admin/shared/AdminPatterns";
+import { apiCall, apiPost, apiPatch, apiDelete } from "@/lib/api/client";
 import { useTranslations } from "next-intl";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -34,8 +42,6 @@ interface PreviewResponse {
   notice: string | null;
 }
 
-type RightTab = "create" | "rule" | "settings";
-
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -45,35 +51,220 @@ interface Props {
   draftPatch?: Partial<Record<string, any>>;
 }
 
-// ── Inline sub-components ─────────────────────────────────────────────────────
+// ── XML option map ───────────────────────────────────────────────────────────
 
-function ToggleRow({
-  label, desc, checked, onChange,
-}: { label: string; desc: string; checked: boolean; onChange: (v: boolean) => void }) {
+const XML_OPTIONS = [
+  { value: "always",       label: "Siempre (CFDI requerido)" },
+  { value: "mexico_only",  label: "Solo México" },
+  { value: "optional",     label: "Opcional" },
+  { value: "never",        label: "Nunca" },
+];
+
+// ── Rule Row ──────────────────────────────────────────────────────────────────
+
+function RuleRow({ rule, selected, onSelect, onToggle, onDelete }: {
+  rule: AIPolicyRead;
+  selected: boolean;
+  onSelect: () => void;
+  onToggle: () => void;
+  onDelete: () => void;
+}) {
+  const t = useTranslations("admin.policies");
+  const isBlock = rule.severity === "block";
+
   return (
-    <div className="flex items-center justify-between gap-3 px-3.5 py-2">
-      <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-medium text-white/65">{label}</p>
-        <p className="text-[10px] text-white/28">{desc}</p>
-      </div>
-      <button type="button" onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-4 w-7 shrink-0 rounded-full border transition-colors ${checked ? "border-indigo-500/40 bg-indigo-600/30" : "border-white/[0.10] bg-white/[0.04]"}`}>
-        <span className={`absolute top-0.5 h-3 w-3 rounded-full transition-transform ${checked ? "translate-x-3 bg-indigo-400" : "translate-x-0.5 bg-white/20"}`} />
+    <div className={`group/rule rounded-md border transition-all ${
+      selected ? "border-accent/30 bg-accent/5" : "border-default hover:border-strong"
+    }`}>
+      <button
+        type="button"
+        onClick={onSelect}
+        className="flex w-full items-center gap-2.5 px-3 py-2 text-left"
+      >
+        <div className={`mt-0.5 ${isBlock ? "text-error" : "text-warning"}`}>
+          {isBlock ? <Shield className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className={`text-[10px] font-medium truncate ${rule.enabled ? "text-primary" : "text-muted line-through"}`}>
+            {rule.summary || rule.source_text.slice(0, 80)}
+          </p>
+          <p className="text-[8px] text-muted mt-0.5 truncate">{rule.source_text}</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className={`text-[7px] font-bold uppercase px-1.5 py-0.5 rounded-full ${
+            isBlock ? "bg-error/10 text-error border border-error/20" : "bg-warning/10 text-warning border border-warning/20"
+          }`}>
+            {isBlock ? "bloqueo" : "aviso"}
+          </span>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onToggle(); }}
+            className={`flex h-4 w-7 items-center rounded-full border transition-colors ${
+              rule.enabled ? "border-accent/40 bg-accent/20" : "border-default bg-surface-2"
+            }`}
+            title={rule.enabled ? t("disableRule") : t("enableRule")}
+          >
+            <span className={`h-3 w-3 rounded-full bg-white transition-transform ${
+              rule.enabled ? "translate-x-3" : "translate-x-0.5"
+            }`} />
+          </button>
+        </div>
+        <div className="text-muted/40 group-hover/rule:text-muted transition-colors">
+          {selected ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+        </div>
       </button>
+
+      {selected && (
+        <div className="border-t border-subtle/30 px-3 py-2.5 space-y-2">
+          <div className="rounded-md bg-surface-1 border border-subtle/30 px-3 py-2">
+            <p className="text-[8px] font-bold uppercase tracking-widest text-muted mb-1">{t("ruleJson")}</p>
+            <pre className="text-[9px] text-secondary font-mono whitespace-pre-wrap leading-relaxed">
+              {JSON.stringify(rule.rule_json, null, 2)}
+            </pre>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onDelete}
+              className="inline-flex items-center gap-1.5 rounded-md border border-error/20 px-2.5 py-1 text-[9px] font-semibold text-error/70 transition-all hover:border-error/30 hover:bg-error/5"
+            >
+              <Trash2 className="h-3 w-3" /> {t("disableRule")}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function SelectRow({
-  label, value, options, onChange,
-}: { label: string; value: string; options: { value: string; label: string }[]; onChange: (v: string) => void }) {
+// ── Create Rule ───────────────────────────────────────────────────────────────
+
+function CreateRuleInput({ companyId, onCreated }: { companyId: number; onCreated: () => void }) {
+  const t = useTranslations("admin.policies");
+  const [prompt, setPrompt] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [preview, setPreview] = useState<PreviewResponse | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
+
+  const handleGenerate = useCallback(async () => {
+    if (!prompt.trim() || generating) return;
+    setGenerating(true);
+    setError(null);
+    setPreview(null);
+    try {
+      const data = await apiPost<PreviewResponse>(`/admin/ai-policies/${companyId}/preview`, { source_text: prompt.trim() });
+      setPreview(data);
+    } catch (e: any) {
+      setError(e?.message || "Error generando regla");
+    } finally {
+      setGenerating(false);
+    }
+  }, [prompt, generating, companyId]);
+
+  const handleSave = useCallback(async () => {
+    if (!preview || saving) return;
+    setSaving(true);
+    try {
+      await apiPost(`/admin/ai-policies/${companyId}`, { source_text: prompt.trim() });
+      setPrompt("");
+      setPreview(null);
+      setExpanded(false);
+      onCreated();
+    } catch (e: any) {
+      setError(e?.message || "Error guardando regla");
+    } finally {
+      setSaving(false);
+    }
+  }, [preview, saving, companyId, prompt, onCreated]);
+
+  if (!expanded) {
+    return (
+      <button
+        type="button"
+        onClick={() => setExpanded(true)}
+        className="flex w-full items-center gap-2 rounded-md border border-dashed border-subtle/40 px-3 py-2 text-[9px] text-muted transition-all hover:border-accent/30 hover:text-accent hover:bg-accent/5"
+      >
+        <Plus className="h-3 w-3" />
+        {t("newRule")}
+      </button>
+    );
+  }
+
   return (
-    <div className="flex items-center justify-between gap-3 px-3.5 py-2">
-      <p className="text-[11px] font-medium text-white/65">{label}</p>
-      <select value={value} onChange={(e) => onChange(e.target.value)}
-        className="rounded border border-white/[0.08] bg-zinc-900 px-2 py-1 text-[10px] text-white/55 outline-none focus:border-indigo-500/40">
-        {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
+    <div className="rounded-md border border-accent/20 bg-accent/5 p-3 space-y-2.5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <Sparkles className="h-3 w-3 text-accent" />
+          <span className="text-[9px] font-bold uppercase tracking-widest text-accent">{t("promptLabel")}</span>
+        </div>
+        <button type="button" onClick={() => { setExpanded(false); setPreview(null); setError(null); }} className="text-muted hover:text-secondary">
+          <X className="h-3 w-3" />
+        </button>
+      </div>
+
+      <div className="flex gap-2">
+        <input
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleGenerate(); } }}
+          placeholder={t("promptPlaceholder")}
+          className={`flex-1 ${inputClasses.base} text-[10px]`}
+          autoFocus
+        />
+        <button
+          type="button"
+          onClick={handleGenerate}
+          disabled={generating || !prompt.trim()}
+          className="shrink-0 flex h-8 w-8 items-center justify-center rounded-md bg-accent text-white transition-all hover:bg-accent-hover disabled:opacity-40"
+        >
+          {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+        </button>
+      </div>
+
+      {error && (
+        <div className="flex items-center gap-1.5 text-[9px] text-error font-medium">
+          <AlertCircle className="h-3 w-3" /> {error}
+        </div>
+      )}
+
+      {preview && (
+        <div className="rounded-md border border-default bg-surface-1 p-2.5 space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[8px] font-bold uppercase tracking-widest text-muted">{t("previewSummary")}</span>
+            <span className={`text-[7px] font-bold uppercase px-1.5 py-0.5 rounded-full ${
+              preview.severity === "block" ? "bg-error/10 text-error border border-error/20" : "bg-warning/10 text-warning border border-warning/20"
+            }`}>
+              {preview.severity === "block" ? "bloqueo" : "aviso"}
+            </span>
+          </div>
+          <p className="text-[10px] font-medium text-primary">{preview.summary}</p>
+          <pre className="text-[8px] text-muted font-mono whitespace-pre-wrap leading-relaxed max-h-24 overflow-y-auto">
+            {JSON.stringify(preview.rule_json, null, 2)}
+          </pre>
+          {preview.notice && (
+            <p className="text-[8px] text-warning italic">{preview.notice}</p>
+          )}
+          {preview.setting_suggestion && (
+            <div className="flex items-center gap-1.5 text-[8px] text-accent">
+              <Zap className="h-2.5 w-2.5" />
+              <span>{preview.setting_suggestion.label || preview.setting_suggestion.setting_key}: {String(preview.setting_suggestion.value)}</span>
+            </div>
+          )}
+          <div className="pt-1.5">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-[9px] font-semibold text-white shadow-sm transition-all hover:bg-accent-hover disabled:opacity-40"
+            >
+              {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+              {saving ? "Guardando..." : t("saveRule")}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -85,400 +276,210 @@ export default function AdminPoliciesPanel({ companyId, expensePolicy, onExpense
   const tm = useTranslations("admin.expenseModule");
   const tc = useTranslations("common");
 
-  // ── AI rules state ─────────────────────────────────────────────────────────
-  const [rules, setRules]             = useState<AIPolicyRead[]>([]);
+  const [rules, setRules]               = useState<AIPolicyRead[]>([]);
   const [loadingRules, setLoadingRules] = useState(true);
-  const [selectedRule, setSelectedRule] = useState<AIPolicyRead | null>(null);
+  const [selectedRuleId, setSelectedRuleId] = useState<number | null>(null);
 
-  // ── Create-rule state ──────────────────────────────────────────────────────
-  const [prompt, setPrompt]           = useState("");
-  const [generating, setGenerating]   = useState(false);
-  const [preview, setPreview]         = useState<PreviewResponse | null>(null);
-  const [saving, setSaving]           = useState(false);
-  const [genError, setGenError]       = useState<string | null>(null);
-
-  // ── Expense-settings state ─────────────────────────────────────────────────
-  const [form, setForm]               = useState<Record<string, any>>({ ...expensePolicy });
+  const [form, setForm]                 = useState<Record<string, any>>({ ...expensePolicy });
   const [settingsDirty, setSettingsDirty] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [settingsSaved, setSettingsSaved]   = useState(false);
   const [settingsError, setSettingsError]   = useState<string | null>(null);
 
-  // ── Tab state ──────────────────────────────────────────────────────────────
-  const [tab, setTab] = useState<RightTab>("create");
-
-  // ── Load rules ─────────────────────────────────────────────────────────────
-  async function loadRules() {
+  // ── Load rules ───────────────────────────────────────────────────────────────
+  const loadRules = useCallback(async () => {
     setLoadingRules(true);
     try {
-      const res = await fetch(`${API}/admin/ai-policies/${companyId}`, { headers: getAuthHeaders() });
-      if (res.ok) setRules(await res.json());
+      const data = await apiCall<AIPolicyRead[]>(`/admin/ai-policies/${companyId}`);
+      setRules(data);
     } finally {
       setLoadingRules(false);
     }
-  }
+  }, [companyId]);
 
-  useEffect(() => { loadRules(); }, [companyId]);
+  useEffect(() => { loadRules(); }, [loadRules]);
 
-  // Sync expense policy when parent changes
+  // Sync expense policy
   useEffect(() => { setForm({ ...expensePolicy }); setSettingsDirty(false); }, [expensePolicy]);
 
-  // Merge draftPatch
   useEffect(() => {
     if (!draftPatch || Object.keys(draftPatch).length === 0) return;
     setForm((prev) => ({ ...prev, ...draftPatch }));
     setSettingsDirty(true);
   }, [draftPatch]);
 
-  // ── Handlers ───────────────────────────────────────────────────────────────
+  // ── Handlers ─────────────────────────────────────────────────────────────────
+  const set = (key: string, value: unknown) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    setSettingsDirty(true);
+    setSettingsSaved(false);
+    setSettingsError(null);
+  };
 
-  async function generate() {
-    if (!prompt.trim()) return;
-    setGenerating(true);
-    setGenError(null);
-    setPreview(null);
+  const toggleRule = async (rule: AIPolicyRead) => {
     try {
-      const res = await fetch(`${API}/admin/ai-policies/${companyId}/preview`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ source_text: prompt }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setGenError(data.detail ?? `${res.status}`); return; }
-      setPreview(data);
+      await apiPatch(`/admin/ai-policies/${companyId}/${rule.id}`, { enabled: !rule.enabled });
+      loadRules();
+    } catch {}
+  };
+
+  const deleteRule = async (rule: AIPolicyRead) => {
+    try {
+      await apiDelete(`/admin/ai-policies/${companyId}/${rule.id}`);
+      if (selectedRuleId === rule.id) setSelectedRuleId(null);
+      loadRules();
+    } catch {}
+  };
+
+  const saveSettings = async () => {
+    setSettingsSaving(true);
+    setSettingsError(null);
+    try {
+      const res = await apiCall<Record<string, any>>(`/expense-policy/${companyId}`, { method: "PUT", json: form });
+      onExpensePolicySaved(res);
+      setSettingsDirty(false);
+      setSettingsSaved(true);
+      setTimeout(() => setSettingsSaved(false), 3000);
     } catch (e: any) {
-      setGenError(e?.message ?? "error");
-    } finally {
-      setGenerating(false);
-    }
-  }
-
-  async function saveRule() {
-    if (!preview) return;
-    setSaving(true);
-    try {
-      const res = await fetch(`${API}/admin/ai-policies/${companyId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ source_text: prompt }),
-      });
-      if (res.ok) {
-        await loadRules();
-        setPrompt("");
-        setPreview(null);
-      }
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function applySetting(key: string, value: unknown) {
-    const res = await fetch(`${API}/admin/ai-policies/${companyId}/apply-setting`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-      body: JSON.stringify({ setting_key: key, value }),
-    });
-    if (res.ok) { setPreview(null); setPrompt(""); }
-  }
-
-  async function toggleRule(rule: AIPolicyRead) {
-    const res = await fetch(`${API}/admin/ai-policies/${companyId}/${rule.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-      body: JSON.stringify({ enabled: !rule.enabled }),
-    });
-    if (res.ok) {
-      const updated: AIPolicyRead = await res.json();
-      setRules((all) => all.map((x) => (x.id === updated.id ? updated : x)));
-      if (selectedRule?.id === updated.id) setSelectedRule(updated);
-    }
-  }
-
-  async function reExtract(rule: AIPolicyRead) {
-    const res = await fetch(`${API}/admin/ai-policies/${companyId}/${rule.id}/re-extract`, {
-      method: "POST",
-      headers: getAuthHeaders(),
-    });
-    if (res.ok) {
-      const updated: AIPolicyRead = await res.json();
-      setRules((all) => all.map((x) => (x.id === updated.id ? updated : x)));
-      if (selectedRule?.id === updated.id) setSelectedRule(updated);
-    }
-  }
-
-  async function deleteRule(rule: AIPolicyRead) {
-    if (!confirm(`Delete policy "${rule.summary}"?`)) return;
-    const res = await fetch(`${API}/admin/ai-policies/${companyId}/${rule.id}`, {
-      method: "DELETE",
-      headers: getAuthHeaders(),
-    });
-    if (res.ok) {
-      setRules((all) => all.filter((x) => x.id !== rule.id));
-      if (selectedRule?.id === rule.id) { setSelectedRule(null); setTab("create"); }
-    }
-  }
-
-  async function saveSettings() {
-    setSettingsSaving(true); setSettingsError(null); setSettingsSaved(false);
-    try {
-      const res = await fetch(`${API}/expenses/policy/${companyId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify(form),
-      });
-      if (!res.ok) throw new Error(`${res.status}`);
-      const updated = await res.json();
-      setSettingsDirty(false); setSettingsSaved(true);
-      onExpensePolicySaved(updated);
-    } catch (e: any) {
-      setSettingsError(e?.message ?? tc("save"));
+      setSettingsError(e?.message || "Error guardando configuración");
     } finally {
       setSettingsSaving(false);
     }
-  }
-
-  const set = (key: string, value: any) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
-    setSettingsDirty(true); setSettingsSaved(false);
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  const activeCount = rules.filter((r) => r.enabled).length;
+  const blockCount = rules.filter((r) => r.severity === "block" && r.enabled).length;
+  const warnCount = rules.filter((r) => r.severity === "warn" && r.enabled).length;
 
-  const XML_OPTIONS = [
-    { value: "never",    label: tm("xmlNever") },
-    { value: "mxn_only", label: tm("xmlMxnOnly") },
-    { value: "always",   label: tm("xmlAlways") },
-  ];
+  // ── XML mode display ────────────────────────────────────────────────────────
+  const xmlLabel = XML_OPTIONS.find((o) => o.value === (form.xml_required_mode ?? "always"))?.label ?? form.xml_required_mode;
+  const ticketsLabel = form.tickets_allowed ? t("ticketsOn") : t("ticketsOff");
 
   return (
-    <div className="flex h-full min-h-0 gap-0">
+    <div className="space-y-4">
+      {/* ── Header ───────────────────────────────────────────────────────────── */}
+      <PremiumHeader
+        icon={<FileText className="h-4 w-4" />}
+        title={t("title")}
+        subtitle={t("studioSubtitle")}
+        section="expense-policy"
+        metrics={[
+          { label: t("activeRules"), value: activeCount, tone: activeCount > 0 ? "success" : "neutral" },
+          { label: "Bloqueos", value: blockCount, tone: blockCount > 0 ? "error" : "neutral" },
+          { label: "Avisos", value: warnCount, tone: warnCount > 0 ? "warning" : "neutral" },
+        ]}
+      />
 
-      {/* ── LEFT: Rule list ─────────────────────────────────────────────── */}
-      <div className="flex w-[40%] min-w-0 flex-col border-r border-white/[0.07]">
-        <div className="flex items-center justify-between border-b border-white/[0.07] px-3.5 py-2.5">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-white/30">{t("rulesLabel")} · {rules.filter(r => r.enabled).length}/{rules.length}</span>
-          <button type="button" onClick={() => { setSelectedRule(null); setTab("create"); }}
-            className="inline-flex items-center gap-1 rounded border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[9.5px] text-white/45 hover:bg-white/[0.07] hover:text-white/75">
-            <Plus className="h-2.5 w-2.5" /> {t("newRule")}
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          {loadingRules ? (
-            <div className="flex items-center gap-1.5 px-3.5 py-4 text-[10px] text-white/28">
-              <Loader2 className="h-3 w-3 animate-spin" /> {tc("loading")}
-            </div>
-          ) : rules.length === 0 ? (
-            <div className="px-3.5 py-4 text-[10px] text-white/28">{t("noRules")}</div>
-          ) : (
-            <ul className="divide-y divide-white/[0.05]">
-              {rules.map((rule) => (
-                <li key={rule.id}
-                  onClick={() => { setSelectedRule(rule); setTab("rule"); }}
-                  className={`group flex cursor-pointer items-start gap-2 px-3.5 py-2.5 transition-colors ${selectedRule?.id === rule.id ? "bg-white/[0.06]" : "hover:bg-white/[0.03]"} ${!rule.enabled ? "opacity-45" : ""}`}>
-                  <span className={`mt-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full ${rule.severity === "block" ? "bg-rose-400" : "bg-amber-400"}`} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[11px] font-medium text-white/75">{rule.summary}</p>
-                    <p className="truncate text-[10px] text-white/30">{rule.scope}</p>
-                  </div>
-                  <div className="hidden shrink-0 items-center gap-0.5 group-hover:flex">
-                    <button type="button" onClick={(e) => { e.stopPropagation(); toggleRule(rule); }}
-                      className="rounded p-1 text-white/30 hover:bg-white/[0.06] hover:text-white/70">
-                      <Power className="h-3 w-3" />
-                    </button>
-                    <button type="button" onClick={(e) => { e.stopPropagation(); reExtract(rule); }}
-                      className="rounded p-1 text-white/30 hover:bg-white/[0.06] hover:text-white/70">
-                      <RefreshCw className="h-3 w-3" />
-                    </button>
-                    <button type="button" onClick={(e) => { e.stopPropagation(); deleteRule(rule); }}
-                      className="rounded p-1 text-white/30 hover:bg-red-500/10 hover:text-red-400">
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+      {/* ── Section 1: Policy Rules ─────────────────────────────────────────── */}
+      <div className="rounded-md border border-default">
+        <div className="flex items-center justify-between border-b border-subtle px-3 py-2">
+          <div className="flex items-center gap-2">
+            <Shield className="h-3 w-3 text-warning" />
+            <span className="text-[10px] font-semibold text-primary">{t("rulesLabel")}</span>
+          </div>
+          {rules.length > 0 && (
+            <span className="text-[8px] text-muted font-medium">{activeCount}/{rules.length} {t("activeRules").toLowerCase()}</span>
           )}
         </div>
 
-        {/* Settings compact summary */}
-        <div className="border-t border-white/[0.07]">
-          <button type="button" onClick={() => { setSelectedRule(null); setTab("settings"); }}
-            className={`w-full px-3.5 py-2.5 text-left transition-colors hover:bg-white/[0.03] ${tab === "settings" ? "bg-white/[0.06]" : ""}`}>
-            <p className="text-[9.5px] font-bold uppercase tracking-widest text-white/25">{t("expenseSettings")}</p>
-            <p className="mt-0.5 text-[10px] text-white/40">
-              {form.xml_required_mode ? `XML: ${form.xml_required_mode}` : "—"}
-              {" · "}
-              {form.tickets_allowed ? t("ticketsOn") : t("ticketsOff")}
-            </p>
-          </button>
+        <div className="p-2 space-y-1.5">
+          {loadingRules && (
+            <div className="flex items-center justify-center py-6"><Loader2 className="h-4 w-4 animate-spin text-muted" /></div>
+          )}
+
+          {!loadingRules && rules.length === 0 && (
+            <div className="py-6 text-center">
+              <div className="flex h-8 w-8 mx-auto items-center justify-center rounded-full bg-warning/10 mb-2">
+                <AlertTriangle className="h-3.5 w-3.5 text-warning" />
+              </div>
+              <p className="text-[10px] font-medium text-secondary">{t("noRules")}</p>
+              <p className="text-[8px] text-muted mt-0.5">{t("promptPlaceholder")}</p>
+            </div>
+          )}
+
+          {!loadingRules && rules.map((rule) => (
+            <RuleRow
+              key={rule.id}
+              rule={rule}
+              selected={selectedRuleId === rule.id}
+              onSelect={() => setSelectedRuleId(selectedRuleId === rule.id ? null : rule.id)}
+              onToggle={() => toggleRule(rule)}
+              onDelete={() => deleteRule(rule)}
+            />
+          ))}
+
+          <CreateRuleInput companyId={companyId} onCreated={loadRules} />
         </div>
       </div>
 
-      {/* ── RIGHT: Detail / editor ──────────────────────────────────────── */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        {/* Tabs */}
-        <div className="flex items-center gap-0 border-b border-white/[0.07]">
-          {([["create", t("tabCreate")], ["rule", t("tabRule")], ["settings", t("tabSettings")]] as [RightTab, string][]).map(([key, label]) => (
-            <button key={key} type="button"
-              onClick={() => { if (key === "rule" && !selectedRule) return; setTab(key); }}
-              className={`border-b-2 px-4 py-2.5 text-[10px] font-semibold transition-colors ${
-                tab === key
-                  ? "border-indigo-400/60 text-white/85"
-                  : "border-transparent text-white/35 hover:text-white/55"
-              } ${key === "rule" && !selectedRule ? "cursor-not-allowed opacity-30" : ""}`}>
-              {label}
-            </button>
-          ))}
+      {/* ── Section 2: Expense Configuration ──────────────────────────────────── */}
+      <div className="rounded-md border border-default">
+        <div className="flex items-center justify-between border-b border-subtle px-3 py-2">
+          <div className="flex items-center gap-2">
+            <FileText className="h-3 w-3 text-amber-400" />
+            <span className="text-[10px] font-semibold text-primary">{t("expenseSettings")}</span>
+          </div>
+          <div className="flex items-center gap-2 text-[8px] text-muted">
+            <span>XML: {xmlLabel}</span>
+            <span className="text-subtle">·</span>
+            <span>{ticketsLabel}</span>
+          </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="p-2">
+          <SectionPanel>
+            <Row label={tm("xmlCfdiRequired")}>
+              <select
+                value={form.xml_required_mode ?? "mxn_only"}
+                onChange={(e) => set("xml_required_mode", e.target.value)}
+                className={`${inputClasses.select} w-44`}
+              >
+                {XML_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </Row>
+            <Row label={tm("pdfPairRequired")} description={tm("pdfPairDesc")}>
+              <Toggle value={!!form.pdf_pair_required_for_cfdi} onChange={(v) => set("pdf_pair_required_for_cfdi", v)} />
+            </Row>
+            <Row label={tm("internationalAllowed")} description={tm("internationalDesc")}>
+              <Toggle value={!!form.international_expenses_allowed} onChange={(v) => set("international_expenses_allowed", v)} />
+            </Row>
+            <Row label={tm("ticketsAllowed")} description={tm("ticketsDesc")}>
+              <Toggle value={!!form.tickets_allowed} onChange={(v) => set("tickets_allowed", v)} />
+            </Row>
+            <Row label={tm("justificationRequired")} description={tm("justificationDesc")}>
+              <Toggle value={!!form.require_justification} onChange={(v) => set("require_justification", v)} />
+            </Row>
+            <Row label={tm("proofRequired")} description={tm("proofDesc")}>
+              <Toggle value={!!form.require_proof} onChange={(v) => set("require_proof", v)} />
+            </Row>
+            <Row label={tm("docFreeExpenses")} description={tm("docFreeExpensesDesc")}>
+              <Toggle value={!!form.allow_document_free_expenses} onChange={(v) => set("allow_document_free_expenses", v)} />
+            </Row>
+          </SectionPanel>
 
-          {/* ── Create rule tab ────────────────────────────────────────── */}
-          {tab === "create" && (
-            <div className="space-y-4">
-              <div>
-                <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-white/25">{t("promptLabel")}</p>
-                <textarea
-                  value={prompt}
-                  onChange={(e) => { setPrompt(e.target.value); setPreview(null); setGenError(null); }}
-                  rows={4}
-                  placeholder={t("promptPlaceholder")}
-                  className="w-full resize-none rounded border border-white/[0.08] bg-black/30 px-3 py-2 text-[11px] text-white/75 placeholder:text-white/22 focus:border-white/20 focus:outline-none"
-                />
+          <div className="flex items-center gap-4 mt-3 px-1">
+            <button
+              type="button"
+              onClick={saveSettings}
+              disabled={settingsSaving || !settingsDirty}
+              className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-1.5 text-[10px] font-semibold text-white shadow-sm transition-all hover:bg-accent-hover disabled:opacity-40"
+            >
+              {settingsSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+              {settingsSaving ? tc("saving") : tc("save")}
+            </button>
+            {settingsSaved && (
+              <div className="flex items-center gap-1 text-[9px] text-success font-medium">
+                <CheckCircle2 className="h-3 w-3" /> {tc("saved")}
               </div>
-
-              <button type="button" onClick={generate}
-                disabled={generating || !prompt.trim()}
-                className="inline-flex items-center gap-1.5 rounded border border-violet-500/25 bg-violet-600/15 px-3 py-1.5 text-[10px] font-semibold text-violet-300/80 transition-colors hover:bg-violet-600/25 disabled:cursor-not-allowed disabled:opacity-40">
-                {generating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                {generating ? t("generating") : t("generateBtn")}
-              </button>
-
-              {genError && (
-                <div className="flex items-start gap-2 rounded border border-red-500/20 bg-red-500/[0.05] px-3 py-2 text-[10px] text-red-400/80">
-                  <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" /> {genError}
-                </div>
-              )}
-
-              {preview && (
-                <div className="space-y-3 rounded border border-white/[0.08] bg-white/[0.02] p-3">
-                  {preview.notice && (
-                    <div className="flex items-start gap-2 rounded border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2 text-[10px] text-amber-300/80">
-                      <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" /> {preview.notice}
-                    </div>
-                  )}
-
-                  <div>
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-white/22">{t("previewSummary")}</p>
-                    <p className="mt-1 text-[11px] text-white/70">{preview.summary}</p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <span className={`rounded border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${preview.severity === "block" ? "border-rose-500/25 bg-rose-500/10 text-rose-300/80" : "border-amber-500/25 bg-amber-500/10 text-amber-300/80"}`}>
-                      {preview.severity}
-                    </span>
-                  </div>
-
-                  {Object.keys(preview.rule_json).length > 0 && (
-                    <pre className="overflow-x-auto rounded border border-white/[0.07] bg-black/30 px-3 py-2 text-[9.5px] text-white/45">
-                      {JSON.stringify(preview.rule_json, null, 2)}
-                    </pre>
-                  )}
-
-                  <div className="flex items-center gap-2">
-                    {!preview.notice && (
-                      <button type="button" onClick={saveRule} disabled={saving}
-                        className="inline-flex items-center gap-1.5 rounded border border-emerald-500/25 bg-emerald-600/15 px-3 py-1.5 text-[10px] font-semibold text-emerald-300/80 transition-colors hover:bg-emerald-600/25 disabled:opacity-40">
-                        {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-                        {t("saveRule")}
-                      </button>
-                    )}
-                    {preview.setting_suggestion && (
-                      <button type="button"
-                        onClick={() => applySetting(preview.setting_suggestion!.setting_key, preview.setting_suggestion!.value)}
-                        className="inline-flex items-center gap-1.5 rounded border border-sky-500/25 bg-sky-600/10 px-3 py-1.5 text-[10px] font-semibold text-sky-300/80 transition-colors hover:bg-sky-600/20">
-                        {t("applyAsSetting")}: {String(preview.setting_suggestion.setting_key).replace(/_/g, " ")}
-                      </button>
-                    )}
-                    <button type="button" onClick={() => { setPreview(null); }}
-                      className="text-[10px] text-white/30 hover:text-white/60">
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── Rule detail tab ────────────────────────────────────────── */}
-          {tab === "rule" && selectedRule && (
-            <div className="space-y-4">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-[12px] font-semibold text-white/85">{selectedRule.summary}</p>
-                  <p className="mt-0.5 text-[10px] text-white/35">{selectedRule.scope}</p>
-                </div>
-                <span className={`shrink-0 rounded border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${selectedRule.severity === "block" ? "border-rose-500/25 bg-rose-500/10 text-rose-300/80" : "border-amber-500/25 bg-amber-500/10 text-amber-300/80"}`}>
-                  {selectedRule.severity}
-                </span>
+            )}
+            {settingsError && (
+              <div className="flex items-center gap-1 text-[9px] text-error font-medium">
+                <AlertCircle className="h-3 w-3" /> {settingsError}
               </div>
-
-              <div>
-                <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-white/22">{t("sourceText")}</p>
-                <p className="rounded border border-white/[0.07] bg-white/[0.02] px-3 py-2 text-[11px] text-white/55 leading-relaxed">{selectedRule.source_text}</p>
-              </div>
-
-              <div>
-                <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-white/22">{t("ruleJson")}</p>
-                <pre className="overflow-x-auto rounded border border-white/[0.07] bg-black/30 px-3 py-2 text-[9.5px] text-white/40">
-                  {JSON.stringify(selectedRule.rule_json, null, 2)}
-                </pre>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button type="button" onClick={() => toggleRule(selectedRule)}
-                  className={`inline-flex items-center gap-1.5 rounded border px-3 py-1.5 text-[10px] font-semibold transition-colors ${selectedRule.enabled ? "border-white/[0.08] bg-white/[0.04] text-white/45 hover:bg-white/[0.08]" : "border-emerald-500/25 bg-emerald-600/10 text-emerald-300/70 hover:bg-emerald-600/20"}`}>
-                  <Power className="h-3 w-3" />
-                  {selectedRule.enabled ? t("disableRule") : t("enableRule")}
-                </button>
-                <button type="button" onClick={() => reExtract(selectedRule)}
-                  className="inline-flex items-center gap-1.5 rounded border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[10px] font-semibold text-white/45 transition-colors hover:bg-white/[0.07]">
-                  <RefreshCw className="h-3 w-3" /> {t("reExtract")}
-                </button>
-                <button type="button" onClick={() => deleteRule(selectedRule)}
-                  className="inline-flex items-center gap-1.5 rounded border border-rose-500/15 px-3 py-1.5 text-[10px] font-semibold text-rose-400/60 transition-colors hover:bg-rose-500/10">
-                  <Trash2 className="h-3 w-3" /> {tc("delete")}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ── Settings tab ───────────────────────────────────────────── */}
-          {tab === "settings" && (
-            <div className="space-y-4 max-w-md">
-              <div className="overflow-hidden rounded border border-white/[0.07] divide-y divide-white/[0.05]">
-                <SelectRow label={tm("xmlCfdiRequired")} value={form.xml_required_mode ?? "mxn_only"} options={XML_OPTIONS} onChange={(v) => set("xml_required_mode", v)} />
-                <ToggleRow label={tm("pdfPairRequired")} desc={tm("pdfPairDesc")} checked={!!form.pdf_pair_required_for_cfdi} onChange={(v) => set("pdf_pair_required_for_cfdi", v)} />
-                <ToggleRow label={tm("internationalAllowed")} desc={tm("internationalDesc")} checked={!!form.international_expenses_allowed} onChange={(v) => set("international_expenses_allowed", v)} />
-                <ToggleRow label={tm("ticketsAllowed")} desc={tm("ticketsDesc")} checked={!!form.tickets_allowed} onChange={(v) => set("tickets_allowed", v)} />
-                <ToggleRow label={tm("justificationRequired")} desc={tm("justificationDesc")} checked={!!form.require_justification} onChange={(v) => set("require_justification", v)} />
-                <ToggleRow label={tm("proofRequired")} desc={tm("proofDesc")} checked={!!form.require_proof} onChange={(v) => set("require_proof", v)} />
-                <ToggleRow label={tm("docFreeExpenses")} desc={tm("docFreeExpensesDesc")} checked={!!form.allow_document_free_expenses} onChange={(v) => set("allow_document_free_expenses", v)} />
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button type="button" onClick={saveSettings} disabled={settingsSaving || !settingsDirty}
-                  className="inline-flex items-center gap-1.5 rounded border border-indigo-500/30 bg-indigo-600/20 px-3 py-1.5 text-[10px] font-semibold text-indigo-300/80 transition-colors hover:bg-indigo-600/30 disabled:cursor-not-allowed disabled:opacity-40">
-                  {settingsSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-                  {settingsSaving ? tc("saving") : tc("save")}
-                </button>
-                {settingsSaved && <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400/70"><CheckCircle2 className="h-3 w-3" /> {tc("saved")}</span>}
-                {settingsError && <span className="text-[10px] text-red-400/70">{settingsError}</span>}
-              </div>
-            </div>
-          )}
-
+            )}
+          </div>
         </div>
       </div>
     </div>

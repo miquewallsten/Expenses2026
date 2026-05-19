@@ -10,8 +10,15 @@ export interface StoredSession {
   isSuperAdmin?: boolean;
 }
 
+/**
+ * All localStorage reads in this file are safe because:
+ * - These functions are only called from useEffect callbacks or event handlers
+ *   (client-only contexts where localStorage is always available).
+ * - The HydrationGuard in layout.tsx ensures no component renders until
+ *   after mount, so these never run during SSR.
+ */
+
 export function getStoredSession(): StoredSession | null {
-  if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem("session");
     return raw ? (JSON.parse(raw) as StoredSession) : null;
@@ -31,7 +38,6 @@ export function clearStoredSession(): void {
 // ── Legacy helpers (kept for compatibility during transition) ─────────────
 
 export function getCurrentUserId(): string | null {
-  if (typeof window === "undefined") return null;
   const s = getStoredSession();
   return s ? String(s.userId) : localStorage.getItem("currentUserId");
 }
@@ -44,10 +50,17 @@ export function clearCurrentUserId(): void {
   localStorage.removeItem("currentUserId");
 }
 
+/** Normalize role aliases so the frontend always uses canonical names. */
+function normalizeRole(role: string | null): string | null {
+  if (!role) return null;
+  // "accountant" is an alias for "accounting" (some DB rows use the shorter form)
+  if (role === "accountant") return "accounting";
+  return role;
+}
+
 export function getCurrentRole(): string | null {
-  if (typeof window === "undefined") return null;
   const s = getStoredSession();
-  return s ? s.role : localStorage.getItem("currentUserRole");
+  return normalizeRole(s ? s.role : localStorage.getItem("currentUserRole"));
 }
 
 export function setCurrentRole(role: string): void {
@@ -55,7 +68,6 @@ export function setCurrentRole(role: string): void {
 }
 
 export function getCurrentCompanyId(): string | null {
-  if (typeof window === "undefined") return null;
   const s = getStoredSession();
   return s ? String(s.companyId) : localStorage.getItem("currentCompanyId");
 }
@@ -71,10 +83,7 @@ export function clearSession(): void {
   localStorage.removeItem("currentCompanyId");
 }
 
-/** Returns the correct Authorization headers for API calls.
- *  Prefers Bearer JWT (from stored session); falls back to X-User-Id in dev.
- *  If the stored token is expired, the session is cleared and empty headers
- *  are returned (forces re-auth). */
+/** Returns the correct Authorization headers for API calls. */
 export function getAuthHeaders(): Record<string, string> {
   const stored = getStoredSession();
   if (stored?.token) {
@@ -88,20 +97,13 @@ export function getAuthHeaders(): Record<string, string> {
   return { "X-User-Id": userId };
 }
 
-
-/** Returns true if a JWT's exp claim has elapsed. Malformed tokens count as
- *  expired (forces re-auth). Tokens without an exp claim are treated as
- *  non-expiring (returns false). */
+/** Returns true if a JWT's exp claim has elapsed. */
 export function isSessionExpired(token: string): boolean {
   if (!token) return true;
   const parts = token.split(".");
   if (parts.length !== 3) return true;
   try {
-    const payload = JSON.parse(
-      typeof atob === "function"
-        ? atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"))
-        : Buffer.from(parts[1].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8"),
-    );
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
     if (typeof payload.exp !== "number") return false;
     return payload.exp * 1000 < Date.now();
   } catch {
@@ -109,16 +111,13 @@ export function isSessionExpired(token: string): boolean {
   }
 }
 
-
 /** Decodes a JWT payload. Returns null if the token is malformed. */
 export function decodeJwtPayload(token: string): Record<string, unknown> | null {
   if (!token) return null;
   const parts = token.split(".");
   if (parts.length !== 3) return null;
   try {
-    const json = typeof atob === "function"
-      ? atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"))
-      : Buffer.from(parts[1].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
+    const json = atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"));
     return JSON.parse(json) as Record<string, unknown>;
   } catch {
     return null;

@@ -1,11 +1,9 @@
 // Unified Agent v2 client — thin wrapper over /agent/* endpoints.
 // Backend is synchronous JSON for now (no SSE); one POST per turn.
 
-import { getAuthHeaders } from "@/lib/session";
+import { apiCall, apiPost } from "@/lib/api/client";
 
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-export type AgentPersona = "admin" | "employee" | "procurement" | "finance_manager";
+export type AgentPersona = "admin" | "employee" | "procurement" | "accounting" | "manager" | "super_admin";
 
 export interface AgentToolCall {
   tool:    string;
@@ -73,45 +71,20 @@ export interface AgentUploadResponse {
   session_id:   string | null;
 }
 
-function base(): string {
-  if (!API) throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured");
-  return API;
-}
-
-async function toJsonOrThrow<T>(res: Response): Promise<T> {
-  if (!res.ok) {
-    let detail = res.statusText;
-    try {
-      const body = await res.json();
-      detail = typeof body?.detail === "string" ? body.detail : JSON.stringify(body);
-    } catch { /* leave statusText */ }
-    throw new Error(`${res.status} ${detail}`);
-  }
-  return res.json() as Promise<T>;
-}
-
 export async function agentChat(
   companyId: number,
   message: string,
   opts: { persona?: AgentPersona; sessionId?: string | null } = {},
 ): Promise<AgentChatResponse> {
-  const res = await fetch(`${base()}/agent/chat/${companyId}`, {
-    method:  "POST",
-    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-    body:    JSON.stringify({
-      message,
-      persona:    opts.persona ?? "admin",
-      session_id: opts.sessionId ?? null,
-    }),
+  return apiPost<AgentChatResponse>(`/agent/chat/${companyId}`, {
+    message,
+    persona:    opts.persona ?? "admin",
+    session_id: opts.sessionId ?? null,
   });
-  return toJsonOrThrow<AgentChatResponse>(res);
 }
 
 export async function getReceipt(companyId: number, receiptId: string): Promise<AgentReceipt> {
-  const res = await fetch(`${base()}/agent/receipts/${companyId}/${receiptId}`, {
-    headers: { ...getAuthHeaders() },
-  });
-  return toJsonOrThrow<AgentReceipt>(res);
+  return apiCall<AgentReceipt>(`/agent/receipts/${companyId}/${receiptId}`);
 }
 
 export async function confirmReceipt(companyId: number, receiptId: string): Promise<{
@@ -119,24 +92,14 @@ export async function confirmReceipt(companyId: number, receiptId: string): Prom
   receipt: AgentReceipt;
   result: Record<string, unknown>;
 }> {
-  const res = await fetch(`${base()}/agent/confirm`, {
-    method:  "POST",
-    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-    body:    JSON.stringify({ receipt_id: receiptId, company_id: companyId }),
-  });
-  return toJsonOrThrow(res);
+  return apiPost("/agent/confirm", { receipt_id: receiptId, company_id: companyId });
 }
 
 export async function rejectReceipt(companyId: number, receiptId: string): Promise<{
   ok: boolean;
   receipt: AgentReceipt;
 }> {
-  const res = await fetch(`${base()}/agent/reject`, {
-    method:  "POST",
-    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-    body:    JSON.stringify({ receipt_id: receiptId, company_id: companyId }),
-  });
-  return toJsonOrThrow(res);
+  return apiPost("/agent/reject", { receipt_id: receiptId, company_id: companyId });
 }
 
 export async function uploadAgentFile(
@@ -147,24 +110,16 @@ export async function uploadAgentFile(
   const form = new FormData();
   form.append("file", file);
   if (sessionId) form.append("session_id", sessionId);
-  const res = await fetch(`${base()}/agent/upload/${companyId}`, {
-    method:  "POST",
-    headers: { ...getAuthHeaders() },    // do NOT set Content-Type — browser adds boundary
-    body:    form,
+  return apiCall<AgentUploadResponse>(`/agent/upload/${companyId}`, {
+    method: "POST",
+    body: form,
   });
-  return toJsonOrThrow<AgentUploadResponse>(res);
 }
 
 export async function listSessions(companyId: number, limit = 20): Promise<AgentSessionMeta[]> {
-  const res = await fetch(`${base()}/agent/sessions/${companyId}?limit=${limit}`, {
-    headers: { ...getAuthHeaders() },
-  });
-  return toJsonOrThrow<AgentSessionMeta[]>(res);
+  return apiCall<AgentSessionMeta[]>(`/agent/sessions/${companyId}?limit=${limit}`);
 }
 
 export async function getSession(companyId: number, sessionId: string): Promise<AgentSessionDetail> {
-  const res = await fetch(`${base()}/agent/sessions/${companyId}/${sessionId}`, {
-    headers: { ...getAuthHeaders() },
-  });
-  return toJsonOrThrow<AgentSessionDetail>(res);
+  return apiCall<AgentSessionDetail>(`/agent/sessions/${companyId}/${sessionId}`);
 }

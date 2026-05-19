@@ -12,7 +12,6 @@ import {
   CheckCircle2,
   ChevronRight,
   Clock,
-  ExternalLink,
   FileText,
   Globe,
   HelpCircle,
@@ -26,9 +25,13 @@ import {
   Plus,
   Send,
   Trash2,
+  ExternalLink,
   XCircle,
   AlertCircle,
 } from "lucide-react";
+import { apiCall, apiPost, apiPatch, apiDelete } from "@/lib/api/client";
+import { getAuthHeaders } from "@/lib/session";
+import { statusClasses, REQUEST_STATUS_STYLES } from "@/lib/status-styles";
 import { useMyWorkContext } from "@/context/MyWorkContext";
 import { useUserContext } from "@/context/UserContext";
 import PurchaseRequisitionForm from "./PurchaseRequisitionForm";
@@ -59,13 +62,13 @@ function renderMd(text: string): React.ReactNode {
     // Inline bold: split on **...**
     const parts = content.split(/\*\*(.+?)\*\*/g);
     const inline: React.ReactNode[] = parts.map((p, pi) =>
-      pi % 2 === 1 ? <strong key={pi} className="font-semibold text-white/90">{p}</strong> : p
+      pi % 2 === 1 ? <strong key={pi} className="font-semibold text-primary">{p}</strong> : p
     );
 
     if (listMatch) {
       nodes.push(
         <div key={li} className="flex gap-1.5">
-          <span className="shrink-0 text-white/30">{listMatch[1].trim()}</span>
+          <span className="shrink-0 text-muted">{listMatch[1].trim()}</span>
           <span>{inline}</span>
         </div>
       );
@@ -137,20 +140,16 @@ const TYPE_LABELS: Record<string, string> = {
   other: "Other",
 };
 
-const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
-  draft:        { label: "Draft",        cls: "text-white/35 bg-white/[0.06]" },
-  submitted:    { label: "Submitted",    cls: "text-blue-300/80 bg-blue-500/[0.10]" },
-  under_review: { label: "Under Review", cls: "text-amber-300/80 bg-amber-500/[0.10]" },
-  approved:     { label: "Approved",     cls: "text-emerald-300/80 bg-emerald-500/[0.10]" },
-  rejected:     { label: "Rejected",     cls: "text-red-300/80 bg-red-500/[0.10]" },
-  fulfilled:    { label: "Fulfilled",    cls: "text-purple-300/80 bg-purple-500/[0.10]" },
-  cancelled:    { label: "Cancelled",    cls: "text-white/20 bg-white/[0.04]" },
+// Status styles via centralized status-styles + REQUEST_STATUS_STYLES
+const PR_STATUS_LABELS: Record<string, string> = {
+  draft: "Draft", submitted: "Submitted", under_review: "Under Review",
+  approved: "Approved", rejected: "Rejected", fulfilled: "Fulfilled", cancelled: "Cancelled",
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function fmtDate(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return " - ";
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
@@ -160,10 +159,9 @@ function TypeIcon({ type, className }: { type: string | null; className?: string
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.draft;
   return (
-    <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${cfg.cls}`}>
-      {cfg.label}
+    <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${statusClasses(status, REQUEST_STATUS_STYLES)}`}>
+      {PR_STATUS_LABELS[status] ?? status}
     </span>
   );
 }
@@ -203,7 +201,7 @@ function AttachmentsBar({
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/requests/${companyId}/${requestId}/attachments`);
+      const res: any = await apiCall(`/requests/${companyId}/${requestId}/attachments`);
       if (res.ok) setAttachments(await res.json());
     } finally {
       setLoading(false);
@@ -218,10 +216,10 @@ function AttachmentsBar({
     setSaving(true);
     const fd = new FormData();
     fd.append("file", file);
-    const res = await fetch(
-      `${API}/requests/${companyId}/${requestId}/attachments/file?uploader_id=${userId}`,
-      { method: "POST", body: fd }
-    );
+    // FormData upload - must use raw fetch (apiCall doesn't support multipart)
+    const res = await fetch(`${API}/requests/${companyId}/${requestId}/attachments/file`, {
+      method: "POST", headers: getAuthHeaders(), body: fd,
+    });
     if (res.ok) await load();
     setSaving(false);
     if (fileRef.current) fileRef.current.value = "";
@@ -230,32 +228,22 @@ function AttachmentsBar({
   async function handleAddUrl() {
     if (!urlInput.trim()) return;
     setSaving(true);
-    const res = await fetch(
-      `${API}/requests/${companyId}/${requestId}/attachments/url?uploader_id=${userId}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: urlInput.trim(), label: urlLabel.trim() || null }),
-      }
-    );
-    if (res.ok) { setUrlInput(""); setUrlLabel(""); setShowAdd(false); await load(); }
+      await apiPost(`/requests/${companyId}/${requestId}/attachments/url`, { url: urlInput.trim(), label: urlLabel.trim() });
+      setUrlInput(""); setUrlLabel(""); setShowAdd(false); await load();
     setSaving(false);
   }
 
   async function handleDelete(attId: number) {
-    const res = await fetch(
-      `${API}/requests/${companyId}/${requestId}/attachments/${attId}?requester_id=${userId}`,
-      { method: "DELETE" }
-    );
-    if (res.ok || res.status === 204) await load();
+      await apiDelete(`/requests/${companyId}/${requestId}/attachments/${attId}`);
+      await load();
   }
 
   if (loading) return null;
 
   return (
-    <div className="border-t border-white/[0.05] px-4 py-2.5">
+    <div className="border-t border-subtle px-4 py-2.5">
       <div className="mb-1.5 flex items-center justify-between">
-        <span className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-white/22">
+        <span className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-muted">
           <Paperclip className="h-2.5 w-2.5" />
           Attachments{attachments.length > 0 ? ` (${attachments.length})` : ""}
         </span>
@@ -273,7 +261,7 @@ function AttachmentsBar({
               title="Upload file"
               onClick={() => fileRef.current?.click()}
               disabled={saving}
-              className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] text-white/30 transition-colors hover:bg-white/[0.04] hover:text-white/55 disabled:opacity-40"
+              className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] text-muted transition-colors hover:bg-surface-2 hover:text-tertiary disabled:opacity-40"
             >
               <FileText className="h-2.5 w-2.5" /> File
             </button>
@@ -281,7 +269,7 @@ function AttachmentsBar({
               type="button"
               title="Add URL"
               onClick={() => setShowAdd((v) => !v)}
-              className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] transition-colors hover:bg-white/[0.04] ${showAdd ? "text-indigo-300/60" : "text-white/30 hover:text-white/55"}`}
+              className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] transition-colors hover:bg-surface-2 ${showAdd ? "text-accent/60" : "text-muted hover:text-tertiary"}`}
             >
               <Link2 className="h-2.5 w-2.5" /> URL
             </button>
@@ -297,20 +285,20 @@ function AttachmentsBar({
             value={urlInput}
             onChange={(e) => setUrlInput(e.target.value)}
             placeholder="https://..."
-            className="min-w-0 flex-1 rounded border border-white/[0.09] bg-white/[0.04] px-2 py-1 text-[10px] text-white/70 placeholder-white/18 outline-none focus:border-indigo-500/40"
+            className="min-w-0 flex-1 rounded border border-default bg-surface-2 px-2 py-1 text-[10px] text-secondary placeholder-white/18 outline-none focus:bg-accent-muted"
           />
           <input
             type="text"
             value={urlLabel}
             onChange={(e) => setUrlLabel(e.target.value)}
             placeholder="Label (optional)"
-            className="w-24 rounded border border-white/[0.09] bg-white/[0.04] px-2 py-1 text-[10px] text-white/70 placeholder-white/18 outline-none focus:border-indigo-500/40"
+            className="w-24 rounded border border-default bg-surface-2 px-2 py-1 text-[10px] text-secondary placeholder-white/18 outline-none focus:bg-accent-muted"
           />
           <button
             type="button"
             onClick={handleAddUrl}
             disabled={!urlInput.trim() || saving}
-            className="rounded bg-indigo-600/60 px-2 py-1 text-[10px] font-medium text-white/80 transition-colors hover:bg-indigo-600/80 disabled:opacity-40"
+            className="rounded bg-accent px-2 py-1 text-[10px] font-medium text-secondary transition-colors hover:bg-indigo-600/80 disabled:opacity-40"
           >
             {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Add"}
           </button>
@@ -319,31 +307,31 @@ function AttachmentsBar({
 
       {/* Attachment list */}
       {attachments.length === 0 ? (
-        <p className="text-[9px] text-white/18">No attachments yet</p>
+        <p className="text-[9px] text-muted">No attachments yet</p>
       ) : (
         <div className="space-y-0.5">
           {attachments.map((att) => (
             <div
               key={att.id}
-              className="group flex items-center gap-2 rounded px-1.5 py-1 hover:bg-white/[0.03]"
+              className="group flex items-center gap-2 rounded px-1.5 py-1 hover:bg-surface-1"
             >
-              <span className="shrink-0 text-white/28">
+              <span className="shrink-0 text-muted">
                 {att.attachment_type === "url"
                   ? <Link2 className="h-3 w-3" />
                   : <AttachmentIcon mime={att.mime_type} />}
               </span>
-              <span className="min-w-0 flex-1 truncate text-[10px] text-white/55">
+              <span className="min-w-0 flex-1 truncate text-[10px] text-tertiary">
                 {att.label ?? att.original_name ?? att.url ?? "Attachment"}
               </span>
               {att.file_size && (
-                <span className="shrink-0 text-[9px] text-white/22">{fmtBytes(att.file_size)}</span>
+                <span className="shrink-0 text-[9px] text-muted">{fmtBytes(att.file_size)}</span>
               )}
               {att.attachment_type === "file" ? (
                 <a
                   href={`${API}/requests/${companyId}/attachments/${att.id}/download`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="shrink-0 text-white/22 opacity-0 transition-opacity group-hover:opacity-100 hover:text-indigo-300/60"
+                  className="shrink-0 text-muted opacity-0 transition-opacity group-hover:opacity-100 hover:text-accent/60"
                 >
                   <ExternalLink className="h-3 w-3" />
                 </a>
@@ -352,7 +340,7 @@ function AttachmentsBar({
                   href={att.url ?? "#"}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="shrink-0 text-white/22 opacity-0 transition-opacity group-hover:opacity-100 hover:text-indigo-300/60"
+                  className="shrink-0 text-muted opacity-0 transition-opacity group-hover:opacity-100 hover:text-accent/60"
                 >
                   <ExternalLink className="h-3 w-3" />
                 </a>
@@ -361,7 +349,7 @@ function AttachmentsBar({
                 <button
                   type="button"
                   onClick={() => handleDelete(att.id)}
-                  className="shrink-0 text-white/18 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-300/60"
+                  className="shrink-0 text-muted opacity-0 transition-opacity group-hover:opacity-100 hover:text-error/60"
                 >
                   <Trash2 className="h-3 w-3" />
                 </button>
@@ -392,15 +380,15 @@ function RequestRow({
       onClick={onClick}
       className={`group relative flex w-full items-center gap-2.5 rounded px-3 py-2 text-left transition-colors ${
         active
-          ? "bg-indigo-600/[0.18] text-white"
-          : "text-white/50 hover:bg-white/[0.04] hover:text-white/75"
+          ? "bg-indigo-600/[0.18] text-primary"
+          : "text-secondary hover:bg-surface-2 hover:text-secondary"
       }`}
     >
       {active && (
-        <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-r-full bg-indigo-400/70" />
+        <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-r-full bg-accent/70" />
       )}
       <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded ${
-        active ? "bg-indigo-500/20 text-indigo-300" : "bg-white/[0.05] text-white/28"
+        active ? "bg-accent-muted text-accent" : "bg-surface-2 text-muted"
       }`}>
         <TypeIcon type={req.request_type} className="h-3 w-3" />
       </span>
@@ -408,15 +396,15 @@ function RequestRow({
         <p className="truncate text-[11px] font-medium leading-tight">{label}</p>
         <div className="mt-0.5 flex items-center gap-1.5">
           <StatusBadge status={req.status} />
-          <span className="text-[9px] text-white/22">{fmtDate(req.created_at)}</span>
+          <span className="text-[9px] text-muted">{fmtDate(req.created_at)}</span>
         </div>
       </div>
       {req.estimated_amount && (
-        <span className="shrink-0 text-[10px] font-medium text-white/35">
+        <span className="shrink-0 text-[10px] font-medium text-muted">
           {req.currency ?? ""}{Number(req.estimated_amount).toLocaleString()}
         </span>
       )}
-      <ChevronRight className={`h-3 w-3 shrink-0 ${active ? "text-indigo-300/50" : "text-white/15"}`} />
+      <ChevronRight className={`h-3 w-3 shrink-0 ${active ? "text-accent/50" : "text-muted"}`} />
     </button>
   );
 }
@@ -474,13 +462,13 @@ function ChatPanel({
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex h-9 shrink-0 items-center gap-2.5 border-b border-white/[0.06] px-4">
+      <div className="flex h-9 shrink-0 items-center gap-2.5 border-b border-subtle px-4">
         <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded ${
-          req.request_type ? "bg-indigo-500/20 text-indigo-300" : "bg-white/[0.05] text-white/28"
+          req.request_type ? "bg-accent-muted text-accent" : "bg-surface-2 text-muted"
         }`}>
           <TypeIcon type={req.request_type} className="h-3 w-3" />
         </span>
-        <span className="text-[11px] font-semibold text-white/70">{label}</span>
+        <span className="text-[11px] font-semibold text-secondary">{label}</span>
         <StatusBadge status={req.status} />
       </div>
 
@@ -495,8 +483,8 @@ function ChatPanel({
               <div
                 className={`max-w-[80%] rounded-lg px-3 py-2 text-[11px] leading-relaxed ${
                   m.role === "user"
-                    ? "bg-indigo-600/[0.22] text-white/85"
-                    : "bg-white/[0.06] text-white/70"
+                    ? "bg-indigo-600/[0.22] text-primary"
+                    : "bg-surface-2 text-secondary"
                 }`}
               >
                 {renderMd(m.content)}
@@ -506,31 +494,31 @@ function ChatPanel({
 
           {sending && (
             <div className="flex justify-start">
-              <div className="flex items-center gap-1.5 rounded-lg bg-white/[0.06] px-3 py-2">
-                <Loader2 className="h-3 w-3 animate-spin text-white/30" />
-                <span className="text-[10px] text-white/28">Thinking…</span>
+              <div className="flex items-center gap-1.5 rounded-lg bg-surface-2 px-3 py-2">
+                <Loader2 className="h-3 w-3 animate-spin text-muted" />
+                <span className="text-[10px] text-muted">Thinking…</span>
               </div>
             </div>
           )}
 
           {/* Research results */}
           {researchResults && researchResults.length > 0 && (
-            <div className="rounded-lg border border-white/[0.07] bg-white/[0.03] p-2.5">
-              <p className="mb-1.5 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-white/25">
+            <div className="rounded-lg border border-default bg-surface-1 p-2.5">
+              <p className="mb-1.5 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-muted">
                 <Globe className="h-2.5 w-2.5" />
                 Web Research
               </p>
               <div className="space-y-1.5">
                 {researchResults.map((r, i) => (
-                  <div key={i} className="text-[10px] leading-relaxed text-white/40">
-                    <span className="font-medium text-white/55">{r.title}: </span>
+                  <div key={i} className="text-[10px] leading-relaxed text-tertiary">
+                    <span className="font-medium text-tertiary">{r.title}: </span>
                     {r.text.slice(0, 120)}
                     {r.url && (
                       <a
                         href={r.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="ml-1 text-indigo-400/60 underline-offset-2 hover:underline"
+                        className="ml-1 text-accent/60 underline-offset-2 hover:underline"
                       >
                         ↗
                       </a>
@@ -549,16 +537,16 @@ function ChatPanel({
         <div className="shrink-0 border-t border-emerald-500/20 bg-emerald-900/[0.08] px-4 py-2.5">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400/60" />
+              <CheckCircle2 className="h-3.5 w-3.5 text-success/60" />
               <span className="text-[10px] font-medium text-emerald-300/60">
-                All details gathered — ready to submit
+                All details gathered - ready to submit
               </span>
             </div>
             <button
               type="button"
               onClick={onSubmit}
               disabled={submitting}
-              className="flex items-center gap-1.5 rounded bg-emerald-600/70 px-3 py-1.5 text-[10px] font-semibold text-white/90 transition-colors hover:bg-emerald-600/90 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded bg-emerald-600/70 px-3 py-1.5 text-[10px] font-semibold text-primary transition-colors hover:bg-emerald-600/90 disabled:opacity-50"
             >
               {submitting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
               Submit Request
@@ -576,7 +564,7 @@ function ChatPanel({
       />
 
       {/* Input area */}
-      <div className="shrink-0 border-t border-white/[0.06] p-3">
+      <div className="shrink-0 border-t border-subtle p-3">
         <div className="flex items-end gap-2">
           <div className="relative flex-1">
             <textarea
@@ -587,18 +575,18 @@ function ChatPanel({
               rows={1}
               placeholder="Tell me what you need…"
               disabled={sending}
-              className="w-full resize-none rounded-lg border border-white/[0.09] bg-white/[0.04] px-3 py-2 text-[11px] text-white/80 placeholder-white/20 outline-none transition-colors focus:border-indigo-500/40 focus:bg-white/[0.06] disabled:opacity-50"
+              className="w-full resize-none rounded-lg border border-default bg-surface-2 px-3 py-2 text-[11px] text-secondary placeholder-white/20 outline-none transition-colors focus:bg-accent-muted focus:bg-surface-2 disabled:opacity-50"
               style={{ minHeight: 34, maxHeight: 100 }}
             />
           </div>
           <button
             type="button"
-            title={webSearch ? "Web search ON — click to disable" : "Enable web search for research"}
+            title={webSearch ? "Web search ON - click to disable" : "Enable web search for research"}
             onClick={() => setWebSearch((v) => !v)}
             className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-lg border transition-colors ${
               webSearch
-                ? "border-indigo-500/40 bg-indigo-600/[0.18] text-indigo-300"
-                : "border-white/[0.07] bg-white/[0.03] text-white/25 hover:text-white/45"
+                ? "bg-accent-muted bg-indigo-600/[0.18] text-accent"
+                : "border-default bg-surface-1 text-muted hover:text-tertiary"
             }`}
           >
             <Globe className="h-3.5 w-3.5" />
@@ -607,14 +595,14 @@ function ChatPanel({
             type="button"
             onClick={handleSend}
             disabled={!input.trim() || sending}
-            className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-lg bg-indigo-600/70 text-white/90 transition-colors hover:bg-indigo-600/90 disabled:opacity-40"
+            className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-lg bg-accent text-primary transition-colors hover:bg-accent-hover disabled:opacity-40"
           >
             <Send className="h-3.5 w-3.5" />
           </button>
         </div>
         {webSearch && (
-          <p className="mt-1.5 text-[9px] text-indigo-300/40">
-            Web search enabled — AI will look up relevant pricing and options
+          <p className="mt-1.5 text-[9px] text-accent/40">
+            Web search enabled - AI will look up relevant pricing and options
           </p>
         )}
       </div>
@@ -650,11 +638,11 @@ function DetailPanel({
   return (
     <div className="flex h-full flex-col overflow-y-auto">
       {/* Header */}
-      <div className="flex h-9 shrink-0 items-center gap-2.5 border-b border-white/[0.06] px-4">
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-indigo-500/20 text-indigo-300">
+      <div className="flex h-9 shrink-0 items-center gap-2.5 border-b border-subtle px-4">
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-accent-muted text-accent">
           <TypeIcon type={req.request_type} className="h-3 w-3" />
         </span>
-        <span className="flex-1 truncate text-[11px] font-semibold text-white/70">{label}</span>
+        <span className="flex-1 truncate text-[11px] font-semibold text-secondary">{label}</span>
         <StatusBadge status={req.status} />
       </div>
 
@@ -662,17 +650,17 @@ function DetailPanel({
         {/* Status message */}
         {req.status === "approved" && (
           <div className="flex items-center gap-2 rounded border border-emerald-500/20 bg-emerald-900/[0.08] px-3 py-2">
-            <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400/60" />
+            <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success/60" />
             <span className="text-[10px] text-emerald-300/60">
-              Approved{req.reviewer_notes ? ` — ${req.reviewer_notes}` : ""}
+              Approved{req.reviewer_notes ? ` - ${req.reviewer_notes}` : ""}
             </span>
           </div>
         )}
         {req.status === "rejected" && (
           <div className="flex items-center gap-2 rounded border border-red-500/20 bg-red-900/[0.08] px-3 py-2">
-            <XCircle className="h-3.5 w-3.5 shrink-0 text-red-400/60" />
-            <span className="text-[10px] text-red-300/60">
-              Rejected{req.rejection_reason ? ` — ${req.rejection_reason}` : ""}
+            <XCircle className="h-3.5 w-3.5 shrink-0 text-error/60" />
+            <span className="text-[10px] text-error/60">
+              Rejected{req.rejection_reason ? ` - ${req.rejection_reason}` : ""}
             </span>
           </div>
         )}
@@ -681,7 +669,7 @@ function DetailPanel({
             <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-purple-400/60" />
             <span className="text-[10px] text-purple-300/60">
               Fulfilled {req.fulfilled_at ? `on ${fmtDate(req.fulfilled_at)}` : ""}
-              {req.reviewer_notes ? ` — ${req.reviewer_notes}` : ""}
+              {req.reviewer_notes ? ` - ${req.reviewer_notes}` : ""}
             </span>
           </div>
         )}
@@ -689,7 +677,7 @@ function DetailPanel({
           <div className="flex items-center gap-2 rounded border border-blue-500/20 bg-blue-900/[0.08] px-3 py-2">
             <Clock className="h-3.5 w-3.5 shrink-0 text-blue-400/60" />
             <span className="text-[10px] text-blue-300/60">
-              Submitted {fmtDate(req.submitted_at)} — awaiting review
+              Submitted {fmtDate(req.submitted_at)} - awaiting review
             </span>
           </div>
         )}
@@ -697,22 +685,22 @@ function DetailPanel({
         {/* Structured details */}
         {detailRows.length > 0 && (
           <div>
-            <p className="mb-2 text-[9px] font-bold uppercase tracking-widest text-white/22">
+            <p className="mb-2 text-[9px] font-bold uppercase tracking-widest text-muted">
               Request Details
             </p>
-            <div className="overflow-hidden rounded-lg border border-white/[0.07]">
+            <div className="overflow-hidden rounded-lg border border-default">
               {detailRows.map(([key, val], i) => (
                 <div
                   key={key}
                   className={`flex items-start justify-between gap-4 px-3 py-2 ${
-                    i < detailRows.length - 1 ? "border-b border-white/[0.05]" : ""
+                    i < detailRows.length - 1 ? "border-b border-subtle" : ""
                   }`}
                 >
-                  <span className="text-[10px] capitalize text-white/30">
+                  <span className="text-[10px] capitalize text-muted">
                     {key.replace(/_/g, " ")}
                   </span>
-                  <span className="text-right text-[10px] font-medium text-white/60">
-                    {String(val ?? "—")}
+                  <span className="text-right text-[10px] font-medium text-secondary">
+                    {String(val ?? " - ")}
                   </span>
                 </div>
               ))}
@@ -722,9 +710,9 @@ function DetailPanel({
 
         {/* Estimated amount */}
         {req.estimated_amount && (
-          <div className="flex items-center justify-between rounded-lg border border-white/[0.07] px-3 py-2.5">
-            <span className="text-[10px] text-white/30">Estimated Amount</span>
-            <span className="text-[13px] font-semibold text-white/70">
+          <div className="flex items-center justify-between rounded-lg border border-default px-3 py-2.5">
+            <span className="text-[10px] text-muted">Estimated Amount</span>
+            <span className="text-[13px] font-semibold text-secondary">
               {req.currency ?? ""} {Number(req.estimated_amount).toLocaleString()}
             </span>
           </div>
@@ -733,14 +721,14 @@ function DetailPanel({
         {/* Research results */}
         {req.research && req.research.length > 0 && (
           <div>
-            <p className="mb-2 text-[9px] font-bold uppercase tracking-widest text-white/22">
+            <p className="mb-2 text-[9px] font-bold uppercase tracking-widest text-muted">
               Research Results
             </p>
             <div className="space-y-2">
               {req.research.map((r, i) => (
-                <div key={i} className="rounded border border-white/[0.06] bg-white/[0.02] px-3 py-2">
-                  <p className="text-[10px] font-medium text-white/50">{r.title}</p>
-                  <p className="mt-0.5 text-[10px] leading-relaxed text-white/32">{r.text.slice(0, 200)}</p>
+                <div key={i} className="rounded border border-subtle bg-surface-1 px-3 py-2">
+                  <p className="text-[10px] font-medium text-secondary">{r.title}</p>
+                  <p className="mt-0.5 text-[10px] leading-relaxed text-muted">{r.text.slice(0, 200)}</p>
                 </div>
               ))}
             </div>
@@ -753,18 +741,18 @@ function DetailPanel({
             <button
               type="button"
               onClick={() => setShowConv((v) => !v)}
-              className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-white/22 transition-colors hover:text-white/40"
+              className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-muted transition-colors hover:text-tertiary"
             >
               <ChevronRight className={`h-2.5 w-2.5 transition-transform ${showConv ? "rotate-90" : ""}`} />
               AI Conversation History ({req.conversation.length} messages)
             </button>
             {showConv && (
-              <div className="mt-2 space-y-1.5 rounded-lg border border-white/[0.06] p-2.5">
+              <div className="mt-2 space-y-1.5 rounded-lg border border-subtle p-2.5">
                 {req.conversation.map((m, i) => (
                   <div key={i} className={`text-[10px] leading-relaxed ${
-                    m.role === "user" ? "text-white/50" : "text-white/35"
+                    m.role === "user" ? "text-secondary" : "text-muted"
                   }`}>
-                    <span className="font-semibold capitalize text-white/28">{m.role}: </span>
+                    <span className="font-semibold capitalize text-muted">{m.role}: </span>
                     {renderMd(m.content)}
                   </div>
                 ))}
@@ -784,12 +772,12 @@ function DetailPanel({
 
       {/* Footer actions */}
       {canCancel && (
-        <div className="shrink-0 border-t border-white/[0.05] px-4 py-3">
+        <div className="shrink-0 border-t border-subtle px-4 py-3">
           <button
             type="button"
             onClick={onCancel}
             disabled={cancelling}
-            className="flex items-center gap-1.5 rounded px-3 py-1.5 text-[10px] font-medium text-white/28 transition-colors hover:bg-red-900/[0.10] hover:text-red-300/60 disabled:opacity-40"
+            className="flex items-center gap-1.5 rounded px-3 py-1.5 text-[10px] font-medium text-muted transition-colors hover:bg-red-900/[0.10] hover:text-error/60 disabled:opacity-40"
           >
             {cancelling ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
             Cancel Request
@@ -805,19 +793,19 @@ function DetailPanel({
 function EmptyRight({ onNew }: { onNew: () => void }) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-      <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.03]">
-        <Briefcase className="h-5 w-5 text-white/18" />
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-default bg-surface-1">
+        <Briefcase className="h-5 w-5 text-muted" />
       </div>
       <div>
-        <p className="text-[12px] font-medium text-white/30">No request selected</p>
-        <p className="mt-0.5 text-[10px] text-white/18">
+        <p className="text-[12px] font-medium text-muted">No request selected</p>
+        <p className="mt-0.5 text-[10px] text-muted">
           Select from the list or start a new request
         </p>
       </div>
       <button
         type="button"
         onClick={onNew}
-        className="mt-1 flex items-center gap-1.5 rounded bg-indigo-600/70 px-3 py-1.5 text-[10px] font-semibold text-white/90 transition-colors hover:bg-indigo-600/90"
+        className="mt-1 flex items-center gap-1.5 rounded bg-accent px-3 py-1.5 text-[10px] font-semibold text-primary transition-colors hover:bg-accent-hover"
       >
         <Plus className="h-3 w-3" />
         New Request
@@ -858,13 +846,8 @@ export default function MyRequestsModule() {
   const loadRequests = useCallback(async () => {
     if (!companyId || !userIdStr) return;
     try {
-      const res = await fetch(
-        `${API}/requests/${companyId}/my?requester_id=${userIdStr}`
-      );
-      if (res.ok) {
-        const data: PurchaseRequest[] = await res.json();
+      const data: any = await apiCall(`/requests/${companyId}/my`);
         setRequests(data);
-      }
     } catch {
       // silent
     } finally {
@@ -880,8 +863,8 @@ export default function MyRequestsModule() {
 
   useEffect(() => {
     if (!selectedId || !companyId) { setAttachments([]); return; }
-    fetch(`${API}/requests/${companyId}/${selectedId}/attachments`)
-      .then((r) => r.ok ? r.json() : [])
+    apiCall(`/requests/${companyId}/${selectedId}/attachments`)
+      .then((r: any) => r.ok ? r.json() : [])
       .then(setAttachments)
       .catch(() => setAttachments([]));
   }, [selectedId, companyId]);
@@ -906,12 +889,7 @@ export default function MyRequestsModule() {
     setError(null);
     try {
       const name = encodeURIComponent(displayName ?? "");
-      const res = await fetch(
-        `${API}/requests/${companyId}/new?requester_id=${userIdStr}&requester_name=${name}`,
-        { method: "POST" }
-      );
-      if (!res.ok) throw new Error("Failed to create request");
-      const req: PurchaseRequest = await res.json();
+      const req: PurchaseRequest = await apiPost(`/requests/${companyId}`, { title: name });
       setRequests((prev) => [req, ...prev]);
       setSelectedId(req.id);
       setChatMessages(req.conversation ?? []);
@@ -936,13 +914,7 @@ export default function MyRequestsModule() {
     setChatMessages((prev) => [...prev, userMsg]);
 
     try {
-      const res = await fetch(`${API}/requests/${companyId}/${selectedId}/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, research }),
-      });
-      if (!res.ok) throw new Error("Chat failed");
-      const data = await res.json();
+      const data: any = await apiPost(`/requests/${companyId}/${selectedId}/chat`, { message: text, research });
 
       const aiMsg: ChatMsg = { role: "assistant", content: data.reply };
       setChatMessages((prev) => [...prev, aiMsg]);
@@ -980,11 +952,7 @@ export default function MyRequestsModule() {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch(`${API}/requests/${companyId}/${selectedId}/submit`, {
-        method: "POST",
-      });
-      if (!res.ok) throw new Error("Submit failed");
-      const updated: PurchaseRequest = await res.json();
+      const updated: PurchaseRequest = await apiPost(`/requests/${companyId}/${selectedId}/submit`);
       setRequests((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
       setReadyToSubmit(false);
     } catch {
@@ -1000,11 +968,7 @@ export default function MyRequestsModule() {
     if (!selectedId || !companyId || cancelling) return;
     setCancelling(true);
     try {
-      const res = await fetch(`${API}/requests/${companyId}/${selectedId}/cancel`, {
-        method: "POST",
-      });
-      if (!res.ok) throw new Error("Cancel failed");
-      const updated: PurchaseRequest = await res.json();
+      const updated: PurchaseRequest = await apiPost(`/requests/${companyId}/${selectedId}/cancel`);
       setRequests((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
     } catch {
       setError("Failed to cancel. Please try again.");
@@ -1019,10 +983,8 @@ export default function MyRequestsModule() {
     if (!selectedId || !companyId || deleting || !canDelete) return;
     setDeleting(true);
     try {
-      const res = await fetch(`${API}/requests/${companyId}/${selectedId}`, {
-        method: "DELETE",
-      });
-      if (!res.ok && res.status !== 204) throw new Error("Delete failed");
+      await apiDelete(`/requests/${companyId}/${selectedId}`);
+      // apiDelete throws on non-2xx, so no res check needed
       setRequests((prev) => prev.filter((r) => r.id !== selectedId));
       setSelectedId(null);
       setChatMessages([]);
@@ -1048,13 +1010,9 @@ export default function MyRequestsModule() {
       if (patchTimer.current) clearTimeout(patchTimer.current);
       patchTimer.current = setTimeout(async () => {
         try {
-          await fetch(`${API}/requests/${companyId}/${selectedId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ details: updatedDetails }),
-          });
+      const data = await apiCall(`/requests/${companyId}/${selectedId}`);
         } catch {
-          // silent — local state already reflects the change
+          // silent - local state already reflects the change
         }
       }, 800);
     },
@@ -1069,10 +1027,10 @@ export default function MyRequestsModule() {
   return (
     <div className="flex h-full overflow-hidden">
       {/* ── Left: request list ─────────────────────────────────────────────── */}
-      <div className="flex w-[220px] shrink-0 flex-col overflow-hidden border-r border-white/[0.06] bg-zinc-950">
+      <div className="flex w-[220px] shrink-0 flex-col overflow-hidden border-r border-subtle bg-surface-0">
         {/* List header */}
-        <div className="flex h-9 shrink-0 items-center justify-between border-b border-white/[0.06] px-3">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">
+        <div className="flex h-9 shrink-0 items-center justify-between border-b border-subtle px-3">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-tertiary">
             My Requests
           </span>
           <button
@@ -1080,7 +1038,7 @@ export default function MyRequestsModule() {
             title="New request"
             onClick={handleNew}
             disabled={creatingNew}
-            className="flex h-5 w-5 items-center justify-center rounded text-white/30 transition-colors hover:bg-white/[0.07] hover:text-white/60 disabled:opacity-40"
+            className="flex h-5 w-5 items-center justify-center rounded text-muted transition-colors hover:bg-surface-3 hover:text-secondary disabled:opacity-40"
           >
             {creatingNew ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
           </button>
@@ -1088,24 +1046,24 @@ export default function MyRequestsModule() {
 
         {error && (
           <div className="mx-2 mt-2 flex items-start gap-1.5 rounded border border-red-500/20 bg-red-900/[0.07] px-2 py-1.5">
-            <AlertCircle className="mt-0.5 h-3 w-3 shrink-0 text-red-400/60" />
-            <span className="text-[9px] text-red-300/50">{error}</span>
+            <AlertCircle className="mt-0.5 h-3 w-3 shrink-0 text-error/60" />
+            <span className="text-[9px] text-error/50">{error}</span>
           </div>
         )}
 
         <div className="min-h-0 flex-1 overflow-y-auto py-1">
           {loading ? (
             <div className="flex h-full items-center justify-center">
-              <Loader2 className="h-4 w-4 animate-spin text-white/20" />
+              <Loader2 className="h-4 w-4 animate-spin text-muted" />
             </div>
           ) : requests.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 px-4 py-8 text-center">
-              <Briefcase className="h-5 w-5 text-white/12" />
-              <p className="text-[10px] text-white/22">No requests yet</p>
+              <Briefcase className="h-5 w-5 text-muted" />
+              <p className="text-[10px] text-muted">No requests yet</p>
               <button
                 type="button"
                 onClick={handleNew}
-                className="text-[10px] font-medium text-indigo-400/60 hover:text-indigo-300/80"
+                className="text-[10px] font-medium text-accent/60 hover:text-accent"
               >
                 + Create your first request
               </button>
@@ -1127,18 +1085,18 @@ export default function MyRequestsModule() {
 
       {/* ── Right area ────────────────────────────────────────────────────── */}
       {!selected ? (
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-zinc-950">
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-surface-0">
           <EmptyRight onNew={handleNew} />
         </div>
       ) : isDraft ? (
-        /* Draft: split — chat left, form preview right */
+        /* Draft: split - chat left, form preview right */
         <div className="flex min-w-0 flex-1 overflow-hidden">
-          {/* Chat panel — fixed width */}
-          <div className="flex w-[340px] shrink-0 flex-col overflow-hidden border-r border-white/[0.06] bg-zinc-950">
+          {/* Chat panel - fixed width */}
+          <div className="flex w-[340px] shrink-0 flex-col overflow-hidden border-r border-subtle bg-surface-0">
             {/* Chat header with delete */}
-            <div className="flex h-9 shrink-0 items-center justify-between border-b border-white/[0.06] px-3">
+            <div className="flex h-9 shrink-0 items-center justify-between border-b border-subtle px-3">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-semibold text-white/50">AI Assistant</span>
+                <span className="text-[10px] font-semibold text-secondary">AI Assistant</span>
               </div>
               <div className="flex items-center gap-1">
                 {/* Manual submit always visible */}
@@ -1147,7 +1105,7 @@ export default function MyRequestsModule() {
                   onClick={handleSubmit}
                   disabled={submitting}
                   title="Submit request"
-                  className="flex items-center gap-1 rounded bg-emerald-600/60 px-2 py-1 text-[9px] font-semibold text-white/80 transition-colors hover:bg-emerald-600/80 disabled:opacity-40"
+                  className="flex items-center gap-1 rounded bg-emerald-600/60 px-2 py-1 text-[9px] font-semibold text-secondary transition-colors hover:bg-emerald-600/80 disabled:opacity-40"
                 >
                   {submitting ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Send className="h-2.5 w-2.5" />}
                   Submit
@@ -1158,7 +1116,7 @@ export default function MyRequestsModule() {
                     onClick={handleDelete}
                     disabled={deleting}
                     title="Delete request"
-                    className="flex h-6 w-6 items-center justify-center rounded text-white/22 transition-colors hover:bg-red-900/20 hover:text-red-400/60 disabled:opacity-40"
+                    className="flex h-6 w-6 items-center justify-center rounded text-muted transition-colors hover:bg-red-900/20 hover:text-error/60 disabled:opacity-40"
                   >
                     {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
                   </button>
@@ -1182,13 +1140,13 @@ export default function MyRequestsModule() {
             </div>
           </div>
 
-          {/* Form preview — fills rest */}
+          {/* Form preview - fills rest */}
           <div className="min-w-0 flex-1 overflow-hidden">
             <PurchaseRequisitionForm
               requestId={selected.id}
               requestNo={reqNo}
               requestDate={selected.created_at}
-              requesterName={displayName ?? selected.requester_name ?? "—"}
+              requesterName={displayName ?? selected.requester_name ?? " - "}
               companyId={String(companyId ?? "")}
               data={(selected.details ?? {}) as Parameters<typeof PurchaseRequisitionForm>[0]["data"]}
               attachments={attachments}
@@ -1203,19 +1161,19 @@ export default function MyRequestsModule() {
         /* Submitted / non-draft: form document + actions */
         <div className="flex min-w-0 flex-1 overflow-hidden">
           {/* Action sidebar */}
-          <div className="flex w-[220px] shrink-0 flex-col overflow-y-auto border-r border-white/[0.06] bg-zinc-950 px-3 py-3">
+          <div className="flex w-[220px] shrink-0 flex-col overflow-y-auto border-r border-subtle bg-surface-0 px-3 py-3">
             {/* Status */}
             <div className="mb-3">
-              <p className="mb-1 text-[8px] font-bold uppercase tracking-widest text-white/25">Status</p>
+              <p className="mb-1 text-[8px] font-bold uppercase tracking-widest text-muted">Status</p>
               <StatusBadge status={selected.status} />
             </div>
 
             {/* Requester */}
             <div className="mb-3">
-              <p className="mb-1 text-[8px] font-bold uppercase tracking-widest text-white/25">Submitted by</p>
-              <p className="text-[10px] text-white/55">{selected.requester_name ?? "—"}</p>
+              <p className="mb-1 text-[8px] font-bold uppercase tracking-widest text-muted">Submitted by</p>
+              <p className="text-[10px] text-tertiary">{selected.requester_name ?? " - "}</p>
               {selected.submitted_at && (
-                <p className="text-[9px] text-white/28">{fmtDate(selected.submitted_at)}</p>
+                <p className="text-[9px] text-muted">{fmtDate(selected.submitted_at)}</p>
               )}
             </div>
 
@@ -1232,11 +1190,11 @@ export default function MyRequestsModule() {
             )}
             {selected.status === "rejected" && (
               <div className="mb-3 rounded border border-red-500/20 bg-red-900/[0.07] px-2 py-1.5">
-                <p className="flex items-center gap-1 text-[9px] font-medium text-red-300/70">
+                <p className="flex items-center gap-1 text-[9px] font-medium text-error/70">
                   <XCircle className="h-3 w-3" /> Rejected
                 </p>
                 {selected.rejection_reason && (
-                  <p className="mt-0.5 text-[9px] text-red-300/50">{selected.rejection_reason}</p>
+                  <p className="mt-0.5 text-[9px] text-error/50">{selected.rejection_reason}</p>
                 )}
               </div>
             )}
@@ -1262,7 +1220,7 @@ export default function MyRequestsModule() {
                   type="button"
                   onClick={handleDelete}
                   disabled={deleting}
-                  className="flex items-center gap-1.5 rounded px-2 py-1.5 text-[10px] font-medium text-white/28 transition-colors hover:bg-red-900/[0.12] hover:text-red-300/60 disabled:opacity-40"
+                  className="flex items-center gap-1.5 rounded px-2 py-1.5 text-[10px] font-medium text-muted transition-colors hover:bg-red-900/[0.12] hover:text-error/60 disabled:opacity-40"
                 >
                   {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
                   Delete Request
@@ -1273,7 +1231,7 @@ export default function MyRequestsModule() {
                   type="button"
                   onClick={handleCancel}
                   disabled={cancelling}
-                  className="flex items-center gap-1.5 rounded px-2 py-1.5 text-[10px] font-medium text-white/28 transition-colors hover:bg-red-900/[0.10] hover:text-red-300/60 disabled:opacity-40"
+                  className="flex items-center gap-1.5 rounded px-2 py-1.5 text-[10px] font-medium text-muted transition-colors hover:bg-red-900/[0.10] hover:text-error/60 disabled:opacity-40"
                 >
                   {cancelling ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
                   Cancel Request
@@ -1288,7 +1246,7 @@ export default function MyRequestsModule() {
               requestId={selected.id}
               requestNo={reqNo}
               requestDate={selected.created_at}
-              requesterName={selected.requester_name ?? displayName ?? "—"}
+              requesterName={selected.requester_name ?? displayName ?? " - "}
               companyId={String(companyId ?? "")}
               data={(selected.details ?? {}) as Parameters<typeof PurchaseRequisitionForm>[0]["data"]}
               attachments={attachments}

@@ -1,17 +1,18 @@
 import asyncio
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from apps.api.auth import get_current_user, require_manager_or_accountant, require_same_company
+from packages.core.platform.module_gate import require_module
 from apps.api.deps import get_db
 from packages.core.platform.models_user import User
 from packages.core.platform.service_permissions import has_permission
 from packages.modules.expenses.schemas.expense import ExpenseCreate, ExpenseRead
 from packages.modules.expenses.schemas.expense_update import ExpenseUpdate
-from packages.modules.expenses.service.expense_service import create_expense, delete_expense, get_expense, get_expense_summary, list_expenses, update_expense
+from packages.modules.expenses.service.expense_service import create_expense, delete_expense, get_expense, get_expense_summary, list_expenses, list_expenses_paginated, update_expense
 from packages.modules.expenses.service.config_reader import get_account_mapping_config
 from packages.modules.expenses.schemas.document import ExpenseDocumentCreate, ExpenseDocumentRead
 from packages.modules.expenses.schemas.document_update import ExpenseDocumentUpdate
@@ -20,6 +21,7 @@ from packages.modules.expenses.service.document_service import create_document, 
 from packages.modules.expenses.service.document_validation_service import validate_document
 from packages.modules.expenses.models.document import ExpenseDocument
 from packages.modules.expenses.models.expense import Expense
+from packages.modules.expenses.models.poliza import Poliza
 from packages.modules.expenses.models.report import ExpenseReport
 from packages.modules.expenses.models.validation_result import ValidationResult
 from packages.modules.expenses.models.tag import ExpenseTag
@@ -40,24 +42,112 @@ from packages.modules.expenses.service.sat_validation_service import run_sat_val
 from packages.modules.expenses.service.policy_service import get_or_create_company_expense_policy
 from packages.modules.archive.service.archive_service import purge_archive_files_for_expense
 
-router = APIRouter(prefix="/expenses", tags=["expenses"])
+router = APIRouter(
+    prefix="/expenses",
+    tags=["expenses"],
+    dependencies=[Depends(require_module("expenses"))],
+)
+
+
+class PaginatedExpenseResponse(BaseModel):
+    items: list[ExpenseRead]
+    total: int
+    page: int
+    pages: int
+
+
+class PaginatedDocumentResponse(BaseModel):
+    items: list[ExpenseDocumentRead]
+    total: int
+    page: int
+    pages: int
+
+
+class PaginatedReportResponse(BaseModel):
+    items: list[ExpenseReportRead]
+    total: int
+    page: int
+    pages: int
+
+
+class PaginatedPolizaResponse(BaseModel):
+    items: list[PolizaRead]
+    total: int
+    page: int
+    pages: int
 
 
 @router.post("/", response_model=ExpenseRead)
 def create_expense_route(payload: ExpenseCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     try:
         require_same_company(payload.company_id, current_user)
+        # If user_id is provided, verify permissions for "create on behalf of"
+        if payload.user_id and payload.user_id != current_user.id:
+            # Check if secretary relationship exists
+            is_delegated = db.query(User).filter(User.id == payload.user_id, User.delegates_for_user_id == current_user.id).first()
+            # Check delegation date range if present
+            if is_delegated and is_delegated.delegation_starts_at:
+                from datetime import datetime, timezone
+                now = datetime.now(timezone.utc)
+                if is_delegated.delegation_ends_at and now > is_delegated.delegation_ends_at:
+                    is_delegated = None  # Delegation has expired
+                if is_delegated and now < is_delegated.delegation_starts_at:
+                    is_delegated = None  # Delegation hasn't started yet
+            if not is_delegated and not has_permission(db, current_user, "expense:create:any"):
+                raise HTTPException(status_code=403, detail="Not authorized to create for this user")
+        
+        # Default to current user if not specified
+        if not payload.user_id:
+            payload.user_id = current_user.id
+            
         return create_expense(db, payload)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/", response_model=list[ExpenseRead])
-def list_expenses_route(company_id: int | None = None, status: str | None = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@router.get("/", response_model=PaginatedExpenseResponse)
+def list_expenses_route(
+    company_id: int | None = None,
+    user_id: int | None = Query(None),
+    page: int = Query(1, ge=1, description="Page number (1-indexed)"),
+    limit: int = Query(50, ge=1, le=100, description="Items per page (max 100)"),
+    status: str | None = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List expenses with pagination."""
     # Non-admin users are scoped to their own company. Admins may pass an explicit company_id.
     if not has_permission(db, current_user, "expense:read:any"):
         company_id = current_user.company_id
-    return list_expenses(db, company_id, status)
+        
+        # Regular employees (not managers/accounting) only see their own expenses
+        # or expenses for users they delegate for.
+        if not has_permission(db, current_user, "expense:read:company"):
+            if user_id and user_id != current_user.id:
+                # Is it their boss?
+                 is_boss = db.query(User).filter(User.id == user_id, User.delegates_for_user_id == current_user.id).first()
+                 if not is_boss:
+                     user_id = current_user.id
+            else:
+                # If no user_id filter requested, and not manager, default to self
+                if not user_id:
+                    user_id = current_user.id
+
+    result = list_expenses_paginated(
+        db=db,
+        company_id=company_id,
+        user_id=user_id,
+        status=status,
+        page=page,
+        limit=limit,
+    )
+
+    return PaginatedExpenseResponse(
+        items=[ExpenseRead.model_validate(e) for e in result["items"]],
+        total=result["total"],
+        page=result["page"],
+        pages=result["pages"],
+    )
 
 
 @router.get("/summary")
@@ -156,6 +246,37 @@ async def upload_document_route(
         data = await file.read()
         if not data:
             raise HTTPException(status_code=400, detail="Empty file")
+
+        # ── Upload size & MIME validation ───────────────────────────────────
+        _MAX_UPLOAD_SIZE = 25 * 1024 * 1024  # 25 MB
+        _ALLOWED_MIME_TYPES = {
+            "application/pdf",
+            "text/xml",
+            "application/xml",
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/heic",
+            "image/heif",
+        }
+        _ALLOWED_EXTENSIONS = {".pdf", ".xml", ".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"}
+
+        if len(data) > _MAX_UPLOAD_SIZE:
+            raise HTTPException(status_code=413, detail=f"File too large. Maximum size is {_MAX_UPLOAD_SIZE // (1024*1024)} MB")
+
+        import os as _os
+        _ext = _os.path.splitext(file.filename or "")[1].lower()
+        if _ext and _ext not in _ALLOWED_EXTENSIONS:
+            raise HTTPException(status_code=415, detail=f"File type {_ext} not allowed. Allowed: {', '.join(sorted(_ALLOWED_EXTENSIONS))}")
+
+        if file.content_type and file.content_type not in _ALLOWED_MIME_TYPES:
+            # Allow common variants
+            _variants = {
+                "application/x-pdf": "application/pdf",
+                "text/plain": None,  # .xml may come as text/plain
+            }
+            if file.content_type not in _variants:
+                raise HTTPException(status_code=415, detail=f"MIME type {file.content_type} not allowed")
         content_text = await asyncio.to_thread(_extract_text_from_upload, file.filename or "upload", data)
 
         # ── Storage dedup ──────────────────────────────────────────────────
@@ -315,11 +436,34 @@ async def upload_document_route(
         raise HTTPException(status_code=500, detail=f"Upload failed: {e}")
 
 
-@router.get("/documents", response_model=list[ExpenseDocumentRead])
-def list_documents_route(company_id: int | None = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@router.get("/documents", response_model=PaginatedDocumentResponse)
+def list_documents_route(
+    company_id: int | None = None,
+    page: int = Query(1, ge=1, description="Page number (1-indexed)"),
+    limit: int = Query(50, ge=1, le=100, description="Items per page (max 100)"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List expense documents with pagination."""
     if not has_permission(db, current_user, "document:read:any"):
         company_id = current_user.company_id
-    return list_documents(db, company_id)
+
+    limit = min(limit, 100)
+    offset = (page - 1) * limit
+
+    query = db.query(ExpenseDocument)
+    if company_id is not None:
+        query = query.filter(ExpenseDocument.company_id == company_id)
+
+    total = query.count()
+    items = query.order_by(ExpenseDocument.created_at.desc()).offset(offset).limit(limit).all()
+
+    return PaginatedDocumentResponse(
+        items=[ExpenseDocumentRead.model_validate(d) for d in items],
+        total=total,
+        page=page,
+        pages=(total + limit - 1) // limit if limit > 0 else 0,
+    )
 
 
 @router.get("/documents/{document_id}", response_model=ExpenseDocumentRead)
@@ -535,11 +679,34 @@ def create_report_route(payload: ExpenseReportCreate, db: Session = Depends(get_
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/reports", response_model=list[ExpenseReportRead])
-def list_reports_route(company_id: int | None = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@router.get("/reports", response_model=PaginatedReportResponse)
+def list_reports_route(
+    company_id: int | None = None,
+    page: int = Query(1, ge=1, description="Page number (1-indexed)"),
+    limit: int = Query(50, ge=1, le=100, description="Items per page (max 100)"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List expense reports with pagination."""
     if not has_permission(db, current_user, "expense:read:any"):
         company_id = current_user.company_id
-    return list_reports(db, company_id)
+
+    limit = min(limit, 100)
+    offset = (page - 1) * limit
+
+    query = db.query(ExpenseReport)
+    if company_id is not None:
+        query = query.filter(ExpenseReport.company_id == company_id)
+
+    total = query.count()
+    items = query.order_by(ExpenseReport.created_at.desc()).offset(offset).limit(limit).all()
+
+    return PaginatedReportResponse(
+        items=[ExpenseReportRead.model_validate(r) for r in items],
+        total=total,
+        page=page,
+        pages=(total + limit - 1) // limit if limit > 0 else 0,
+    )
 
 
 @router.get("/reports/summary")
@@ -631,11 +798,34 @@ def generate_poliza_route(report_id: int, db: Session = Depends(get_db), _user: 
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/polizas", response_model=list[PolizaRead])
-def list_polizas_route(company_id: int | None = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@router.get("/polizas", response_model=PaginatedPolizaResponse)
+def list_polizas_route(
+    company_id: int | None = None,
+    page: int = Query(1, ge=1, description="Page number (1-indexed)"),
+    limit: int = Query(50, ge=1, le=100, description="Items per page (max 100)"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List polizas with pagination."""
     if not has_permission(db, current_user, "accounting:work"):
         company_id = current_user.company_id
-    return list_polizas(db, company_id)
+
+    limit = min(limit, 100)
+    offset = (page - 1) * limit
+
+    query = db.query(Poliza)
+    if company_id is not None:
+        query = query.filter(Poliza.company_id == company_id)
+
+    total = query.count()
+    items = query.order_by(Poliza.created_at.desc()).offset(offset).limit(limit).all()
+
+    return PaginatedPolizaResponse(
+        items=[PolizaRead.model_validate(p) for p in items],
+        total=total,
+        page=page,
+        pages=(total + limit - 1) // limit if limit > 0 else 0,
+    )
 
 
 @router.get("/polizas/summary")

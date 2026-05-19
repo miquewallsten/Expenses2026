@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * FinanceAnalyticsModule — Phase 4.7 + 5.7.
+ * FinanceAnalyticsModule - Phase 4.7 + 5.7.
  *
  * Read-only finance dashboard. Pulls from /analytics/finance/* endpoints.
  * Layout: tile row (totals + SLA) + two charts (spend by month bar,
@@ -13,9 +13,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { BarChart2, Clock, TrendingUp, AlertTriangle } from "lucide-react";
-import { getAuthHeaders } from "@/lib/session";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { apiCall } from "@/lib/api/client";
 
 // ── Types matching backend response models ───────────────────────────────────
 
@@ -53,8 +51,8 @@ function fmtHours(h: number) {
 }
 
 const STATUS_TONE: Record<string, string> = {
-  draft: "bg-white/10",
-  submitted: "bg-sky-500/55",
+  draft: "bg-surface-2",
+  submitted: "bg-accent/55",
   manager_approved: "bg-indigo-500/55",
   approved: "bg-emerald-500/60",
   rejected: "bg-red-500/55",
@@ -75,16 +73,13 @@ export default function FinanceAnalyticsModule() {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    const headers = getAuthHeaders();
     Promise.all([
-      fetch(`${API}/analytics/finance/spend-by-month?months=12`, { headers }),
-      fetch(`${API}/analytics/finance/spend-by-category`, { headers }),
-      fetch(`${API}/analytics/finance/approval-funnel`, { headers }),
-      fetch(`${API}/analytics/finance/approval-sla`, { headers }),
+      apiCall<{ items: MonthlyBucket[] }>("/analytics/finance/spend-by-month?months=12"),
+      apiCall<{ items: CategoryBucket[] }>("/analytics/finance/spend-by-category"),
+      apiCall<{ items: FunnelBucket[] }>("/analytics/finance/approval-funnel"),
+      apiCall<SlaResponse>("/analytics/finance/approval-sla"),
     ])
-      .then(async ([rm, rc, rf, rs]) => {
-        if (!rm.ok || !rc.ok || !rf.ok || !rs.ok) throw new Error("fetch_failed");
-        const [m, c, f, s] = await Promise.all([rm.json(), rc.json(), rf.json(), rs.json()]);
+      .then(([m, c, f, s]) => {
         if (cancelled) return;
         setMonthly(m.items ?? []);
         setCategories(c.items ?? []);
@@ -126,16 +121,16 @@ export default function FinanceAnalyticsModule() {
   );
 
   return (
-    <div className="flex h-full flex-col bg-zinc-950">
+    <div className="flex h-full flex-col bg-surface-0">
       {/* Header */}
-      <header className="border-b border-white/[0.06] px-5 py-3">
+      <header className="border-b border-subtle px-5 py-3">
         <div className="flex items-center gap-2">
-          <BarChart2 className="h-4 w-4 text-white/40" />
-          <h1 className="text-[12px] font-semibold uppercase tracking-wider text-white/70">
+          <BarChart2 className="h-4 w-4 text-tertiary" />
+          <h1 className="text-[12px] font-semibold uppercase tracking-wider text-secondary">
             {t("title")}
           </h1>
         </div>
-        <p className="mt-0.5 text-[10.5px] text-white/35">{t("subtitle")}</p>
+        <p className="mt-0.5 text-[10.5px] text-muted">{t("subtitle")}</p>
       </header>
 
       {error && (
@@ -151,25 +146,25 @@ export default function FinanceAnalyticsModule() {
         <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
           <Tile
             label={t("tiles.approvedTotal")}
-            value={loading ? "—" : fmtMoney(totals.approvedTotal)}
+            value={loading ? " - " : fmtMoney(totals.approvedTotal)}
             sub={loading ? "" : t("tiles.approvedCount", { count: totals.approvedCount })}
             tone="emerald"
           />
           <Tile
             label={t("tiles.pending")}
-            value={loading ? "—" : String(totals.pendingCount)}
+            value={loading ? " - " : String(totals.pendingCount)}
             sub={loading ? "" : t("tiles.pendingSub")}
             tone="sky"
           />
           <Tile
             label={t("tiles.rejected")}
-            value={loading ? "—" : String(totals.rejectedCount)}
+            value={loading ? " - " : String(totals.rejectedCount)}
             sub={loading ? "" : t("tiles.rejectedSub")}
             tone="red"
           />
           <Tile
             label={t("tiles.slaP95")}
-            value={loading || !sla ? "—" : fmtHours(sla.p95_hours)}
+            value={loading || !sla ? " - " : fmtHours(sla.p95_hours)}
             sub={
               loading || !sla
                 ? ""
@@ -197,12 +192,12 @@ export default function FinanceAnalyticsModule() {
                     <div key={m.period} className="group flex flex-1 flex-col items-center gap-1">
                       <div className="relative flex w-full flex-1 items-end">
                         <div
-                          className="w-full rounded-t bg-indigo-500/55 transition-colors group-hover:bg-indigo-400/75"
+                          className="w-full rounded-t bg-indigo-500/55 transition-colors group-hover:bg-accent/75"
                           style={{ height: `${h}%` }}
                           title={`${m.period} · ${fmtMoney(m.total)} · ${m.count}`}
                         />
                       </div>
-                      <span className="text-[8.5px] text-white/35">{m.period.slice(5)}</span>
+                      <span className="text-[8.5px] text-muted">{m.period.slice(5)}</span>
                     </div>
                   );
                 })}
@@ -223,19 +218,19 @@ export default function FinanceAnalyticsModule() {
                   const w = (v / categoryMax) * 100;
                   return (
                     <li key={c.category_code ?? "_uncat"} className="flex items-center gap-2">
-                      <span className="w-24 truncate text-[10.5px] text-white/55">
+                      <span className="w-24 truncate text-[10.5px] text-tertiary">
                         {c.category_code ?? t("uncategorized")}
                       </span>
-                      <div className="relative flex-1 overflow-hidden rounded bg-white/[0.04]">
+                      <div className="relative flex-1 overflow-hidden rounded bg-surface-2">
                         <div
                           className="h-3 bg-emerald-500/55"
                           style={{ width: `${Math.max(2, w)}%` }}
                         />
                       </div>
-                      <span className="w-20 text-right font-mono text-[10px] text-white/65">
+                      <span className="w-20 text-right font-mono text-[10px] text-secondary">
                         {fmtMoney(c.total)}
                       </span>
-                      <span className="w-8 text-right text-[9.5px] text-white/35">×{c.count}</span>
+                      <span className="w-8 text-right text-[9.5px] text-muted">×{c.count}</span>
                     </li>
                   );
                 })}
@@ -267,17 +262,17 @@ export default function FinanceAnalyticsModule() {
                   }
                 })();
                 return (
-                  <div key={f.status} className="rounded border border-white/[0.06] bg-white/[0.02] p-2">
-                    <div className="text-[9.5px] uppercase tracking-wider text-white/40">
+                  <div key={f.status} className="rounded border border-subtle bg-surface-1 p-2">
+                    <div className="text-[9.5px] uppercase tracking-wider text-tertiary">
                       {statusLabel}
                     </div>
-                    <div className="mt-0.5 text-[15px] font-semibold tabular-nums text-white/85">
+                    <div className="mt-0.5 text-[15px] font-semibold tabular-nums text-primary">
                       {f.count}
                     </div>
-                    <div className="mt-0.5 text-[9.5px] text-white/35">{fmtMoney(f.total)}</div>
-                    <div className="mt-1.5 h-1 overflow-hidden rounded bg-white/[0.04]">
+                    <div className="mt-0.5 text-[9.5px] text-muted">{fmtMoney(f.total)}</div>
+                    <div className="mt-1.5 h-1 overflow-hidden rounded bg-surface-2">
                       <div
-                        className={`h-1 ${STATUS_TONE[f.status] ?? "bg-white/15"}`}
+                        className={`h-1 ${STATUS_TONE[f.status] ?? "bg-surface-2"}`}
                         style={{ width: `${Math.max(2, w)}%` }}
                       />
                     </div>
@@ -320,9 +315,9 @@ export default function FinanceAnalyticsModule() {
 
 const TILE_TONE: Record<string, string> = {
   emerald: "border-emerald-500/20 text-emerald-300/80",
-  sky: "border-sky-500/20 text-sky-300/80",
-  red: "border-red-500/20 text-red-300/80",
-  indigo: "border-indigo-500/20 text-indigo-300/80",
+  sky: "border-sky-500/20 text-accent/80",
+  red: "border-red-500/20 text-error/80",
+  indigo: "border-indigo-500/20 text-accent",
 };
 
 function Tile({
@@ -339,15 +334,15 @@ function Tile({
   icon?: React.ReactNode;
 }) {
   return (
-    <div className={`rounded-md border bg-white/[0.02] px-3 py-2 ${TILE_TONE[tone]}`}>
+    <div className={`rounded-md border bg-surface-1 px-3 py-2 ${TILE_TONE[tone]}`}>
       <div className="flex items-center gap-1 text-[9.5px] uppercase tracking-wider opacity-70">
         {icon}
         {label}
       </div>
-      <div className="mt-0.5 text-[18px] font-semibold tabular-nums text-white/90">
+      <div className="mt-0.5 text-[18px] font-semibold tabular-nums text-primary">
         {value}
       </div>
-      {sub && <div className="text-[10px] text-white/35">{sub}</div>}
+      {sub && <div className="text-[10px] text-muted">{sub}</div>}
     </div>
   );
 }
@@ -365,9 +360,9 @@ function Panel({
 }) {
   return (
     <section
-      className={`rounded-md border border-white/[0.06] bg-white/[0.015] ${className}`}
+      className={`rounded-md border border-subtle bg-surface-1 ${className}`}
     >
-      <header className="flex items-center gap-1.5 border-b border-white/[0.05] px-3 py-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-white/55">
+      <header className="flex items-center gap-1.5 border-b border-subtle px-3 py-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-tertiary">
         {icon}
         {title}
       </header>
@@ -378,7 +373,7 @@ function Panel({
 
 function Empty({ msg }: { msg: string }) {
   return (
-    <div className="flex h-32 items-center justify-center text-[10.5px] text-white/30">
+    <div className="flex h-32 items-center justify-center text-[10.5px] text-muted">
       {msg}
     </div>
   );
@@ -393,10 +388,10 @@ function SlaCell({
   value: string;
   tone?: "neutral" | "amber";
 }) {
-  const text = tone === "amber" ? "text-amber-300/85" : "text-white/85";
+  const text = tone === "amber" ? "text-warning/85" : "text-primary";
   return (
     <div>
-      <div className="text-[9.5px] uppercase tracking-wider text-white/40">{label}</div>
+      <div className="text-[9.5px] uppercase tracking-wider text-tertiary">{label}</div>
       <div className={`mt-0.5 text-[14px] font-semibold tabular-nums ${text}`}>{value}</div>
     </div>
   );

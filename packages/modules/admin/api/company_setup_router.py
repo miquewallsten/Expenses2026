@@ -6,7 +6,8 @@ import io
 import os
 import uuid
 
-from apps.api.auth import require_admin
+from apps.api.auth import get_current_user, require_admin, require_same_company
+from packages.core.platform.models_user import User
 from apps.api.deps import get_db
 from packages.modules.admin.schemas.company_setup import (
     CompanySetupRead,
@@ -46,7 +47,8 @@ router = APIRouter(prefix="/admin/company-setup", tags=["admin"], dependencies=[
 
 
 @router.get("/{company_id}", response_model=CompanySetupRead)
-def get_company_setup_route(company_id: int, db: Session = Depends(get_db)):
+def get_company_setup_route(company_id: int, db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)):
     return get_or_create_company_setup(db, company_id)
 
 
@@ -120,7 +122,8 @@ def upload_company_logo(
 
 
 @router.get("/{company_id}/legal-entities", response_model=list[LegalEntityRead])
-def list_legal_entities_route(company_id: int, db: Session = Depends(get_db)):
+def list_legal_entities_route(company_id: int, db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)):
     return list_legal_entities(db, company_id)
 
 
@@ -161,7 +164,8 @@ class OnboardingStepUpdate(BaseModel):
 
 
 @router.get("/{company_id}/checklist")
-def get_onboarding_checklist_route(company_id: int, db: Session = Depends(get_db)):
+def get_onboarding_checklist_route(company_id: int, db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)):
     return compute_checklist(db, company_id)
 
 

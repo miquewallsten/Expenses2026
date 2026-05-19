@@ -1,8 +1,8 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, Integer, Numeric, String, Text, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, Index, Integer, Numeric, String, Text, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from apps.api.db import Base
 
@@ -28,11 +28,18 @@ class Expense(Base):
             "amount >= 0",
             name="ck_expense_amount_non_negative",
         ),
+        # Composite indexes for common query patterns
+        Index('idx_expense_company_status', 'company_id', 'status'),
+        Index('idx_expense_company_created', 'company_id', 'created_at'),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     company_id: Mapped[int] = mapped_column(index=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, index=True, nullable=True)
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), default="MXN", server_default="MXN", nullable=False)
+    exchange_rate: Mapped[Decimal | None] = mapped_column(Numeric(12, 6), nullable=True)
+    amount_mxn: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     description: Mapped[str] = mapped_column(String(255), nullable=False)
     status: Mapped[str] = mapped_column(String(50), default="draft")
     # How this expense is settled.  Allowed: "reimbursable", "corporate_card",
@@ -59,4 +66,24 @@ class Expense(Base):
     cfdi_last_checked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     cfdi_amount_mismatch: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default="false", nullable=False
+    )
+
+    # Soft delete — expenses are never hard-deleted; drafts can be "trashed"
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    # ── Relationships for eager loading ─────────────────────────────────────────
+    # Documents linked to this expense via ExpenseDocument.expense_id
+    documents: Mapped[list["ExpenseDocument"]] = relationship(
+        "ExpenseDocument",
+        back_populates="expense",
+        lazy="select",
+    )
+    # Category lookup via category_code (soft ref, no FK constraint)
+    category: Mapped["AccountingCategory | None"] = relationship(
+        "AccountingCategory",
+        primaryjoin="and_(foreign(Expense.category_code) == AccountingCategory.code, "
+                    "foreign(Expense.company_id) == AccountingCategory.company_id)",
+        uselist=False,
+        lazy="select",
     )

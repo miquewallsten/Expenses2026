@@ -16,7 +16,7 @@ interface Props {
 
 /**
  * Read-only grid for ingestion receipts (accounting catalog, user roster, org
- * entities). The applier ultimately uses `args.rows` — preview is capped at
+ * entities). The applier ultimately uses `args.rows` - preview is capped at
  * 20 rows for UI readability, with a "+N more" indicator.
  */
 export default function IngestionGrid({ receipt, rows, columns }: Props) {
@@ -45,17 +45,17 @@ export default function IngestionGrid({ receipt, rows, columns }: Props) {
   }, [receipt, rows, columns]);
 
   if (shown.length === 0) {
-    return <p className="text-xs text-zinc-500">{t("empty")}</p>;
+    return <p className="text-xs text-muted">{t("empty")}</p>;
   }
 
   return (
     <div className="space-y-2">
-      <div className="overflow-x-auto rounded border border-white/10">
+      <div className="overflow-x-auto rounded border border-subtle">
         <table className="min-w-full text-xs">
-          <thead className="bg-zinc-900/70">
+          <thead className="bg-surface-1/70">
             <tr>
               {cols.map((c) => (
-                <th key={c} className="px-2 py-1 text-left font-semibold uppercase tracking-wide text-zinc-400">
+                <th key={c} className="px-2 py-1 text-left font-semibold uppercase tracking-wide text-secondary">
                   {c}
                 </th>
               ))}
@@ -63,9 +63,9 @@ export default function IngestionGrid({ receipt, rows, columns }: Props) {
           </thead>
           <tbody>
             {shown.map((row, i) => (
-              <tr key={i} className="border-t border-white/[0.06] even:bg-zinc-950/40">
+              <tr key={i} className="border-t border-subtle even:bg-surface-0/40">
                 {cols.map((c) => (
-                  <td key={c} className="px-2 py-1 align-top text-zinc-300">
+                  <td key={c} className="px-2 py-1 align-top text-tertiary">
                     {renderCell(row[c])}
                   </td>
                 ))}
@@ -74,7 +74,7 @@ export default function IngestionGrid({ receipt, rows, columns }: Props) {
           </tbody>
         </table>
       </div>
-      <p className="text-[11px] text-zinc-500">
+      <p className="text-[11px] text-muted">
         {t("rowsSummary", { shown: shown.length, total })}
       </p>
     </div>
@@ -82,7 +82,7 @@ export default function IngestionGrid({ receipt, rows, columns }: Props) {
 }
 
 function renderCell(v: unknown): string {
-  if (v === null || v === undefined) return "—";
+  if (v === null || v === undefined) return " - ";
   if (typeof v === "boolean") return v ? "✓" : "✗";
   if (typeof v === "object") return JSON.stringify(v);
   return String(v);

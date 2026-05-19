@@ -142,7 +142,7 @@ def _notify_submitted(db: Session, expense, submitter_id: int | None) -> None:
         approve_link = _expense_link(expense)
         if approver_user is not None:
             try:
-                token, _row = create_action_token(
+                approve_token, _row = create_action_token(
                     db,
                     user_id=approver_user.id,
                     company_id=expense.company_id,
@@ -152,20 +152,63 @@ def _notify_submitted(db: Session, expense, submitter_id: int | None) -> None:
                 )
                 approve_link = (
                     f"{settings.web_base_url.rstrip('/')}"
-                    f"/channels/action/{token}"
+                    f"/channels/action/{approve_token}"
                 )
             except Exception:
                 log.exception(
-                    "Failed to mint action token for approver %s expense %s",
+                    "Failed to mint approve token for approver %s expense %s",
                     approver_user.id,
                     expense.id,
                 )
+                approve_link = _expense_link(expense)
+
+            reject_link = _expense_link(expense)
+            if approver_user is not None:
+                try:
+                    reject_token, _row = create_action_token(
+                        db,
+                        user_id=approver_user.id,
+                        company_id=expense.company_id,
+                        action="reject",
+                        resource_type="expense",
+                        resource_id=expense.id,
+                    )
+                    reject_link = (
+                        f"{settings.web_base_url.rstrip('/')}"
+                        f"/channels/action/{reject_token}"
+                    )
+                except Exception:
+                    log.exception(
+                        "Failed to mint reject token for approver %s expense %s",
+                        approver_user.id,
+                        expense.id,
+                    )
         ctx = _ctx_for_expense(
             expense, submitter=submitter, approver=approver_user, link=approve_link
         )
         msg = render_email(
             "expense_submitted_to_approver", _locale_for(approver_user), ctx
         )
+
+        # Build WhatsApp-specific text with inline approve/reject links
+        wa_amount = f"${float(expense.amount):,.2f}" if expense.amount else "—"
+        wa_lines = [
+            "📋 *Gasto pendiente de aprobación*",
+            f"#{expense.id} — {wa_amount}",
+            getattr(expense, 'description', '') or '',
+        ]
+        if approve_link and approve_link != _expense_link(expense):
+            wa_lines.append(f"✅ Aprobar: {approve_link}")
+        if reject_link and reject_link != _expense_link(expense):
+            wa_lines.append(f"❌ Rechazar: {reject_link}")
+        msg.whatsapp_text = "\n".join(wa_lines)
+
+        # Send via both email and WhatsApp (WhatsApp only if user has verified phone)
+        channels = ("email", "whatsapp") if (
+            approver_recipient.whatsapp and approver_user
+            and getattr(approver_user, 'whatsapp_verified', False)
+        ) else ("email",)
+
         send(
             db,
             NotifyRequest(
@@ -175,7 +218,7 @@ def _notify_submitted(db: Session, expense, submitter_id: int | None) -> None:
                 resource_id=expense.id,
                 recipients=[approver_recipient],
                 message=msg,
-                channels=("email",),
+                channels=channels,
             ),
         )
 
@@ -256,12 +299,15 @@ def notify_magic_link(
     link: str,
     ttl_minutes: int,
     token_id: int,
-) -> None:
-    """Send a magic-link email through the unified Notifier."""
+) -> list:
+    """Send a magic-link email through the unified Notifier.
+    
+    Returns list of NotificationDispatch rows that were created/sent.
+    """
     try:
         ctx = {"user": user, "link": link, "ttl_minutes": ttl_minutes}
         msg = render_email("magic_link", _locale_for(user), ctx)
-        send(
+        return send(
             db,
             NotifyRequest(
                 company_id=user.company_id,
@@ -275,6 +321,7 @@ def notify_magic_link(
         )
     except Exception:  # pragma: no cover — defensive
         log.exception("event_router: failed to send magic-link email")
+        return []
 
 
 # ── Locale helper ────────────────────────────────────────────────────────────

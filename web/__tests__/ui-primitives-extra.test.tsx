@@ -39,6 +39,22 @@ describe("Select / Textarea", () => {
       "true",
     );
   });
+
+  it("Textarea has focus ring styles", () => {
+    render(<Textarea placeholder="focus-test" />);
+    expect(screen.getByPlaceholderText("focus-test")).toHaveClass("focus:ring-2");
+    expect(screen.getByPlaceholderText("focus-test")).toHaveClass("focus:ring-blue-400/20");
+  });
+
+  it("Textarea has invalid focus ring styles", () => {
+    render(<Textarea invalid placeholder="invalid-test" />);
+    expect(screen.getByPlaceholderText("invalid-test")).toHaveClass("focus:ring-red-400/20");
+  });
+
+  it("Textarea has transition styles", () => {
+    render(<Textarea placeholder="trans-test" />);
+    expect(screen.getByPlaceholderText("trans-test")).toHaveClass("transition-colors");
+  });
 });
 
 describe("Tabs", () => {
@@ -86,6 +102,32 @@ describe("Table primitives", () => {
     expect(screen.getByRole("table")).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Name" })).toBeInTheDocument();
     expect(screen.getByText("Acme")).toBeInTheDocument();
+  });
+
+  it("has hairline separators", () => {
+    const { container } = render(
+      <Table>
+        <TBody>
+          <TR><TD>Row 1</TD></TR>
+          <TR><TD>Row 2</TD></TR>
+        </TBody>
+      </Table>,
+    );
+    const tbody = container.querySelector("tbody");
+    expect(tbody).toHaveClass("divide-y");
+    expect(tbody).toHaveClass("divide-subtle");
+  });
+
+  it("has subtle hover state on rows", () => {
+    const { container } = render(
+      <Table>
+        <TBody>
+          <TR><TD>Row 1</TD></TR>
+        </TBody>
+      </Table>,
+    );
+    const row = container.querySelector("tr");
+    expect(row).toHaveClass("hover:bg-surface-1");
   });
 });
 

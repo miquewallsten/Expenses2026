@@ -1,6 +1,6 @@
 """Phase 5.6 — Agent V2 finance copilot tools.
 
-Read-only tools registered under ``finance_manager`` (and ``admin``) personas.
+Read-only tools registered under ``accounting`` (and ``admin``) personas.
 All tools are tenant-scoped via ``ctx.company_id`` and produce structured
 ``ToolResult.data`` for the agent to summarise.
 
@@ -27,7 +27,7 @@ from ..core.context import AgentContext
 from ..core.registry import REGISTRY, ToolResult, ToolSpec
 
 
-_FINANCE_PERSONAS = frozenset({"admin", "finance_manager"})
+_FINANCE_PERSONAS = frozenset({"accounting", "admin"})
 
 
 # ── find_missing_receipts ───────────────────────────────────────────────────
